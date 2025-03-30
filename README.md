@@ -1,5 +1,5 @@
 # Xray-Keenetic
-Форк https://github.com/Skrill0/XKeen
+Форк проекта https://github.com/Skrill0/XKeen
 
 Версия 1.1.3.1
 
