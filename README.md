@@ -1,7 +1,7 @@
 # Xray-Keenetic
 Форк проекта <https://github.com/Skrill0/XKeen>
 
-Обсуждение в Telegram <https://t.me/+SZWOjSlvYpdlNmMy>
+Telegram <https://t.me/+SZWOjSlvYpdlNmMy>
 
 FAQ <https://jameszero.net/faq-xkeen.htm>
 
