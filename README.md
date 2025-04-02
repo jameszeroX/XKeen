@@ -13,7 +13,7 @@
 
 Добавлено:
 - Возможность установки GeoIP базы zkeenip.dat
-- Обновление zkeen.dat и zkeenip.dat по расписанию средствами XKeen
+- Обновление [zkeen.dat](https://github.com/jameszeroX/zkeen-domains) и zkeenip.dat по расписанию средствами XKeen
 - Ключ командной строки `-remove` для полной деинсталляции XKeen (ранее деинсталляцию нужно было выполнять покомпонентно)
 
 Удалено:
