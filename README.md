@@ -1,7 +1,9 @@
 # Xray-Keenetic
-Форк проекта https://github.com/Skrill0/XKeen
-Обсуждение в Telegram https://t.me/+SZWOjSlvYpdlNmMy
-FAQ https://jameszero.net/faq-xkeen.htm
+Форк проекта <https://github.com/Skrill0/XKeen>
+
+Обсуждение в Telegram <https://t.me/+SZWOjSlvYpdlNmMy>
+
+FAQ <https://jameszero.net/faq-xkeen.htm>
 
 Версия 1.1.3.2
 
