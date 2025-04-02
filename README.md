@@ -1,5 +1,5 @@
 # Xray-Keenetic
-Форк проекта <https://github.com/Skrill0/XKeen>
+Origin <https://github.com/Skrill0/XKeen>
 
 Telegram <https://t.me/+SZWOjSlvYpdlNmMy>
 
