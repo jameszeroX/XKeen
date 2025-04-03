@@ -1,9 +1,9 @@
 # Xray-Keenetic
 Origin <https://github.com/Skrill0/XKeen>
 
-Telegram <https://t.me/+SZWOjSlvYpdlNmMy> (обсуждение, инструкции по установке, советы по использованию)
-
 FAQ <https://jameszero.net/faq-xkeen.htm>
+
+Telegram <https://t.me/+SZWOjSlvYpdlNmMy> (обсуждение, инструкции по установке, советы по использованию)
 
 Версия 1.1.3.2
 
