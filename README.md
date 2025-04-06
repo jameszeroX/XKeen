@@ -44,3 +44,6 @@ TB9dLwzNdLB6QeKV6w4FjCACSarePb32Dg
 ```
 UQDHmmyz0e1K07Wf7aTVtdmcGzCPfo4Pf7uBi_Id8TDI6Da6
 ```
+[yoomoney](https://yoomoney.ru/to/41001350776240)
+
+[cloudtips](https://pay.cloudtips.ru/p/7edb30ec)
