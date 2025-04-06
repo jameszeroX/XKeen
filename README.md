@@ -33,3 +33,14 @@ curl -sOfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh
 chmod +x ./install.sh
 ./install.sh
 ```
+
+## Поддержка
+Желающие угостить меня пивом) могут сделать это в кошельке Telegram
+- Монета USDT, сеть TRC20:
+```
+TB9dLwzNdLB6QeKV6w4FjCACSarePb32Dg
+```
+- Монета USDT, сеть TON:
+```
+UQDHmmyz0e1K07Wf7aTVtdmcGzCPfo4Pf7uBi_Id8TDI6Da6
+```
