@@ -37,6 +37,12 @@ curl -sOfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh
 chmod +x ./install.sh
 ./install.sh
 ```
+Альтернативный вариант установки:
+```
+opkg install curl tar
+curl -s -L https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar --output xkeen.tar && tar -xvf xkeen.tar -C /opt/sbin --overwrite > /dev/null && rm xkeen.tar
+xkeen -i
+```
 
 ## Поддержка
 Желающие угостить меня пивом, такую возможность имеют)
