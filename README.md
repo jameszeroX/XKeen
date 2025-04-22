@@ -41,7 +41,6 @@ chmod +x ./install.sh
 ```
 opkg install ca-certificates wget-ssl tar
 wget "https://cdn.jsdelivr.net/gh/jameszeroX/XKeen@main/xkeen.tar" && tar -xvf xkeen.tar -C /opt/sbin --overwrite > /dev/null && rm xkeen.tar
-cd /opt/sbin/_xkeen
 xkeen -i
 ```
 
