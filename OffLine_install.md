@@ -3,6 +3,7 @@
 Для OffLine установки необходимо заранее любым способом скачать установочный архив XKeen версии 1.1.3.4+, бинарник xray, подходящей архитектуры, из [репозитория](https://github.com/XTLS/Xray-core/releases/latest) и необходимые dat-файлы. Затем поместить архив XKeen и предварительно извлечённый из архива бинарник xray в папку entware /opt/sbin/, после чего выполнить следующие команды в ssh-консоли entware Keenetic:
 
 ```
+opkg install tar
 cd /opt/sbin
 tar -xvf xkeen.tar --overwrite && rm xkeen.tar
 xkeen -io
