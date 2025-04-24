@@ -34,8 +34,7 @@ Telegram <https://t.me/+SZWOjSlvYpdlNmMy> (обсуждение, инструк�
 ## Порядок установки:
 ```
 opkg install curl
-curl -sOfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh
-chmod +x ./install.sh
+curl -OfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh && chmod +x ./install.sh
 ./install.sh
 ```
 Альтернативный вариант установки:
