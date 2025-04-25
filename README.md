@@ -31,7 +31,7 @@ Telegram <https://t.me/+SZWOjSlvYpdlNmMy> (обсуждение, инструк�
 - Возможность установки GeoSite Antizapret (база повреждена в репозитории)
 - Конфигурационный файл transport.json (не используется новыми ядрами xray-core)
 
-## Порядок установки:
+## Порядок установки
 ```
 opkg install curl
 curl -OfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh && chmod +x ./install.sh
