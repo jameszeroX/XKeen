@@ -37,12 +37,13 @@ opkg install curl
 curl -OfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh && chmod +x ./install.sh
 ./install.sh
 ```
-Альтернативный вариант установки:
+Альтернативный вариант:
 ```
 opkg install ca-certificates wget-ssl tar
 wget "https://cdn.jsdelivr.net/gh/jameszeroX/XKeen@main/xkeen.tar" && tar -xvf xkeen.tar -C /opt/sbin --overwrite > /dev/null && rm xkeen.tar
 xkeen -i
 ```
+Установка [OffLine](https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md) 
 
 ## Поддержка
 Желающие угостить меня пивом, такую возможность имеют)
