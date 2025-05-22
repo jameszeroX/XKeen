@@ -5,6 +5,8 @@ FAQ <https://jameszero.net/faq-xkeen.htm>
 
 Telegram <https://t.me/+SZWOjSlvYpdlNmMy> (обсуждение, инструкции по установке, советы по использованию)
 
+Xray-core <https://github.com/XTLS/Xray-core>
+
 ## Версия 1.1.3.5
 
 Сравнение форка с оригинальным XKeen
