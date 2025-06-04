@@ -16,4 +16,4 @@ tar -xvf xkeen.tar -C /opt/sbin --overwrite > /dev/null && rm xkeen.tar
 xkeen -i
 ```
 
-Обсудить работу XKeen и сообщить об ошибках в beta-версии можно в телеграм-чате https://t.me/+SZWOjSlvYpdlNmMy
+Обсудить работу XKeen и сообщить об ошибках beta-версии можно в телеграм-чате https://t.me/+SZWOjSlvYpdlNmMy
