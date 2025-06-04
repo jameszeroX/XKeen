@@ -15,3 +15,5 @@ curl -L https://raw.githubusercontent.com/jameszeroX/xkeen/refs/heads/main/beta/
 tar -xvf xkeen.tar -C /opt/sbin --overwrite > /dev/null && rm xkeen.tar
 xkeen -i
 ```
+
+Обсудить работу XKeen и сообщить об ошибках в beta-версии можно в телеграм-чате https://t.me/+SZWOjSlvYpdlNmMy
