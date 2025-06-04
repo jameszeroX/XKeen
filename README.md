@@ -45,7 +45,8 @@ curl -OfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh && 
 Альтернативный вариант:
 ```
 opkg install ca-certificates wget-ssl tar
-wget "https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar" && tar -xvf xkeen.tar -C /opt/sbin --overwrite > /dev/null && rm xkeen.tar
+wget "https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar"
+tar -xvf xkeen.tar -C /opt/sbin --overwrite > /dev/null && rm xkeen.tar
 xkeen -i
 ```
 Установка [OffLine](https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md) 
