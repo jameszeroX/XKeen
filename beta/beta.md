@@ -11,7 +11,7 @@
 Порядок установки:
 ```
 opkg install tar
-curl -L https://raw.githubusercontent.com/jameszeroX/xkeen/refs/heads/main/beta/xkeen.tar --output xkeen.tar
+curl -L https://raw.githubusercontent.com/jameszeroX/xkeen/main/beta/xkeen.tar --output xkeen.tar
 tar -xvf xkeen.tar -C /opt/sbin --overwrite > /dev/null && rm xkeen.tar
 xkeen -i
 ```
