@@ -1,0 +1,45 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (e.g., 1.0.0)"
+        required: true
+        type: string
+      prerelease:
+        description: "Is this a pre-release?"
+        required: true
+        default: "false"
+        type: boolean
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up variables
+        id: vars
+        run: |
+          echo "VERSION=v${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          echo "ARCHIVE_NAME=XKeen-v${{ github.event.inputs.version }}.tar.gz" >> $GITHUB_ENV
+
+      - name: Create scripts archive
+        run: |
+          mkdir -p dist
+          cd scripts
+          find . -type f -o -type l | sed 's|^\./||' | tar -czf "../dist/${ARCHIVE_NAME}" -T -
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: ${{ env.VERSION }}
+          prerelease: ${{ github.event.inputs.prerelease }}
+          files: |
+            dist/${{ env.ARCHIVE_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
