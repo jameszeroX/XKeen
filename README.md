@@ -39,6 +39,7 @@ Xray-core <https://github.com/XTLS/Xray-core>
 ## Порядок установки
 ```
 opkg update >/dev/null 2>&1
+opkg upgrade >/dev/null 2>&1
 opkg install curl tar
 curl -OfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh && chmod +x ./install.sh
 ./install.sh
@@ -46,6 +47,7 @@ curl -OfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh && 
 Альтернативный вариант:
 ```
 opkg update >/dev/null 2>&1
+opkg upgrade >/dev/null 2>&1
 opkg install ca-certificates wget-ssl tar
 wget "https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar"
 tar -xvf xkeen.tar -C /opt/sbin --overwrite > /dev/null && rm xkeen.tar
