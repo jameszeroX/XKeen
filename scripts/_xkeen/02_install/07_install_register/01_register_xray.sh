@@ -22,15 +22,15 @@ register_xray_list() {
     touch xray_s.list
 
 # Генерация списка файлов
-    find /opt/etc/xray/dat -type f | while read file; do
+    find /opt/etc/xray/dat -type f | while read -r file; do
         echo "$file" >> xray_s.list
     done
 
-    find /opt/etc/xray/configs -type f | while read file; do
+    find /opt/etc/xray/configs -type f | while read -r file; do
         echo "$file" >> xray_s.list
     done
 
-    find /opt/var/log/xray -type f | while read file; do
+    find /opt/var/log/xray -type f | while read -r file; do
         echo "$file" >> xray_s.list
     done
 
@@ -61,7 +61,7 @@ register_xray_status() {
     echo "Architecture: $status_architecture" >> new_entry.txt
     echo "Conffiles:" >> new_entry.txt
 
-    while read line; do
+    while read -r line; do
         filename=$(echo $line | cut -d' ' -f1)
         hash=$(echo $line | cut -d' ' -f2)
         echo "/opt/etc/xray/configs/$filename $hash" >> new_entry.txt

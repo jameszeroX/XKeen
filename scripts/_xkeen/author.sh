@@ -9,7 +9,7 @@ author_donate() {
     echo "     3. Crypto"
 	echo
 
-    read -p "  Ваш выбор: " choice
+    read -r -p "  Ваш выбор: " choice
 
     case "$choice" in
         0)

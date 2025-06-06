@@ -32,7 +32,7 @@ EOF
         "${install_script}"
         
         # Проверка успешности установки и запись информации в соответствующие логи
-        if [ $? -eq 0 ]; then
+        if [ -s "${initd_dir}/S99xkeenstart" ]; then
             info_content="${info_content}\t[info] Установка xkeen успешно завершена"
             echo "" >> "${xkeen_info_log}"
             echo "[start] Установка xkeen" >> "${xkeen_info_log}"

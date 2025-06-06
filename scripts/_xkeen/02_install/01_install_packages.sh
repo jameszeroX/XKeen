@@ -10,9 +10,10 @@ install_packages() {
         opkg install "${package_name}" &>/dev/null
 
         # Проверка успешности установки
-        if [ $? -eq 0 ]; then
-            package_status="installed_xkeen"
-        fi
+       if opkg list-installed | grep -q "^${package_name}"; then
+           package_status="installed_xkeen"
+       fi
+
     fi
 }
 

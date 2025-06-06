@@ -8,10 +8,10 @@
 PATH="/opt/bin:/opt/sbin:/sbin:/bin:/usr/sbin:/usr/bin"
 
 # Цвета
-color_green="\033[32m"
-color_red="\033[31m"
-color_yellow="\033[33m"
-color_reset="\033[0m"
+green="\033[32m"
+red="\033[31m"
+yellow="\033[33m"
+reset="\033[0m"
 
 # Имена
 name_client="xray"
@@ -107,13 +107,13 @@ log_error_router() {
 
 log_error_terminal() {
     echo
-    echo -e "${color_red}Ошибка:${color_reset} $1" >&2
+    echo -e "${red}Ошибка:${reset} $1" >&2
     exit 1
 }
 
 log_warning_terminal() {
     echo
-    echo -e "${color_yellow}Предупреждение:${color_reset} $1" >&2
+    echo -e "${yellow}Предупреждение:${reset} $1" >&2
 }
 
 log_clean() {
@@ -149,7 +149,7 @@ get_modules() {
                 log_error_terminal "
   Модуль ${module} не найден
   Невозможно запустить прокси в режиме ${mode_proxy} без него
-  Установите компоненты роутера '${color_yellow}IPv6${color_reset}' и '${color_yellow}Модули ядра Netfilter${color_reset}'
+  Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
   "
             fi
         done
@@ -161,7 +161,7 @@ get_modules() {
             log_warning_terminal "
   Модуль multiport не найден
   Невозможно использовать указанные порты без него
-  Установите компоненты роутера '${color_yellow}IPv6${color_reset}' и '${color_yellow}Модули ядра Netfilter${color_reset}'
+  Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
   
   Прокси будет работать на всех портах
   "
@@ -172,14 +172,14 @@ get_modules() {
                 port_donor=$(echo "$port_donor" | tr ',' '\n' | head -n 15 | tr '\n' ',' | sed 's/,$//')
                 log_warning_terminal "
   Количество проксируемых портов превышает лимит
-  Будут оставлены первые 15: ${color_yellow}$port_donor${color_reset}
+  Будут оставлены первые 15: ${yellow}$port_donor${reset}
   "
             fi
             if [ -n "$port_exclude" ] && [ $(echo "$port_exclude" | tr ',' '\n' | wc -l) -gt 15 ]; then
                 port_exclude=$(echo "$port_exclude" | tr ',' '\n' | head -n 15 | tr '\n' ',' | sed 's/,$//')
                 log_warning_terminal "
   Количество исключаемых портов превышает лимит
-  Будут оставлены первые 15: ${color_yellow}$port_exclude${color_reset}
+  Будут оставлены первые 15: ${yellow}$port_exclude${reset}
   "
             fi
         fi
@@ -192,7 +192,7 @@ get_modules() {
             log_warning_terminal "
   Модуль owner не найден
   Невозможно использовать DNS-сервер xray без него
-  Установите компоненты роутера '${color_yellow}IPv6${color_reset}' и '${color_yellow}Модули ядра Netfilter${color_reset}'
+  Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
   
   Прокси-клиент будет запущен с использованием DNS роутера
   "
@@ -206,7 +206,7 @@ get_keenetic_port() {
     keenetic_port=$(echo "$result" | jq -r '.port' 2>/dev/null)
     if [ "$keenetic_port" = "443" ]; then
         log_error_terminal "
-  ${color_red}Порт 443 занят${color_reset} сервисами Keenetic
+  ${red}Порт 443 занят${reset} сервисами Keenetic
   
   Освободите его на странице 'Пользователи и доступ' веб-интерфейса роутера
   "
@@ -327,14 +327,14 @@ get_policy_mark() {
     if ! proxy_status && [ -z "$policy_mark" ]; then
         if [ -z "${port_donor}" ]; then
             log_warning_terminal "
-  Политика '${color_green}XKeen${color_reset}' не найдена в веб-интерфейсе роутера
+  Политика '${green}XKeen${reset}' не найдена в веб-интерфейсе роутера
   Не определены целевые порты для XKeen
   Прокси будет запущен для всего устройства на всех портах
   "
             echo ""
         else
             log_warning_terminal "
-  Политика '${color_green}XKeen${color_reset}' не найдена в веб-интерфейсе роутера
+  Политика '${green}XKeen${reset}' не найдена в веб-интерфейсе роутера
   Определены целевые порты для XKeen
   Прокси будет запущен для всего устройства на портах ${port_donor}
   "
@@ -759,7 +759,7 @@ proxy_start() {
             fi
         fi
         if proxy_status; then
-            echo -e "  Прокси-клиент уже ${color_green}запущен${color_reset}"
+            echo -e "  Прокси-клиент уже ${green}запущен${reset}"
             log_error_terminal "Не удалось запустить $name_client, так как он уже запущен"
         else
             delay_increment=1
@@ -812,7 +812,7 @@ proxy_start() {
                 sleep "$current_delay"
                 if proxy_status; then
                     [ "$mode_proxy" != "Other" ] && configure_firewall
-                    echo -e "  Прокси-клиент ${color_green}запущен${color_reset}"
+                    echo -e "  Прокси-клиент ${green}запущен${reset}"
                     log_info_router "Прокси-клиент успешно запущен"
                     if [ "$check_fd" = "on" ] && [ -f "/tmp/start_fd" ] && [ ! -f "/tmp/observer_fd" ]; then
                         touch "/tmp/observer_fd"
@@ -823,7 +823,7 @@ proxy_start() {
                 current_delay=$((current_delay + delay_increment))
                 attempt=$((attempt + 1))
             done
-            echo -e "  ${color_red}Не удалось запустить${color_reset} прокси-клиент"
+            echo -e "  ${red}Не удалось запустить${reset} прокси-клиент"
             log_error_terminal "Не удалось запустить прокси-клиент"
         fi
     else
@@ -834,7 +834,7 @@ proxy_start() {
 # Остановка прокси-клиента
 proxy_stop() {
     if ! proxy_status; then
-        echo -e "  Прокси-клиент ${color_red}не запущен${color_reset}"
+        echo -e "  Прокси-клиент ${red}не запущен${reset}"
     else
         log_info_router "Инициирована остановка прокси-клиента"
         delay_increment=1
@@ -845,14 +845,14 @@ proxy_stop() {
             killall -q -9 "$name_client"
             sleep "$current_delay"
             if ! proxy_status; then
-                echo -e "  Прокси-клиент ${color_yellow}остановлен${color_reset}"
+                echo -e "  Прокси-клиент ${yellow}остановлен${reset}"
                 log_info_router "Прокси-клиент успешно остановлен"
                 return 0
             fi
             current_delay=$((current_delay + delay_increment))
             attempt=$((attempt + 1))
         done
-        echo -e "  Прокси-клиент ${color_red}не удалось остановить${color_reset}"
+        echo -e "  Прокси-клиент ${red}не удалось остановить${reset}"
         log_error_terminal "Не удалось остановить прокси-клиент"
     fi
 }
@@ -863,13 +863,13 @@ case "$1" in
     stop) proxy_stop ;;
     status)
         if proxy_status; then
-            echo -e "  Прокси-клиент ${color_green}запущен${color_reset}"
+            echo -e "  Прокси-клиент ${green}запущен${reset}"
         else
-            echo -e "  Прокси-клиент ${color_red}не запущен${color_reset}"
+            echo -e "  Прокси-клиент ${red}не запущен${reset}"
         fi
         ;;
     restart) proxy_stop; proxy_start "$2" ;;
-    *) echo -e "  Команды: ${color_green}start${color_reset} | ${color_red}stop${color_reset} | ${color_yellow}restart${color_reset} | status" ;;
+    *) echo -e "  Команды: ${green}start${reset} | ${red}stop${reset} | ${yellow}restart${reset} | status" ;;
 esac
 
 exit 0

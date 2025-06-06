@@ -5,63 +5,63 @@ logs_packages_info_xkeen() {
     error_content=""
 
     if [ "$info_packages_lscpu" = "installed" ]; then
-        info_content="${info_content}    [info] lscpu установлен\n"
+        info_content="${info_content}  [info] lscpu установлен\n"
     else
-        error_content="${error_content}    [error] lscpu не установлен\n"
+        error_content="${error_content}  [error] lscpu не установлен\n"
     fi
 
 	if [ "$info_packages_uname" = "installed" ]; then
-        info_content="${info_content}    [info] coreutils-uname установлен\n"
+        info_content="${info_content}  [info] coreutils-uname установлен\n"
     else
-        error_content="${error_content}    [error] coreutils-uname не установлен\n"
+        error_content="${error_content}  [error] coreutils-uname не установлен\n"
     fi
 
 	if [ "$info_packages_nohup" = "installed" ]; then
-        info_content="${info_content}    [info] coreutils-nohup установлен\n"
+        info_content="${info_content}  [info] coreutils-nohup установлен\n"
     else
-        error_content="${error_content}    [error] coreutils-nohup не установлен\n"
+        error_content="${error_content}  [error] coreutils-nohup не установлен\n"
     fi
 
     if [ "$info_packages_curl" = "installed" ]; then
-        info_content="${info_content}    [info] curl установлен\n"
+        info_content="${info_content}  [info] curl установлен\n"
     else
-        error_content="${error_content}    [error] curl не установлен\n"
+        error_content="${error_content}  [error] curl не установлен\n"
     fi
 
     if [ "$info_packages_jq" = "installed" ]; then
-        info_content="${info_content}    [info] jq установлен\n"
+        info_content="${info_content}  [info] jq установлен\n"
     else
-        error_content="${error_content}    [error] jq не установлен\n"
+        error_content="${error_content}  [error] jq не установлен\n"
     fi
 
     if [ "$info_packages_libc" = "installed" ]; then
-        info_content="${info_content}    [info] libc установлен\n"
+        info_content="${info_content}  [info] libc установлен\n"
     else
-        error_content="${error_content}    [error] libc не установлен\n"
+        error_content="${error_content}  [error] libc не установлен\n"
     fi
 
     if [ "$info_packages_libssp" = "installed" ]; then
-        info_content="${info_content}    [info] libssp установлен\n"
+        info_content="${info_content}  [info] libssp установлен\n"
     else
-        error_content="${error_content}    [error] libssp не установлен\n"
+        error_content="${error_content}  [error] libssp не установлен\n"
     fi
 
     if [ "$info_packages_librt" = "installed" ]; then
-        info_content="${info_content}    [info] librt установлен\n"
+        info_content="${info_content}  [info] librt установлен\n"
     else
-        error_content="${error_content}    [error] librt не установлен\n"
+        error_content="${error_content}  [error] librt не установлен\n"
     fi
 
     if [ "$info_packages_libpthread" = "installed" ]; then
-        info_content="${info_content}    [info] libpthread установлен\n"
+        info_content="${info_content}  [info] libpthread установлен\n"
     else
-        error_content="${error_content}    [error] libpthread не установлен\n"
+        error_content="${error_content}  [error] libpthread не установлен\n"
     fi
 
     if [ "$info_packages_cabundle" = "installed" ]; then
-        info_content="${info_content}    [info] ca-bundle установлен\n"
+        info_content="${info_content}  [info] ca-bundle установлен\n"
     else
-        error_content="${error_content}    [error] ca-bundle не установлен\n"
+        error_content="${error_content}  [error] ca-bundle не установлен\n"
     fi
 
     if [ -n "$info_content" ]; then
@@ -85,9 +85,9 @@ logs_cpu_info_xkeen() {
     error_content=""
 
     if [ -n "$architecture" ]; then
-        info_content="    [info] Набор инструкций процессора: $architecture\n"
+        info_content="  [info] Набор инструкций процессора: $architecture\n"
     else
-        error_content="    [error] Набор инструкций процессора: Не удалось определить\n"
+        error_content="  [error] Набор инструкций процессора: Не удалось определить\n"
     fi
 
     if [ -n "$architecture" ]; then
@@ -118,7 +118,7 @@ logs_xray_info_xkeen() {
     if [ "$xray_installed" = "installed" ]; then
         echo "" >> "$xkeen_info_log"
         echo "[start] Проверка установки xray" >> "$xkeen_info_log"
-        echo "    [info] xray установлен" >> "$xkeen_info_log"
+        echo "  [info] xray установлен" >> "$xkeen_info_log"
         echo "[end] Проверка установки xray выполнена" >> "$xkeen_info_log"
         echo "" >> "$xkeen_info_log"
     fi
@@ -126,7 +126,7 @@ logs_xray_info_xkeen() {
     if [ "$xray_installed" = "not_installed" ]; then
         echo "" >> "$xkeen_error_log"
         echo "[start] Проверка установки xray" >> "$xkeen_error_log"
-        echo "    [error] xray не установлен" >> "$xkeen_error_log"
+        echo "  [error] xray не установлен" >> "$xkeen_error_log"
         echo "[end] Проверка установки xray выполнена" >> "$xkeen_error_log"
         echo "" >> "$xkeen_error_log"
     fi
@@ -443,19 +443,19 @@ logs_download_xray_info_xkeen() {
     error_content=""
 
     if [ -n "$download_url" ]; then
-        info_content="    [info] URL для скачивания Xray найден"
+        info_content="  [info] URL для скачивания Xray найден"
     else
-        error_content="    [error] URL для скачивания Xray не найден"
+        error_content="  [error] URL для скачивания Xray не найден"
     fi
 
     if [ -e "$tmp_dir/xray.ipk" ]; then
         if [ -s "$tmp_dir/xray.ipk" ]; then
-            result_content="    [info] xray успешно загружен"
+            result_content="  [info] xray успешно загружен"
         else
-            error_content="    [error] Загрузка Xray не удалась. Некорректная ссылка"
+            error_content="  [error] Загрузка Xray не удалась. Некорректная ссылка"
         fi
     else
-        error_content="    [error] Загрузка Xray не удалась. Архив не найден"
+        error_content="  [error] Загрузка Xray не удалась. Архив не найден"
     fi
 
     if [ -n "$error_content" ]; then
@@ -483,63 +483,63 @@ logs_choice_geoip_info_xkeen() {
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Установить: AntiFilter"
+        info_content="${info_content}  [info] Установить: AntiFilter"
     fi
 
     if [ "$update_antifilter_geoip" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Обновить: AntiFilter"
+        info_content="${info_content}  [info] Обновить: AntiFilter"
     fi
 
     if [ "$install_v2fly_geoip" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Установить: v2fly"
+        info_content="${info_content}  [info] Установить: v2fly"
     fi
 
     if [ "$update_v2fly_geoip" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Обновить: v2fly"
+        info_content="${info_content}  [info] Обновить: v2fly"
     fi
 
     if [ "$install_zkeenip_geoip" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Установить: ZkeenIP"
+        info_content="${info_content}  [info] Установить: ZkeenIP"
     fi
 
     if [ "$update_zkeenip_geoip" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Обновить: ZkeenIP"
+        info_content="${info_content}  [info] Обновить: ZkeenIP"
     fi
 
     if [ "$choice_delete_geoip_antifilter_select" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Удаление: AntiFilter"
+        info_content="${info_content}  [info] Удаление: AntiFilter"
     fi
 
     if [ "$choice_delete_geoip_v2fly_select" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Удаление: v2fly"
+        info_content="${info_content}  [info] Удаление: v2fly"
     fi
 
     if [ "$choice_delete_geoip_zkeenip_select" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Удаление: ZkeenIP"
+        info_content="${info_content}  [info] Удаление: ZkeenIP"
     fi
 
     if [ -n "$info_content" ]; then
@@ -558,63 +558,63 @@ logs_choice_geosite_info_xkeen() {
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Установить: AntiFilter"
+        info_content="${info_content}  [info] Установить: AntiFilter"
     fi
 
     if [ "$update_antifilter_geosite" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Обновить: AntiFilter"
+        info_content="${info_content}  [info] Обновить: AntiFilter"
     fi
 
     if [ "$install_v2fly_geosite" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Установить: v2fly"
+        info_content="${info_content}  [info] Установить: v2fly"
     fi
 
     if [ "$update_v2fly_geosite" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Обновить: v2fly"
+        info_content="${info_content}  [info] Обновить: v2fly"
     fi
 
     if [ "$install_zkeen_geosite" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Установить: Zkeen"
+        info_content="${info_content}  [info] Установить: Zkeen"
     fi
 
     if [ "$update_zkeen_geosite" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Обновить: Zkeen"
+        info_content="${info_content}  [info] Обновить: Zkeen"
     fi
 
     if [ "$choice_delete_geosite_antifilter_select" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Удаление: AntiFilter"
+        info_content="${info_content}  [info] Удаление: AntiFilter"
     fi
 
     if [ "$choice_delete_geosite_v2fly_select" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Удаление: v2fly"
+        info_content="${info_content}  [info] Удаление: v2fly"
     fi
 
     if [ "$choice_delete_geosite_zkeen_select" = true ]; then
         if [ -n "$info_content" ]; then
             info_content="${info_content}\n"
         fi
-        info_content="${info_content}    [info] Удаление: Zkeen"
+        info_content="${info_content}  [info] Удаление: Zkeen"
     fi
 
     if [ -n "$info_content" ]; then
@@ -808,17 +808,17 @@ logs_choice_update_cron_info_xkeen() {
     has_missing_cron_tasks=false
     has_updatable_cron_tasks=false
 
-    [ "$choice_geofile_cron_select" != true ] && has_missing_cron_tasks=true
-    [ "$choice_xkeen_cron_select" != true ] && has_missing_cron_tasks=true
-    [ "$choice_xray_cron_select" != true ] && has_missing_cron_tasks=true
+  [ "$choice_geofile_cron_select" != true ] && has_missing_cron_tasks=true
+  [ "$choice_xkeen_cron_select" != true ] && has_missing_cron_tasks=true
+  [ "$choice_xray_cron_select" != true ] && has_missing_cron_tasks=true
 
-    [ "$choice_geofile_cron_select" = true ] || [ "$choice_xkeen_cron_select" = true ] || [ "$choice_xray_cron_select" = true ] && has_updatable_cron_tasks=true
+  [ "$choice_geofile_cron_select" = true ] || [ "$choice_xkeen_cron_select" = true ] || [ "$choice_xray_cron_select" = true ] && has_updatable_cron_tasks=true
 
     if [ "$has_missing_cron_tasks" = true ]; then
         info_content="${info_content}\n\t[info] Будут включены следующие задачи автоматического обновления:\n"
-        [ "$choice_geofile_cron_select" != true ] && info_content="${info_content}\t\t[info] GeoFile\n"
-        [ "$choice_xkeen_cron_select" != true ] && info_content="${info_content}\t\t[info] Xkeen\n"
-        [ "$choice_xray_cron_select" != true ] && info_content="${info_content}\t\t[info] Xray\n"
+      [ "$choice_geofile_cron_select" != true ] && info_content="${info_content}\t\t[info] GeoFile\n"
+      [ "$choice_xkeen_cron_select" != true ] && info_content="${info_content}\t\t[info] Xkeen\n"
+      [ "$choice_xray_cron_select" != true ] && info_content="${info_content}\t\t[info] Xray\n"
     fi
 
     if [ -n "$info_content" ]; then

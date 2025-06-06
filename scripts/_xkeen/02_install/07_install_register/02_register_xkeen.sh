@@ -28,13 +28,13 @@ register_xkeen_list() {
     touch xkeen.list
 
     # Генерация списка файлов и директорий
-    find /opt/sbin/.xkeen -mindepth 1 | while read entry; do
+    find /opt/sbin/.xkeen -mindepth 1 | while read -r entry; do
         echo "$entry" >> xkeen.list
     done
 
     # Добавление дополнительных путей
     echo "/opt/sbin/xkeen" >> xkeen.list
-	echo "/opt/sbin/.xkeen" >> xkeen.list
+    echo "/opt/sbin/.xkeen" >> xkeen.list
     echo "/opt/var/log/xkeen/error.log" >> xkeen.list
     echo "/opt/var/log/xkeen/info.log" >> xkeen.list
     echo "/opt/var/log/xkeen" >> xkeen.list

@@ -17,7 +17,7 @@ install_geoip() {
         antifilterip_dat=$(mktemp)
         if curl -L -o "$antifilterip_dat" "https://github.com/Skrill0/AntiFilter-IP/releases/latest/download/geoip.dat" > /dev/null 2>&1; then
             mv "$antifilterip_dat" "$geo_dir/geoip_antifilter.dat"
-            if [ $? -eq 0 ] && [ -s "$geo_dir/geoip_antifilter.dat" ]; then
+            if [ -s "$geo_dir/geoip_antifilter.dat" ]; then
                 if [ "$update_antifilter_geoip_msg" = true ]; then
                     echo -e "  GeoIP AntiFilter ${green}успешно обновлен${reset}"
                 else
@@ -37,7 +37,7 @@ install_geoip() {
         v2flyip_dat=$(mktemp)
         if curl -L -o "$v2flyip_dat" "https://github.com/loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat" > /dev/null 2>&1; then
             mv "$v2flyip_dat" "$geo_dir/geoip_v2fly.dat"
-            if [ $? -eq 0 ] && [ -s "$geo_dir/geoip_v2fly.dat" ]; then
+            if [ -s "$geo_dir/geoip_v2fly.dat" ]; then
                 if [ "$update_v2fly_geoip_msg" = true ]; then
                     echo -e "  GeoIP V2Fly ${green}успешно обновлен${reset}"
                 else
@@ -59,7 +59,7 @@ install_geoip() {
             rm -f "$geo_dir/zkeenip.dat" "$geo_dir/geoip_zkeenip.dat"
             mv "$zkeenip_dat" "$geo_dir/geoip_zkeenip.dat"
             ln -s "$geo_dir/geoip_zkeenip.dat" "$geo_dir/zkeenip.dat"
-            if [ $? -eq 0 ] && [ -s "$geo_dir/geoip_zkeenip.dat" ]; then
+            if [ -s "$geo_dir/geoip_zkeenip.dat" ]; then
                 if [ "$update_zkeenip_geoip_msg" = true ]; then
                     echo -e "  GeoIP ZkeenIP ${green}успешно обновлен${reset}"
                 else
@@ -79,7 +79,7 @@ install_geoip() {
         antifilterip_dat=$(mktemp)
         if curl -L -o "$antifilterip_dat" "https://github.com/Skrill0/AntiFilter-IP/releases/latest/download/geoip.dat" > /dev/null 2>&1; then
             mv "$antifilterip_dat" "$geo_dir/geoip_antifilter.dat"
-            if [ $? -eq 0 ] && [ -s "$geo_dir/geoip_antifilter.dat" ]; then
+            if [ -s "$geo_dir/geoip_antifilter.dat" ]; then
                 echo -e "  GeoIP AntiFilter ${green}успешно обновлен${reset}"
             else
                 echo -e "  ${red}Неизвестная ошибка${reset} при обновлении GeoIP AntiFilter"
@@ -95,7 +95,7 @@ install_geoip() {
         v2flyip_dat=$(mktemp)
         if curl -L -o "$v2flyip_dat" "https://github.com/loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat" > /dev/null 2>&1; then
             mv "$v2flyip_dat" "$geo_dir/geoip_v2fly.dat"
-            if [ $? -eq 0 ] && [ -s "$geo_dir/geoip_v2fly.dat" ]; then
+            if [ -s "$geo_dir/geoip_v2fly.dat" ]; then
                 echo -e "  GeoIP V2Fly ${green}успешно обновлен${reset}"
             else
                 echo -e "  ${red}Неизвестная ошибка${reset} при обновлении GeoIP V2Fly"
@@ -113,7 +113,7 @@ install_geoip() {
             rm -f "$geo_dir/zkeenip.dat" "$geo_dir/geoip_zkeenip.dat"
             mv "$zkeenip_dat" "$geo_dir/geoip_zkeenip.dat"
             ln -s "$geo_dir/geoip_zkeenip.dat" "$geo_dir/zkeenip.dat"
-            if [ $? -eq 0 ] && [ -s "$geo_dir/geoip_zkeenip.dat" ]; then
+            if [ -s "$geo_dir/geoip_zkeenip.dat" ]; then
                 echo -e "  GeoIP ZkeenIP ${green}успешно обновлен${reset}"
             else
                 echo -e "  ${red}Неизвестная ошибка${reset} при обновлении GeoIP ZkeenIP"

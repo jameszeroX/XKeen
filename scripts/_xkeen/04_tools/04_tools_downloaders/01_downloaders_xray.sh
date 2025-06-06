@@ -33,7 +33,7 @@ download_xray() {
         echo " 0) Пропустить загрузку Xray"
 
         printf "\n  Введите порядковый номер релиза Xray (или 0 для пропуска): "
-        read choice
+        read -r choice
 
         if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
             printf "  ${red}Некорректный${reset} ввод. Пожалуйста, введите число\n"

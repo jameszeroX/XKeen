@@ -27,7 +27,7 @@ choice_cron_time() {
 
             day_choice=
             while true; do
-                read -p "  Ваш выбор: " day_choice
+                read -r -p "  Ваш выбор: " day_choice
                 if [[ "$day_choice" =~ ^[0-8]$ ]]; then
                     break
                 else
@@ -40,32 +40,32 @@ choice_cron_time() {
             else
                 if [ "$day_choice" -eq 8 ]; then
                     echo
-                    read -p "  Выберите час (0-23): " hour
+                    read -r -p "  Выберите час (0-23): " hour
                     while [[ ! "$hour" =~ ^[0-9]+$ || "$hour" -lt 0 || "$hour" -gt 23 ]]; do
                         echo -e "  ${red}Некорректный час.${reset} Пожалуйста, попробуйте снова"
-                        read -p "  Введите значение от 0 до 23: " hour
+                        read -r -p "  Введите значение от 0 до 23: " hour
                     done
 
-                    read -p "  Выберите минуту (0-59): " minute
+                    read -r -p "  Выберите минуту (0-59): " minute
                     while [[ ! "$minute" =~ ^[0-9]+$ || "$minute" -lt 0 || "$minute" -gt 59 ]]; do
                         echo -e "  ${red}Некорректные минуты.${reset} Пожалуйста, попробуйте снова"
-                        read -p "  Введите значение от 0 до 59: " minute
+                        read -r -p "  Введите значение от 0 до 59: " minute
                     done
 
                     cron_expression="$minute $hour * * *"
                     cron_display="$minute $hour * * *"
                 else
                     echo
-                    read -p "  Выберите час (0-23): " hour
+                    read -r -p "  Выберите час (0-23): " hour
                     while [[ ! "$hour" =~ ^[0-9]+$ || "$hour" -lt 0 || "$hour" -gt 23 ]]; do
                         echo -e "  ${red}Некорректный час.${reset} Пожалуйста, попробуйте снова"
-                        read -p "  Введите значение от 0 до 23: " hour
+                        read -r -p "  Введите значение от 0 до 23: " hour
                     done
 
-                    read -p "  Выберите минуту (0-59): " minute
+                    read -r -p "  Выберите минуту (0-59): " minute
                     while [[ ! "$minute" =~ ^[0-9]+$ || "$minute" -lt 0 || "$minute" -gt 59 ]]; do
                         echo -e "  ${red}Некорректные минуты.${reset} Пожалуйста, попробуйте снова"
-                        read -p "  Введите значение от 0 до 59: " minute
+                        read -r -p "  Введите значение от 0 до 59: " minute
                     done
 
                     case "$day_choice" in

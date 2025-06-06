@@ -31,7 +31,7 @@ download_mihomo() {
         echo " 0) Пропустить загрузку Mihomo"
 
         printf "\n  Введите порядковый номер релиза Mihomo (или 0 для пропуска): "
-        read choice
+        read -r choice
 
         if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
             printf "  ${red}Некорректный${reset} ввод. Пожалуйста, введите число\n"

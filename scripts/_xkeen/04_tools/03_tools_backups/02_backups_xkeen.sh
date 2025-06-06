@@ -11,7 +11,7 @@ backup_xkeen() {
     # Переименование скрытой директории .xkeen в _xkeen в резервной копии
     mv "$backup_dir/.xkeen" "$backup_dir/_xkeen"
 
-    if [ $? -eq 0 ]; then
+    if [ -s "$backup_dir/xkeen" ]; then
         echo -e "  Резервная копия XKeen создана: ${yellow}${current_datetime}_xkeen_v${xkeen_current_version}${reset}"
     else
         echo -e "  ${red}Ошибка при создании резервной копии XKeen.${reset}"

@@ -58,5 +58,5 @@ tests_ports_client() {
         echo -e "  $name_client ${red}не слушает${reset} на каких-либо портах"
     fi
 
-    break
+    return 1
 }

@@ -17,7 +17,7 @@ install_geosite() {
         antifilter_dat=$(mktemp)
         if curl -L -o "$antifilter_dat" "https://github.com/Skrill0/AntiFilter-Domains/releases/latest/download/geosite.dat" > /dev/null 2>&1; then
             mv "$antifilter_dat" "$geo_dir/geosite_antifilter.dat"
-            if [ $? -eq 0 ] && [ -s "$geo_dir/geosite_antifilter.dat" ]; then
+            if [ -s "$geo_dir/geosite_antifilter.dat" ]; then
                 if [ "$update_antifilter_geosite_msg" = true ]; then
                     echo -e "  GeoSite AntiFilter ${green}успешно обновлен${reset}"
                 else
@@ -37,7 +37,7 @@ install_geosite() {
         v2fly_dat=$(mktemp)
         if curl -L -o "$v2fly_dat" "https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat" > /dev/null 2>&1; then
             mv "$v2fly_dat" "$geo_dir/geosite_v2fly.dat"
-            if [ $? -eq 0 ] && [ -s "$geo_dir/geosite_v2fly.dat" ]; then
+            if [ -s "$geo_dir/geosite_v2fly.dat" ]; then
                 if [ "$update_v2fly_geosite_msg" = true ]; then
                     echo -e "  GeoSite V2Fly ${green}успешно обновлен${reset}"
                 else
@@ -59,7 +59,7 @@ install_geosite() {
             rm -f "$geo_dir/zkeen.dat" "$geo_dir/geosite_zkeen.dat"
             mv "$zkeen_dat" "$geo_dir/geosite_zkeen.dat"
             ln -s "$geo_dir/geosite_zkeen.dat" "$geo_dir/zkeen.dat"
-            if [ $? -eq 0 ] && [ -s "$geo_dir/geosite_zkeen.dat" ]; then
+            if [ -s "$geo_dir/geosite_zkeen.dat" ]; then
                 if [ "$update_zkeen_geosite_msg" = true ]; then
                     echo -e "  GeoSite Zkeen ${green}успешно обновлен${reset}"
                 else
@@ -79,7 +79,7 @@ install_geosite() {
         antifilter_dat=$(mktemp)
         if curl -L -o "$antifilter_dat" "https://github.com/Skrill0/AntiFilter-Domains/releases/latest/download/geosite.dat" > /dev/null 2>&1; then
             mv "$antifilter_dat" "$geo_dir/geosite_antifilter.dat"	
-            if [ $? -eq 0 ] && [ -s "$geo_dir/geosite_antifilter.dat" ]; then
+            if [ -s "$geo_dir/geosite_antifilter.dat" ]; then
                 echo -e "  GeoSite AntiFilter ${green}успешно обновлен${reset}"
             else
                 echo -e "  ${red}Неизвестная ошибка${reset} при обновлении GeoSite AntiFilter"
@@ -95,7 +95,7 @@ install_geosite() {
         v2fly_dat=$(mktemp)
         if curl -L -o "$v2fly_dat" "https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat" > /dev/null 2>&1; then
             mv "$v2fly_dat" "$geo_dir/geosite_v2fly.dat"
-            if [ $? -eq 0 ] && [ -s "$geo_dir/geosite_v2fly.dat" ]; then
+            if [ -s "$geo_dir/geosite_v2fly.dat" ]; then
                 echo -e "  GeoSite V2Fly ${green}успешно обновлен${reset}"
             else
                 echo -e "  ${red}Неизвестная ошибка${reset} при обновлении GeoSite V2Fly"
@@ -113,7 +113,7 @@ install_geosite() {
             rm -f "$geo_dir/zkeen.dat" "$geo_dir/geosite_zkeen.dat"
             mv "$zkeen_dat" "$geo_dir/geosite_zkeen.dat"
             ln -s "$geo_dir/geosite_zkeen.dat" "$geo_dir/zkeen.dat"
-            if [ $? -eq 0 ] && [ -s "$geo_dir/geosite_zkeen.dat" ]; then
+            if [ -s "$geo_dir/geosite_zkeen.dat" ]; then
                 echo -e "  GeoSite Zkeen ${green}успешно обновлен${reset}"
             else
                 echo -e "  ${red}Неизвестная ошибка${reset} при обновлении GeoSite Zkeen"
