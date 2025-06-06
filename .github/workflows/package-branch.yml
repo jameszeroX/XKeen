@@ -1,4 +1,4 @@
-name: Package Script to `beta` branch
+name: Package Script to `test` branch
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-and-push-to-beta-branch:
+  build-and-push-to-test-branch:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,17 +26,17 @@ jobs:
           cd scripts
           find . -type f -o -type l | sed 's|^\./||' | tar -czf "../output/xkeen.tar.gz" -T -
 
-      - name: Switch to beta branch
+      - name: Switch to test branch
         run: |
-          git fetch origin beta
-          git checkout origin/beta -B beta
+          git fetch origin test
+          git checkout origin/test -B test
 
       - name: Copy archive to branch root
         run: |
           cp output/xkeen.tar.gz .
 
-      - name: Commit and push to beta branch
+      - name: Commit and push to test branch
         run: |
           git add xkeen.tar.gz
-          git commit -m "[automated] Update archive in beta branch" || echo "No changes"
-          git push origin beta
+          git commit -m "[automated] Update archive in test branch" || echo "No changes"
+          git push origin test
