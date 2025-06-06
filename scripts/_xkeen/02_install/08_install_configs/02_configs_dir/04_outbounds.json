@@ -1,0 +1,50 @@
+{
+  "outbounds": [
+
+    // Подключение через прокси
+    {
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "",    // IP-адрес или доменное имя сервера
+            "port": 443,    // Порт Reality. 443 обязателен
+            "users": [
+              {
+                "id": "",    // ID, присвоенный пользователю на сервере
+                "encryption": "none",
+                "flow": "xtls-rprx-vision",
+                "level": 0
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "publicKey": "",    // Public Key, присвоенный пользователю на сервере
+          "fingerprint": "chrome",    // Finger Print, указанный на сервере
+          "serverName": "",    // SNI, указанный на сервере
+          "shortId": "",    // Short ID, присвоенный пользователю на сервере
+          "spiderX": "/"
+        }
+      },
+      "tag": "vless-reality"
+    },
+
+    // Прямое подключение через провайдера
+    {
+      "protocol": "freedom",
+      "tag": "direct"
+    },
+
+    // Блокировка нежелательных подключений
+    {
+      "protocol": "blackhole",
+      "tag": "block"
+    }
+
+  ]
+}
