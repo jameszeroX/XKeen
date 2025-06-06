@@ -24,15 +24,15 @@ jobs:
         run: |
           mkdir -p output
           cd scripts
-          find . -type f -o -type l | sed 's|^\./||' | tar -czf "../output/XKeen.tar.gz" -T -
+          find . -type f -o -type l | sed 's|^\./||' | tar -czf "../output/xkeen.tar.gz" -T -
 
       - name: Move archive to beta folder in main
         run: |
           mkdir -p beta
-          mv output/XKeen.tar.gz beta/
+          mv output/xkeen.tar.gz beta/
 
       - name: Commit and push archive to beta folder
         run: |
-          git add beta/XKeen.tar.gz
+          git add beta/xkeen.tar.gz
           git commit -m "[automated] Update archive in beta folder of main branch" || echo "No changes"
           git push origin main

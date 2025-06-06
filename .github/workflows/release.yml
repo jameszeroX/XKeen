@@ -25,8 +25,8 @@ jobs:
         id: vars
         run: |
           echo "VERSION=v${{ github.event.inputs.version }}" >> $GITHUB_ENV
-          echo "ARCHIVE_NAME=XKeen-v${{ github.event.inputs.version }}.tar.gz" >> $GITHUB_ENV
-
+#          echo "ARCHIVE_NAME=xkeen-v${{ github.event.inputs.version }}.tar.gz" >> $GITHUB_ENV
+          echo "ARCHIVE_NAME=xkeen.tar.gz" >> $GITHUB_ENV 
       - name: Create scripts archive
         run: |
           mkdir -p dist

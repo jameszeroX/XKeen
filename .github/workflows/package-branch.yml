@@ -24,7 +24,7 @@ jobs:
         run: |
           mkdir -p output
           cd scripts
-          find . -type f -o -type l | sed 's|^\./||' | tar -czf "../output/XKeen.tar.gz" -T -
+          find . -type f -o -type l | sed 's|^\./||' | tar -czf "../output/xkeen.tar.gz" -T -
 
       - name: Switch to beta branch
         run: |
@@ -33,10 +33,10 @@ jobs:
 
       - name: Copy archive to branch root
         run: |
-          cp output/XKeen.tar.gz .
+          cp output/xkeen.tar.gz .
 
       - name: Commit and push to beta branch
         run: |
-          git add XKeen.tar.gz
+          git add xkeen.tar.gz
           git commit -m "[automated] Update archive in beta branch" || echo "No changes"
           git push origin beta
