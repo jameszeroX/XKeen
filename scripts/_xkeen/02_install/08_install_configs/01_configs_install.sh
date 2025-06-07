@@ -10,7 +10,7 @@ install_configs() {
 
     xkeen_files="$xkeen_conf_dir"/*.json
     for file in $xkeen_files; do
-        filename=$(basename "$file" .json)
+        filename=$(basename "$file")
         cp "$file" "$install_conf_dir/"
         echo -e "  Добавлен шаблон кофигурационного файла xray:"
         echo -e "  ${yellow}$filename${reset}"
