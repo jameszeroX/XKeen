@@ -553,40 +553,6 @@ while [ $# -gt 0 ]; do
     ;;
 
 
-    -rx)    # Зарегистрировать Xray
-        xkeen_info
-        clear
-        echo -e "  Регистрация ${yellow}Xray${reset}"
-        delete_register_xray
-        logs_delete_register_xray_info_xkeen
-        logs_delete_register_xray_info_console
-
-        echo -e "  ${yellow}Выполняется${reset} регистрация"
-        sleep 1
-        echo
-        echo -e "  ${yellow}Проверка${reset}"
-
-        register_xray_list
-        logs_register_xray_list_info_xkeen
-        logs_register_xray_list_info_console
-
-        register_xray_control
-        logs_register_xray_control_info_xkeen
-        logs_register_xray_control_info_console
-
-        register_xray_status
-        logs_register_xray_status_info_xkeen
-        logs_register_xray_status_info_console
-        fixed_register_packages
-
-        echo
-        echo -e "  Проверка регистрации ${green}завершена${reset}"
-
-        echo "  Регистрация Xray в системе завершена"
-        shift
-    ;;
-
-
     -ri)    # Создать правило автоматического запуска Xray
         clear
         $initd_dir/S24xray stop >/dev/null 2>&1
@@ -610,41 +576,6 @@ while [ $# -gt 0 ]; do
         shift
     ;;
 
-
-    -rk)    # Зарегистрировать XKeen
-        xkeen_info
-        clear
-        echo -e "  Регистрация ${yellow}XKeen${reset}"
-
-        delete_register_xkeen
-        logs_delete_register_xkeen_info_xkeen
-        logs_delete_register_xkeen_info_console
-
-        echo -e "  ${yellow}Выполняется${reset} регистрация"
-        sleep 1
-        echo
-        echo -e "  ${yellow}Проверка${reset} регистрации"
-
-        register_xkeen_list
-        logs_register_xkeen_list_info_xkeen
-        logs_register_xkeen_list_info_console
-
-        register_xkeen_control
-        logs_register_xkeen_control_info_xkeen
-        logs_register_xkeen_control_info_console
-
-        register_xkeen_status
-        logs_register_xkeen_status_info_xkeen
-        logs_register_xkeen_status_info_console
-
-        fixed_register_packages
-
-        echo
-        echo -e "  Проверка регистрации ${green}завершена${reset}"
-
-        echo "  Регистрация XKeen в системе завершена"
-        shift
-    ;;
 
     -dgc)    # Удалить задачу автообновления GeoFile
         info_cron
@@ -1324,7 +1255,7 @@ while [ $# -gt 0 ]; do
 
     -h)    # Помощь
         echo
-        echo -e "${light_blue}XKeen${reset} — утилита для обеспечения работы Xray на роутерах Keenetic"
+        echo -e "${light_blue}XKeen${reset} — утилита для обеспечения работы Xray и Mihomo на роутерах Keenetic"
         echo 
         echo -e "	Пример использования"
         echo -e "	xkeen -ap 80,443"
@@ -1345,9 +1276,9 @@ while [ $# -gt 0 ]; do
         echo -e "${yellow}Включение или изменение задачи автообновления${reset}"
         echo -e "	-ugc	${gray}	GeoFile${reset}"
         echo 
-        echo -e "${yellow}Регистрация${reset}"
-        echo -e "	-rk	${gray}	XKeen${reset}"
-        echo -e "	-rx	${gray}	Xray${reset}"
+        echo -e "${yellow}Регистрация в системе${reset}"
+        echo -e "	-rrk	${gray}	XKeen${reset}"
+        echo -e "	-rrx	${gray}	Xray${reset}"
         echo -e "	-ri	${gray}	Автоматический запуск XKeen средствами init.d${reset}"
         echo
         echo -e "${red}Удаление${reset} | Утилиты и компоненты"
@@ -1362,7 +1293,7 @@ while [ $# -gt 0 ]; do
         echo -e "${red}Удаление${reset} | Задачи автообновления"
         echo -e "	-dgc	${gray}	GeoFile${reset}"
         echo
-        echo -e "${red}Удаление${reset} | Регистрации"
+        echo -e "${red}Удаление${reset} | Регистрации в системе"
         echo -e "	-drk	${gray}	XKeen${reset}"
         echo -e "	-drx	${gray}	Xray${reset}"
         echo
@@ -1376,18 +1307,12 @@ while [ $# -gt 0 ]; do
         echo -e "	-dpe	${gray}	Удалить${reset}"
         echo -e "	-cpe	${gray}	Список${reset}"
         echo
-        echo -e "${green}Обновление регистрации утилит${reset}"
-        echo -e "	-rrk	${gray}	XKeen${reset}"
-        echo -e "	-rrx	${gray}	Xray${reset}"
-        echo
         echo -e "${green}Переустановка${reset}"
         echo -e "	-k	${gray}	XKeen${reset}"
         echo
-        echo -e "${green}Резервные копии${reset} | Создание"
-        echo -e "	-kb	${gray}	XKeen${reset}"
-        echo
-        echo -e "${green}Резервные копии${reset} | Восстановление последней${reset}"
-        echo -e "	-kbr	${gray}	XKeen${reset}"
+        echo -e "${green}Резервная копия XKeen${reset}"
+        echo -e "	-kb	${gray}	Создание{reset}"
+        echo -e "	-kbr	${gray}	Восстановление${reset}"
         echo
         echo -e "${light_blue}Проверки${reset}"
         echo -e "	-tpx	${gray}	Порты, шлюз и протокол прокси-клиента${reset}"
