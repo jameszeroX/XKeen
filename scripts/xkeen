@@ -118,10 +118,8 @@ while [ $# -gt 0 ]; do
 
         clear
         echo
-        echo -e "  ${yellow}Выполняется${reset} отмена регистрации XKeen"
         delete_register_xkeen
         logs_delete_register_xkeen_info_xkeen
-        logs_delete_register_xkeen_info_console
     
         echo -e "  ${yellow}Выполняется${reset} регистрация XKeen"
         register_xkeen_list
@@ -136,10 +134,8 @@ while [ $# -gt 0 ]; do
         logs_register_xkeen_status_info_xkeen
         logs_register_xkeen_status_info_console
 
-        echo -e "  ${yellow}Выполняется${reset} отмена регистрации Xray"
         delete_register_xray
         logs_delete_register_xray_info_xkeen
-        logs_delete_register_xray_info_console
 
         echo -e "  ${yellow}Выполняется${reset} регистрация Xray"
         register_xray_list
@@ -176,7 +172,6 @@ while [ $# -gt 0 ]; do
         register_mihomo
 
         # Удаляем временные файлы
-        echo
         delete_tmp
         logs_delete_tmp_info_xkeen
 
@@ -274,10 +269,8 @@ while [ $# -gt 0 ]; do
         logs_install_configs_info_xkeen
 
         echo
-        echo -e "  ${yellow}Выполняется${reset} отмена регистрации XKeen"
         delete_register_xkeen
         logs_delete_register_xkeen_info_xkeen
-        logs_delete_register_xkeen_info_console
 
         echo -e "  ${yellow}Выполняется${reset} регистрация XKeen"
         register_xkeen_list
@@ -292,10 +285,8 @@ while [ $# -gt 0 ]; do
         logs_register_xkeen_status_info_xkeen
         logs_register_xkeen_status_info_console
 
-        echo -e "  ${yellow}Выполняется${reset} отмена регистрации Xray"
         delete_register_xray
         logs_delete_register_xray_info_xkeen
-        logs_delete_register_xray_info_console
 
         echo -e "  ${yellow}Выполняется${reset} регистрация Xray"
         register_xray_list
