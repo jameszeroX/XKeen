@@ -454,7 +454,7 @@ while [ $# -gt 0 ]; do
 
         else
             echo
-            echo -e "  Обновление ${yellow}Beta-версии XKeen${reset} параметром '-uk' ${red}не предусмотрено${reset}"
+            echo -e "  Обновление ${yellow}тестовой версии XKeen${reset} параметром '-uk' ${red}не предусмотрено${reset}"
         fi
         shift
     ;;
