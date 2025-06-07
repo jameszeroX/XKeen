@@ -37,10 +37,10 @@ choice_geosite() {
         echo "     5. $zkeen_choice Zkeen"
         echo 
         echo "     0. Пропустить"
-        echo 
-        [ "$has_updatable_geosite_bases" = true ] && echo "     99. Удалить установленные GeoSite"
+
+        [ "$has_updatable_geosite_bases" = true ] && echo && echo "     99. Удалить установленные GeoSite"
+
         echo
-        
         geosite_choices=$(input_digits "Ваш выбор: " "${red}Некорректный номер действия.${reset} Пожалуйста, выберите снова")
 
         for choice in $geosite_choices; do

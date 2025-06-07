@@ -39,10 +39,10 @@ choice_geoip() {
         echo "     5. $zkeenip_choice ZkeenIP"
         echo 
         echo "     0. Пропустить"
-        echo 
-        [ "$has_updatable_geoip_bases" = true ] && echo "     99. Удалить установленные GeoIP"
+
+        [ "$has_updatable_geoip_bases" = true ] && echo && echo "     99. Удалить установленные GeoIP"
+
         echo
-        
         geoip_choices=$(input_digits "Ваш выбор: " "${red}Некорректный номер действия.${reset} Пожалуйста, выберите снова")
 
         for choice in $geoip_choices; do

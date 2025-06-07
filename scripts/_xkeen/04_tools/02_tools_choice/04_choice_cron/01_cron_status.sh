@@ -12,7 +12,6 @@ choice_update_cron() {
         invalid_choice=false
 
         echo
-        echo
         echo -e "  ${yellow}Выберите номер действия${reset} для автообновления GeoFile"
         echo
 
@@ -20,10 +19,10 @@ choice_update_cron() {
 
         echo "     1. $geofile_choice задачу"
         echo "     0. Пропустить"
-        echo
-        [ "$has_updatable_cron_tasks" = true ] && echo "     99. Выключить автообновление"
-        echo
 
+        [ "$has_updatable_cron_tasks" = true ] && echo && echo "     99. Выключить автообновление"
+
+        echo
         update_choices=$(input_digits "Ваш выбор: " "${red}Некорректный номер действия. ${reset}Пожалуйста, выберите снова")
 
         for choice in $update_choices; do

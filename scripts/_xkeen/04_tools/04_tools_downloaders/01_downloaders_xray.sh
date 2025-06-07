@@ -28,9 +28,10 @@ download_xray() {
             printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
         fi
 
-        echo "$RELEASE_TAGS" | awk '{printf "%2d) %s\n", NR, $0}'
         echo ""
-        echo " 0) Пропустить загрузку Xray"
+        echo "$RELEASE_TAGS" | awk '{printf "    %2d. %s\n", NR, $0}'
+        echo ""
+        echo "     0. Пропустить загрузку Xray"
 
         printf "\n  Введите порядковый номер релиза Xray (или 0 для пропуска): "
         read -r choice

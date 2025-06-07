@@ -26,9 +26,10 @@ download_mihomo() {
             printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
         fi
 
-        echo "$RELEASE_TAGS" | awk '{printf "%2d) %s\n", NR, $0}'
         echo ""
-        echo " 0) Пропустить загрузку Mihomo"
+        echo "$RELEASE_TAGS" | awk '{printf "    %2d. %s\n", NR, $0}'
+        echo ""
+        echo "     0. Пропустить загрузку Mihomo"
 
         printf "\n  Введите порядковый номер релиза Mihomo (или 0 для пропуска): "
         read -r choice
