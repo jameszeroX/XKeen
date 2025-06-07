@@ -24,7 +24,6 @@ jobs:
         run: |
           mkdir -p output
           cd scripts
-          chmod +x xkeen
           find . -type f -o -type l | sed 's|^\./||' | tar -czf "../output/xkeen.tar.gz" -T -
 
       - name: Switch to test branch
