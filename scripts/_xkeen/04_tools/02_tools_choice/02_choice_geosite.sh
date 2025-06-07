@@ -6,7 +6,7 @@ choice_geosite() {
     [ "$geo_exists_geosite_antifilter" != "installed" ] && has_missing_geosite_bases=true
     [ "$geo_exists_geosite_v2fly" != "installed" ] && has_missing_geosite_bases=true
     [ "$geo_exists_geosite_zkeen" != "installed" ] && has_missing_geosite_bases=true
-    ([ "$geo_exists_geosite_antifilter" = "installed" ] || [ "$geo_exists_geosite_v2fly" = "installed" ] || [ "$geo_exists_geosite_zkeen" = "installed" ]) && has_updatable_geosite_bases=true
+    { [ "$geo_exists_geosite_antifilter" = "installed" ] || [ "$geo_exists_geosite_v2fly" = "installed" ] || [ "$geo_exists_geosite_zkeen" = "installed" ]; } && has_updatable_geosite_bases=true
 
     while true; do
         install_antifilter_geosite=false

@@ -7,7 +7,7 @@ choice_geoip() {
     [ "$geo_exists_geoip_antifilter" != "installed" ] && has_missing_geoip_bases=true
     [ "$geo_exists_geoip_v2fly" != "installed" ] && has_missing_geoip_bases=true
     [ "$geo_exists_geoip_zkeenip" != "installed" ] && has_missing_geoip_bases=true
-    ([ "$geo_exists_geoip_antifilter" = "installed" ] || [ "$geo_exists_geoip_v2fly" = "installed" ] || [ "$geo_exists_geoip_zkeenip" = "installed" ]) && has_updatable_geoip_bases=true
+    { [ "$geo_exists_geoip_antifilter" = "installed" ] || [ "$geo_exists_geoip_v2fly" = "installed" ] || [ "$geo_exists_geoip_zkeenip" = "installed" ]; } && has_updatable_geoip_bases=true
 
     while true; do
         # Сброс флагов при каждом повторении цикла
