@@ -1,4 +1,4 @@
-name: Package Script to `main/beta/` folder
+name: Package Script to `main/test/` folder
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-and-push-to-main-beta-folder:
+  build-and-push-to-main-test-folder:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,13 +27,13 @@ jobs:
           chmod +x xkeen
           find . -type f -o -type l | sed 's|^\./||' | tar -czf "../output/xkeen.tar.gz" -T -
 
-      - name: Move archive to beta folder in main
+      - name: Move archive to test folder in main
         run: |
-          mkdir -p beta
-          mv output/xkeen.tar.gz beta/
+          mkdir -p test
+          mv output/xkeen.tar.gz test/
 
-      - name: Commit and push archive to beta folder
+      - name: Commit and push archive to test folder
         run: |
-          git add beta/xkeen.tar.gz
-          git commit -m "[automated] Update archive in beta folder of main branch" || echo "No changes"
+          git add test/xkeen.tar.gz
+          git commit -m "[automated] Update archive in test folder of main branch" || echo "No changes"
           git push origin main
