@@ -1,8 +1,0 @@
-{
-  "log": 
-    {
-      "access": "/opt/var/log/xray/access.log",
-      "error": "/opt/var/log/xray/error.log",
-      "loglevel": "none"
-    }
-}
