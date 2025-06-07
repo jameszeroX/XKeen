@@ -1,0 +1,43 @@
+name: Package Script to `test` branch
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push-to-test-branch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # нужен полный fetch для переключения веток
+
+      - name: Set up Git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create tar.gz archive
+        run: |
+          mkdir -p output
+          cd scripts
+          chmod +x xkeen
+          find . -type f -o -type l | sed 's|^\./||' | tar -czf "../output/xkeen.tar.gz" -T -
+
+      - name: Switch to test branch
+        run: |
+          git fetch origin test
+          git checkout origin/test -B test
+
+      - name: Copy archive to branch root
+        run: |
+          cp output/xkeen.tar.gz .
+
+      - name: Commit and push to test branch
+        run: |
+          git add xkeen.tar.gz
+          git commit -m "[automated] Update archive in test branch" || echo "No changes"
+          git push origin test
