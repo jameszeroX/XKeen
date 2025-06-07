@@ -14,7 +14,6 @@
 opkg update && opkg upgrade && opkg install curl tar
 curl -L https://raw.githubusercontent.com/jameszeroX/xkeen/test/xkeen.tar.gz -o xkeen.tar.gz
 tar -xvzf xkeen.tar.gz -C /opt/sbin --overwrite > /dev/null && rm xkeen.tar.gz
-chmod +x /opt/sbin/xkeen
 xkeen -i
 ```
 
