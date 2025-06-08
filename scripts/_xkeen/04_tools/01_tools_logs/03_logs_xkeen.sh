@@ -117,17 +117,17 @@ logs_cpu_info_xkeen() {
 logs_xray_info_xkeen() {
     if [ "$xray_installed" = "installed" ]; then
         echo "" >> "$xkeen_info_log"
-        echo "[start] Проверка установки xray" >> "$xkeen_info_log"
-        echo "  [info] xray установлен" >> "$xkeen_info_log"
-        echo "[end] Проверка установки xray выполнена" >> "$xkeen_info_log"
+        echo "[start] Проверка установки Xray" >> "$xkeen_info_log"
+        echo "  [info] Xray установлен" >> "$xkeen_info_log"
+        echo "[end] Проверка установки Xray выполнена" >> "$xkeen_info_log"
         echo "" >> "$xkeen_info_log"
     fi
     
     if [ "$xray_installed" = "not_installed" ]; then
         echo "" >> "$xkeen_error_log"
-        echo "[start] Проверка установки xray" >> "$xkeen_error_log"
-        echo "  [error] xray не установлен" >> "$xkeen_error_log"
-        echo "[end] Проверка установки xray выполнена" >> "$xkeen_error_log"
+        echo "[start] Проверка установки Xray" >> "$xkeen_error_log"
+        echo "  [error] Xray не установлен" >> "$xkeen_error_log"
+        echo "[end] Проверка установки Xray выполнена" >> "$xkeen_error_log"
         echo "" >> "$xkeen_error_log"
     fi
 }
@@ -316,17 +316,17 @@ logs_version_xray_info_xkeen() {
 
     if [ -n "$info_content" ]; then
         echo "" >> "$xkeen_info_log"
-		echo "[start] Проверка версии xray" >> "$xkeen_info_log"
+		echo "[start] Проверка версии Xray" >> "$xkeen_info_log"
         echo -e "$info_content" >> "$xkeen_info_log"
-        echo "[end] Проверка версии xray выполнена" >> "$xkeen_info_log"
+        echo "[end] Проверка версии Xray выполнена" >> "$xkeen_info_log"
         echo "" >> "$xkeen_info_log"
     fi
 
     if [ -n "$error_content" ]; then
         echo "" >> "$xkeen_error_log"
-        echo "[start] Проверка версии xray" >> "$xkeen_error_log"
+        echo "[start] Проверка версии Xray" >> "$xkeen_error_log"
         echo -e "$error_content" >> "$xkeen_error_log"
-        echo "[end] Проверка версии xray выполнена" >> "$xkeen_error_log"
+        echo "[end] Проверка версии Xray выполнена" >> "$xkeen_error_log"
         echo "" >> "$xkeen_error_log"
     fi
 }

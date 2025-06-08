@@ -51,7 +51,8 @@ current_datetime=$(date "+%d-%b-%y_%H-%M")
 # -------------------------------------
 xkeen_api_url="https://api.github.com/repos/jameszeroX/xkeen/releases/latest"	# url api для XKeen
 xkeen_jsd_url="https://data.jsdelivr.com/v1/package/gh/jameszeroX/xkeen"	# резервный url api для XKeen
-xkeen_tar_url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar"	# прямая ссылка на XKeen
+xkeen_tar_url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"	# прямая ссылка на XKeen
+xkeen_test_url="https://raw.githubusercontent.com/jameszeroX/xkeen/main/test/xkeen.tar.gz"	# прямая ссылка на тестовую версию XKeen
 
 # -------------------------------------
 # Создание директорий и файлов

@@ -1179,8 +1179,42 @@ while [ $# -gt 0 ]; do
     ;;
 
 
-    -test)
+    -uktest)
+        xkeen_info
+        clear
+        backup_xkeen
+        download_xkeen_test
+        install_xkeen
+        . "$script_dir/.xkeen/import.sh"
 
+        echo -e "  ${yellow}Выполняется${reset} отмена регистрации предыдущей версии XKeen"
+        delete_register_xkeen
+        logs_delete_register_xkeen_info_xkeen
+        logs_delete_register_xkeen_info_console
+    
+        echo -e "  ${yellow}Выполняется${reset} регистрация новой версии XKeen"
+        register_xkeen_list
+        logs_register_xkeen_list_info_xkeen
+        logs_register_xkeen_list_info_console
+    
+        register_xkeen_control
+        logs_register_xkeen_control_info_xkeen
+        logs_register_xkeen_control_info_console
+    
+        register_xkeen_status
+        logs_register_xkeen_status_info_xkeen
+        logs_register_xkeen_status_info_console
+    
+        register_cron_initd
+        register_xray_initd
+        register_autostart
+        choice_canel_cron_select=true
+        update_cron_geofile_task
+    
+        fixed_register_packages
+        delete_tmp
+        logs_delete_tmp_info_xkeen
+        $initd_dir/S24xray restart on >/dev/null 2>&1
         shift
     ;;
 
