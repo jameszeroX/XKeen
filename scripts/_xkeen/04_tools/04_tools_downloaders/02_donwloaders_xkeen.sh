@@ -24,9 +24,8 @@ download_xkeen_test() {
     if [ -n "$xkeen_test_url" ]; then
         xkeen_dist=$(mktemp)
         mkdir -p "$tmp_dir"
-        echo -e "  ${yellow}Выполняется загрузка${reset} XKeen"
 
-        # Загрузка файла с использованием cURL и сохранение его во временной директории
+        echo -e "  ${yellow}Выполняется загрузка${reset} XKeen"
         if curl -L -o "$xkeen_dist" "$xkeen_test_url" &> /dev/null; then
             if [ -s "$xkeen_dist" ]; then
                 mv "$xkeen_dist" "$tmp_dir/xkeen.tar.gz"

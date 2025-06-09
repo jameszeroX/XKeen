@@ -81,18 +81,22 @@ download_xray() {
 
         filename=$(basename "$download_url")
         extension="${filename##*.}"
+        xray_dist=$(mktemp)
         mkdir -p "$xtmp_dir"
-        
+ 
         echo -e "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray"
-        curl -L -o "$xtmp_dir/$filename" "$download_url" &> /dev/null
-    
-        if [ -e "$xtmp_dir/$filename" ]; then
-            mv "$xtmp_dir/$filename" "$xtmp_dir/xray.$extension"
-            echo -e "  Xray ${green}успешно загружен${reset}"
-            return
+        if curl -L -o "$xray_dist" "$download_url" &> /dev/null; then
+            if [ -s "$xray_dist" ]; then
+                mv "$xray_dist" "$xtmp_dir/xray.$extension"
+                echo -e "  Xray ${green}успешно загружен${reset}"
+                return
+            else
+                echo -e "  ${red}Ошибка${reset}: Загруженный файл Xray поврежден"
+            fi
         else
             echo -e "  ${red}Ошибка${reset}: Не удалось загрузить Xray. Проверьте соединение с интернетом или повторите позже"
-            exit 1
         fi
+        rm -f "$xray_dist"
+        exit 1
     done
 }

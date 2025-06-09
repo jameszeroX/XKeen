@@ -10,14 +10,14 @@ register_mihomo() {
 listeners:
   - name: tproxy
     type: tproxy
-    port: 4000
+    port: 1181
 
-mixed-port: 2080
+mixed-port: 1080
 allow-lan: true
 mode: rule
 log-level: silent 
 ipv6: false
-external-controller: 0.0.0.0:91
+external-controller: 0.0.0.0:9090
 external-ui: ui
 geodata-mode: true
 
@@ -29,9 +29,7 @@ sniffer:
   parse-pure-ip: true
   sniff:
     HTTP:
-      ports: [80]
     TLS:
-      ports: [443]
 
 proxies:
   - name: PROXY
@@ -40,7 +38,6 @@ proxies:
     port: 443
     uuid: ******-***-***-***-******
     network: tcp
-    packet-encoding: xudp
     tls: true
     udp: true
     flow: xtls-rprx-vision
@@ -64,7 +61,7 @@ rules:
 EOF
 
         echo ""
-        echo -e "  Добавлен шаблон кофигурационного файла mihomo:"
+        echo "  Добавлен шаблон конфигурационного файла Mihomo:"
         echo -e "  ${yellow}config.yaml${reset}"
         sleep 2
     fi

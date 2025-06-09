@@ -101,19 +101,39 @@ download_mihomo() {
 
         filename=$(basename "$download_url")
         extension="${filename##*.}"
+        yq_dist=$(mktemp)
+        mihomo_dist=$(mktemp)
         mkdir -p "$mtmp_dir"
-        
-        echo -e "  ${yellow}Выполняется загрузка${reset} выбранной версии Mihomo"
-        curl -L -o "$mtmp_dir/$filename" "$download_url" &> /dev/null
-        curl -L -o "$install_dir/yq" "$download_yq" &> /dev/null && chmod +x "$install_dir/yq"
 
-        if [ -e "$mtmp_dir/$filename" ]; then
-            mv "$mtmp_dir/$filename" "$mtmp_dir/mihomo.$extension"
-            echo -e "  Mihomo ${green}успешно загружен${reset}"
-            return
+        echo -e "  ${yellow}Выполняется загрузка${reset} парсера yaml-файлов - yq"
+        if curl -L -o "$yq_dist" "$download_yq" &> /dev/null; then
+            if [ -s "$yq_dist" ]; then
+                mv "$yq_dist" "$install_dir/yq"
+                chmod +x "$install_dir/yq"
+                echo -e "  yq ${green}успешно загружен${reset}"
+            else
+                echo -e "  ${red}Ошибка${reset}: Загруженный файл yq поврежден"
+            fi
+        else
+            echo -e "  ${red}Ошибка${reset}: Не удалось загрузить yq. Проверьте соединение с интернетом или повторите позже"
+        fi
+
+        echo -e "  ${yellow}Выполняется загрузка${reset} выбранной версии Mihomo"
+        if curl -L -o "$mihomo_dist" "$download_url" &> /dev/null; then
+            if [ -s "$mihomo_dist" ]; then
+                mv "$mihomo_dist" "$mtmp_dir/mihomo.$extension"
+                echo -e "  Mihomo ${green}успешно загружен${reset}"
+                return
+            else
+                echo -e "  ${red}Ошибка${reset}: Загруженный файл Mihomo поврежден"
+            fi
         else
             echo -e "  ${red}Ошибка${reset}: Не удалось загрузить Mihomo. Проверьте соединение с интернетом или повторите позже"
+            rm -f "$mihomo_dist" "$yq_dist"
             exit 1
         fi
+
+        rm -f "$yq_dist" "$mihomo_dist"
+        exit 1
     done
 }

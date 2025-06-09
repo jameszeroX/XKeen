@@ -104,7 +104,7 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  Поместите файл xray архитектуры ${green}$architecture${reset} в директорию /opt/sbin/ и начните установку снова"
             echo
-            echo -e "  Страница загрузок: ${yellow}https://github.com/XTLS/Xray-core/releases/latest${reset}"
+            echo -e "  Страница загрузок xray: ${yellow}https://github.com/XTLS/Xray-core/releases/latest${reset}"
             echo
             exit 1
         fi
@@ -188,7 +188,7 @@ while [ $# -gt 0 ]; do
         echo -e "  Если хотите переключить XKeen на ядро ${yellow}mihomo${reset}"
         echo
         echo -e "  1. Поместите бинарники ${yellow}mihomo${reset} и ${yellow}yq${reset} в директорию '${yellow}$install_dir${reset}'"
-        echo -e "  2. Сделате их исполняемыми командой '${yellow}chmod +x /opt/sbin/xray /opt/sbin/yq${reset}'"
+        echo -e "  2. Сделайте их исполняемыми командой '${yellow}chmod +x /opt/sbin/xray /opt/sbin/yq${reset}'"
         echo -e "  3. Настройте конфигурацию в файле '${yellow}$mihomo_conf_dir/config.yaml${reset}'"
         echo -e "  4. Переключите ядро командой ${yellow}xkeen -mihomo${reset}"
         echo -e "  5. Запустите XKeen командой ${yellow}xkeen -start${reset}"
