@@ -4,14 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version number (e.g., 1.0.0)"
+        description: 'Version number (e.g., 1.0.0)'
         required: true
         type: string
       prerelease:
-        description: "Is this a pre-release?"
+        description: 'Is this a pre-release?'
         required: true
         default: "false"
         type: boolean
+      release_notes:
+        description: 'Release notes (markdown)'
+        required: false
+        type: string
 
 jobs:
   release:
@@ -23,7 +27,7 @@ jobs:
       - name: Set up variables
         id: vars
         run: |
-          echo "VERSION=v${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
           echo "ARCHIVE_NAME=xkeen.tar.gz" >> $GITHUB_ENV
       - name: Create scripts archive
         run: |
