@@ -234,7 +234,10 @@ get_port_redirect() {
 get_port_tproxy() {
     if [ "$name_client" = "mihomo" ]; then
         for file in $(find "$directory_configs_app" -name '*.yaml'); do
-            port=$(yq eval '.listeners[] | select(.name == "tproxy") | .port' "$file" 2>/dev/null)
+            port=$(yq eval '.tproxy-port' "$file" 2>/dev/null)
+            if [ -z "$port" ]; then
+                port=$(yq eval '.listeners[] | select(.name == "tproxy") | .port' "$file" 2>/dev/null)
+            fi
             [ -n "$port" ] && echo "$port" && return
         done
     else

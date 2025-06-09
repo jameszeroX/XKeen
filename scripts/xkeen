@@ -911,7 +911,6 @@ while [ $# -gt 0 ]; do
         logs_delete_register_xkeen_info_xkeen
         logs_delete_register_xkeen_info_console
 
-        sleep 1
         echo -e "  ${yellow}Выполняется${reset} регистрация новой версии XKeen"
         register_xkeen_list
         logs_register_xkeen_list_info_xkeen
