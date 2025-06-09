@@ -7,15 +7,19 @@ register_mihomo() {
             mkdir $mihomo_conf_dir
         fi
             cat << EOF > "$mihomo_conf_dir/config.yaml"
-tproxy-port: 1081
+listeners:
+  - name: tproxy
+    type: tproxy
+    port: 1181
+
 mixed-port: 1080
 allow-lan: true
-log-level: silent
-geodata-mode: true
 mode: rule
+log-level: silent 
 ipv6: false
-external-ui: ui
 external-controller: 0.0.0.0:9090
+external-ui: ui
+geodata-mode: true
 
 profile:
   store-selected: true
