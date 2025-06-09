@@ -1,4 +1,4 @@
-name: Package Script to `main/test/` folder
+name: Create Test build to `main/test/` folder
 
 on:
   push:
