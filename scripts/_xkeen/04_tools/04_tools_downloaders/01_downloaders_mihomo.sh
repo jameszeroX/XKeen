@@ -105,7 +105,7 @@ download_mihomo() {
         mihomo_dist=$(mktemp)
         mkdir -p "$mtmp_dir"
 
-        echo -e "  ${yellow}Выполняется загрузка${reset} парсера yaml-файлов - yq"
+        echo -e "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - yq"
         if curl -L -o "$yq_dist" "$download_yq" &> /dev/null; then
             if [ -s "$yq_dist" ]; then
                 mv "$yq_dist" "$install_dir/yq"
