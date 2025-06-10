@@ -3,3 +3,5 @@
 
 # Unix files that are always LF
 *.sh text eol=lf
+*.json text eol=lf
+xkeen text eol=lf
