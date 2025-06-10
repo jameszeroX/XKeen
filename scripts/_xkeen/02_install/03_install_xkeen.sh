@@ -33,7 +33,7 @@ EOF
         
         # Проверка успешности установки и запись информации в соответствующие логи
         if [ -s "${install_dir}/xkeen" ]; then
-            info_content="${info_content}\t[info] Установка XKeen успешно завершена"
+            info_content="${info_content}\t[info] Установка XKeen успешно выполнена"
             echo "" >> "${xkeen_info_log}"
             echo "[start] Установка XKeen" >> "${xkeen_info_log}"
             echo -e "${info_content}" >> "${xkeen_info_log}"

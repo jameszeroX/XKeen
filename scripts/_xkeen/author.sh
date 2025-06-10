@@ -54,7 +54,7 @@ author_feedback() {
 	echo
     echo "  Контакты"
     echo -e "  ${yellow}Профиль на форуме keenetic${reset}"
-	echo "     forum.keenetic.com/profile/73583-skrill0"
+	echo "     forum.keenetic.ru/profile/73583-skrill0"
 	echo
     echo -e "  ${yellow}e-mail${reset}"
 	echo "     alinajoeyone@gmail.com"

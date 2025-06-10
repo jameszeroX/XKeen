@@ -12,6 +12,8 @@ mixed-port: 1080
 allow-lan: true
 log-level: silent
 geodata-mode: true
+geo-auto-update: true
+geo-update-interval: 72
 mode: rule
 ipv6: false
 external-ui: ui

@@ -796,7 +796,7 @@ logs_install_configs_info_xkeen() {
         if [ -n "$info_content" ]; then
             echo -e "$info_content" | sed '/^$/d' >> "$xkeen_info_log"
         fi
-        echo "[end] Проверка файлов конфигурации Xray завершена" >> "$xkeen_info_log"
+        echo "[end] Проверка файлов конфигурации Xray выполнена" >> "$xkeen_info_log"
         echo "" >> "$xkeen_info_log"
     fi
 }
