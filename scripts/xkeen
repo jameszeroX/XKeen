@@ -329,7 +329,6 @@ while [ $# -gt 0 ]; do
         fi
 
         # Удаляем временные файлы
-        echo
         delete_tmp
         logs_delete_tmp_info_xkeen
         rm -f "$install_dir/xray_bak" "$install_dir/mihomo_bak"
@@ -345,10 +344,10 @@ while [ $# -gt 0 ]; do
         echo -e "  3. ${green}Enjoy!${reset}"
         echo
         if [ "$mihomo_installed" = "installed" ]; then
-            echo -e "  Если хотите переключить XKeen на ядро ${yellow}mihomo${reset}"
+            echo -e "  Если хотите переключить XKeen на ядро ${yellow}Mihomo${reset}"
             echo
             echo -e "  1. Настройте его конфигурацию в файле '${yellow}$mihomo_conf_dir/config.yaml${reset}'"
-            echo -e "  2. Переключите ядро командой ${yellow}xkeen -mihomo${reset}"
+            echo -e "  2. Переключите ядро проксирования командой ${yellow}xkeen -mihomo${reset}"
             echo -e "  3. Запустите XKeen командой ${yellow}xkeen -start${reset}"
             echo -e "  4. ${green}Enjoy!${reset}"
             echo
@@ -506,24 +505,39 @@ while [ $# -gt 0 ]; do
         shift
     ;;
 
-    -um)    # Обновление ядра Mihomo
+    -um)    # Обновление или установка ядра Mihomo
+        if pidof "mihomo" >/dev/null; then
+            mihomo_installed=installed
+        fi
+
         . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
         status_file="/opt/lib/opkg/status"
         info_cpu
 
         clear
         echo
-
         download_mihomo
 
         if [ -z $bypass_mihomo ]; then
             install_mihomo
         fi
 
-        echo
-        echo -e "  Обновление ядра Mihomo ${green}выполнено${reset}"
-        echo -e "  Если конфигурация Mihomo настроена и XKeen переключен на его ядро, выполните команду ${yellow}xkeen -restart${reset}"
-        echo
+        if [ "$mihomo_installed" = "installed" ]; then
+            $initd_dir/S24xray restart on >/dev/null 2>&1
+            echo
+            echo -e "  Обновление ядра ${yellow}Mihomo${reset} ${green}выполнено${reset}"
+            echo
+        else
+            register_mihomo
+            echo
+            echo -e "  Установка ядра ${yellow}Mihomo${reset} ${green}выполнена${reset}"
+            echo
+            echo -e "  1. Настройте его конфигурацию в файле '${yellow}$mihomo_conf_dir/config.yaml${reset}'"
+            echo -e "  2. Переключите ядро проксирования командой ${yellow}xkeen -mihomo${reset}"
+            echo -e "  3. Запустите XKeen командой ${yellow}xkeen -start${reset}"
+            echo -e "  4. ${green}Enjoy!${reset}"
+            echo
+        fi
 
         rm -f "$install_dir/mihomo_bak"
         rm -rf "$mtmp_dir"
@@ -581,6 +595,7 @@ while [ $# -gt 0 ]; do
         logs_cron_info_xkeen
 
         clear
+        echo
         echo -e "  Удаление задачи автообновления ${yellow}GeoFile${reset}"
         echo
         echo -e "  ${yellow}Проверка${reset} удаления задач Cron для GeoFile"
@@ -596,25 +611,57 @@ while [ $# -gt 0 ]; do
         logs_delete_tmp_info_xkeen
 
         echo "  Удаление задачи автообновления GeoFile выполнено"
+        echo
         shift
     ;;
 
 
     -dx)    # Удалить Xray
-        echo -e "  ${yellow}Удаление${reset} Xray"
+        clear
+        echo
+        echo -e "  Удаление ${yellow}Xray${reset}"
 
         $initd_dir/S24xray stop >/dev/null 2>&1
         opkg remove xray_s
 
         echo
+        echo -e "  Удаление ${yellow}конфигурационных файлов Xray${reset}"
+
+        delete_configs
+        logs_delete_configs_info_console
+        logs_delete_configs_info_xkeen
+
+        echo
         echo -e "  Удаление Xray ${green}выполнено${reset}"
-        sleep 2
+        echo
+        shift
+    ;;
+
+
+    -dm)    # Удалить Mihomo
+        if [ -f "$install_dir/mihomo" ]; then
+            clear
+            echo
+            echo -e "  Удаление ${yellow}Mihomo${reset}"
+    
+            rm -f "$install_dir/mihomo" "$install_dir/yq"
+            rm -rf "$mihomo_conf_dir"
+    
+            echo
+            echo -e "  Удаление Mihomo ${green}выполнено${reset}"
+            echo
+        else
+            echo -e "  Mihomo ${green}не установлен${reset}"
+            echo
+
+        fi
         shift
     ;;
 
 
     -dk)    # Удалить XKeen
         clear
+        echo
         echo -e "  Удаление ${yellow}XKeen${reset}"
         opkg remove xkeen
         delete_tmp
@@ -628,11 +675,14 @@ while [ $# -gt 0 ]; do
         echo -e "  ${green}curl -OfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh${reset}"
         echo -e "  ${green}chmod +x ./install.sh${reset}"
         echo -e "  ${green}./install.sh${reset}"
+        echo
         shift
     ;;
 
 
     -dgi)    # Удалить GeoIP's
+        clear
+        echo
         echo -e "  Удаление всех баз ${yellow}GeoIP${reset}"
 
         delete_geoip_key
@@ -641,11 +691,14 @@ while [ $# -gt 0 ]; do
 
         echo
         echo -e "  Удаление всех баз GeoIP ${green}выполнено${reset}"
+        echo
         shift
     ;;
 
 
     -dgs)    # Удалить GeoSite's
+        clear
+        echo
         echo -e "  Удаление всех баз ${yellow}GeoSite${reset}"
 
         delete_geosite_key
@@ -654,62 +707,46 @@ while [ $# -gt 0 ]; do
 
         echo
         echo -e "  Удаление всех баз GeoSite ${green}выполнено${reset}"
+        echo
         shift
     ;;
 
 
     -dt)    # Удалить временные файлы XKeen
+        clear
         delete_tmp
         logs_delete_tmp_info_xkeen
-        shift
-    ;;
-
-
-    -dc)    # Удалить все конфиги Xray
-        echo -e "  Удаление ${yellow}конфигурационных файлов Xray${reset}"
-
-        delete_configs
-        logs_delete_configs_info_console
-        logs_delete_configs_info_xkeen
-
         echo
-        echo -e "  Удаление всех конфигурационных файлов Xray ${green}выполнено${reset}"
         shift
     ;;
 
 
     -drx)    # Удалить регистрации Xray
         clear
-        echo -e "  Удаление ${yellow}регистрации Xray${reset}"
         echo
-        sleep 1
-        echo -e "  ${yellow}Проверка${reset} удаления регистрации Xray"
+        echo -e "  Удаление ${yellow}регистрации Xray${reset}"
 
         delete_register_xray
         logs_delete_register_xray_info_xkeen
         logs_delete_register_xray_info_console
 
-        echo -e "  Проверка удаления регистрации Xray ${green}выполнена${reset}"
-
-        echo "  Удаление регистрации Xray из системы выполнено"
+        echo -e "  Удаление регистрации Xray ${green}выполнено${reset}"
+        echo
         shift
     ;;
 
 
     -drk)    # Удалить регистрации XKeen
         clear
-        echo -e "  Удаление ${yellow}регистрации XKeen${reset}"
         echo
-        sleep 1
-        echo -e "  ${yellow}Проверка${reset} удаления регистрации XKeen"
+        echo -e "  Удаление ${yellow}регистрации XKeen${reset}"
 
         delete_register_xkeen
         logs_delete_register_xkeen_info_xkeen
         logs_delete_register_xkeen_info_console
 
-        echo -e "  Проверка удаления регистрации XKeen ${green}выполнена${reset}"
-
-        echo "  Удаление регистрации XKeen из системы выполнено"
+        echo -e "  Удаление регистрации XKeen ${green}выполнено${reset}"
+        echo
         shift
     ;;
 
@@ -720,6 +757,7 @@ while [ $# -gt 0 ]; do
         logs_cron_info_xkeen
 
         clear
+        echo
         echo -e "  Удаление задачи автообновления ${yellow}GeoFile${reset}"
         delete_cron_geofile
         logs_delete_cron_geofile_info_xkeen
@@ -731,6 +769,7 @@ while [ $# -gt 0 ]; do
 
         # Удаление GeoIP's
         clear
+        echo
         echo -e "  Удаление всех баз ${yellow}GeoIP${reset}"
 
         delete_geoip_key
@@ -743,6 +782,7 @@ while [ $# -gt 0 ]; do
 
         # Удаление GeoSite's
         clear
+        echo
         echo -e "  Удаление всех баз ${yellow}GeoSite${reset}"
 
         delete_geosite_key
@@ -755,6 +795,7 @@ while [ $# -gt 0 ]; do
 
         # Удаление файлов конфигурации Xray
         clear
+        echo
         echo -e "  Удаление ${yellow}конфигурационных файлов Xray${reset}"
 
         delete_configs
@@ -767,6 +808,7 @@ while [ $# -gt 0 ]; do
 
         # Удаление Xray
         clear
+        echo
         echo -e "  ${yellow}Удаление${reset} Xray"
 
         $initd_dir/S24xray stop >/dev/null 2>&1
@@ -779,6 +821,7 @@ while [ $# -gt 0 ]; do
         if [ -f "$install_dir/mihomo" ]; then
             # Удаление Mihomo
             clear
+            echo
             echo -e "  ${yellow}Удаление${reset} Mihomo"
     
             rm -f "$install_dir/mihomo" "$install_dir/yq"
@@ -791,6 +834,7 @@ while [ $# -gt 0 ]; do
 
         # Удаление XKeen
         clear
+        echo
         echo -e "  Удаление ${yellow}XKeen${reset}"
         opkg remove xkeen
         delete_tmp
@@ -811,6 +855,7 @@ while [ $# -gt 0 ]; do
         echo -e "  ${green}curl -OfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh${reset}"
         echo -e "  ${green}chmod +x ./install.sh${reset}"
         echo -e "  ${green}./install.sh${reset}"
+        echo
 
         shift
     ;;
@@ -1351,7 +1396,7 @@ while [ $# -gt 0 ]; do
         echo -e "	-dgs	${gray}	GeoSite${reset}"
         echo -e "	-dgi	${gray}	GeoIP${reset}"
         echo -e "	-dx	${gray}	Xray${reset}"
-        echo -e "	-dс	${gray}	Файлы конфигурации Xray${reset}"
+        echo -e "	-dm	${gray}	Mihomo${reset}"
         echo -e "	-dt	${gray}	Временные файлы${reset}"
         echo -e "	-dk	${gray}	XKeen${reset}"
         echo 

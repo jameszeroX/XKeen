@@ -11,8 +11,7 @@ delete_tmp() {
     if [ -f "/opt/etc/ndm/netfilter.d/proxy.sh" ]; then
         rm "/opt/etc/ndm/netfilter.d/proxy.sh"
     fi
-	
-	echo -e "  Выполняется ${yellow}очистка временных файлов${reset}"
-	sleep 1
-	echo -e "  Очистка временных файлов ${green}выполнена${reset}"
+
+    echo
+    echo -e "  Очистка временных файлов ${green}выполнена${reset}"
 }
