@@ -1,33 +1,33 @@
 # -------------------------------------
 # Цвета
 # -------------------------------------
-green="\033[92m"      # Зеленый
-red="\033[91m"        # Красный
-yellow="\033[33m"     # Желтый
-light_blue="\033[96m" # Голубой
-gray="\033[37m"       # Серый
-reset="\033[0m"       # Сброс цветов
+green="\033[92m"	# Зеленый
+red="\033[91m"		# Красный
+yellow="\033[33m"	# Желтый
+light_blue="\033[96m"	# Голубой
+gray="\033[37m"		# Серый
+reset="\033[0m"		# Сброс цветов
 
 # -------------------------------------
 # Директории
 # -------------------------------------
-tmp_dir_global="/opt/tmp"            # Временная директория общая
-tmp_dir="/opt/tmp/xkeen"             # Временная директория xkeen
-xtmp_dir="/opt/tmp/xray"             # Временная директория xray
-mtmp_dir="/opt/tmp/mihomo"           # Временная директория mihomo
-xkeen_log_dir="/opt/var/log/xkeen"   # Директория логов для xkeen
-xray_log_dir="/opt/var/log/xray"     # Директория логов для xray
-initd_dir="/opt/etc/init.d"          # Директория init.d
-pid_dir="/opt/var/run"               # Директория для pid файлов
-backups_dir="/opt/backups"           # Директория для бекапов
-install_dir="/opt/sbin"              # Директория установки
-xkeen_dir="/opt/sbin/.xkeen"        # xkeen директория
-geo_dir="/opt/etc/xray/dat"          # Директория для dat
-cron_dir="/opt/var/spool/cron/crontabs" # Директория для cron файла xkeen
-cron_file="root"                    # Сron файл
-install_conf_dir="/opt/etc/xray/configs"  # Директория конфигурации xray
+tmp_dir_global="/opt/tmp"		# Временная директория общая
+tmp_dir="/opt/tmp/xkeen"		# Временная директория xkeen
+xtmp_dir="/opt/tmp/xray"		# Временная директория xray
+mtmp_dir="/opt/tmp/mihomo"		# Временная директория mihomo
+xkeen_log_dir="/opt/var/log/xkeen"	# Директория логов для xkeen
+xray_log_dir="/opt/var/log/xray"	# Директория логов для xray
+initd_dir="/opt/etc/init.d"		# Директория init.d
+pid_dir="/opt/var/run"			# Директория для pid файлов
+backups_dir="/opt/backups"		# Директория для бекапов
+install_dir="/opt/sbin"			# Директория установки
+xkeen_dir="/opt/sbin/.xkeen"		# xkeen директория
+geo_dir="/opt/etc/xray/dat"		# Директория для dat
+cron_dir="/opt/var/spool/cron/crontabs"	# Директория для cron файла xkeen
+cron_file="root"			# Сron файл
+install_conf_dir="/opt/etc/xray/configs" # Директория конфигурации xray
 xkeen_conf_dir="$xkeen_dir/02_install/08_install_configs/02_configs_dir" # Директория шаблонов конфигурации xray
-mihomo_conf_dir="/opt/etc/mihomo" # Директория конфигурации mihomo
+mihomo_conf_dir="/opt/etc/mihomo"	# Директория конфигурации mihomo
 register_dir="/opt/lib/opkg/info"
 status_file="/opt/lib/opkg/status"
 releases_dir="/opt/releases"
@@ -47,12 +47,19 @@ source_date_epoch=$(date +%s)
 current_datetime=$(date "+%d-%b-%y_%H-%M")
 
 # -------------------------------------
-# API URL
+# URL
 # -------------------------------------
-xkeen_api_url="https://api.github.com/repos/jameszeroX/xkeen/releases/latest"	# url api для XKeen
-xkeen_jsd_url="https://data.jsdelivr.com/v1/package/gh/jameszeroX/xkeen"	# резервный url api для XKeen
-xkeen_tar_url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"	# прямая ссылка на XKeen
-xkeen_test_url="https://raw.githubusercontent.com/jameszeroX/xkeen/main/test/xkeen.tar.gz"	# прямая ссылка на тестовую версию XKeen
+xkeen_api_url="https://api.github.com/repos/jameszeroX/xkeen/releases/latest"			# url api для XKeen
+xkeen_jsd_url="https://data.jsdelivr.com/v1/package/gh/jameszeroX/xkeen"			# резервный url api для XKeen
+xkeen_tar_url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"	# url для загрузки XKeen
+xkeen_test_url="https://raw.githubusercontent.com/jameszeroX/xkeen/main/test/xkeen.tar.gz"	# test
+xray_api_url="https://api.github.com/repos/XTLS/Xray-core/releases"				# url api для Xray
+xray_jsd_url="https://data.jsdelivr.com/v1/package/gh/XTLS/Xray-core"				# резервный url api для Xray
+xray_zip_url="https://github.com/XTLS/Xray-core/releases/download"				# url для загрузки Xray
+mihomo_api_url="https://api.github.com/repos/MetaCubeX/mihomo/releases"				# url api для Mihomo
+mihomo_jsd_url="https://data.jsdelivr.com/v1/package/gh/MetaCubeX/mihomo"			# резервный url api для Mihomo
+mihomo_gz_url="https://github.com/MetaCubeX/mihomo/releases/download"				# url для загрузки Mihomo
+yq_dist_url="https://github.com/mikefarah/yq/releases/latest/download"				# url для загрузки yq
 
 # -------------------------------------
 # Создание директорий и файлов

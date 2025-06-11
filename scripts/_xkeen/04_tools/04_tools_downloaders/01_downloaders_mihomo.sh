@@ -2,12 +2,12 @@
 download_mihomo() {
     while true; do
         printf "  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"
-        RELEASE_TAGS=$(curl -s https://api.github.com/repos/MetaCubeX/mihomo/releases?per_page=20 | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 9) >/dev/null 2>&1
+        RELEASE_TAGS=$(curl -s ${mihomo_api_url}?per_page=20 | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 9) >/dev/null 2>&1
 
         if [ -z "$RELEASE_TAGS" ]; then
             echo ""
             printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
-            RELEASE_TAGS=$(curl -s https://data.jsdelivr.com/v1/package/gh/MetaCubeX/mihomo | jq -r '.versions[]' | head -n 9) >/dev/null 2>&1
+            RELEASE_TAGS=$(curl -s $mihomo_jsd_url | jq -r '.versions[]' | head -n 9) >/dev/null 2>&1
             
             if [ -z "$RELEASE_TAGS" ]; then
                 echo ""
@@ -60,33 +60,32 @@ download_mihomo() {
             unset USE_JSDELIVR
         fi
 	
-        URL_BASE="https://github.com/MetaCubeX/mihomo/releases/download/$VERSION_ARG"
-        URL_YQ="https://github.com/mikefarah/yq/releases/latest/download"
+        URL_BASE="${mihomo_gz_url}/$VERSION_ARG"
 
         case $architecture in
             "arm64-v8a")
                 download_url="$URL_BASE/mihomo-linux-arm64-$VERSION_ARG.gz"
-                download_yq="$URL_YQ/yq_linux_arm64"
+                download_yq="$yq_dist_url/yq_linux_arm64"
             ;;
             "mips32le")
                 download_url="$URL_BASE/mihomo-linux-mipsle-hardfloat-$VERSION_ARG.gz"
-                download_yq="$URL_YQ/yq_linux_mipsle"
+                download_yq="$yq_dist_url/yq_linux_mipsle"
             ;;
             "mips")
                 download_url="$URL_BASE/mihomo-linux-mips-hardfloat-$VERSION_ARG.gz"
-                download_yq="$URL_YQ/yq_linux_mips"
+                download_yq="$yq_dist_url/yq_linux_mips"
             ;;
             "mips64")
                 download_url="$URL_BASE/mihomo-linux-mips64-$VERSION_ARG.gz"
-                download_yq="$URL_YQ/yq_linux_mips64"
+                download_yq="$yq_dist_url/yq_linux_mips64"
             ;;
             "mips64le")
                 download_url="$URL_BASE/mihomo-linux-mips64le-$VERSION_ARG.gz"
-                download_yq="$URL_YQ/yq_linux_mips64le"
+                download_yq="$yq_dist_url/yq_linux_mips64le"
             ;;
             "arm32-v5")
                 download_url="$URL_BASE/mihomo-linux-armv5-$VERSION_ARG.gz"
-                download_yq="$URL_YQ/yq_linux_arm"
+                download_yq="$yq_dist_url/yq_linux_arm"
             ;;
             *)
                 download_url=""

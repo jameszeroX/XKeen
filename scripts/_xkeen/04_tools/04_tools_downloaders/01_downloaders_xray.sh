@@ -2,12 +2,12 @@
 download_xray() {
     while true; do
         printf "  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
-        RELEASE_TAGS=$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases?per_page=20 | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 9) >/dev/null 2>&1
+        RELEASE_TAGS=$(curl -s ${xray_api_url}?per_page=20 | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 9) >/dev/null 2>&1
 
         if [ -z "$RELEASE_TAGS" ]; then
             echo ""
             printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
-            RELEASE_TAGS=$(curl -s https://data.jsdelivr.com/v1/package/gh/XTLS/Xray-core | jq -r '.versions[]' | head -n 9) >/dev/null 2>&1
+            RELEASE_TAGS=$(curl -s $xray_jsd_url | jq -r '.versions[]' | head -n 9) >/dev/null 2>&1
             
             if [ -z "$RELEASE_TAGS" ]; then
                 echo ""
@@ -62,7 +62,7 @@ download_xray() {
             unset USE_JSDELIVR
         fi
 
-        URL_BASE="https://github.com/XTLS/Xray-core/releases/download/$VERSION_ARG"
+        URL_BASE="${xray_zip_url}/$VERSION_ARG"
 
         case $architecture in
             "arm64-v8a") download_url="$URL_BASE/Xray-linux-arm64-v8a.zip" ;;
