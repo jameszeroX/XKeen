@@ -1129,9 +1129,15 @@ while [ $# -gt 0 ]; do
     -auto)    # Переключение значения autostart между "on" и "off"
         if grep -q 'autostart="on"' $initd_dir/S99xkeenstart; then
             sed -i 's/autostart="on"/autostart="off"/' $initd_dir/S99xkeenstart
+            if grep -q 'start_auto="on"' $initd_dir/S24xray; then
+                sed -i 's/start_auto="on"/start_auto="off"/' $initd_dir/S24xray
+            fi
             echo -e "  Автозапуск XKeen ${red}отключен${reset}"
         else
             sed -i 's/autostart="off"/autostart="on"/' $initd_dir/S99xkeenstart
+            if grep -q 'start_auto="off"' $initd_dir/S24xray; then
+                sed -i 's/start_auto="off"/start_auto="on"/' $initd_dir/S24xray
+            fi
             echo -e "  Автозапуск XKeen ${green}включен${reset}"
         fi
 
