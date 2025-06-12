@@ -776,7 +776,6 @@ while [ $# -gt 0 ]; do
         logs_delete_geoip_info_xkeen
         logs_delete_geoip_info_console
 
-        echo
         echo -e "  Удаление всех баз GeoIP ${green}выполнено${reset}"
         sleep 2
 
@@ -789,7 +788,6 @@ while [ $# -gt 0 ]; do
         logs_delete_geosite_info_xkeen
         logs_delete_geosite_info_console
 
-        echo
         echo -e "  Удаление всех баз GeoSite ${green}выполнено${reset}"
         sleep 2
 
