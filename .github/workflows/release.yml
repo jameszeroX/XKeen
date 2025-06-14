@@ -12,10 +12,6 @@ on:
         required: true
         default: "false"
         type: boolean
-      release_notes:
-        description: 'Release notes (markdown)'
-        required: false
-        type: string
 
 jobs:
   release:

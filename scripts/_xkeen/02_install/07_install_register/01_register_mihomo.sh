@@ -48,6 +48,7 @@ proxies:
 
 geox-url:
   geosite: "https://github.com/jameszeroX/zkeen-domains/releases/latest/download/zkeen.dat"
+  geoip: "https://github.com/jameszeroX/zkeen-ip/releases/latest/download/zkeenip.dat"
 
 rules:
   - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
@@ -55,6 +56,17 @@ rules:
   - GEOSITE,OTHER,PROXY
   - GEOSITE,POLITIC,PROXY
   - GEOSITE,YOUTUBE,PROXY
+  - GEOIP,AKAMAI,PROXY
+  - GEOIP,AMAZON,PROXY
+  - GEOIP,CDN77,PROXY
+  - GEOIP,CLOUDFLARE,PROXY
+  - GEOIP,DIGITALOCEAN,PROXY
+  - GEOIP,FASTLY,PROXY
+  - GEOIP,GCORE,PROXY
+  - GEOIP,HETZNER,PROXY
+  - GEOIP,LINODE,PROXY
+  - GEOIP,OVH,PROXY
+  - GEOIP,VULTR,PROXY
   - MATCH,DIRECT
 EOF
 
