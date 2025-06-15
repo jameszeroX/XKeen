@@ -41,7 +41,7 @@ add_ports_donor() {
     current_ports=$(echo "$current_ports" | sed 's/^,//')
 
     # Соединяем текущие порты с переданными и удаляем дубликаты
-    new_ports
+    new_ports=""
     if [ -z "$current_ports" ]; then
         new_ports="$ports"
     else
@@ -124,7 +124,8 @@ dell_ports_donor() {
                     echo "$new_ports" \
                     | tr ',' '\n' \
                     | grep -vFx "$port" \
-                    | tr '\n' ','
+                    | tr '\n' ',' \
+                    | sed 's/^,//; s/,$//'
                 )
                 deleted_ports="$deleted_ports\n     $port"
             else
@@ -186,7 +187,7 @@ add_ports_exclude() {
     current_ports=$(echo "$current_ports" | sed 's/^,//')
 
     # Соединяем текущие порты с переданными и удаляем дубликаты
-    new_ports
+    new_ports=""
     if [ -z "$current_ports" ]; then
         new_ports="$ports"
     else
@@ -272,7 +273,8 @@ dell_ports_exclude() {
                     echo "$new_ports" \
                     | tr ',' '\n' \
                     | grep -vFx "$port" \
-                    | tr '\n' ','
+                    | tr '\n' ',' \
+                    | sed 's/^,//; s/,$//'
                 )
                 deleted_ports="$deleted_ports\n     $port"
             else
