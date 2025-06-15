@@ -67,7 +67,7 @@ download_xray() {
         case $architecture in
             "arm64-v8a") download_url="$URL_BASE/Xray-linux-arm64-v8a.zip" ;;
             "mips32le") download_url="$URL_BASE/Xray-linux-mips32le.zip" ;;
-            "mips") download_url="$URL_BASE/Xray-linux-mips32.zip" ;;
+            "mips32") download_url="$URL_BASE/Xray-linux-mips32.zip" ;;
             "mips64") download_url="$URL_BASE/Xray-linux-mips64.zip" ;;
             "mips64le") download_url="$URL_BASE/Xray-linux-mips64le.zip" ;;
             "arm32-v5") download_url="$URL_BASE/Xray-linux-arm32-v5.zip" ;;
