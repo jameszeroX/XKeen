@@ -26,11 +26,17 @@ data_is_updated_excluded() {
     fi
 }
 
-add_ports_donor() {
-    ports=$1
-    # Нормализация портов - удаление пробелов и преобразование разделителей в запятые
-    ports=$(echo "$ports" | tr -s '[:space:]' ',' | tr -s ',' | tr ',' '\n' | sort -nu | tr '\n' ',' | sed 's/,$//')
+# Нормализация портов - удаление пробелов и преобразование разделителей в запятые
+normalize_ports() {
+    echo "$1" | tr -s '[:space:]' ',' | tr -s ',' | sed 's/^,//; s/,$//' | tr ',' '\n' | sort -nu | tr '\n' ',' | sed 's/,$//'
+}
 
+add_ports_donor() {
+    if [ -z "$1" ]; then
+        echo -e "${red}Ошибка${reset}: список портов не может быть пустым"
+        return 1
+    fi
+    ports=$(normalize_ports "$1")
     current_ports=$(
         awk -F= '/port_donor/{print $2; exit}' $initd_dir/S24xray \
         | tr -d '"'
@@ -45,7 +51,11 @@ add_ports_donor() {
     if [ -z "$current_ports" ]; then
         new_ports="$ports"
     else
-        new_ports=$(echo "$current_ports,$ports" | tr ',' '\n' | sort -nu | tr '\n' ',' | sed 's/,$//')
+        if [ -n "$ports" ]; then
+            new_ports=$(echo "$current_ports,$ports" | tr ',' '\n' | sort -nu | tr '\n' ',' | sed 's/,$//')
+        else
+            new_ports="$current_ports"
+        fi
     fi
 
     added_ports=""
@@ -66,8 +76,15 @@ add_ports_donor() {
         | sed 's/^ *//'
     )
 
+    # Если new_ports пуст, не добавляем запятую
+    if [ -n "$new_ports" ]; then
+        port_var="port_donor=\"$new_ports\""
+    else
+        port_var="port_donor=\"\""
+    fi
+
     tmpfile=$(mktemp)
-    awk -v new="port_donor=\"$new_ports\"" 'BEGIN{replaced=0} /port_donor/ && !replaced {sub(/port_donor="[^"]*"/, new); replaced=1} {print}' $initd_dir/S24xray > "$tmpfile" && mv "$tmpfile" $initd_dir/S24xray
+    awk -v new="$port_var" 'BEGIN{replaced=0} /port_donor/ && !replaced {sub(/port_donor="[^"]*"/, new); replaced=1} {print}' $initd_dir/S24xray > "$tmpfile" && mv "$tmpfile" $initd_dir/S24xray
 
     while true; do
         if data_is_updated_donor "$initd_dir/S24xray" "$new_ports"; then
@@ -84,21 +101,13 @@ add_ports_donor() {
             echo -e "  Прокси-клиент ${yellow}уже работает${reset} на портах$duplicate_ports"
         fi
     fi
-	
-	chmod +x $initd_dir/S24xray
-	chmod 755 $initd_dir/S24xray
-
-        $initd_dir/S24xray restart on
+    chmod +x $initd_dir/S24xray
+    $initd_dir/S24xray restart on
 
 }
 
-
-
 dell_ports_donor() {
-    ports="$1"
-    # Нормализация портов - удаление пробелов и преобразование разделителей в запятые
-    ports=$(echo "$ports" | tr -s '[:space:]' ',' | tr -s ',' | tr ',' '\n' | sort -nu | tr '\n' ',' | sed 's/,$//')
-
+    ports=$(normalize_ports "$1")
     current_ports=$(
         awk -F= '/port_donor/{print $2; exit}' "$initd_dir/S24xray" \
         | tr -d '"'
@@ -165,18 +174,17 @@ dell_ports_donor() {
             fi
         fi
     fi
-	chmod +x $initd_dir/S24xray
-	chmod 755 $initd_dir/S24xray
-
-        $initd_dir/S24xray restart on
+    chmod +x $initd_dir/S24xray
+    $initd_dir/S24xray restart on
 
 }
 
 add_ports_exclude() {
-    ports=$1
-    # Нормализация портов - удаление пробелов и преобразование разделителей в запятые
-    ports=$(echo "$ports" | tr -s '[:space:]' ',' | tr -s ',' | tr ',' '\n' | sort -nu | tr '\n' ',' | sed 's/,$//')
-
+    if [ -z "$1" ]; then
+        echo -e "${red}Ошибка${reset}: список портов не может быть пустым"
+        return 1
+    fi
+    ports=$(normalize_ports "$1")
     current_ports=$(
         awk -F= '/port_exclude/{print $2; exit}' $initd_dir/S24xray \
         | tr -d '"'
@@ -191,7 +199,11 @@ add_ports_exclude() {
     if [ -z "$current_ports" ]; then
         new_ports="$ports"
     else
-        new_ports=$(echo "$current_ports,$ports" | tr ',' '\n' | sort -nu | tr '\n' ',' | sed 's/,$//')
+        if [ -n "$ports" ]; then
+            new_ports=$(echo "$current_ports,$ports" | tr ',' '\n' | sort -nu | tr '\n' ',' | sed 's/,$//')
+        else
+            new_ports="$current_ports"
+        fi
     fi
 
     added_ports=""
@@ -212,8 +224,15 @@ add_ports_exclude() {
         | sed 's/^ *//'
     )
 
+    # Если new_ports пуст, не добавляем запятую
+    if [ -n "$new_ports" ]; then
+        port_var="port_exclude=\"$new_ports\""
+    else
+        port_var="port_exclude=\"\""
+    fi
+
     tmpfile=$(mktemp)
-    awk -v new="port_exclude=\"$new_ports\"" 'BEGIN{replaced=0} /port_exclude/ && !replaced {sub(/port_exclude="[^"]*"/, new); replaced=1} {print}' $initd_dir/S24xray > "$tmpfile" && mv "$tmpfile" $initd_dir/S24xray
+    awk -v new="$port_var" 'BEGIN{replaced=0} /port_exclude/ && !replaced {sub(/port_exclude="[^"]*"/, new); replaced=1} {print}' $initd_dir/S24xray > "$tmpfile" && mv "$tmpfile" $initd_dir/S24xray
 
     while true; do
         if data_is_updated_excluded "$initd_dir/S24xray" "$new_ports"; then
@@ -233,20 +252,13 @@ add_ports_exclude() {
 			echo -e "  Прокси-клиент ${yellow}уже не работает${reset} с портами$duplicate_ports"
         fi
     fi
-	chmod +x $initd_dir/S24xray
-	chmod 755 $initd_dir/S24xray
-
-        $initd_dir/S24xray restart on
+    chmod +x $initd_dir/S24xray
+    $initd_dir/S24xray restart on
 
 }
 
-
-
 dell_ports_exclude() {
-    ports="$1"
-    # Нормализация портов - удаление пробелов и преобразование разделителей в запятые
-    ports=$(echo "$ports" | tr -s '[:space:]' ',' | tr -s ',' | tr ',' '\n' | sort -nu | tr '\n' ',' | sed 's/,$//')
-
+    ports=$(normalize_ports "$1")
     current_ports=$(
         awk -F= '/port_exclude/{print $2; exit}' "$initd_dir/S24xray" \
         | tr -d '"'
@@ -317,9 +329,7 @@ dell_ports_exclude() {
             fi
         fi
     fi
-	chmod +x $initd_dir/S24xray
-	chmod 755 $initd_dir/S24xray
-
-        $initd_dir/S24xray restart on
+    chmod +x $initd_dir/S24xray
+    $initd_dir/S24xray restart on
 
 }

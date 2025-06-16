@@ -93,7 +93,6 @@ register_xray_initd() {
     if [ ! -e "${initd_file}" ]; then
         cp "${script_file}" "${initd_file}"
         chmod +x "${initd_file}"
-        chmod 755 "${initd_file}"
         echo -e "  Файл автозапуска ${yellow}создан и обновлен${reset}"
     else
         mv "${initd_file}" "${backup_path}"
@@ -117,7 +116,6 @@ register_xray_initd() {
     fi
 
     chmod +x "${initd_file}"
-    chmod 755 "${initd_file}"
 }
 
 
@@ -158,5 +156,4 @@ fi
 EOF
 
     chmod +x "${initd_dir}/S99xkeenstart"
-    chmod 755 "${initd_dir}/S99xkeenstart"
 }
