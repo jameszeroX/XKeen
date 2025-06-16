@@ -33,7 +33,7 @@ normalize_ports() {
 
 add_ports_donor() {
     if [ -z "$1" ]; then
-        echo -e "${red}Ошибка${reset}: список портов не может быть пустым"
+        echo -e "  ${red}Ошибка${reset}: список портов не может быть пустым"
         return 1
     fi
     ports=$(normalize_ports "$1")
@@ -181,7 +181,7 @@ dell_ports_donor() {
 
 add_ports_exclude() {
     if [ -z "$1" ]; then
-        echo -e "${red}Ошибка${reset}: список портов не может быть пустым"
+        echo -e "  ${red}Ошибка${reset}: список портов не может быть пустым"
         return 1
     fi
     ports=$(normalize_ports "$1")
