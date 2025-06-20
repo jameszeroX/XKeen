@@ -34,8 +34,8 @@ releases_dir="/opt/releases"
 os_modules="/lib/modules/$(uname -r)"
 user_modules="/opt/lib/modules"
 app_name=XKeen
-xkeen_current_version="1.1.3.7"
-xkeen_beta="false"
+xkeen_current_version="1.1.3.8"
+xkeen_build="Pre"
 
 # -------------------------------------
 # Время

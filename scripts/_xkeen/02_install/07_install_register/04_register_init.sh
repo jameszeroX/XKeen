@@ -83,7 +83,7 @@ fi
 
 # Настройки запуска
 start_attempts=10
-start_delay=0
+start_delay=1
 start_auto="on"
 
 # Контроль открытых файловых дескрипторов

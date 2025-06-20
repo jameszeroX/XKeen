@@ -14,7 +14,7 @@ log-level: silent
 geodata-mode: true
 geo-auto-update: true
 geo-update-interval: 72
-mode: rule
+find-process-mode: off
 ipv6: false
 external-ui: ui
 external-controller: 0.0.0.0:9090
