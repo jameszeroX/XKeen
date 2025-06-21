@@ -83,7 +83,7 @@ fi
 
 # Настройки запуска
 start_attempts=10
-start_delay=1
+start_delay=0
 start_auto="on"
 
 # Контроль открытых файловых дескрипторов
@@ -812,7 +812,7 @@ proxy_start() {
                         ;;
                     *) "$name_client" run -C "$directory_user_settings" & ;;
                 esac
-                sleep "$current_delay"
+                sleep 2 && sleep "$current_delay"
                 if proxy_status; then
                     [ "$mode_proxy" != "Other" ] && configure_firewall
                     echo -e "  Прокси-клиент ${green}запущен${reset}"
