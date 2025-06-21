@@ -5,7 +5,7 @@
 ```
 opkg update && opkg upgrade && opkg install tar
 cd /opt/sbin
-tar -xvzf xkeen.tar.gz --overwrite && rm xkeen.tar.gz
+tar -xvzf xkeen.tar.gz && rm xkeen.tar.gz
 xkeen -io
 ```
 

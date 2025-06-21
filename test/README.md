@@ -7,7 +7,7 @@
 ```
 opkg update && opkg upgrade && opkg install curl tar
 curl -OL https://raw.githubusercontent.com/jameszeroX/xkeen/main/test/xkeen.tar.gz
-tar -xvzf xkeen.tar.gz -C /opt/sbin --overwrite > /dev/null && rm xkeen.tar.gz
+c="tar -xvzf xkeen.tar.gz -C /opt/sbin >/dev/null 2>&1";$c --overwrite || $c && rm xkeen.tar.gz
 xkeen -i
 ```
 
@@ -15,7 +15,7 @@ xkeen -i
 ```
 opkg update && opkg upgrade && opkg install curl tar
 curl -OL https://raw.githubusercontent.com/jameszeroX/xkeen/main/test/xkeen.tar.gz
-tar -xvzf xkeen.tar.gz -C /opt/sbin --overwrite > /dev/null && rm xkeen.tar.gz
+c="tar -xvzf xkeen.tar.gz -C /opt/sbin >/dev/null 2>&1";$c --overwrite || $c && rm xkeen.tar.gz
 xkeen -k
 ```
 
