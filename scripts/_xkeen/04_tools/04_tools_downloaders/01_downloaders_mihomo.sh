@@ -71,7 +71,7 @@ download_mihomo() {
                 download_url="$URL_BASE/mihomo-linux-mipsle-hardfloat-$VERSION_ARG.gz"
                 download_yq="$yq_dist_url/yq_linux_mipsle"
             ;;
-            "mips")
+            "mips32")
                 download_url="$URL_BASE/mihomo-linux-mips-hardfloat-$VERSION_ARG.gz"
                 download_yq="$yq_dist_url/yq_linux_mips"
             ;;
