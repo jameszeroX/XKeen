@@ -59,12 +59,12 @@ chmod +x ./install.sh
 ```
 Альтернативный вариант:
 ```
-opkg update && opkg upgrade && opkg install ca-certificates wget-ssl tar
-wget "https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"
-tar -xvzf xkeen.tar.gz -C /opt/sbin --overwrite > /dev/null && rm xkeen.tar.gz
+opkg update && opkg upgrade && opkg install curl tar
+curl -OL https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz
+tar -xvzf xkeen.tar.gz -C /opt/sbin > /dev/null && rm xkeen.tar.gz
 xkeen -i
 ```
-Установка [OffLine](https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md) 
+Установка [OffLine](https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md)
 
 ## Поддержка
 Желающие угостить меня пивом, такую возможность имеют)
