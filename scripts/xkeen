@@ -79,8 +79,7 @@ xkeen_info() {
     logs_install_packages_xkeen
 }
 
-while [ $# -gt 0 ]; do
-    case "$1" in
+case "$1" in
 
     -io)    # Установка XKeen OffLine
         clear
@@ -118,16 +117,16 @@ while [ $# -gt 0 ]; do
         echo
         delete_register_xkeen
         logs_delete_register_xkeen_info_xkeen
-    
-        echo -e "  ${yellow}Выполняется${reset} регистрация XKeen"
+
+        echo -e "  Выполняется регистрация ${yellow}XKeen${reset}"
         register_xkeen_list
         logs_register_xkeen_list_info_xkeen
         logs_register_xkeen_list_info_console
-    
+
         register_xkeen_control
         logs_register_xkeen_control_info_xkeen
         logs_register_xkeen_control_info_console
-    
+
         register_xkeen_status
         logs_register_xkeen_status_info_xkeen
         logs_register_xkeen_status_info_console
@@ -135,7 +134,7 @@ while [ $# -gt 0 ]; do
         delete_register_xray
         logs_delete_register_xray_info_xkeen
 
-        echo -e "  ${yellow}Выполняется${reset} регистрация Xray"
+        echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
         register_xray_list
         logs_register_xray_list_info_xkeen
         logs_register_xray_list_info_console
@@ -193,8 +192,6 @@ while [ $# -gt 0 ]; do
         echo -e "  6. ${green}Enjoy!${reset}"
         echo
         echo -e "  Для вывода Справки выполните ${yellow}xkeen -h${reset}"
-        echo
-        exit 0
     ;;
 
 
@@ -269,7 +266,7 @@ while [ $# -gt 0 ]; do
         delete_register_xkeen
         logs_delete_register_xkeen_info_xkeen
 
-        echo -e "  ${yellow}Выполняется${reset} регистрация XKeen"
+        echo -e "  Выполняется регистрация ${yellow}XKeen${reset}"
         register_xkeen_list
         logs_register_xkeen_list_info_xkeen
         logs_register_xkeen_list_info_console
@@ -285,7 +282,7 @@ while [ $# -gt 0 ]; do
         delete_register_xray
         logs_delete_register_xray_info_xkeen
 
-        echo -e "  ${yellow}Выполняется${reset} регистрация Xray"
+        echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
         register_xray_list
         logs_register_xray_list_info_xkeen
         logs_register_xray_list_info_console
@@ -317,11 +314,11 @@ while [ $# -gt 0 ]; do
         if [ "$add_mihomo" = "true" ]; then
             echo
             download_mihomo
-    
+
             if [ -z $bypass_mihomo ]; then
                 install_mihomo
             fi
-    
+
             mihomo_installed="installed"
             register_mihomo
         fi
@@ -351,13 +348,11 @@ while [ $# -gt 0 ]; do
             echo
         fi
         echo -e "  Для вывода Справки выполните ${yellow}xkeen -h${reset}"
-        echo
-        exit 0
     ;;
 
 
     -ug)    # Запуск обновления баз GeoFile
-        echo "  Обновление установленных GeoFile"
+        echo "  Обновление установленных баз GeoFile"
 
         info_geosite
         logs_geosite_info_xkeen
@@ -397,9 +392,7 @@ while [ $# -gt 0 ]; do
             $initd_dir/S24xray restart on >/dev/null 2>&1
         fi
 
-        echo "  Обновление установленных GeoFile выполнено"
-        echo
-        exit 0
+        echo -e "  Обновление установленных баз GeoFile ${green}выполнено${reset}"
     ;;
 
 
@@ -417,44 +410,42 @@ while [ $# -gt 0 ]; do
                 install_xkeen
                 . "$script_dir/.xkeen/import.sh"
 
-                echo -e "  ${yellow}Выполняется${reset} отмена регистрации предыдущей версии XKeen"
+                echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
                 delete_register_xkeen
                 logs_delete_register_xkeen_info_xkeen
                 logs_delete_register_xkeen_info_console
-    
-                echo -e "  ${yellow}Выполняется${reset} регистрация новой версии XKeen"
+
+                echo -e "  Выполняется регистрация новой версии ${yellow}XKeen${reset}"
                 register_xkeen_list
                 logs_register_xkeen_list_info_xkeen
                 logs_register_xkeen_list_info_console
-    
+
                 register_xkeen_control
                 logs_register_xkeen_control_info_xkeen
                 logs_register_xkeen_control_info_console
-    
+
                 register_xkeen_status
                 logs_register_xkeen_status_info_xkeen
                 logs_register_xkeen_status_info_console
-    
+
                 register_cron_initd
                 register_xray_initd
                 register_autostart
                 choice_canel_cron_select=true
                 update_cron_geofile_task
-    
+
                 fixed_register_packages
                 delete_tmp
                 logs_delete_tmp_info_xkeen
                 $initd_dir/S24xray restart on >/dev/null 2>&1
                 echo -e "  Обновление XKeen ${green}выполнено${reset}"
-            else
+                else
                 echo "  Нет доступных обновлений XKeen"
             fi
         else
             echo
             echo -e "  Обновление ${yellow}тестовой версии XKeen${reset} параметром '-uk' ${red}не предусмотрено${reset}"
         fi
-        echo
-        exit 0
     ;;
 
 
@@ -475,12 +466,12 @@ while [ $# -gt 0 ]; do
             install_xray
         fi
 
-        echo -e "  ${yellow}Выполняется${reset} отмена регистрации предыдущей версии Xray"
+        echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}Xray${reset}"
         delete_register_xray
         logs_delete_register_xray_info_xkeen
         logs_delete_register_xray_info_console
 
-        echo -e "  ${yellow}Выполняется${reset} регистрация новой версии Xray"
+        echo -e "  Выполняется регистрация новой версии ${yellow}Xray${reset}"
         register_xray_list
         logs_register_xray_list_info_xkeen
         logs_register_xray_list_info_console
@@ -501,9 +492,8 @@ while [ $# -gt 0 ]; do
 
         rm -f "$install_dir/xray_bak"
         rm -rf "$xtmp_dir"
-        echo
-        exit 0
     ;;
+
 
     -um)    # Обновление или установка ядра Mihomo
         if pidof "mihomo" >/dev/null; then
@@ -526,7 +516,6 @@ while [ $# -gt 0 ]; do
             $initd_dir/S24xray restart on >/dev/null 2>&1
             echo
             echo -e "  Обновление ядра ${yellow}Mihomo${reset} ${green}выполнено${reset}"
-            echo
         else
             register_mihomo
             echo
@@ -536,19 +525,17 @@ while [ $# -gt 0 ]; do
             echo -e "  2. Переключите ядро проксирования командой ${yellow}xkeen -mihomo${reset}"
             echo -e "  3. Запустите XKeen командой ${yellow}xkeen -start${reset}"
             echo -e "  4. ${green}Enjoy!${reset}"
-            echo
         fi
 
         rm -f "$install_dir/mihomo_bak"
         rm -rf "$mtmp_dir"
-        echo
-        exit 0
     ;;
 
-    -ugc)    # Создать или изменить существующюю задачу автообновления GeoFile
+
+    -ugc)    # Создать или изменить существующюю задачу автообновления баз GeoFile
         info_cron
         clear
-        echo -e "  Создание или изменение задачи автообновления ${yellow}GeoFile${reset}"
+        echo -e "  Создание или изменение задачи автообновления баз ${yellow}GeoFile${reset}"
         choice_update_cron
         update_cron_geofile_task
         logs_choice_update_cron_info_xkeen
@@ -562,60 +549,45 @@ while [ $# -gt 0 ]; do
         delete_tmp
         logs_delete_tmp_info_xkeen
 
-        echo -e "  Создание или изменение задачи автообновления GeoFile ${green}выполнено${reset}"
-        echo
-        exit 0
+        echo -e "  Создание или изменение задачи автообновления баз GeoFile ${green}выполнено${reset}"
     ;;
 
 
-    -ri)    # Создать правило автоматического запуска Xray
+    -ri)    # Создать файл автозапуска XKeen
         clear
         $initd_dir/S24xray stop >/dev/null 2>&1
         [ -e "$initd_dir/S24Xray" ] && rm -f "$initd_dir/S24Xray"
 
-        echo -e "  Создание файла автоматического запуска ${yellow}Xray${reset}"
+        echo -e "  Создание файла автозапуска ${yellow}XKeen${reset}"
         sleep 1
 
         register_xray_initd
         register_autostart
         logs_register_xray_initd_info_xkeen
-
-        echo
-        echo -e "  ${yellow}Проверка${reset} init.d"
         logs_register_xray_initd_info_console
 
         echo
-        echo -e "  Если Ваша конфигурация Xray готова, то можете запустить его '${green}xkeen -start${reset}'"
-
-        echo "  Создание правила автоматического запуска Xray выполнено"
-        echo
-        exit 0
+        echo -e "  Создание файла автозапуска XKeen ${green}выполнено${reset}"
+        echo -e "  Если конфигурация настроена, то можете запустить проксирование командой '${yellow}xkeen -start${reset}'"
     ;;
 
 
-    -dgc)    # Удалить задачу автообновления GeoFile
+    -dgc)    # Удалить задачу автообновления баз GeoFile
         info_cron
         logs_cron_info_xkeen
 
         clear
         echo
-        echo -e "  Удаление задачи автообновления ${yellow}GeoFile${reset}"
-        echo
-        echo -e "  ${yellow}Проверка${reset} удаления задач Cron для GeoFile"
+        echo -e "  Удаление задачи автообновления баз ${yellow}GeoFile${reset}"
 
         delete_cron_geofile
         logs_delete_cron_geofile_info_xkeen
         logs_delete_cron_geofile_info_console
 
-        echo -e "  Проверка удаления задачи Cron для GeoFile ${green}выполнена${reset}"
-        echo
-
         delete_tmp
         logs_delete_tmp_info_xkeen
 
-        echo "  Удаление задачи автообновления GeoFile выполнено"
-        echo
-        exit 0
+        echo -e "  Удаление задачи автообновления баз GeoFile ${green}выполнено${reset}"
     ;;
 
 
@@ -636,8 +608,6 @@ while [ $# -gt 0 ]; do
 
         echo
         echo -e "  Удаление Xray ${green}выполнено${reset}"
-        echo
-        exit 0
     ;;
 
 
@@ -646,19 +616,16 @@ while [ $# -gt 0 ]; do
             clear
             echo
             echo -e "  Удаление ${yellow}Mihomo${reset}"
-    
+
             rm -f "$install_dir/mihomo" "$install_dir/yq"
             rm -rf "$mihomo_conf_dir"
-    
+
             echo
             echo -e "  Удаление Mihomo ${green}выполнено${reset}"
-            echo
         else
-            echo -e "  Mihomo ${green}не установлен${reset}"
             echo
+            echo -e "  Mihomo ${green}не установлен${reset}"
         fi
-        echo
-        exit 0
     ;;
 
 
@@ -678,8 +645,6 @@ while [ $# -gt 0 ]; do
         echo -e "  ${green}curl -OfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh${reset}"
         echo -e "  ${green}chmod +x ./install.sh${reset}"
         echo -e "  ${green}./install.sh${reset}"
-        echo
-        exit 0
     ;;
 
 
@@ -694,8 +659,6 @@ while [ $# -gt 0 ]; do
 
         echo
         echo -e "  Удаление всех баз GeoIP ${green}выполнено${reset}"
-        echo
-        exit 0
     ;;
 
 
@@ -710,8 +673,6 @@ while [ $# -gt 0 ]; do
 
         echo
         echo -e "  Удаление всех баз GeoSite ${green}выполнено${reset}"
-        echo
-        exit 0
     ;;
 
 
@@ -719,8 +680,6 @@ while [ $# -gt 0 ]; do
         clear
         delete_tmp
         logs_delete_tmp_info_xkeen
-        echo
-        exit 0
     ;;
 
 
@@ -734,8 +693,6 @@ while [ $# -gt 0 ]; do
         logs_delete_register_xray_info_console
 
         echo -e "  Удаление регистрации Xray ${green}выполнено${reset}"
-        echo
-        exit 0
     ;;
 
 
@@ -749,25 +706,23 @@ while [ $# -gt 0 ]; do
         logs_delete_register_xkeen_info_console
 
         echo -e "  Удаление регистрации XKeen ${green}выполнено${reset}"
-        echo
-        exit 0
     ;;
 
 
     -remove)    # Полная деинсталляция XKeen и всех зависимостей
-        # Удаление задачи автообновления GeoFile
+        # Удаление задачи автообновления баз GeoFile
         info_cron
         logs_cron_info_xkeen
 
         clear
         echo
-        echo -e "  Удаление задачи автообновления ${yellow}GeoFile${reset}"
+        echo -e "  Удаление задачи автообновления баз ${yellow}GeoFile${reset}"
         delete_cron_geofile
         logs_delete_cron_geofile_info_xkeen
         logs_delete_cron_geofile_info_console
 
         echo
-        echo -e "  Удаление задачи автообновления GeoFile ${green}выполнено${reset}"
+        echo -e "  Удаление задачи автообновления баз GeoFile ${green}выполнено${reset}"
         sleep 2
 
         # Удаление GeoIP's
@@ -824,14 +779,14 @@ while [ $# -gt 0 ]; do
             clear
             echo
             echo -e "  ${yellow}Удаление${reset} Mihomo"
-    
+
             rm -f "$install_dir/mihomo" "$install_dir/yq"
             rm -rf "$mihomo_conf_dir"
-    
+
             echo
             echo -e "  Удаление Mihomo ${green}выполнено${reset}"
             sleep 2
-       fi
+           fi
 
         # Удаление XKeen
         clear
@@ -856,8 +811,6 @@ while [ $# -gt 0 ]; do
         echo -e "  ${green}curl -OfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh${reset}"
         echo -e "  ${green}chmod +x ./install.sh${reset}"
         echo -e "  ${green}./install.sh${reset}"
-        echo
-        exit 0
     ;;
 
 
@@ -870,7 +823,7 @@ while [ $# -gt 0 ]; do
         info_version_xkeen
         logs_version_xkeen_info_xkeen
 
-        delete_register_xkeen        
+        delete_register_xkeen    
         logs_delete_register_xkeen_info_xkeen
         logs_delete_register_xkeen_info_console
 
@@ -888,8 +841,6 @@ while [ $# -gt 0 ]; do
 
         echo
         echo -e "  Обновление регистрации XKeen в системе ${green}выполнено${reset}"
-        echo
-        exit 0
     ;;
 
 
@@ -922,8 +873,6 @@ while [ $# -gt 0 ]; do
 
         echo
         echo -e "  Обновление регистрации Xray в системе ${green}выполнено${reset}"
-        echo
-        exit 0
     ;;
 
 
@@ -933,17 +882,17 @@ while [ $# -gt 0 ]; do
         info_cpu
 
         clear
-        echo -e "  ${yellow}Переустановка${reset} XKeen"
+        echo -e "  Переустановка ${yellow}XKeen${reset}"
 
         echo
         install_xkeen
         . "$script_dir/.xkeen/import.sh"
-        echo -e "  ${yellow}Выполняется${reset} отмена регистрации предыдущей версии XKeen"
+        echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
         delete_register_xkeen
         logs_delete_register_xkeen_info_xkeen
         logs_delete_register_xkeen_info_console
 
-        echo -e "  ${yellow}Выполняется${reset} регистрация новой версии XKeen"
+        echo -e "  Выполняется регистрация новой версии ${yellow}XKeen${reset}"
         register_xkeen_list
         logs_register_xkeen_list_info_xkeen
         logs_register_xkeen_list_info_console
@@ -969,12 +918,10 @@ while [ $# -gt 0 ]; do
 
         echo
         echo -e "  Переустановка XKeen ${green}выполнена${reset}"
-        echo
-        exit 0
     ;;
 
 
-    -g)    # Переустановка GeoFile
+    -g)    # Переустановка баз GeoFile
         clear
         info_geosite
         info_geoip
@@ -1001,124 +948,98 @@ while [ $# -gt 0 ]; do
 
         clear
         echo
-        echo -e "  Переустановка GeoFile ${green}выполнена${reset}"
-        echo
-        exit 0
+        echo -e "  Переустановка баз GeoFile ${green}выполнена${reset}"
     ;;
 
 
     -kb)    # Резервное копирование XKeen
-        echo "  Создание резервной копии XKeen"
+        echo -e "  Создание резервной копии ${yellow}XKeen${reset}"
 
         info_version_xkeen
         logs_version_xkeen_info_xkeen
 
         backup_xkeen
 
-        echo "  Создание резервной копии XKeen выполнено"
-        echo
-        exit 0
+        echo -e "  Создание резервной копии XKeen ${green}выполнено${reset}"
     ;;
 
 
-    -kbr)    # Восстановление резервной копировании XKeen
-        echo "  Восстановление из резервной копии XKeen"
+    -kbr)    # Восстановление XKeen из резервной копии
+        echo "  Восстановление ${yellow}XKeen${reset} из резервной копии"
 
         restore_backup_xkeen
 
-        echo "  Восстановление из резервной копии XKeen выполнено"
-        echo
-        exit 0
+        echo -e "  Восстановление XKeen из резервной копии ${green}выполнено${reset}"
     ;;
 
 
     -tc)    # Тест соединения
-        echo -e "  ${yellow}Проверка${reset} интернет-соединения"
+        echo "  Проверка интернет-соединения"
         tests_connection
         echo -e "  Проверка интернет-соединения ${green}выполнена${reset}"
-        echo
-        exit 0
     ;;
 
 
     -tpx)    # Показать прослушиваемые порты
-        echo -e "  ${yellow}Определение${reset} прослушиваемых портов"
+        echo "  Определение прослушиваемых портов"
         tests_ports_client
     ;;
 
 
     -tfk)    # Проверить файлы XKeen
-        echo -e "  ${yellow}Проверка${reset} файлов XKeen"
+        echo -e "  Проверка файлов ${yellow}XKeen${reset}"
         logs_file_check_xkeen_xkeen
         echo -e "  Проверка файлов XKeen ${green}выполнена${reset}"
-        echo
-        exit 0
     ;;
 
 
     -tfx)    # Проверить файлы Xray
-        echo -e "  ${yellow}Проверка${reset} файлов Xray"
+        echo -e "  Проверка файлов ${yellow}Xray${reset}"
         logs_file_check_xray_xkeen
         echo -e "  Проверка файлов Xray ${green}выполнена${reset}"
-        echo
-        exit 0
     ;;
 
 
-    -v)    # Показать текущую версию
-        echo "  Текущая версия XKeen $xkeen_current_version $xkeen_build"
-        echo
-        exit 0
+    -v)    # Показать версию XKeen
+        echo "  Версия XKeen $xkeen_current_version $xkeen_build"
     ;;
 
 
-    -ad)    # Можете купить Мне кофе
+    -ad)    # Можете купить кофе Skrill)
         author_donate
-        echo
-        exit 0
     ;;
 
 
     -af)    # Обратная связь
         author_feedback
-        echo
-        exit 0
     ;;
 
 
-    -start)    # Запуск Xray
+    -start)    # Запуск XKeen
         add_chmod_init
         $initd_dir/S24xray start on
         ip route flush cache
-        echo
-        exit 0
     ;;
 
 
-    -stop)    # Остановка Xray
+    -stop)    # Остановка XKeen
         add_chmod_init
         $initd_dir/S24xray stop
-        echo
-        exit 0
     ;;
 
 
-    -restart)    # Перезапуск Xray
+    -restart)    # Перезапуск XKeen
         add_chmod_init
         $initd_dir/S24xray restart on
-        echo
-        exit 0
     ;;
 
 
-    -status)    # Проверка Xray
+    -status)    # Проверка XKeen
         $initd_dir/S24xray status
-        echo
-        exit 0
     ;;
 
 
-    -auto)    # Переключение значения autostart между "on" и "off"
+    -auto)    # Смена режима запуска XKeen
         if grep -q 'autostart="on"' $initd_dir/S99xkeenstart; then
             sed -i 's/autostart="on"/autostart="off"/' $initd_dir/S99xkeenstart
             if grep -q 'start_auto="on"' $initd_dir/S24xray; then
@@ -1133,121 +1054,97 @@ while [ $# -gt 0 ]; do
             echo -e "  Автозапуск XKeen ${green}включен${reset}"
         fi
         add_chmod_init
-        echo
-        exit 0
     ;;
 
 
-    -fd)    # Переключение значения check_fd между "on" и "off"
+    -fd)    # Смена режима контроля открытых файловых дескрипторов
         if grep -q 'check_fd="on"' $initd_dir/S24xray; then
             sed -i 's/check_fd="on"/check_fd="off"/' $initd_dir/S24xray
-            echo -e "  Контроль открытых файловых дескрипторов для xray ${red}отключен${reset}. ${yellow}Перезагрузите роутер!${reset}"
+            echo -e "  Контроль открытых файловых дескрипторов для прокси-клиента ${red}отключен${reset}. ${yellow}Перезагрузите роутер!${reset}"
         else
             sed -i 's/check_fd="off"/check_fd="on"/' $initd_dir/S24xray
-            echo -e "  Контроль открытых файловых дескрипторов для xray ${green}включен${reset}. ${yellow}Перезагрузите роутер!${reset}"
+            echo -e "  Контроль открытых файловых дескрипторов для прокси-клиента ${green}включен${reset}. ${yellow}Перезагрузите роутер!${reset}"
         fi
         add_chmod_init
-        echo
-        exit 0
     ;;
 
 
-    -ap)    # Добавить порт Xray
+    -ap)    # Добавить порт проксирования
         shift
         add_ports_donor "$1" 
         sleep 2
         add_chmod_init
-        echo
-        exit 0
     ;;
 
 
-    -dp)    # Удалить порт Xray
+    -dp)    # Удалить порт проксирования
         shift
         dell_ports_donor "$1"
         sleep 2
         add_chmod_init
-        echo
-        exit 0
     ;;
 
 
-    -cp)    # Получить список портов, на которых работает прокси
+    -cp)    # Получить список портов, на которых работает прокси-клиент
         port_donor=$(grep -m1 '^port_donor=' /opt/etc/init.d/S24xray | cut -d'=' -f2 | tr -d '"' | tr ' ' '\n' | sed 's/^/     /')
         if [ -z "$port_donor" ] || [ "$port_donor" == "     " ]
         then
-            echo -e "  Xray работает ${yellow}на всех${reset} портах"
+            echo -e "  Прокси-клиент работает ${yellow}на всех портах${reset}"
         else
-            echo -e "  Xray ${green}работает${reset} на портах\n$port_donor"
+            echo -e "  Прокси-клиент работает на портах\n${green}$port_donor${reset}"
         fi
         add_chmod_init
-        echo
-        exit 0
     ;;
 
 
-    -ape)    # Добавить порт-исключение Xray
+    -ape)    # Добавить порт-исключение проксирования
         shift
         add_ports_exclude "$1" 
         sleep 2
         add_chmod_init
-        echo
-        exit 0
     ;;
 
 
-    -dpe)    # Удалить порт-исключение Xray
-        shift        
+    -dpe)    # Удалить порт-исключение проксирования
+        shift
         dell_ports_exclude "$1"
         sleep 2
         add_chmod_init
-        echo
-        exit 0
     ;;
 
 
-    -cpe)    # Получить список портов-исключение, на которых не работает прокси
+    -cpe)    # Получить список портов, исключёных из проксирования
         port_exclude=$(grep -m1 '^port_exclude=' /opt/etc/init.d/S24xray | cut -d'=' -f2 | tr -d '"' | tr ' ' '\n' | sed 's/^/     /')
         if [ -z "$port_exclude" ] || [ "$port_exclude" == "     " ]
         then
-            echo -e "  ${yellow}Нет портов${reset} Xray для исключения"
+            echo -e "  ${yellow}Нет портов${reset} исключенных из проксирования"
         else
-            echo -e "  Xray ${red} не работает${reset} на портах\n$port_exclude"
+            echo -e "  Из проксирования исключены порты\n${green}$port_exclude${reset}"
         fi
         add_chmod_init
-        echo
-        exit 0
     ;;
 
 
-    -modules)    # Переносит модули из прошивки в пользовательскую директорию
+    -modules)    # Перенос необходимых модулей из прошивки в пользовательскую директорию
         migration_modules
-        echo
-        exit 0
     ;;
 
 
-    -d)    # Установить задержку автозапуска в секундах
+    -d)    # Установка задержки автозапуска в секундах
         shift
         delay_autostart "$1"
         sleep 2
         add_chmod_init
-        echo
-        exit 0
     ;;
 
 
     -diag)
         diagnostic
-        echo
-        exit 0
     ;;
 
 
     -arch)
         archive_xkeen
-        echo
-        exit 0
     ;;
 
 
@@ -1263,32 +1160,30 @@ while [ $# -gt 0 ]; do
         delete_register_xkeen
         logs_delete_register_xkeen_info_xkeen
         logs_delete_register_xkeen_info_console
-    
+
         echo -e "  ${yellow}Выполняется${reset} регистрация новой версии XKeen"
         register_xkeen_list
         logs_register_xkeen_list_info_xkeen
         logs_register_xkeen_list_info_console
-    
+
         register_xkeen_control
         logs_register_xkeen_control_info_xkeen
         logs_register_xkeen_control_info_console
-    
+
         register_xkeen_status
         logs_register_xkeen_status_info_xkeen
         logs_register_xkeen_status_info_console
-    
+
         register_cron_initd
         register_xray_initd
         register_autostart
         choice_canel_cron_select=true
         update_cron_geofile_task
-    
+
         fixed_register_packages
         delete_tmp
         logs_delete_tmp_info_xkeen
         $initd_dir/S24xray restart on >/dev/null 2>&1
-        echo
-        exit 0
     ;;
 
 
@@ -1313,8 +1208,6 @@ while [ $# -gt 0 ]; do
         fixed_register_packages
 
         delete_tmp
-        echo
-        exit 0
     ;;
 
 
@@ -1331,13 +1224,9 @@ while [ $# -gt 0 ]; do
             echo -e "  ${green}Выполнена${reset} смена ядра на ${yellow}Xray${reset}"
             echo -e "  Настройте конфигурацию по пути '${yellow}$install_conf_dir/${reset}'"
             echo -e "  И запустите проксирование командой ${yellow}xkeen -start${reset}"
-            echo
-            exit 0
         else
-            echo -e " Произошла ${red}ошибка${reset} при смене ядра"
+            echo -e " Произошла ${red}ошибка${reset} при смене ядра проксирования"
         fi
-        echo
-        exit 0
     ;;
 
 
@@ -1355,20 +1244,16 @@ while [ $# -gt 0 ]; do
             echo -e "  ${green}Выполнена${reset} смена ядра на ${yellow}Mihomo${reset}"
             echo -e "  Настройте конфигурацию по пути '${yellow}$mihomo_conf_dir/${reset}'"
             echo -e "  И запустите проксирование командой ${yellow}xkeen -start${reset}"
-            echo
-            exit 0
         else
-            echo -e " Произошла ${red}ошибка${reset} при смене ядра или ядро ${yellow}Mihomo${reset} не установлено"
+            echo -e " Произошла ${red}ошибка${reset} при смене ядра проксирования"
         fi
-        echo
-        exit 0
     ;;
 
 
     -h)    # Помощь
         echo
         echo -e "${light_blue}XKeen${reset} — утилита для обеспечения работы Xray и Mihomo на роутерах Keenetic"
-        echo 
+        echo
         echo -e "	Пример использования"
         echo -e "	xkeen -ap 80,443"
         echo -e "	xkeen	${gray}	Утилита${reset}"
@@ -1384,10 +1269,10 @@ while [ $# -gt 0 ]; do
         echo -e "	-ug	${gray}	GeoFile${reset}"
         echo -e "	-ux	${gray}	Xray${reset} (повышение/понижение версии)"
         echo -e "	-um	${gray}	Mihomo${reset} (повышение/понижение версии)"
-        echo 
+        echo
         echo -e "${yellow}Включение или изменение задачи автообновления${reset}"
         echo -e "	-ugc	${gray}	GeoFile${reset}"
-        echo 
+        echo
         echo -e "${yellow}Регистрация в системе${reset}"
         echo -e "	-rrk	${gray}	XKeen${reset}"
         echo -e "	-rrx	${gray}	Xray${reset}"
@@ -1401,7 +1286,7 @@ while [ $# -gt 0 ]; do
         echo -e "	-dm	${gray}	Mihomo${reset}"
         echo -e "	-dt	${gray}	Временные файлы${reset}"
         echo -e "	-dk	${gray}	XKeen${reset}"
-        echo 
+        echo
         echo -e "${red}Удаление${reset} | Задачи автообновления"
         echo -e "	-dgc	${gray}	GeoFile${reset}"
         echo
@@ -1449,15 +1334,11 @@ while [ $# -gt 0 ]; do
         echo -e "${light_blue}Автор${reset}"
         echo -e "	-ad	${gray}	Если Вам полезна утилита, можете купить Мне кофе${reset}"
         echo -e "	-af	${gray}	Обратная связь${reset}"
-        echo
-        exit 0
     ;;
+
 
     *)
         echo -e "     Неизвестный ключ: ${red}$1${reset}"
         echo -e "     Список доступных ключей: ${yellow}xkeen -h${reset}"
-        exit 0
     ;;
-
-    esac
-done
+esac

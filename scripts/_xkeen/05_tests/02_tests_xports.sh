@@ -6,7 +6,7 @@ tests_ports_client() {
     elif pidof "mihomo" >/dev/null; then
         name_client=mihomo
     else
-        echo ""
+        echo
         echo "  Определение портов прослушивания возможно только при работающем XKeen"
         echo "  Запустите XKeen командой 'xkeen -start'"
         exit 1
@@ -54,9 +54,8 @@ tests_ports_client() {
             fi
             echo -e "\n     ${gray}Шлюз${reset} $gateway\n     ${gray}Порт${reset} $port\n     ${gray}Протокол${reset} $protocol"
         done
+        break
     else
         echo -e "  $name_client ${red}не слушает${reset} на каких-либо портах"
     fi
-    echo
-    break
 }

@@ -1,4 +1,3 @@
-# Работа с резервными копиями XKeen
 
 # Создание резервной копии XKeen
 backup_xkeen() {
@@ -14,12 +13,11 @@ backup_xkeen() {
     if [ -s "$backup_dir/xkeen" ]; then
         echo -e "  Резервная копия XKeen создана: ${yellow}${current_datetime}_xkeen_v${xkeen_current_version}${reset}"
     else
-        echo -e "  ${red}Ошибка при создании резервной копии XKeen.${reset}"
+        echo -e "  ${red}Ошибка при создании резервной копии XKeen${reset}"
     fi
 }
 
-
-
+# Восстановление XKeen из резервной копии
 restore_backup_xkeen() {
     restore_script=$(mktemp)
     cat <<eof > "$restore_script"
@@ -37,16 +35,16 @@ if [ -n "\$latest_backup_dir" ]; then
                     rm -rf "$install_dir/.xkeen"
                 fi
                 mv "$install_dir/_xkeen" "$install_dir/.xkeen"
-                echo "  Резервная копия XKeen успешно восстановлена."
+                echo "  Резервная копия XKeen успешно восстановлена"
             fi
         else
-            echo "  Не удалось скопировать _xkeen."
+            echo "  Не удалось скопировать _xkeen"
         fi
     else
-        echo "  Не удалось скопировать _xkeen."
+        echo "  Не удалось скопировать _xkeen"
     fi
 else
-    echo "  Подходящая резервная копия XKeen не найдена."
+    echo "  Подходящая резервная копия XKeen не найдена"
 fi
 
 # Удаление временного скрипта
