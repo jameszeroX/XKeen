@@ -23,5 +23,5 @@ main_dir="$script_dir/.xkeen"
 # Модуль тестирования
 . "$xtests_dir/00_tests_import.sh"
 
-# Модуль тестирования
+# Модуль обратной связи
 . "$main_dir/author.sh"

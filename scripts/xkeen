@@ -1060,10 +1060,10 @@ case "$1" in
     -fd)    # Смена режима контроля открытых файловых дескрипторов
         if grep -q 'check_fd="on"' $initd_dir/S24xray; then
             sed -i 's/check_fd="on"/check_fd="off"/' $initd_dir/S24xray
-            echo -e "  Контроль открытых файловых дескрипторов для прокси-клиента ${red}отключен${reset}. ${yellow}Перезагрузите роутер!${reset}"
+            echo -e "  Контроль файловых дескрипторов, открытых прокси-клиентом ${red}отключен${reset}. ${yellow}Перезагрузите роутер!${reset}"
         else
             sed -i 's/check_fd="off"/check_fd="on"/' $initd_dir/S24xray
-            echo -e "  Контроль открытых файловых дескрипторов для прокси-клиента ${green}включен${reset}. ${yellow}Перезагрузите роутер!${reset}"
+            echo -e "  Контроль файловых дескрипторов, открытых прокси-клиентом ${green}включен${reset}. ${yellow}Перезагрузите роутер!${reset}"
         fi
         add_chmod_init
     ;;
@@ -1323,7 +1323,7 @@ case "$1" in
         echo -e "	-status	${gray}	Статус работы${reset}"
         echo -e "	-auto	${gray}	Включить | Отключить автозапуск прокси-клиента${reset}"
         echo -e "	-d	${gray}	Установить начальное время запуска прокси-клиента с роутером${reset}"
-        echo -e "	-fd	${gray}	Включить | Отключить контроль открытых файловых дескрипторов для процесса прокси-клиента${reset}"
+        echo -e "	-fd	${gray}	Включить | Отключить контроль файловых дескрипторов, открытых прокси-клиентом${reset}"
         echo -e "	-diag	${gray}	Выполнить диагностику${reset}"
         echo -e "	-xray	${gray}	Переключить XKeen на ядро Xray${reset}"
         echo -e "	-mihomo	${gray}	Переключить XKeen на ядро Mihomo${reset}"
