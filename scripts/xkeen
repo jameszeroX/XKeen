@@ -957,19 +957,37 @@ case "$1" in
 
         info_version_xkeen
         logs_version_xkeen_info_xkeen
-
         backup_xkeen
-
-        echo -e "  Создание резервной копии XKeen ${green}выполнено${reset}"
     ;;
 
 
     -kbr)    # Восстановление XKeen из резервной копии
-        echo "  Восстановление ${yellow}XKeen${reset} из резервной копии"
-
+        echo -e "  Восстановление ${yellow}XKeen${reset} из резервной копии"
         restore_backup_xkeen
+    ;;
 
-        echo -e "  Восстановление XKeen из резервной копии ${green}выполнено${reset}"
+
+    -cb)    # Резервное копирование конфигурации Xray
+        echo -e "  Создание резервной копии ${yellow}конфигурации Xray${reset}"
+        backup_configs_xray
+    ;;
+
+
+    -cbr)    # Восстановление конфигурации Xray из резервной копии
+        echo -e "  Восстановление ${yellow}конфигурации Xray${reset} из резервной копии"
+        restore_backup_configs_xray
+    ;;
+
+
+    -mb)    # Резервное копирование конфигурации Mihomo
+        echo -e "  Создание резервной копии ${yellow}конфигурации Mihomo${reset}"
+        backup_configs_mihomo
+    ;;
+
+
+    -mbr)    # Восстановление конфигурации Mihomo из резервной копии
+        echo -e "  Восстановление ${yellow}конфигурации Mihomo${reset} из резервной копии"
+        restore_backup_configs_mihomo
     ;;
 
 
@@ -1311,6 +1329,14 @@ case "$1" in
         echo -e "${green}Резервная копия XKeen${reset}"
         echo -e "	-kb	${gray}	Создание{reset}"
         echo -e "	-kbr	${gray}	Восстановление${reset}"
+        echo
+        echo -e "${green}Резервная копия конфигурации Xray${reset}"
+        echo -e "	-cb	${gray}	Создание{reset}"
+        echo -e "	-cbr	${gray}	Восстановление${reset}"
+        echo
+        echo -e "${green}Резервная копия конфигурации Mihomo${reset}"
+        echo -e "	-mb	${gray}	Создание{reset}"
+        echo -e "	-mbr	${gray}	Восстановление${reset}"
         echo
         echo -e "${light_blue}Проверки${reset}"
         echo -e "	-tpx	${gray}	Порты, шлюз и протокол прокси-клиента${reset}"

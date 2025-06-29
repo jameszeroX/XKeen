@@ -1,4 +1,3 @@
-
 # Создание резервной копии XKeen
 backup_xkeen() {
     backup_dir="${backups_dir}/${current_datetime}_xkeen_v${xkeen_current_version}"
@@ -13,7 +12,7 @@ backup_xkeen() {
     if [ -s "$backup_dir/xkeen" ]; then
         echo -e "  Резервная копия XKeen создана: ${yellow}${current_datetime}_xkeen_v${xkeen_current_version}${reset}"
     else
-        echo -e "  ${red}Ошибка при создании резервной копии XKeen${reset}"
+        echo -e "  ${red}Ошибка${reset} при создании резервной копии XKeen"
     fi
 }
 
@@ -35,7 +34,7 @@ if [ -n "\$latest_backup_dir" ]; then
                     rm -rf "$install_dir/.xkeen"
                 fi
                 mv "$install_dir/_xkeen" "$install_dir/.xkeen"
-                echo "  Резервная копия XKeen успешно восстановлена"
+                echo -e "  XKeen ${green}успешно восстановлен${reset}"
             fi
         else
             echo "  Не удалось скопировать _xkeen"
