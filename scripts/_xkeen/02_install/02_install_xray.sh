@@ -54,6 +54,11 @@ install_xray() {
             error_content="${error_content}[error] Ошибка при удалении временных файлов\n"
         fi
 
+        # Фикс для новых ядер xray
+        if [ -f "$install_conf_dir"/*transport* ]; then
+            rm -f "$install_conf_dir"/*transport*
+        fi
+
     else
         error_content="[error] Архив Xray не найден\n"
     fi
