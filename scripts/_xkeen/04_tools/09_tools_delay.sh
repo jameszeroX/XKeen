@@ -15,10 +15,14 @@ data_is_updated_exclude() {
 delay_autostart() {
     new_delay="$1"
 
-    # Проверка, что new_delay не пусто
+    # Вывод текущей задержки автозапуска
     if [ -z "$new_delay" ]; then
-        echo -e "  ${red}Ошибка${reset}"
-		echo "  Новая задержка не может быть пустой"
+        current_delay=$(
+            awk -F= '/start_delay/{print $2; exit}' "$initd_dir/S99xkeenstart" \
+            | tr -d '[:space:]'
+        )
+        current_delay=${current_delay:-""}
+        echo -e "  Текущая задержка автозапуска ${yellow}$current_delay секунд(ы)${reset}"
         return 1
     fi
 
@@ -48,7 +52,7 @@ delay_autostart() {
     while true; do
         if data_is_updated_exclude "$initd_dir/S99xkeenstart" "$new_delay"; then
         echo -e "  ${green}Успех${reset}"
-        echo -e "  Установлена задержка автозапуска XKeen - ${new_delay} секунд(ы)"
+        echo -e "  Установлена задержка автозапуска XKeen ${yellow}${new_delay} секунд(ы)${reset}"
             break
         fi
     done
