@@ -1,6 +1,6 @@
 
 # Модуль логирования
-. "$xtools_dir/01_tools_logs/00_logs_import.sh"
+. "$xtools_dir/01_tools_logs/02_logs_console.sh"
 
 # Модуль выбора
 . "$xtools_dir/02_tools_choice/00_choice_import.sh"

@@ -5,7 +5,7 @@ data_is_updated_donor() {
         awk -F= '/port_donor/{print $2; exit}' "$file" \
         | tr -d '"'
     )
-    if [ "$current_ports" == "$new_ports" ]; then
+    if [ "$current_ports" = "$new_ports" ]; then
         return 0
     else
         return 1
@@ -19,7 +19,7 @@ data_is_updated_excluded() {
         awk -F= '/port_exclude/{print $2; exit}' "$file" \
         | tr -d '"'
     )
-    if [ "$current_ports" == "$new_ports" ]; then
+    if [ "$current_ports" = "$new_ports" ]; then
         return 0
     else
         return 1
@@ -101,8 +101,6 @@ add_ports_donor() {
             echo -e "  Прокси-клиент ${yellow}уже работает${reset} на портах$duplicate_ports"
         fi
     fi
-    chmod +x $initd_dir/S24xray
-    $initd_dir/S24xray restart on
 
 }
 
@@ -174,8 +172,6 @@ dell_ports_donor() {
             fi
         fi
     fi
-    chmod +x $initd_dir/S24xray
-    $initd_dir/S24xray restart on
 
 }
 
@@ -252,8 +248,6 @@ add_ports_exclude() {
 			echo -e "  Прокси-клиент ${yellow}уже не работает${reset} с портами$duplicate_ports"
         fi
     fi
-    chmod +x $initd_dir/S24xray
-    $initd_dir/S24xray restart on
 
 }
 
@@ -329,7 +323,5 @@ dell_ports_exclude() {
             fi
         fi
     fi
-    chmod +x $initd_dir/S24xray
-    $initd_dir/S24xray restart on
 
 }

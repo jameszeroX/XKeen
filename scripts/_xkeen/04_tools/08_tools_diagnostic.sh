@@ -154,11 +154,11 @@ echo "" >> "$diagnostic"
 echo "" >> "$diagnostic"
 
 # 10. Определение IP адреса с использованием запроса на внешний сервер
-write_header "Внешний IP адрес"
-external_ip=$(curl -s ifconfig.me)
-echo "${external_ip}" >> "$diagnostic" 
-echo "" >> "$diagnostic"
-echo "" >> "$diagnostic"
+# write_header "Внешний IP адрес"
+# external_ip=$(curl -s ifconfig.me)
+# echo "${external_ip}" >> "$diagnostic" 
+# echo "" >> "$diagnostic"
+# echo "" >> "$diagnostic"
 
 # 11. Запрос к curl для получения country, ndmhwid, product
 write_header "Данные из localhost:79/rci/show/defaults"
@@ -167,13 +167,14 @@ echo "" >> "$diagnostic"
 echo "" >> "$diagnostic"
 
 # 12. Запрос версии ядра
-if [ "${name_client}" == "xray" ]; then
+if [ "${name_client}" = "xray" ]; then
 write_header "Версия Xray"
 xray -version >> "$diagnostic" 
-elif [ "${name_client}" == "mihomo" ]; then
+elif [ "${name_client}" = "mihomo" ]; then
 write_header "Версия Mihomo"
 mihomo -v >> "$diagnostic" 
 fi
+echo "" >> "$diagnostic"
 echo "Разрешено файловых дескрипторов:" >> "$diagnostic"
 grep 'Max open files' "/proc/$(pidof ${name_client})/limits" | awk '{print $4}' >> "$diagnostic" 
 echo "Использовано файловых дескрипторов:" >> "$diagnostic"

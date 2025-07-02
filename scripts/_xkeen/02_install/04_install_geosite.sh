@@ -2,126 +2,68 @@
 install_geosite() {
     mkdir -p "$geo_dir" || { echo "Ошибка: Не удалось создать директорию $geo_dir"; exit 1; }
 
-    if [ -f "$geo_dir/geosite_antifilter.dat" ]; then
-        update_antifilter_geosite_msg=true
-    fi
-    if [ -f "$geo_dir/geosite_v2fly.dat" ]; then
-        update_v2fly_geosite_msg=true
-    fi
-    if [ -f "$geo_dir/geosite_zkeen.dat" ]; then
-        update_zkeen_geosite_msg=true
-    fi
+    # Установка/обновление файла
+    process_geosite_file() {
+        url=$1
+        filename=$2
+        display_name=$3
+        update_flag=$4
 
-    # Установка GeoSite AntiFilter
-    if [ "$install_antifilter_geosite" = true ]; then
-        antifilter_dat=$(mktemp)
-        if curl -L -o "$antifilter_dat" "https://github.com/Skrill0/AntiFilter-Domains/releases/latest/download/geosite.dat" > /dev/null 2>&1; then
-            mv "$antifilter_dat" "$geo_dir/geosite_antifilter.dat"
-            if [ -s "$geo_dir/geosite_antifilter.dat" ]; then
-                if [ "$update_antifilter_geosite_msg" = true ]; then
-                    echo -e "  GeoSite AntiFilter ${green}успешно обновлен${reset}"
+        temp_file=$(mktemp)
+        if curl -L -o "$temp_file" "$url" > /dev/null 2>&1; then
+            mv "$temp_file" "$geo_dir/$filename"
+            if [ -s "$geo_dir/$filename" ]; then
+                if [ "$update_flag" = true ]; then
+                    echo -e "  $display_name ${green}успешно обновлен${reset}"
                 else
-                    echo -e "  GeoSite AntiFilter ${green}успешно установлен${reset}"
+                    echo -e "  $display_name ${green}успешно установлен${reset}"
                 fi
+                return 0
             else
-                echo -e "  ${red}Неизвестная ошибка${reset} при установке GeoSite AntiFilter"
+                echo -e "  ${red}Неизвестная ошибка${reset} при установке $display_name"
+                return 1
             fi
         else
-            rm -f "$antifilter_dat"
-            echo -e "  ${red}Ошибка${reset} при загрузке GeoSite AntiFilter. Проверьте соединение с интернетом или повторите позже"
+            rm -f "$temp_file"
+            echo -e "  ${red}Ошибка${reset} при загрузке $display_name. Проверьте соединение с интернетом или повторите позже"
+            return 1
         fi
+    }
+
+    # Установка GeoSite Re:filter
+    if [ "$install_refilter_geosite" = true ] || [ "$update_refilter_geosite" = true ]; then
+        process_geosite_file \
+            "$refilter_url" \
+            "geosite_refilter.dat" \
+            "GeoSite Re:filter" \
+            "$update_refilter_geosite"
     fi
 
     # Установка GeoSite V2Fly
-    if [ "$install_v2fly_geosite" = true ]; then
-        v2fly_dat=$(mktemp)
-        if curl -L -o "$v2fly_dat" "https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat" > /dev/null 2>&1; then
-            mv "$v2fly_dat" "$geo_dir/geosite_v2fly.dat"
-            if [ -s "$geo_dir/geosite_v2fly.dat" ]; then
-                if [ "$update_v2fly_geosite_msg" = true ]; then
-                    echo -e "  GeoSite V2Fly ${green}успешно обновлен${reset}"
-                else
-                    echo -e "  GeoSite V2Fly ${green}успешно установлен${reset}"
-                fi
-            else
-                echo -e "  ${red}Неизвестная ошибка${reset} при установке GeoSite V2Fly"
-            fi
-        else
-            rm -f "$v2fly_dat"
-            echo -e "  ${red}Ошибка${reset} при загрузке GeoSite V2Fly. Проверьте соединение с интернетом или повторите позже"
-        fi
-    fi
-	
-    # Установка GeoSite by Zkeen
-    if [ "$install_zkeen_geosite" = true ]; then
-        zkeen_dat=$(mktemp)
-        if curl -L -o "$zkeen_dat" "https://github.com/jameszeroX/zkeen-domains/releases/latest/download/zkeen.dat" > /dev/null 2>&1; then
-            rm -f "$geo_dir/zkeen.dat" "$geo_dir/geosite_zkeen.dat"
-            mv "$zkeen_dat" "$geo_dir/geosite_zkeen.dat"
-            ln -s "$geo_dir/geosite_zkeen.dat" "$geo_dir/zkeen.dat"
-            if [ -s "$geo_dir/geosite_zkeen.dat" ]; then
-                if [ "$update_zkeen_geosite_msg" = true ]; then
-                    echo -e "  GeoSite Zkeen ${green}успешно обновлен${reset}"
-                else
-                    echo -e "  GeoSite Zkeen ${green}успешно установлен${reset}"
-                fi
-            else
-                echo -e "  ${red}Неизвестная ошибка${reset} при установке GeoSite Zkeen"
-            fi
-        else
-            rm -f "$zkeen_dat"
-            echo -e "  ${red}Ошибка${reset} при загрузке GeoSite Zkeen. Проверьте соединение с интернетом или повторите позже"
-        fi
+    if [ "$install_v2fly_geosite" = true ] || [ "$update_v2fly_geosite" = true ]; then
+        process_geosite_file \
+            "$v2fly_url" \
+            "geosite_v2fly.dat" \
+            "GeoSite V2Fly" \
+            "$update_v2fly_geosite"
     fi
 
-    # Обновление GeoSite AntiFilter, если установлены и требуется обновление
-    if [ "$update_antifilter_geosite" = true ]; then
-        antifilter_dat=$(mktemp)
-        if curl -L -o "$antifilter_dat" "https://github.com/Skrill0/AntiFilter-Domains/releases/latest/download/geosite.dat" > /dev/null 2>&1; then
-            mv "$antifilter_dat" "$geo_dir/geosite_antifilter.dat"	
-            if [ -s "$geo_dir/geosite_antifilter.dat" ]; then
-                echo -e "  GeoSite AntiFilter ${green}успешно обновлен${reset}"
-            else
-                echo -e "  ${red}Неизвестная ошибка${reset} при обновлении GeoSite AntiFilter"
-            fi
-        else
-            rm -f "$antifilter_dat"
-            echo -e "  ${red}Ошибка${reset} при загрузке GeoSite AntiFilter. Проверьте соединение с интернетом или повторите позже"
+    # Установка GeoSite Zkeen
+    if [ "$install_zkeen_geosite" = true ] || [ "$update_zkeen_geosite" = true ]; then
+        datfile="geosite_zkeen.dat"
+        [ -L "$geo_dir/geosite_zkeen.dat" ] && datfile="zkeen.dat"
+        process_geosite_file \
+        "$zkeen_url" \
+        "$datfile" \
+        "GeoSite Zkeen" \
+        "$update_zkeen_geosite"
+        # Создание симлинков для совместимости
+        if [ "$datfile" = "geosite_zkeen.dat" ]; then
+            rm -f "$geo_dir/zkeen.dat"
+            ln -sf "$geo_dir/geosite_zkeen.dat" "$geo_dir/zkeen.dat"
+        elif [ "$datfile" = "zkeen.dat" ]; then
+            rm -f "$geo_dir/geosite_zkeen.dat"
+            ln -sf "$geo_dir/zkeen.dat" "$geo_dir/geosite_zkeen.dat"
         fi
     fi
-
-    # Обновление GeoSite V2Fly, если установлены и требуется обновление
-    if [ "$update_v2fly_geosite" = true ]; then
-        v2fly_dat=$(mktemp)
-        if curl -L -o "$v2fly_dat" "https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat" > /dev/null 2>&1; then
-            mv "$v2fly_dat" "$geo_dir/geosite_v2fly.dat"
-            if [ -s "$geo_dir/geosite_v2fly.dat" ]; then
-                echo -e "  GeoSite V2Fly ${green}успешно обновлен${reset}"
-            else
-                echo -e "  ${red}Неизвестная ошибка${reset} при обновлении GeoSite V2Fly"
-            fi
-        else
-            rm -f "$v2fly_dat"
-            echo -e "  ${red}Ошибка${reset} при загрузке GeoSite V2Fly. Проверьте соединение с интернетом или повторите позже"
-        fi
-    fi
-
-	# Обновление GeoSite Zkeen, если установлены и требуется обновление
-    if [ "$update_zkeen_geosite" = true ]; then
-        zkeen_dat=$(mktemp)
-        if curl -L -o "$zkeen_dat" "https://github.com/jameszeroX/zkeen-domains/releases/latest/download/zkeen.dat" > /dev/null 2>&1; then
-            rm -f "$geo_dir/zkeen.dat" "$geo_dir/geosite_zkeen.dat"
-            mv "$zkeen_dat" "$geo_dir/geosite_zkeen.dat"
-            ln -s "$geo_dir/geosite_zkeen.dat" "$geo_dir/zkeen.dat"
-            if [ -s "$geo_dir/geosite_zkeen.dat" ]; then
-                echo -e "  GeoSite Zkeen ${green}успешно обновлен${reset}"
-            else
-                echo -e "  ${red}Неизвестная ошибка${reset} при обновлении GeoSite Zkeen"
-            fi
-        else
-            rm -f "$zkeen_dat"
-            echo -e "  ${red}Ошибка${reset} при загрузке GeoSite Zkeen. Проверьте соединение с интернетом или повторите позже"
-        fi
-    fi
-
 }

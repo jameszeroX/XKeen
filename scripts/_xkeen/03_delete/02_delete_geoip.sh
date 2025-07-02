@@ -1,31 +1,14 @@
-# Функция для удаления файлов GeoIP данных
+# Функция для удаления выбранных файлов GeoIP
 delete_geoip() {
-    if [ "$choice_delete_geoip_antifilter_select" == "true" ]; then
-        if [ -f "$geo_dir/geoip_antifilter.dat" ]; then
-            rm "$geo_dir/geoip_antifilter.dat"
-        fi
-    fi
-
-    if [ "$choice_delete_geoip_v2fly_select" == "true" ]; then
-        if [ -f "$geo_dir/geoip_v2fly.dat" ]; then
-            rm "$geo_dir/geoip_v2fly.dat"
-        fi
-    fi
-
-    if [ "$choice_delete_geoip_zkeenip_select" == "true" ]; then
-        rm -f "$geo_dir/zkeenip.dat" "$geo_dir/geoip_zkeenip.dat"
-    fi
+    [ "$choice_delete_geoip_refilter_select" = "true" ] && rm -f "$geo_dir/geoip_refilter.dat"
+    [ "$choice_delete_geoip_v2fly_select" = "true" ] && rm -f "$geo_dir/geoip_v2fly.dat"
+    [ "$choice_delete_geoip_zkeen_select" = "true" ] && rm -f "$geo_dir/"geoip_zkeenip.dat "$geo_dir/"zkeenip.dat
 }
 
-# Функция для удаления всех файлов GeoIP данных
+# Функция для удаления всех файлов GeoIP
 delete_geoip_key() {
-    if [ -f "$geo_dir/geoip_antifilter.dat" ]; then
-        rm "$geo_dir/geoip_antifilter.dat"
-    fi
-
-    if [ -f "$geo_dir/geoip_v2fly.dat" ]; then
-        rm "$geo_dir/geoip_v2fly.dat"
-    fi
-
-    rm -f "$geo_dir/zkeenip.dat" "$geo_dir/geoip_zkeenip.dat"
+    rm -f "$geo_dir/geoip_refilter.dat" \
+          "$geo_dir/geoip_v2fly.dat" \
+          "$geo_dir/geoip_zkeenip.dat" \
+          "$geo_dir/zkeenip.dat"
 }

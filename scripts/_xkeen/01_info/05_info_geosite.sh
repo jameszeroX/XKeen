@@ -1,23 +1,10 @@
-# Функция для проверки наличия и записи информации о базах geo
+# Функция для проверки наличия и записи информации о базах GeoSite
 info_geosite() {
-    # Проверяем наличие файла geosite_antifilter.dat
-    if [ -e "$geo_dir/geosite_antifilter.dat" ]; then
-        geo_exists_geosite_antifilter="installed"
-    else
-        geo_exists_geosite_antifilter="not_installed"
-    fi
-
-    # Проверяем наличие файла geosite_v2fly.dat
-    if [ -e "$geo_dir/geosite_v2fly.dat" ]; then
-        geo_exists_geosite_v2fly="installed"
-    else
-        geo_exists_geosite_v2fly="not_installed"
-    fi
-	
-	# Проверяем наличие файла geosite_zkeen.dat
-    if [ -e "$geo_dir/geosite_zkeen.dat" ]; then
-        geo_exists_geosite_zkeen="installed"
-    else
-        geo_exists_geosite_zkeen="not_installed"
-    fi
+    update_refilter_geosite=false
+    update_v2fly_geosite=false
+    update_zkeen_geosite=false
+    [ -f "$geo_dir/geosite_refilter.dat" ] && update_refilter_geosite=true
+    [ -f "$geo_dir/geosite_v2fly.dat" ] && update_v2fly_geosite=true
+    [ -f "$geo_dir/geosite_zkeen.dat" ] || [ -f "$geo_dir/zkeen.dat" ] && update_zkeen_geosite=true
 }
+

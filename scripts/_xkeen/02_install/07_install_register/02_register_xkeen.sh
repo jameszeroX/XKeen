@@ -35,9 +35,6 @@ register_xkeen_list() {
     # Добавление дополнительных путей
     echo "/opt/sbin/xkeen" >> xkeen.list
     echo "/opt/sbin/.xkeen" >> xkeen.list
-    echo "/opt/var/log/xkeen/error.log" >> xkeen.list
-    echo "/opt/var/log/xkeen/info.log" >> xkeen.list
-    echo "/opt/var/log/xkeen" >> xkeen.list
 }
 
 register_xkeen_status() {

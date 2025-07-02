@@ -27,56 +27,42 @@ add_chmod_init() {
 
 # Импортируем модули
 . "$script_dir/.xkeen/import.sh"
-
-# Очищаем журнал перед работой
-    logs_clear
 	
 xkeen_info() {
     opkg update >/dev/null 2>&1
     opkg upgrade >/dev/null 2>&1
     # Проверяем установку пакетов
     info_packages
-    logs_packages_info_xkeen
 
     # Собираем необходимую информацию о процессоре
     info_cpu
-    logs_cpu_info_xkeen
 
     # Проверяем установку xray
     info_xray
-    logs_xray_info_xkeen
 
     # Проверяем установленные базы geosite
     info_geosite
-    logs_geosite_info_xkeen
 
     # Проверяем установленные базы geoip
     info_geoip
-    logs_geoip_info_xkeen
 
     # Проверяем статус автообновления
     info_cron
-    logs_cron_info_xkeen
 
     # Проверяем версию xkeen
     info_version_xkeen
-    logs_version_xkeen_info_xkeen
 
     # Проверяем актуальность xkeen
     info_compare_xkeen
-    logs_compare_xkeen_info_xkeen
 
     # Проверяем версию xray
     info_version_xray
-    logs_version_xray_info_xkeen
 
     # Проверяем актуальность xray
     info_compare_xray
-    logs_compare_xray_info_xkeen
 
     # Устанавливаем недостающие пакеты
     install_packages
-    logs_install_packages_xkeen
 }
 
 case "$1" in
@@ -107,7 +93,6 @@ case "$1" in
         fi
 
         install_configs
-        logs_install_configs_info_xkeen
 
         if [ ! -d "$geo_dir" ]; then
             mkdir -p "$geo_dir"
@@ -116,35 +101,27 @@ case "$1" in
         clear
         echo
         delete_register_xkeen
-        logs_delete_register_xkeen_info_xkeen
 
         echo -e "  Выполняется регистрация ${yellow}XKeen${reset}"
         register_xkeen_list
-        logs_register_xkeen_list_info_xkeen
         logs_register_xkeen_list_info_console
 
         register_xkeen_control
-        logs_register_xkeen_control_info_xkeen
         logs_register_xkeen_control_info_console
 
         register_xkeen_status
-        logs_register_xkeen_status_info_xkeen
         logs_register_xkeen_status_info_console
 
         delete_register_xray
-        logs_delete_register_xray_info_xkeen
 
         echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
         register_xray_list
-        logs_register_xray_list_info_xkeen
         logs_register_xray_list_info_console
 
         register_xray_control
-        logs_register_xray_control_info_xkeen
         logs_register_xray_control_info_console
 
         register_xray_status
-        logs_register_xray_status_info_xkeen
         logs_register_xray_status_info_console
 
         if [ -f "$install_dir/xray" ]; then
@@ -170,7 +147,6 @@ case "$1" in
 
         # Удаляем временные файлы
         delete_tmp
-        logs_delete_tmp_info_xkeen
         sleep 2
 
         clear
@@ -210,7 +186,6 @@ case "$1" in
         # Устанавливаем xray
         echo
         download_xray
-        logs_download_xray_info_xkeen
 
         if [ -z $bypass_xray ]; then
             install_xray
@@ -223,25 +198,19 @@ case "$1" in
         clear
         # Устанавливаем geosite
         choice_geosite
-        logs_choice_geosite_info_xkeen
 
         delete_geosite
-        logs_delete_geosite_info_xkeen
 
         install_geosite
-        logs_install_geosite_info_xkeen
         sleep 2
 
         clear
         # Устанавливаем geoip
         choice_geoip
-        logs_choice_geoip_info_xkeen
 
         delete_geoip
-        logs_delete_geoip_info_xkeen
 
         install_geoip
-        logs_install_geoip_info_xkeen
         sleep 2
 
         clear
@@ -249,50 +218,38 @@ case "$1" in
         info_cron
         choice_update_cron
         update_cron_geofile_task
-        logs_choice_update_cron_info_xkeen
         clear
         choice_cron_time
-        logs_choice_cron_time_info_xkeen
 
         install_cron
-        logs_install_cron_info_xkeen
 
         clear
         echo
         install_configs
-        logs_install_configs_info_xkeen
 
         echo
         delete_register_xkeen
-        logs_delete_register_xkeen_info_xkeen
 
         echo -e "  Выполняется регистрация ${yellow}XKeen${reset}"
         register_xkeen_list
-        logs_register_xkeen_list_info_xkeen
         logs_register_xkeen_list_info_console
 
         register_xkeen_control
-        logs_register_xkeen_control_info_xkeen
         logs_register_xkeen_control_info_console
 
         register_xkeen_status
-        logs_register_xkeen_status_info_xkeen
         logs_register_xkeen_status_info_console
 
         delete_register_xray
-        logs_delete_register_xray_info_xkeen
 
         echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
         register_xray_list
-        logs_register_xray_list_info_xkeen
         logs_register_xray_list_info_console
 
         register_xray_control
-        logs_register_xray_control_info_xkeen
         logs_register_xray_control_info_console
 
         register_xray_status
-        logs_register_xray_status_info_xkeen
         logs_register_xray_status_info_console
 
         register_xray_initd
@@ -325,7 +282,6 @@ case "$1" in
 
         # Удаляем временные файлы
         delete_tmp
-        logs_delete_tmp_info_xkeen
         rm -f "$install_dir/xray_bak" "$install_dir/mihomo_bak"
         rm -rf "$xtmp_dir" "$mtmp_dir"
         sleep 2
@@ -355,44 +311,26 @@ case "$1" in
         echo "  Обновление установленных баз GeoFile"
 
         info_geosite
-        logs_geosite_info_xkeen
-
-        if [ "$geo_exists_geosite_v2fly" = "installed" ]; then
-            install_v2fly_geosite="true"
-        fi
-
-        if [ "$geo_exists_geosite_antifilter" = "installed" ]; then
-            install_antifilter_geosite="true"
-        fi
-
-        if [ "$geo_exists_geosite_zkeen" = "installed" ]; then
-            install_zkeen_geosite="true"
-        fi
-
-        install_geosite
-
         info_geoip
-        logs_geoip_info_xkeen
+        if 
+            [ "$update_refilter_geosite" = "true" ] || \
+            [ "$update_v2fly_geosite" = "true" ] || \
+            [ "$update_zkeen_geosite" = "true" ] || \
+            [ "$update_refilter_geoip" = "true" ] || \
+            [ "$update_v2fly_geoip" = "true" ] || \
+            [ "$update_zkeenip_geoip" = "true" ]; then
 
-        if [ "$geo_exists_geoip_v2fly" = "installed" ]; then
-            install_v2fly_geoip="true"
+            install_geoip
+            install_geosite
+
+            if pidof xray >/dev/null; then
+                $initd_dir/S24xray restart on >/dev/null 2>&1
+            fi
+
+            echo -e "  Обновление установленных баз GeoFile ${green}выполнено${reset}"
+        else
+            echo -e "  ${red}Не обнаружены${reset} базы GeoFile для обновления"
         fi
-
-        if [ "$geo_exists_geoip_antifilter" = "installed" ]; then
-            install_antifilter_geoip="true"
-        fi
-
-        if [ "$geo_exists_geoip_zkeenip" = "installed" ]; then
-            install_zkeenip_geoip="true"
-        fi
-
-        install_geoip
-
-        if pidof "xray" >/dev/null; then
-            $initd_dir/S24xray restart on >/dev/null 2>&1
-        fi
-
-        echo -e "  Обновление установленных баз GeoFile ${green}выполнено${reset}"
     ;;
 
 
@@ -412,20 +350,16 @@ case "$1" in
 
                 echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
                 delete_register_xkeen
-                logs_delete_register_xkeen_info_xkeen
                 logs_delete_register_xkeen_info_console
 
                 echo -e "  Выполняется регистрация новой версии ${yellow}XKeen${reset}"
                 register_xkeen_list
-                logs_register_xkeen_list_info_xkeen
                 logs_register_xkeen_list_info_console
 
                 register_xkeen_control
-                logs_register_xkeen_control_info_xkeen
                 logs_register_xkeen_control_info_console
 
                 register_xkeen_status
-                logs_register_xkeen_status_info_xkeen
                 logs_register_xkeen_status_info_console
 
                 register_cron_initd
@@ -436,7 +370,6 @@ case "$1" in
 
                 fixed_register_packages
                 delete_tmp
-                logs_delete_tmp_info_xkeen
                 $initd_dir/S24xray restart on >/dev/null 2>&1
                 echo -e "  Обновление XKeen ${green}выполнено${reset}"
                 else
@@ -460,7 +393,6 @@ case "$1" in
         echo
 
         download_xray
-        logs_download_xray_info_xkeen
 
         if [ -z $bypass_xray ]; then
             install_xray
@@ -468,20 +400,16 @@ case "$1" in
 
         echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}Xray${reset}"
         delete_register_xray
-        logs_delete_register_xray_info_xkeen
         logs_delete_register_xray_info_console
 
         echo -e "  Выполняется регистрация новой версии ${yellow}Xray${reset}"
         register_xray_list
-        logs_register_xray_list_info_xkeen
         logs_register_xray_list_info_console
 
         register_xray_control
-        logs_register_xray_control_info_xkeen
         logs_register_xray_control_info_console
 
         register_xray_status
-        logs_register_xray_status_info_xkeen
         logs_register_xray_status_info_console
 
         sleep 2
@@ -538,17 +466,9 @@ case "$1" in
         echo -e "  Создание или изменение задачи автообновления баз ${yellow}GeoFile${reset}"
         choice_update_cron
         update_cron_geofile_task
-        logs_choice_update_cron_info_xkeen
-
         choice_cron_time
-        logs_choice_cron_time_info_xkeen
-
         install_cron
-        logs_install_cron_info_xkeen
-
         delete_tmp
-        logs_delete_tmp_info_xkeen
-
         echo -e "  Создание или изменение задачи автообновления баз GeoFile ${green}выполнено${reset}"
     ;;
 
@@ -563,7 +483,6 @@ case "$1" in
 
         register_xray_initd
         register_autostart
-        logs_register_xray_initd_info_xkeen
         logs_register_xray_initd_info_console
 
         echo
@@ -574,18 +493,14 @@ case "$1" in
 
     -dgc)    # Удалить задачу автообновления баз GeoFile
         info_cron
-        logs_cron_info_xkeen
 
         clear
         echo
         echo -e "  Удаление задачи автообновления баз ${yellow}GeoFile${reset}"
 
         delete_cron_geofile
-        logs_delete_cron_geofile_info_xkeen
         logs_delete_cron_geofile_info_console
-
         delete_tmp
-        logs_delete_tmp_info_xkeen
 
         echo -e "  Удаление задачи автообновления баз GeoFile ${green}выполнено${reset}"
     ;;
@@ -604,7 +519,6 @@ case "$1" in
 
         delete_configs
         logs_delete_configs_info_console
-        logs_delete_configs_info_xkeen
 
         echo
         echo -e "  Удаление Xray ${green}выполнено${reset}"
@@ -654,7 +568,6 @@ case "$1" in
         echo -e "  Удаление всех баз ${yellow}GeoIP${reset}"
 
         delete_geoip_key
-        logs_delete_geoip_info_xkeen
         logs_delete_geoip_info_console
 
         echo
@@ -668,7 +581,6 @@ case "$1" in
         echo -e "  Удаление всех баз ${yellow}GeoSite${reset}"
 
         delete_geosite_key
-        logs_delete_geosite_info_xkeen
         logs_delete_geosite_info_console
 
         echo
@@ -679,7 +591,6 @@ case "$1" in
     -dt)    # Удалить временные файлы XKeen
         clear
         delete_tmp
-        logs_delete_tmp_info_xkeen
     ;;
 
 
@@ -689,7 +600,6 @@ case "$1" in
         echo -e "  Удаление ${yellow}регистрации Xray${reset}"
 
         delete_register_xray
-        logs_delete_register_xray_info_xkeen
         logs_delete_register_xray_info_console
 
         echo -e "  Удаление регистрации Xray ${green}выполнено${reset}"
@@ -702,7 +612,6 @@ case "$1" in
         echo -e "  Удаление ${yellow}регистрации XKeen${reset}"
 
         delete_register_xkeen
-        logs_delete_register_xkeen_info_xkeen
         logs_delete_register_xkeen_info_console
 
         echo -e "  Удаление регистрации XKeen ${green}выполнено${reset}"
@@ -712,13 +621,11 @@ case "$1" in
     -remove)    # Полная деинсталляция XKeen и всех зависимостей
         # Удаление задачи автообновления баз GeoFile
         info_cron
-        logs_cron_info_xkeen
 
         clear
         echo
         echo -e "  Удаление задачи автообновления баз ${yellow}GeoFile${reset}"
         delete_cron_geofile
-        logs_delete_cron_geofile_info_xkeen
         logs_delete_cron_geofile_info_console
 
         echo
@@ -731,7 +638,6 @@ case "$1" in
         echo -e "  Удаление всех баз ${yellow}GeoIP${reset}"
 
         delete_geoip_key
-        logs_delete_geoip_info_xkeen
         logs_delete_geoip_info_console
 
         echo -e "  Удаление всех баз GeoIP ${green}выполнено${reset}"
@@ -743,7 +649,6 @@ case "$1" in
         echo -e "  Удаление всех баз ${yellow}GeoSite${reset}"
 
         delete_geosite_key
-        logs_delete_geosite_info_xkeen
         logs_delete_geosite_info_console
 
         echo -e "  Удаление всех баз GeoSite ${green}выполнено${reset}"
@@ -756,7 +661,6 @@ case "$1" in
 
         delete_configs
         logs_delete_configs_info_console
-        logs_delete_configs_info_xkeen
 
         echo
         echo -e "  Удаление конфигурационных файлов Xray ${green}выполнено${reset}"
@@ -819,24 +723,18 @@ case "$1" in
         echo -e "  Обновление регистрации ${yellow}XKeen${reset}"
 
         info_cpu
-        logs_cpu_info_xkeen
         info_version_xkeen
-        logs_version_xkeen_info_xkeen
 
         delete_register_xkeen    
-        logs_delete_register_xkeen_info_xkeen
         logs_delete_register_xkeen_info_console
 
         register_xkeen_list
-        logs_register_xkeen_list_info_xkeen
         logs_register_xkeen_list_info_console
 
         register_xkeen_control
-        logs_register_xkeen_control_info_xkeen
         logs_register_xkeen_control_info_console
 
         register_xkeen_status
-        logs_register_xkeen_status_info_xkeen
         logs_register_xkeen_status_info_console
 
         echo
@@ -849,26 +747,19 @@ case "$1" in
         echo -e "  Обновление регистрации ${yellow}Xray${reset}"
 
         info_xray
-        logs_xray_info_xkeen
         info_cpu
-        logs_cpu_info_xkeen
         info_version_xray
-        logs_version_xray_info_xkeen
 
         delete_register_xray
-        logs_delete_register_xray_info_xkeen
         logs_delete_register_xray_info_console
 
         register_xray_list
-        logs_register_xray_list_info_xkeen
         logs_register_xray_list_info_console
 
         register_xray_control
-        logs_register_xray_control_info_xkeen
         logs_register_xray_control_info_console
 
         register_xray_status
-        logs_register_xray_status_info_xkeen
         logs_register_xray_status_info_console
 
         echo
@@ -889,20 +780,16 @@ case "$1" in
         . "$script_dir/.xkeen/import.sh"
         echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
         delete_register_xkeen
-        logs_delete_register_xkeen_info_xkeen
         logs_delete_register_xkeen_info_console
 
         echo -e "  Выполняется регистрация новой версии ${yellow}XKeen${reset}"
         register_xkeen_list
-        logs_register_xkeen_list_info_xkeen
         logs_register_xkeen_list_info_console
 
         register_xkeen_control
-        logs_register_xkeen_control_info_xkeen
         logs_register_xkeen_control_info_console
 
         register_xkeen_status
-        logs_register_xkeen_status_info_xkeen
         logs_register_xkeen_status_info_console
 
         register_cron_initd
@@ -913,7 +800,6 @@ case "$1" in
 
         fixed_register_packages
         delete_tmp
-        logs_delete_tmp_info_xkeen
         $initd_dir/S24xray restart on >/dev/null 2>&1
 
         echo
@@ -927,24 +813,15 @@ case "$1" in
         info_geoip
 
         choice_geosite
-        logs_choice_geosite_info_xkeen
-
         delete_geosite
-        logs_delete_geosite_info_xkeen
-
         install_geosite
-        logs_install_geosite_info_xkeen
         sleep 2
 
         clear
         choice_geoip
-        logs_choice_geoip_info_xkeen
-
         delete_geoip
-        logs_delete_geoip_info_xkeen
-
         install_geoip
-        logs_install_geoip_info_xkeen
+        sleep 2
 
         clear
         echo
@@ -954,9 +831,7 @@ case "$1" in
 
     -kb)    # Резервное копирование XKeen
         echo -e "  Создание резервной копии ${yellow}XKeen${reset}"
-
         info_version_xkeen
-        logs_version_xkeen_info_xkeen
         backup_xkeen
     ;;
 
@@ -1006,14 +881,12 @@ case "$1" in
 
     -tfk)    # Проверить файлы XKeen
         echo -e "  Проверка файлов ${yellow}XKeen${reset}"
-        logs_file_check_xkeen_xkeen
         echo -e "  Проверка файлов XKeen ${green}выполнена${reset}"
     ;;
 
 
     -tfx)    # Проверить файлы Xray
         echo -e "  Проверка файлов ${yellow}Xray${reset}"
-        logs_file_check_xray_xkeen
         echo -e "  Проверка файлов Xray ${green}выполнена${reset}"
     ;;
 
@@ -1092,6 +965,9 @@ case "$1" in
         add_ports_donor "$1" 
         sleep 2
         add_chmod_init
+        if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+            $initd_dir/S24xray restart on >/dev/null 2>&1
+        fi
     ;;
 
 
@@ -1100,18 +976,20 @@ case "$1" in
         dell_ports_donor "$1"
         sleep 2
         add_chmod_init
+        if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+            $initd_dir/S24xray restart on >/dev/null 2>&1
+        fi
     ;;
 
 
     -cp)    # Получить список портов, на которых работает прокси-клиент
         port_donor=$(grep -m1 '^port_donor=' /opt/etc/init.d/S24xray | cut -d'=' -f2 | tr -d '"' | tr ' ' '\n' | sed 's/^/     /')
-        if [ -z "$port_donor" ] || [ "$port_donor" == "     " ]
+        if [ -z "$port_donor" ] || [ "$port_donor" = "     " ]
         then
             echo -e "  Прокси-клиент работает ${yellow}на всех портах${reset}"
         else
             echo -e "  Прокси-клиент работает на портах\n${green}$port_donor${reset}"
         fi
-        add_chmod_init
     ;;
 
 
@@ -1120,6 +998,9 @@ case "$1" in
         add_ports_exclude "$1" 
         sleep 2
         add_chmod_init
+        if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+            $initd_dir/S24xray restart on >/dev/null 2>&1
+        fi
     ;;
 
 
@@ -1128,18 +1009,20 @@ case "$1" in
         dell_ports_exclude "$1"
         sleep 2
         add_chmod_init
+        if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+            $initd_dir/S24xray restart on >/dev/null 2>&1
+        fi
     ;;
 
 
     -cpe)    # Получить список портов, исключёных из проксирования
         port_exclude=$(grep -m1 '^port_exclude=' /opt/etc/init.d/S24xray | cut -d'=' -f2 | tr -d '"' | tr ' ' '\n' | sed 's/^/     /')
-        if [ -z "$port_exclude" ] || [ "$port_exclude" == "     " ]
+        if [ -z "$port_exclude" ] || [ "$port_exclude" = "     " ]
         then
             echo -e "  ${yellow}Нет портов${reset} исключенных из проксирования"
         else
             echo -e "  Из проксирования исключены порты\n${green}$port_exclude${reset}"
         fi
-        add_chmod_init
     ;;
 
 
@@ -1176,20 +1059,16 @@ case "$1" in
 
         echo -e "  ${yellow}Выполняется${reset} отмена регистрации предыдущей версии XKeen"
         delete_register_xkeen
-        logs_delete_register_xkeen_info_xkeen
         logs_delete_register_xkeen_info_console
 
         echo -e "  ${yellow}Выполняется${reset} регистрация новой версии XKeen"
         register_xkeen_list
-        logs_register_xkeen_list_info_xkeen
         logs_register_xkeen_list_info_console
 
         register_xkeen_control
-        logs_register_xkeen_control_info_xkeen
         logs_register_xkeen_control_info_console
 
         register_xkeen_status
-        logs_register_xkeen_status_info_xkeen
         logs_register_xkeen_status_info_console
 
         register_cron_initd
@@ -1200,7 +1079,6 @@ case "$1" in
 
         fixed_register_packages
         delete_tmp
-        logs_delete_tmp_info_xkeen
         $initd_dir/S24xray restart on >/dev/null 2>&1
     ;;
 

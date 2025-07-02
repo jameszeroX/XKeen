@@ -21,7 +21,8 @@ tests_ports_client() {
 
     if [ -n "$listening_ports_tcp" ] || [ -n "$listening_ports_udp" ]; then
         printed=false
-        IFS=$'\n'
+        IFS='
+'
         for line in $listening_ports_tcp $listening_ports_udp; do
             gateway=""
             port=""
@@ -38,7 +39,7 @@ tests_ports_client() {
                 fi
             fi
             
-            if [[ "$line" == *::* ]]; then
+            if echo "$line" | grep -q "::"; then
                 # IPv6 адрес
                 gateway="::"
                 port=$(echo "$line" | awk '{print $4}' | awk -F':' '{print $NF}')
@@ -54,7 +55,6 @@ tests_ports_client() {
             fi
             echo -e "\n     ${gray}Шлюз${reset} $gateway\n     ${gray}Порт${reset} $port\n     ${gray}Протокол${reset} $protocol"
         done
-        break
     else
         echo -e "  $name_client ${red}не слушает${reset} на каких-либо портах"
     fi

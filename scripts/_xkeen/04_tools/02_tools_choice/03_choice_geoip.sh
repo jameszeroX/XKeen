@@ -4,20 +4,31 @@ choice_geoip() {
     has_updatable_geoip_bases=false
 
     # Проверяем наличие и обновляемость GeoIP баз
-    [ "$geo_exists_geoip_antifilter" != "installed" ] && has_missing_geoip_bases=true
-    [ "$geo_exists_geoip_v2fly" != "installed" ] && has_missing_geoip_bases=true
-    [ "$geo_exists_geoip_zkeenip" != "installed" ] && has_missing_geoip_bases=true
-    { [ "$geo_exists_geoip_antifilter" = "installed" ] || [ "$geo_exists_geoip_v2fly" = "installed" ] || [ "$geo_exists_geoip_zkeenip" = "installed" ]; } && has_updatable_geoip_bases=true
+    if [ "$update_refilter_geoip" = "false" ]; then
+        has_missing_geoip_bases=true
+    else
+        update_refilter_geoip_msg=true
+    fi
+    if [ "$update_v2fly_geoip" = "false" ]; then
+        has_missing_geoip_bases=true
+    else
+        update_v2fly_geoip_msg=true
+    fi
+    if [ "$update_zkeenip_geoip" = "false" ]; then
+        has_missing_geoip_bases=true
+    else
+        update_zkeenip_geoip_msg=true
+    fi
+    { [ "$update_refilter_geoip" = "true" ] || [ "$update_v2fly_geoip" = "true" ] || [ "$update_zkeenip_geoip" = "true" ]; } && has_updatable_geoip_bases=true
 
     while true; do
-        # Сброс флагов при каждом повторении цикла
-        install_antifilter_geoip=false
+        install_refilter_geoip=false
         install_v2fly_geoip=false
         install_zkeenip_geoip=false
-        update_antifilter_geoip=false
+        update_refilter_geoip=false
         update_v2fly_geoip=false
         update_zkeenip_geoip=false
-        choice_delete_geoip_antifilter_select=false
+        choice_delete_geoip_refilter_select=false
         choice_delete_geoip_v2fly_select=false
         choice_delete_geoip_zkeenip_select=false
         invalid_choice=false
@@ -30,11 +41,11 @@ choice_geoip() {
         [ "$has_missing_geoip_bases" = true ] && echo "     1. Установить отсутствующие GeoIP" || echo -e "     1. ${gray}Все доступные GeoIP установлены${reset}"
         [ "$has_updatable_geoip_bases" = true ] && echo "     2. Обновить установленные GeoIP" || echo -e "     2. ${gray}Нет доступных GeoIP для обновления${reset}"
 
-        [ "$geo_exists_geoip_antifilter" != "installed" ] && antifilter_choice="Установить" || antifilter_choice="Обновить"
-        [ "$geo_exists_geoip_v2fly" != "installed" ] && v2fly_choice="Установить" || v2fly_choice="Обновить"
-        [ "$geo_exists_geoip_zkeenip" != "installed" ] && zkeenip_choice="Установить" || zkeenip_choice="Обновить"
+        [ "$update_refilter_geoip_msg" = "true" ] && refilter_choice="Обновить" || refilter_choice="Установить"
+        [ "$update_v2fly_geoip_msg" = "true" ] && v2fly_choice="Обновить" || v2fly_choice="Установить"
+        [ "$update_zkeenip_geoip_msg" = "true" ] && zkeenip_choice="Обновить" || zkeenip_choice="Установить"
 
-        echo "     3. $antifilter_choice AntiFilter"
+        echo "     3. $refilter_choice Re:filter"
         echo "     4. $v2fly_choice v2fly"
         echo "     5. $zkeenip_choice ZkeenIP"
         echo 
@@ -46,7 +57,7 @@ choice_geoip() {
         geoip_choices=$(input_digits "Ваш выбор: " "${red}Некорректный номер действия.${reset} Пожалуйста, выберите снова")
 
         for choice in $geoip_choices; do
-            if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
+            if ! echo "$choice" | grep -Eq '^[0-9]+$'; then
                 echo -e "  ${red}Некорректный номер действия.${reset} Пожалуйста, выберите снова"
                 invalid_choice=true
                 sleep 1
@@ -62,42 +73,42 @@ choice_geoip() {
                     if [ "$has_missing_geoip_bases" = false ]; then
                         echo -e "  Все GeoIP ${green}уже установлены${reset}"
                         if input_concordance_list "Вы хотите обновить их?"; then
-                            update_antifilter_geoip=true
+                            update_refilter_geoip=true
                             update_v2fly_geoip=true
                             update_zkeenip_geoip=true
                         else
                             invalid_choice=true
                         fi
                     else
-                        [ "$geo_exists_geoip_antifilter" != "installed" ] && install_antifilter_geoip=true
-                        [ "$geo_exists_geoip_v2fly" != "installed" ] && install_v2fly_geoip=true
-                        [ "$geo_exists_geoip_zkeenip" != "installed" ] && install_zkeenip_geoip=true
+                        [ "$update_refilter_geoip_msg" != "true" ] && install_refilter_geoip=true
+                        [ "$update_v2fly_geoip_msg" != "true" ] && install_v2fly_geoip=true
+                        [ "$update_zkeenip_geoip_msg" != "true" ] && install_zkeenip_geoip=true
                     fi
                     ;;
                 2)
                     if [ "$has_updatable_geoip_bases" = false ]; then
                         echo -e "  ${red}Нет установленных GeoIP${reset} для обновления"
                         if input_concordance_list "Вы хотите установить их?"; then
-                            install_antifilter_geoip=true
+                            install_refilter_geoip=true
                             install_v2fly_geoip=true
                             install_zkeenip_geoip=true
                         else
                             invalid_choice=true
                         fi
                     else
-                        [ "$geo_exists_geoip_antifilter" = "installed" ] && update_antifilter_geoip=true
-                        [ "$geo_exists_geoip_v2fly" = "installed" ] && update_v2fly_geoip=true
-                        [ "$geo_exists_geoip_zkeenip" = "installed" ] && update_zkeenip_geoip=true
+                        [ "$update_refilter_geoip_msg" = "true" ] && update_refilter_geoip=true
+                        [ "$update_v2fly_geoip_msg" = "true" ] && update_v2fly_geoip=true
+                        [ "$update_zkeenip_geoip_msg" = "true" ] && update_zkeenip_geoip=true
                     fi
                     ;;
                 3)
-                    [ "$geo_exists_geoip_antifilter" != "installed" ] && install_antifilter_geoip=true || update_antifilter_geoip=true
+                    [ "$update_refilter_geoip_msg" != "true" ] && install_refilter_geoip=true || update_refilter_geoip=true
                     ;;
                 4)
-                    [ "$geo_exists_geoip_v2fly" != "installed" ] && install_v2fly_geoip=true || update_v2fly_geoip=true
+                    [ "$update_v2fly_geoip_msg" != "true" ] && install_v2fly_geoip=true || update_v2fly_geoip=true
                     ;;
                 5)
-                    [ "$geo_exists_geoip_zkeenip" != "installed" ] && install_zkeenip_geoip=true || update_zkeenip_geoip=true
+                    [ "$update_zkeenip_geoip_msg" != "true" ] && install_zkeenip_geoip=true || update_zkeenip_geoip=true
                     ;;
                 0)
                     echo "  Выполнен пропуск установки / обновления GeoIP"
@@ -108,7 +119,7 @@ choice_geoip() {
                         echo -e "  ${red}Нет установленных GeoIP для удаления${reset}. Выберите другой пункт"
                         invalid_choice=true
                     else
-                        choice_delete_geoip_antifilter_select=true
+                        choice_delete_geoip_refilter_select=true
                         choice_delete_geoip_v2fly_select=true
                         choice_delete_geoip_zkeenip_select=true
                     fi
@@ -126,13 +137,13 @@ choice_geoip() {
         update_list=""
         delete_list=""
 
-        [ "$install_antifilter_geoip" = true ] && install_list="$install_list ${yellow}AntiFilter${reset},"
+        [ "$install_refilter_geoip" = true ] && install_list="$install_list ${yellow}Re:filter${reset},"
         [ "$install_v2fly_geoip" = true ] && install_list="$install_list ${yellow}v2fly${reset},"
         [ "$install_zkeenip_geoip" = true ] && install_list="$install_list ${yellow}ZkeenIP${reset},"
-        [ "$update_antifilter_geoip" = true ] && update_list="$update_list ${yellow}AntiFilter${reset},"
+        [ "$update_refilter_geoip" = true ] && update_list="$update_list ${yellow}Re:filter${reset},"
         [ "$update_v2fly_geoip" = true ] && update_list="$update_list ${yellow}v2fly${reset},"
         [ "$update_zkeenip_geoip" = true ] && update_list="$update_list ${yellow}ZkeenIP${reset},"
-        [ "$choice_delete_geoip_antifilter_select" = true ] && delete_list="$delete_list ${yellow}AntiFilter${reset},"
+        [ "$choice_delete_geoip_refilter_select" = true ] && delete_list="$delete_list ${yellow}Re:filter${reset},"
         [ "$choice_delete_geoip_v2fly_select" = true ] && delete_list="$delete_list ${yellow}v2fly${reset},"
         [ "$choice_delete_geoip_zkeenip_select" = true ] && delete_list="$delete_list ${yellow}ZkeenIP${reset},"
 

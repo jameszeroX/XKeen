@@ -1,12 +1,9 @@
 # Функция для установки Xkeen
 install_xkeen() {
     xkeen_archive="${tmp_dir}/xkeen.tar.gz"
-    info_content=""
-    error_content=""
 
     # Проверка наличия архива xkeen
     if [ -f "${xkeen_archive}" ]; then
-        info_content="\t[info] Установочный архив XKeen найден\n"
         
         # Временный скрипт для установки
         install_script=$(mktemp)
@@ -30,27 +27,6 @@ EOF
 
         chmod +x "${install_script}"
         "${install_script}"
-        
-        # Проверка успешности установки и запись информации в соответствующие логи
-        if [ -s "${install_dir}/xkeen" ]; then
-            info_content="${info_content}\t[info] Установка XKeen успешно выполнена"
-            echo "" >> "${xkeen_info_log}"
-            echo "[start] Установка XKeen" >> "${xkeen_info_log}"
-            echo -e "${info_content}" >> "${xkeen_info_log}"
-            echo "[end] Установка XKeen выполнена" >> "${xkeen_info_log}"
-            echo "" >> "${xkeen_info_log}"
-        else
-            error_content="${error_content}\t[error] Ошибка при установке XKeen"
-            echo "" >> "${xkeen_error_log}"
-            echo "[start] Установка XKeen" >> "${xkeen_error_log}"
-            echo -e "${error_content}" >> "${xkeen_error_log}"
-            echo "[end] Установка XKeen выполнена" >> "${xkeen_error_log}"
-            echo "" >> "${xkeen_error_log}"
-        fi
-        
-        rm "${install_script}"
-
-    else
-        error_content="\t[error] Архив XKeen не найден\n"
     fi
+    [ -d "$xkeen_log_dir" ] && rm -rf "$xkeen_log_dir"
 }

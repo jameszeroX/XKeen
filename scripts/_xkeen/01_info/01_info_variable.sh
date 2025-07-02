@@ -61,10 +61,17 @@ mihomo_jsd_url="https://data.jsdelivr.com/v1/package/gh/MetaCubeX/mihomo"			# р
 mihomo_gz_url="https://github.com/MetaCubeX/mihomo/releases/download"				# url для загрузки Mihomo
 yq_dist_url="https://github.com/mikefarah/yq/releases/latest/download"				# url для загрузки yq
 
+# url для загрузки геофайлов
+refilter_url="https://github.com/1andrevich/Re-filter-lists/releases/latest/download/geosite.dat"
+refilterip_url="https://github.com/1andrevich/Re-filter-lists/releases/latest/download/geoip.dat"
+v2fly_url="https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat"
+v2flyip_url="https://github.com/loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat"
+zkeen_url="https://github.com/jameszeroX/zkeen-domains/releases/latest/download/zkeen.dat"
+zkeenip_url="https://github.com/jameszeroX/zkeen-ip/releases/latest/download/zkeenip.dat"
+
 # -------------------------------------
 # Создание директорий и файлов
 # -------------------------------------
-mkdir -p "$xkeen_log_dir" || { echo "Ошибка: Не удалось создать директорию $xkeen_log_dir"; exit 1; }
 mkdir -p "$xray_log_dir" || { echo "Ошибка: Не удалось создать директорию $xray_log_dir"; exit 1; }
 mkdir -p "$initd_dir" || { echo "Ошибка: Не удалось создать директорию $initd_dir"; exit 1; }
 mkdir -p "$pid_dir" || { echo "Ошибка: Не удалось создать директорию $pid_dir"; exit 1; }
@@ -75,14 +82,8 @@ mkdir -p "$cron_dir" || { echo "Ошибка: Не удалось создать
 # -------------------------------------
 # Журналы
 # -------------------------------------
-xkeen_info_log="$xkeen_log_dir/info.log"
-xkeen_error_log="$xkeen_log_dir/error.log"
-
 xray_access_log="$xray_log_dir/access.log"
 xray_error_log="$xray_log_dir/error.log"
-
-touch "$xkeen_info_log" || { echo "Ошибка: Не удалось создать файл $xkeen_info_log"; exit 1; }
-touch "$xkeen_error_log" || { echo "Ошибка: Не удалось создать файл $xkeen_error_log"; exit 1; }
 
 touch "$xray_access_log" || { echo "Ошибка: Не удалось создать файл $xkeen_info_log"; exit 1; }
 touch "$xray_error_log" || { echo "Ошибка: Не удалось создать файл $xkeen_error_log"; exit 1; }

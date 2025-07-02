@@ -37,7 +37,6 @@ directory_app_routing="$directory_configs_app/dat"
 directory_user_settings="$directory_configs_app/configs"
 directory_logs="$directory_variable/log"
 directory_logs_proxy="$directory_logs/$name_client"
-directory_logs_xkeen="$directory_logs/xkeen"
 directory_ndm="$directory_configs/ndm"
 directory_nefilter="$directory_ndm/netfilter.d"
 
