@@ -7,9 +7,11 @@ delete_tmp() {
     if [ -f "$cron_dir/root.tmp" ]; then
         rm "$cron_dir/root.tmp"
     fi
-	
-    if [ -f "/opt/etc/ndm/netfilter.d/proxy.sh" ]; then
-        rm "/opt/etc/ndm/netfilter.d/proxy.sh"
+
+    if ! pidof xray >/dev/null || ! pidof mihomo >/dev/null ; then
+        if [ -f "/opt/etc/ndm/netfilter.d/proxy.sh" ]; then
+            rm "/opt/etc/ndm/netfilter.d/proxy.sh"
+        fi
     fi
 
     echo

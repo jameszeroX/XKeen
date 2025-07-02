@@ -274,10 +274,10 @@ case "$1" in
 
             if [ -z $bypass_mihomo ]; then
                 install_mihomo
+                register_mihomo
+                mihomo_installed="installed"
             fi
 
-            mihomo_installed="installed"
-            register_mihomo
         fi
 
         # Удаляем временные файлы
@@ -370,7 +370,11 @@ case "$1" in
 
                 fixed_register_packages
                 delete_tmp
-                $initd_dir/S24xray restart on >/dev/null 2>&1
+
+                if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+                    $initd_dir/S24xray restart on >/dev/null 2>&1
+                fi
+
                 echo -e "  Обновление XKeen ${green}выполнено${reset}"
                 else
                 echo "  Нет доступных обновлений XKeen"
@@ -413,7 +417,9 @@ case "$1" in
         logs_register_xray_status_info_console
 
         sleep 2
-        $initd_dir/S24xray restart on >/dev/null 2>&1
+        if pidof xray >/dev/null; then
+            $initd_dir/S24xray restart on >/dev/null 2>&1
+        fi
 
         echo
         echo -e "  Обновление ядра Xray ${green}выполнено${reset}"
@@ -424,10 +430,6 @@ case "$1" in
 
 
     -um)    # Обновление или установка ядра Mihomo
-        if pidof "mihomo" >/dev/null; then
-            mihomo_installed=installed
-        fi
-
         . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
         status_file="/opt/lib/opkg/status"
         info_cpu
@@ -438,21 +440,24 @@ case "$1" in
 
         if [ -z $bypass_mihomo ]; then
             install_mihomo
+            mihomo_installed=installed
         fi
 
         if [ "$mihomo_installed" = "installed" ]; then
-            $initd_dir/S24xray restart on >/dev/null 2>&1
-            echo
-            echo -e "  Обновление ядра ${yellow}Mihomo${reset} ${green}выполнено${reset}"
-        else
-            register_mihomo
-            echo
-            echo -e "  Установка ядра ${yellow}Mihomo${reset} ${green}выполнена${reset}"
-            echo
-            echo -e "  1. Настройте его конфигурацию в файле '${yellow}$mihomo_conf_dir/config.yaml${reset}'"
-            echo -e "  2. Переключите ядро проксирования командой ${yellow}xkeen -mihomo${reset}"
-            echo -e "  3. Запустите XKeen командой ${yellow}xkeen -start${reset}"
-            echo -e "  4. ${green}Enjoy!${reset}"
+            if pidof mihomo >/dev/null; then
+                $initd_dir/S24xray restart on >/dev/null 2>&1
+                echo
+                echo -e "  Обновление ядра ${yellow}Mihomo${reset} ${green}выполнено${reset}"
+            else
+                register_mihomo
+                echo
+                echo -e "  Установка ядра ${yellow}Mihomo${reset} ${green}выполнена${reset}"
+                echo
+                echo -e "  1. Настройте его конфигурацию в файле '${yellow}$mihomo_conf_dir/config.yaml${reset}'"
+                echo -e "  2. Переключите ядро проксирования командой ${yellow}xkeen -mihomo${reset}"
+                echo -e "  3. Запустите XKeen командой ${yellow}xkeen -start${reset}"
+                echo -e "  4. ${green}Enjoy!${reset}"
+            fi
         fi
 
         rm -f "$install_dir/mihomo_bak"
@@ -800,7 +805,10 @@ case "$1" in
 
         fixed_register_packages
         delete_tmp
-        $initd_dir/S24xray restart on >/dev/null 2>&1
+
+        if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+            $initd_dir/S24xray restart on >/dev/null 2>&1
+        fi
 
         echo
         echo -e "  Переустановка XKeen ${green}выполнена${reset}"
@@ -1079,7 +1087,10 @@ case "$1" in
 
         fixed_register_packages
         delete_tmp
-        $initd_dir/S24xray restart on >/dev/null 2>&1
+
+        if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+            $initd_dir/S24xray restart on >/dev/null 2>&1
+        fi
     ;;
 
 
