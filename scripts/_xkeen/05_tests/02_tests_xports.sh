@@ -39,23 +39,36 @@ tests_ports_client() {
                 fi
             fi
             
-            if echo "$line" | grep -q "::"; then
-                # IPv6 адрес
-                gateway="::"
-                port=$(echo "$line" | awk '{print $4}' | awk -F':' '{print $NF}')
-            else
-                # IPv4 адрес
-                gateway=$(echo "$line" | awk '{print $4}' | cut -d':' -f1)
-                port=$(echo "$line" | awk '{print $4}' | cut -d':' -f2)
+            full_address=$(echo "$line" | awk '{print $4}')
+            
+            if echo "$full_address" | grep -q '^:::[0-9]'; then
+                # Если IPv4 отображается как :::port
+                gateway="0.0.0.0"
+                port=$(echo "$full_address" | awk -F':::' '{print $2}')
+            elif echo "$full_address" | grep -q '^\[::\]'; then
+                # Явный IPv6 [::]:port
+                gateway="[::]"
+                port=$(echo "$full_address" | awk -F'\\]:' '{print $2}')
+            elif echo "$full_address" | grep -q '\\]:'; then
+                # Обычный IPv6 [addr]:port
+                gateway=$(echo "$full_address" | awk -F'\\]:' '{print $1}')"]"
+                port=$(echo "$full_address" | awk -F'\\]:' '{print $2}')
+            elif echo "$full_address" | grep -q ':'; then
+                # Обычный IPv4
+                gateway=$(echo "$full_address" | cut -d':' -f1)
+                port=$(echo "$full_address" | cut -d':' -f2)
             fi
             
             if [ "$printed" = false ]; then
-                echo -e "$output"
+                printf "%b\n" "$output"
                 printed=true
             fi
-            echo -e "\n     ${gray}Шлюз${reset} $gateway\n     ${gray}Порт${reset} $port\n     ${gray}Протокол${reset} $protocol"
+            printf "\n     %bШлюз%b %s\n     %bПорт%b %s\n     %bПротокол%b %s\n" \
+                   "$gray" "$reset" "$gateway" \
+                   "$gray" "$reset" "$port" \
+                   "$gray" "$reset" "$protocol"
         done
     else
-        echo -e "  $name_client ${red}не слушает${reset} на каких-либо портах"
+        printf "%b\n" "  $name_client ${red}не слушает${reset} на каких-либо портах"
     fi
 }
