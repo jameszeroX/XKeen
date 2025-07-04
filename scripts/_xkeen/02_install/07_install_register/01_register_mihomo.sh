@@ -70,7 +70,7 @@ rules:
   - MATCH,DIRECT
 EOF
 
-        echo ""
+        echo
         echo "  Добавлен шаблон конфигурационного файла Mihomo:"
         echo -e "  ${yellow}config.yaml${reset}"
         sleep 2

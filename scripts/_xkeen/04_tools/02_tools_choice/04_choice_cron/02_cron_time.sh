@@ -85,7 +85,7 @@ choice_cron_time() {
                 formatted_hour=$(printf "%02d" "$hour")
                 formatted_minute=$(printf "%02d" "$minute")
 
-                day_name=""
+                day_name=
                 case "$day_choice" in
                     0) day_name="Отмена" ;;
                     1) day_name="Понедельник" ;;

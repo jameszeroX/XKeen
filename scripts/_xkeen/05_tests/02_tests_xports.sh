@@ -24,9 +24,9 @@ tests_ports_client() {
         IFS='
 '
         for line in $listening_ports_tcp $listening_ports_udp; do
-            gateway=""
-            port=""
-            protocol=""
+            gateway=
+            port=
+            protocol=
             
             if [ -n "$(echo "$line" | grep "tcp")" ]; then
                 protocol="TCP"

@@ -5,30 +5,30 @@ download_mihomo() {
         RELEASE_TAGS=$(curl -s ${mihomo_api_url}?per_page=20 | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 9) >/dev/null 2>&1
 
         if [ -z "$RELEASE_TAGS" ]; then
-            echo ""
+            echo
             printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
             RELEASE_TAGS=$(curl -s $mihomo_jsd_url | jq -r '.versions[]' | head -n 9) >/dev/null 2>&1
             
             if [ -z "$RELEASE_TAGS" ]; then
-                echo ""
+                echo
                 printf "  ${red}Нет доступа${reset} к ${yellow}jsDelivr${reset}\n"
-                echo ""
-                printf "  ${red}Ошибка:${reset} Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n
+                echo
+                printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n
   Проверьте соединение с интернетом или повторите позже\n"
-                echo ""
+                echo
                 exit 1
             fi
-            echo ""
+            echo
             printf "  Список релизов получен с использованием ${yellow}jsDelivr${reset}:\n"
             USE_JSDELIVR="true"
         else
-            echo ""
+            echo
             printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
         fi
 
-        echo ""
+        echo
         echo "$RELEASE_TAGS" | awk '{printf "    %2d. %s\n", NR, $0}'
-        echo ""
+        echo
         echo "     0. Пропустить загрузку Mihomo"
 
         printf "\n  Введите порядковый номер релиза Mihomo (или 0 для пропуска): "
@@ -88,8 +88,8 @@ download_mihomo() {
                 download_yq="$yq_dist_url/yq_linux_arm"
             ;;
             *)
-                download_url=""
-                download_yq=""
+                download_url=
+                download_yq=
             ;;
         esac
 

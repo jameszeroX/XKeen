@@ -132,9 +132,9 @@ choice_geosite() {
 
         [ "$invalid_choice" = true ] && continue
 
-        install_list=""
-        update_list=""
-        delete_list=""
+        install_list=
+        update_list=
+        delete_list=
 
         [ "$install_refilter_geosite" = true ] && install_list="$install_list ${yellow}Re:filter${reset},"
         [ "$install_v2fly_geosite" = true ] && install_list="$install_list ${yellow}v2fly${reset},"

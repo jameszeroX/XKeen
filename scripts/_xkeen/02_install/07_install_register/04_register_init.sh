@@ -106,13 +106,13 @@ log_error_router() {
 
 log_error_terminal() {
     echo
-    echo -e "${red}Ошибка:${reset} $1" >&2
+    echo -e "${red}Ошибка${reset}: $1" >&2
     exit 1
 }
 
 log_warning_terminal() {
     echo
-    echo -e "${yellow}Предупреждение:${reset} $1" >&2
+    echo -e "${yellow}Предупреждение${reset}: $1" >&2
 }
 
 log_clean() {
@@ -333,14 +333,14 @@ get_policy_mark() {
   Не определены целевые порты для XKeen
   Прокси будет запущен для всего устройства на всех портах
   "
-            echo ""
+            echo
         else
             log_warning_terminal "
   Политика '${green}XKeen${reset}' не найдена в веб-интерфейсе роутера
   Определены целевые порты для XKeen
   Прокси будет запущен для всего устройства на портах ${port_donor}
   "
-            echo ""
+            echo
         fi
     else
         echo "0x${policy_mark}"

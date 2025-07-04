@@ -5,32 +5,32 @@ download_xray() {
         RELEASE_TAGS=$(curl -s ${xray_api_url}?per_page=20 | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 9) >/dev/null 2>&1
 
         if [ -z "$RELEASE_TAGS" ]; then
-            echo ""
+            echo
             printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
             RELEASE_TAGS=$(curl -s $xray_jsd_url | jq -r '.versions[]' | head -n 9) >/dev/null 2>&1
             
             if [ -z "$RELEASE_TAGS" ]; then
-                echo ""
+                echo
                 printf "  ${red}Нет доступа${reset} к ${yellow}jsDelivr${reset}\n"
-                echo ""
-                printf "  ${red}Ошибка:${reset} Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n
+                echo
+                printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n
   Проверьте соединение с интернетом или повторите позже\n
   Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n
   https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md\n"
-                echo ""
+                echo
                 exit 1
             fi
-            echo ""
+            echo
             printf "  Список релизов получен с использованием ${yellow}jsDelivr${reset}:\n"
             USE_JSDELIVR="true"
         else
-            echo ""
+            echo
             printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
         fi
 
-        echo ""
+        echo
         echo "$RELEASE_TAGS" | awk '{printf "    %2d. %s\n", NR, $0}'
-        echo ""
+        echo
         echo "     0. Пропустить загрузку Xray"
 
         printf "\n  Введите порядковый номер релиза Xray (или 0 для пропуска): "
@@ -71,7 +71,7 @@ download_xray() {
             "mips64") download_url="$URL_BASE/Xray-linux-mips64.zip" ;;
             "mips64le") download_url="$URL_BASE/Xray-linux-mips64le.zip" ;;
             "arm32-v5") download_url="$URL_BASE/Xray-linux-arm32-v5.zip" ;;
-            *) download_url="" ;;
+            *) download_url= ;;
         esac
 
         if [ -z "$download_url" ]; then

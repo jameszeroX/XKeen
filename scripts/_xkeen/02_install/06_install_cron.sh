@@ -1,6 +1,6 @@
 # Функция для установки задач Cron
 install_cron() {
-    cron_entry=""
+    cron_entry=
 
     # Добавление задачи Cron для обновления GeoFile
     if [ -n "$choice_geofile_cron_time" ]; then

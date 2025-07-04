@@ -10,7 +10,7 @@ Source: XTLS Team
 SourceName: xray_s
 Section: net
 SourceDateEpoch: $source_date_epoch
-Maintainer: Skrill
+Maintainer: Skrill / jameszero
 Architecture: $status_architecture
 Installed-Size: $installed_size
 Description: A unified platform for anti-censorship.
@@ -37,40 +37,21 @@ register_xray_list() {
     # Добавление дополнительных путей
     echo "/opt/var/log/xray" >> xray_s.list
     echo "/opt/etc/xray/configs" >> xray_s.list
-	echo "/opt/etc/xray/dat" >> xray_s.list
-	echo "/opt/etc/xray" >> xray_s.list
-	echo "/opt/sbin/xray" >> xray_s.list
-	echo "/opt/etc/init.d/S24xray" >> xray_s.list
-	echo "/opt/etc/init.d/S99xkeenstart" >> xray_s.list
+    echo "/opt/etc/xray/dat" >> xray_s.list
+    echo "/opt/etc/xray" >> xray_s.list
+    echo "/opt/sbin/xray" >> xray_s.list
+    echo "/opt/etc/init.d/S24xray" >> xray_s.list
+    echo "/opt/etc/init.d/S99xkeenstart" >> xray_s.list
 }
 
 register_xray_status() {
-    # Генерация хэш-сумм для .json файлов
-    temp_file=$(mktemp)
-    for file in "$install_conf_dir"/*.json; do
-        filename=$(basename "$file")
-        hash_value=$(sha256sum "$file" | awk '{print $1}')
-        echo "$filename $hash_value" >> $temp_file
-    done
-
     # Генерация новой записи
     echo "Package: xray_s" > new_entry.txt
     echo "Version: $xray_current_version" >> new_entry.txt
     echo "Depends: libc, libssp, librt, libpthread, ca-bundle" >> new_entry.txt
     echo "Status: install user installed" >> new_entry.txt
     echo "Architecture: $status_architecture" >> new_entry.txt
-    echo "Conffiles:" >> new_entry.txt
-
-    while read -r line; do
-        filename=$(echo $line | cut -d' ' -f1)
-        hash=$(echo $line | cut -d' ' -f2)
-        echo "/opt/etc/xray/configs/$filename $hash" >> new_entry.txt
-    done < $temp_file
-
     echo "Installed-Time: $(date +%s)" >> new_entry.txt
-
-    # Удаление временного файла
-    rm $temp_file
 
     # Чтение существующего содержимого файла "status"
     existing_content=$(cat "$status_file")

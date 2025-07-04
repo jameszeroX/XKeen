@@ -1,4 +1,4 @@
-# Регистрация xkeen
+# Регистрация XKeen
 
 # Функция для создания файла xkeen.control
 register_xkeen_control() {
@@ -14,7 +14,7 @@ Source: Skrill
 SourceName: xkeen
 Section: net
 SourceDateEpoch: $source_date_epoch
-Maintainer: Skrill
+Maintainer: Skrill / jameszero
 Architecture: $status_architecture
 Installed-Size: $installed_size
 Description: The platform that makes Xray work.
@@ -38,19 +38,13 @@ register_xkeen_list() {
 }
 
 register_xkeen_status() {
-    # Генерация хэш-сумм для .json файлов
-    temp_file=$(mktemp)
-
     # Генерация новой записи
     echo "Package: xkeen" > new_entry.txt
     echo "Version: $xkeen_current_version" >> new_entry.txt
     echo "Depends: jq, curl, lscpu, coreutils-uname, coreutils-nohup, iptables" >> new_entry.txt
     echo "Status: install user installed" >> new_entry.txt
     echo "Architecture: $status_architecture" >> new_entry.txt
-    echo "Installed-Time: $(date +%s)" >> new_entry.txt	
-
-    # Удаление временного файла
-    rm $temp_file
+    echo "Installed-Time: $(date +%s)" >> new_entry.txt
 
     # Чтение существующего содержимого файла "status"
     existing_content=$(cat "$status_file")

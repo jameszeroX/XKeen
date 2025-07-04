@@ -5,14 +5,14 @@ tests_connection() {
     if ping -c 4 google.com > /dev/null 2>&1; then
         result=0
     else
-        echo -e "  ${red}Ошибка:${reset} Не удалось пинговать google.com"
+        echo -e "  ${red}Ошибка${reset}: Не удалось пинговать google.com"
     fi
 
     # Проверка соединения с yandex.ru
     if ping -c 4 yandex.ru > /dev/null 2>&1; then
         result=0
     else
-        echo -e "  ${red}Ошибка:${reset}  Не удалось пинговать yandex.ru"
+        echo -e "  ${red}Ошибка${reset}: Не удалось пинговать yandex.ru"
     fi
 
     # Проверяем код завершения функции и выводим сообщение

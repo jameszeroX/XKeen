@@ -1052,11 +1052,6 @@ case "$1" in
     ;;
 
 
-    -arch)
-        archive_xkeen
-    ;;
-
-
     -uktest)
         xkeen_info
         clear
@@ -1065,11 +1060,11 @@ case "$1" in
         install_xkeen
         . "$script_dir/.xkeen/import.sh"
 
-        echo -e "  ${yellow}Выполняется${reset} отмена регистрации предыдущей версии XKeen"
+        echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
         delete_register_xkeen
         logs_delete_register_xkeen_info_console
 
-        echo -e "  ${yellow}Выполняется${reset} регистрация новой версии XKeen"
+        echo -e "  Выполняется регистрация новой версии ${yellow}XKeen${reset}"
         register_xkeen_list
         logs_register_xkeen_list_info_console
 
