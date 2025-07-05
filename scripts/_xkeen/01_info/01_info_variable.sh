@@ -12,22 +12,22 @@ reset="\033[0m"		# Сброс цветов
 # Директории
 # -------------------------------------
 tmp_dir_global="/opt/tmp"		# Временная директория общая
-tmp_dir="/opt/tmp/xkeen"		# Временная директория xkeen
-xtmp_dir="/opt/tmp/xray"		# Временная директория xray
-mtmp_dir="/opt/tmp/mihomo"		# Временная директория mihomo
-xkeen_log_dir="/opt/var/log/xkeen"	# Директория логов для xkeen
-xray_log_dir="/opt/var/log/xray"	# Директория логов для xray
+tmp_dir="/opt/tmp/xkeen"		# Временная директория XKeen
+xtmp_dir="/opt/tmp/xray"		# Временная директория Xray
+mtmp_dir="/opt/tmp/mihomo"		# Временная директория Mihomo
+xkeen_log_dir="/opt/var/log/xkeen"	# Директория логов для XKeen
+xray_log_dir="/opt/var/log/xray"	# Директория логов для Xray
 initd_dir="/opt/etc/init.d"		# Директория init.d
 pid_dir="/opt/var/run"			# Директория для pid файлов
 backups_dir="/opt/backups"		# Директория для бекапов
 install_dir="/opt/sbin"			# Директория установки
 xkeen_dir="/opt/sbin/.xkeen"		# xkeen директория
 geo_dir="/opt/etc/xray/dat"		# Директория для dat
-cron_dir="/opt/var/spool/cron/crontabs"	# Директория для cron файла xkeen
+cron_dir="/opt/var/spool/cron/crontabs"	# Директория для cron файла XKeen
 cron_file="root"			# Сron файл
-install_conf_dir="/opt/etc/xray/configs" # Директория конфигурации xray
-xkeen_conf_dir="$xkeen_dir/02_install/08_install_configs/02_configs_dir" # Директория шаблонов конфигурации xray
-mihomo_conf_dir="/opt/etc/mihomo"	# Директория конфигурации mihomo
+install_conf_dir="/opt/etc/xray/configs" # Директория конфигурации Xray
+xkeen_conf_dir="$xkeen_dir/02_install/08_install_configs/02_configs_dir" # Директория шаблонов конфигурации Xray
+mihomo_conf_dir="/opt/etc/mihomo"	# Директория конфигурации Mihomo
 register_dir="/opt/lib/opkg/info"
 status_file="/opt/lib/opkg/status"
 releases_dir="/opt/releases"
@@ -59,7 +59,7 @@ xray_zip_url="https://github.com/XTLS/Xray-core/releases/download"				# url дл
 mihomo_api_url="https://api.github.com/repos/MetaCubeX/mihomo/releases"				# url api для Mihomo
 mihomo_jsd_url="https://data.jsdelivr.com/v1/package/gh/MetaCubeX/mihomo"			# резервный url api для Mihomo
 mihomo_gz_url="https://github.com/MetaCubeX/mihomo/releases/download"				# url для загрузки Mihomo
-yq_dist_url="https://github.com/mikefarah/yq/releases/latest/download"				# url для загрузки yq
+yq_dist_url="https://github.com/mikefarah/yq/releases/latest/download"				# url для загрузки Yq
 
 # url для загрузки геофайлов
 refilter_url="https://github.com/1andrevich/Re-filter-lists/releases/latest/download/geosite.dat"

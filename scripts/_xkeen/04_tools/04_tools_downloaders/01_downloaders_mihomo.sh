@@ -104,17 +104,17 @@ download_mihomo() {
         mihomo_dist=$(mktemp)
         mkdir -p "$mtmp_dir"
 
-        echo -e "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - yq"
+        echo -e "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - Yq"
         if curl -L -o "$yq_dist" "$download_yq" &> /dev/null; then
             if [ -s "$yq_dist" ]; then
                 mv "$yq_dist" "$install_dir/yq"
                 chmod +x "$install_dir/yq"
-                echo -e "  yq ${green}успешно загружен${reset}"
+                echo -e "  Yq ${green}успешно загружен${reset}"
             else
-                echo -e "  ${red}Ошибка${reset}: Загруженный файл yq поврежден"
+                echo -e "  ${red}Ошибка${reset}: Загруженный файл Yq поврежден"
             fi
         else
-            echo -e "  ${red}Ошибка${reset}: Не удалось загрузить yq. Проверьте соединение с интернетом или повторите позже"
+            echo -e "  ${red}Ошибка${reset}: Не удалось загрузить Yq. Проверьте соединение с интернетом или повторите позже"
         fi
 
         echo -e "  ${yellow}Выполняется загрузка${reset} выбранной версии Mihomo"
