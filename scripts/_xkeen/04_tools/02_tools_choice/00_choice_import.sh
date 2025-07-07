@@ -3,6 +3,7 @@
 # Модули выбора
 . "$xtools_dir/02_tools_choice/01_choice_input.sh"
 . "$xtools_dir/02_tools_choice/01_choice_mihomo.sh"
+. "$xtools_dir/02_tools_choice/01_choice_xray.sh"
 . "$xtools_dir/02_tools_choice/02_choice_geosite.sh"
 . "$xtools_dir/02_tools_choice/03_choice_geoip.sh"
 

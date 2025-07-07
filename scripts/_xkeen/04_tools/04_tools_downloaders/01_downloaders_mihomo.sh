@@ -34,7 +34,7 @@ download_mihomo() {
         printf "\n  Введите порядковый номер релиза Mihomo (или 0 для пропуска): "
         read -r choice
 
-        if ! echo "$choice" | grep -Eq '^[0-9]+$'; then
+        if ! echo "$choice" | grep -Eq '^[0-9]$'; then
             printf "  ${red}Некорректный${reset} ввод. Пожалуйста, введите число\n"
             sleep 1
             continue

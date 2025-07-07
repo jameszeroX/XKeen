@@ -5,7 +5,6 @@ choice_update_cron() {
     [ "$info_update_geofile_cron" = "installed" ] && has_updatable_cron_tasks=true
 
     while true; do
-        # Сброс флагов при каждом повторении цикла
         choice_canel_cron_select=false
         choice_geofile_cron_select=false
         choice_delete_all_cron_select=false
@@ -16,34 +15,30 @@ choice_update_cron() {
         echo
 
         [ "$info_update_geofile_cron" != "installed" ] && geofile_choice="Включить" || geofile_choice="Обновить"
-
         echo "     1. $geofile_choice задачу"
         echo "     0. Пропустить"
 
-        [ "$has_updatable_cron_tasks" = true ] && echo && echo "     99. Выключить автообновление"
-
+        [ "$has_updatable_cron_tasks" = true ] && echo && echo "     2. Выключить автообновление"
         echo
-        update_choices=$(input_digits "Ваш выбор: " "${red}Некорректный номер действия. ${reset}Пожалуйста, выберите снова")
 
-        for choice in $update_choices; do
-            if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
-                echo -e "  ${red}Некорректный номер действия.${reset} Пожалуйста, выберите снова"
-                invalid_choice=true
-                sleep 1
+        while true; do
+            read -r -p "  Ваш выбор: " update_choices
+            update_choices=$(echo "$update_choices" | sed 's/,/, /g')
+
+            if echo "$update_choices" | grep -qE '^[0-2]$'; then
                 break
+            else
+                echo -e "  ${red}Некорректный ввод.${reset} Выберите один из предложенных вариантов"
             fi
         done
-
-        [ "$invalid_choice" = true ] && continue
 
         for choice in $update_choices; do
             case "$choice" in
                 1)
+                    choice_geofile_cron_select=true
                     if [ "$info_update_geofile_cron" = "installed" ]; then
-                        choice_geofile_cron_select=true
                         echo -e "  ${yellow}Будет выполнено${reset} обновление задачи GeoFile"
                     else
-                        choice_geofile_cron_select=true
                         echo -e "  ${yellow}Будет выполнено${reset} включение задачи GeoFile"
                     fi
                     ;;
@@ -52,24 +47,22 @@ choice_update_cron() {
                     echo "  Выполнен пропуск настройки автообновления"
                     return
                     ;;
-                99)
+                2)
                     if [ "$has_updatable_cron_tasks" = true ]; then
-                        echo "  Будет выключено автообновление GeoFile"
                         delete_cron_geofile
+                        echo -e "  Автообновление баз GeoFile ${green}выключено${reset}"
                     else
-                        echo -e "  ${red}Автообновление GeoFile не включено${reset}. Выберите другой пункт"
+                        echo -e "  ${red}Автообновление баз GeoFile не включено${reset}. Выберите другой пункт"
                         invalid_choice=true
                     fi
                     ;;
                 *)
-                    echo -e "  ${red}Некорректный номер действия: $choice${reset}. Пожалуйста, выберите снова"
+                    echo -e "  ${red}Некорректный ввод{reset}"
                     invalid_choice=true
                     ;;
             esac
         done
 
-        [ "$invalid_choice" = true ] && continue
-
-        break
+        [ "$invalid_choice" = true ] || break
     done
 }

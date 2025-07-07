@@ -3,22 +3,17 @@ choice_geosite() {
     has_missing_geosite_bases=false
     has_updatable_geosite_bases=false
 
-    if [ "$update_refilter_geosite" = "false" ]; then
-        has_missing_geosite_bases=true
-    else
-        update_refilter_geosite_msg=true
-    fi
-    if [ "$update_v2fly_geosite" = "false" ]; then
-        has_missing_geosite_bases=true
-    else
-        update_v2fly_geosite_msg=true
-    fi
-    if [ "$update_zkeen_geosite" = "false" ]; then
-        has_missing_geosite_bases=true
-    else
-        update_zkeen_geosite_msg=true
-    fi
-    { [ "$update_refilter_geosite" = "true" ] || [ "$update_v2fly_geosite" = "true" ] || [ "$update_zkeen_geosite" = "true" ]; } && has_updatable_geosite_bases=true
+    for source in refilter v2fly zkeen; do
+        var="update_${source}_geosite"
+        msg_var="update_${source}_geosite_msg"
+        
+        if [ "$(eval echo \$$var)" = "false" ]; then
+            has_missing_geosite_bases=true
+        else
+            eval "$msg_var=true"
+            has_updatable_geosite_bases=true
+        fi
+    done
 
     while true; do
         install_refilter_geosite=false
@@ -34,7 +29,7 @@ choice_geosite() {
 
         echo 
         echo 
-        echo -e "  Выберите номер или номера действий для ${yellow}GeoSite${reset}"
+        echo -e "  Выберите номер или номера действий через пробел для ${yellow}GeoSite${reset}"
         echo 
 
         [ "$has_missing_geosite_bases" = true ] && echo "     1. Установить отсутствующие GeoSite" || echo -e "     1. ${gray}Все доступные GeoSite установлены${reset}"
@@ -50,26 +45,26 @@ choice_geosite() {
         echo 
         echo "     0. Пропустить"
 
-        [ "$has_updatable_geosite_bases" = true ] && echo && echo "     99. Удалить установленные GeoSite"
+        [ "$has_updatable_geosite_bases" = true ] && echo && echo "     6. Удалить установленные GeoSite"
 
         echo
-        geosite_choices=$(input_digits "Ваш выбор: " "${red}Некорректный номер действия.${reset} Пожалуйста, выберите снова")
+        valid_input=true
+        
+        while true; do
+            read -r -p "  Ваш выбор: " geosite_choices
+            geosite_choices=$(echo "$geosite_choices" | sed 's/,/, /g')
 
-        for choice in $geosite_choices; do
-            if ! echo "$choice" | grep -Eq '^[0-9]+$'; then
-                echo -e "  ${red}Некорректный номер действия.${reset} Пожалуйста, выберите снова"
-                invalid_choice=true
-                sleep 1
+            if echo "$geosite_choices" | grep -qE '^[0-6 ]+$'; then
                 break
+            else
+                echo -e "  ${red}Некорректный ввод.${reset} Пожалуйста, выберите снова"
             fi
         done
-
-        [ "$invalid_choice" = true ] && continue
 
         for choice in $geosite_choices; do
             case "$choice" in
                 1)
-                    if [ "$has_missing_geosite_bases" = false ]; then
+                    if [ "$has_missing_geosite_bases" = "false" ]; then
                         echo -e "  Все GeoSite ${green}уже установлены${reset}"
                         if input_concordance_list "Вы хотите обновить их?"; then
                             update_refilter_geosite=true
@@ -80,12 +75,12 @@ choice_geosite() {
                         fi
                     else
                         [ "$update_refilter_geosite_msg" != "true" ] && install_refilter_geosite=true
-                        [ "$update_v2fly_geosite" != "true" ] && install_v2fly_geosite=true
-                        [ "$update_zkeen_geosite" != "true" ] && install_zkeen_geosite=true
+                        [ "$update_v2fly_geosite_msg" != "true" ] && install_v2fly_geosite=true
+                        [ "$update_zkeen_geosite_msg" != "true" ] && install_zkeen_geosite=true
                     fi
                     ;;
                 2)
-                    if [ "$has_updatable_geosite_bases" = false ]; then
+                    if [ "$has_updatable_geosite_bases" = "false" ]; then
                         echo -e "  ${red}Нет установленных GeoSite${reset} для обновления"
                         if input_concordance_list "Вы хотите установить их?"; then
                             install_refilter_geosite=true
@@ -113,8 +108,8 @@ choice_geosite() {
                     echo "  Выполнен пропуск установки / обновления GeoSite"
                     return
                     ;;
-                99)
-                    if [ "$has_updatable_geosite_bases" = false ]; then
+                6)
+                    if [ "$has_updatable_geosite_bases" = "false" ]; then
                         echo -e "  ${red}Нет установленных GeoSite для удаления${reset}. Выберите другой пункт"
                         invalid_choice=true
                     else
@@ -124,7 +119,7 @@ choice_geosite() {
                     fi
                     ;;
                 *)
-                    echo -e "  ${red}Некорректный номер действия: $choice${reset}. Пожалуйста, выберите снова"
+                    echo -e "  ${red}Некорректный ввод.${reset} Пожалуйста, выберите снова"
                     invalid_choice=true
                     ;;
             esac

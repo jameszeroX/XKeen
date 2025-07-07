@@ -3,23 +3,17 @@ choice_geoip() {
     has_missing_geoip_bases=false
     has_updatable_geoip_bases=false
 
-    # Проверяем наличие и обновляемость GeoIP баз
-    if [ "$update_refilter_geoip" = "false" ]; then
-        has_missing_geoip_bases=true
-    else
-        update_refilter_geoip_msg=true
-    fi
-    if [ "$update_v2fly_geoip" = "false" ]; then
-        has_missing_geoip_bases=true
-    else
-        update_v2fly_geoip_msg=true
-    fi
-    if [ "$update_zkeenip_geoip" = "false" ]; then
-        has_missing_geoip_bases=true
-    else
-        update_zkeenip_geoip_msg=true
-    fi
-    { [ "$update_refilter_geoip" = "true" ] || [ "$update_v2fly_geoip" = "true" ] || [ "$update_zkeenip_geoip" = "true" ]; } && has_updatable_geoip_bases=true
+    for source in refilter v2fly zkeenip; do
+        var="update_${source}_geoip"
+        msg_var="update_${source}_geoip_msg"
+        
+        if [ "$(eval echo \$$var)" = "false" ]; then
+            has_missing_geoip_bases=true
+        else
+            eval "$msg_var=true"
+            has_updatable_geoip_bases=true
+        fi
+    done
 
     while true; do
         install_refilter_geoip=false
@@ -35,7 +29,7 @@ choice_geoip() {
 
         echo 
         echo 
-        echo -e "  Выберите номер или номера действий для ${yellow}GeoIP${reset}"
+        echo -e "  Выберите номер или номера действий через пробел для ${yellow}GeoIP${reset}"
         echo 
 
         [ "$has_missing_geoip_bases" = true ] && echo "     1. Установить отсутствующие GeoIP" || echo -e "     1. ${gray}Все доступные GeoIP установлены${reset}"
@@ -51,21 +45,21 @@ choice_geoip() {
         echo 
         echo "     0. Пропустить"
 
-        [ "$has_updatable_geoip_bases" = true ] && echo && echo "     99. Удалить установленные GeoIP"
+        [ "$has_updatable_geoip_bases" = true ] && echo && echo "     6. Удалить установленные GeoIP"
 
         echo
-        geoip_choices=$(input_digits "Ваш выбор: " "${red}Некорректный номер действия.${reset} Пожалуйста, выберите снова")
+        valid_input=true
+        
+        while true; do
+            read -r -p "  Ваш выбор: " geoip_choices
+            geoip_choices=$(echo "$geoip_choices" | sed 's/,/, /g')
 
-        for choice in $geoip_choices; do
-            if ! echo "$choice" | grep -Eq '^[0-9]+$'; then
-                echo -e "  ${red}Некорректный номер действия.${reset} Пожалуйста, выберите снова"
-                invalid_choice=true
-                sleep 1
+            if echo "$geoip_choices" | grep -qE '^[0-6 ]+$'; then
                 break
+            else
+                echo -e "  ${red}Некорректный ввод.${reset} Пожалуйста, выберите снова"
             fi
         done
-
-        [ "$invalid_choice" = true ] && continue
 
         for choice in $geoip_choices; do
             case "$choice" in
@@ -86,7 +80,7 @@ choice_geoip() {
                     fi
                     ;;
                 2)
-                    if [ "$has_updatable_geoip_bases" = false ]; then
+                    if [ "$has_updatable_geoip_bases" = "false" ]; then
                         echo -e "  ${red}Нет установленных GeoIP${reset} для обновления"
                         if input_concordance_list "Вы хотите установить их?"; then
                             install_refilter_geoip=true
@@ -114,8 +108,8 @@ choice_geoip() {
                     echo "  Выполнен пропуск установки / обновления GeoIP"
                     return
                     ;;
-                99)
-                    if [ "$has_updatable_geoip_bases" = false ]; then
+                6)
+                    if [ "$has_updatable_geoip_bases" = "false" ]; then
                         echo -e "  ${red}Нет установленных GeoIP для удаления${reset}. Выберите другой пункт"
                         invalid_choice=true
                     else
@@ -125,7 +119,7 @@ choice_geoip() {
                     fi
                     ;;
                 *)
-                    echo -e "  ${red}Некорректный номер действия: $choice${reset}. Пожалуйста, выберите снова"
+                    echo -e "  ${red}Некорректный ввод.${reset} Пожалуйста, выберите снова"
                     invalid_choice=true
                     ;;
             esac

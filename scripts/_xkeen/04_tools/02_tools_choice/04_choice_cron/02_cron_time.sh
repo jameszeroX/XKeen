@@ -28,7 +28,7 @@ choice_cron_time() {
             day_choice=
             while true; do
                 read -r -p "  Ваш выбор: " day_choice
-                if [[ "$day_choice" =~ ^[0-8]$ ]]; then
+                if echo "$day_choice" | grep -qE '^[0-8]$'; then
                     break
                 else
                     echo -e "  ${red}Некорректный номер действия.${reset} Пожалуйста, выберите снова"
@@ -41,13 +41,13 @@ choice_cron_time() {
                 if [ "$day_choice" -eq 8 ]; then
                     echo
                     read -r -p "  Выберите час (0-23): " hour
-                    while [[ ! "$hour" =~ ^[0-9]+$ || "$hour" -lt 0 || "$hour" -gt 23 ]]; do
+                        while ! { case "$hour" in *[!0-9]*) false;; *) [ "$hour" -ge 0 ] && [ "$hour" -le 23 ];; esac; }; do
                         echo -e "  ${red}Некорректный час.${reset} Пожалуйста, попробуйте снова"
                         read -r -p "  Введите значение от 0 до 23: " hour
                     done
 
                     read -r -p "  Выберите минуту (0-59): " minute
-                    while [[ ! "$minute" =~ ^[0-9]+$ || "$minute" -lt 0 || "$minute" -gt 59 ]]; do
+                    while ! { case "$minute" in *[!0-9]*) false;; *) [ "$minute" -ge 0 ] && [ "$minute" -le 59 ];; esac; }; do
                         echo -e "  ${red}Некорректные минуты.${reset} Пожалуйста, попробуйте снова"
                         read -r -p "  Введите значение от 0 до 59: " minute
                     done
@@ -57,13 +57,13 @@ choice_cron_time() {
                 else
                     echo
                     read -r -p "  Выберите час (0-23): " hour
-                    while [[ ! "$hour" =~ ^[0-9]+$ || "$hour" -lt 0 || "$hour" -gt 23 ]]; do
+                    while ! { case "$hour" in *[!0-9]*) false;; *) [ "$hour" -ge 0 ] && [ "$hour" -le 23 ];; esac; }; do
                         echo -e "  ${red}Некорректный час.${reset} Пожалуйста, попробуйте снова"
                         read -r -p "  Введите значение от 0 до 23: " hour
                     done
 
                     read -r -p "  Выберите минуту (0-59): " minute
-                    while [[ ! "$minute" =~ ^[0-9]+$ || "$minute" -lt 0 || "$minute" -gt 59 ]]; do
+                    while ! { case "$minute" in *[!0-9]*) false;; *) [ "$minute" -ge 0 ] && [ "$minute" -le 59 ];; esac; }; do
                         echo -e "  ${red}Некорректные минуты.${reset} Пожалуйста, попробуйте снова"
                         read -r -p "  Введите значение от 0 до 59: " minute
                     done

@@ -26,9 +26,16 @@ data_is_updated_excluded() {
     fi
 }
 
-# Нормализация портов - удаление пробелов и преобразование разделителей в запятые
 normalize_ports() {
-    echo "$1" | tr -s '[:space:]' ',' | tr -s ',' | sed 's/^,//; s/,$//' | tr ',' '\n' | sort -nu | tr '\n' ',' | sed 's/,$//'
+    echo "$1" | \
+    tr '-' ':' | \
+    tr -s '[:space:]' ',' | \
+    tr -s ',' | \
+    sed 's/^,//; s/,$//' | \
+    tr ',' '\n' | \
+    sort -nu | \
+    tr '\n' ',' | \
+    sed 's/,$//'
 }
 
 add_ports_donor() {

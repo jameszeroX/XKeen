@@ -31,13 +31,11 @@ input_digits() {
 
     while true; do
         read -r -p "  $prompt_message" input
-        input="${input//,/, }"
-        if [[ "$input" =~ ^[0-9\ ,]+$ ]]; then
-            echo 
+        input=$(echo "$input" | sed 's/,/, /g')
+        if echo "$input" | grep -qE '^[0-9 ]+$'; then
             echo "$input"
-            break
+            return 0
         else
-            echo 
             echo -e "  $error_message"
         fi
     done

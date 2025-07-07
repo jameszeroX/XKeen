@@ -1,16 +1,16 @@
-# Запрос на добавление ядра Mihomo
-choice_add_mihomo() {
+# Запрос на добавление ядра Xray
+choice_add_xray() {
     while true; do
         echo
         echo
-        echo -e "  ${green}Загрузить${reset} ядро ${yellow}Mihomo${reset}?"
+        echo -e "  ${green}Загрузить${reset} ядро ${yellow}Xray${reset}?"
         echo
         echo "     1. Да"
         echo "     0. Нет"
         echo
 
         valid_input=true
-        add_mihomo=true
+        add_xray=true
 
         while true; do
             read -r -p "  Ваш выбор: " update_choices
@@ -29,7 +29,7 @@ choice_add_mihomo() {
                     sleep 1
                     ;;
                 0)
-                    add_mihomo=false
+                    add_xray=false
                     ;;
                 *)
                     echo -e "  ${red}Некорректный ввод${reset}"
