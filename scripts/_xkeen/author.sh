@@ -1,6 +1,6 @@
 # Информация об авторе
 author_donate() {
-    clear
+    reset
     echo
     echo "  Выберите удобный для Вас способ перевода:"
     echo "     0. Отмена"
@@ -51,7 +51,7 @@ author_donate() {
 }
 
 author_feedback() {
-    clear
+    reset
     echo
     echo "  Контакты"
     echo -e "  ${yellow}Профиль на форуме keenetic${reset}"

@@ -72,7 +72,7 @@ xkeen_info() {
 case "$1" in
 
     -io)    # Установка XKeen OffLine
-        clear
+        reset
         echo
         echo "  Установка XKeen OffLine"
 
@@ -93,7 +93,7 @@ case "$1" in
                 exit 1
             fi
         else
-            clear
+            reset
             echo
             echo -e "  ${red}Не найдено ядро проксирования xray или mihomo${reset}"
             echo
@@ -114,7 +114,7 @@ case "$1" in
                 mkdir -p "$geo_dir"
             fi
 
-            clear
+            reset
             delete_register_xray
             echo
             echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
@@ -152,7 +152,7 @@ case "$1" in
             sleep 2
         fi
 
-        clear
+        reset
         delete_register_xkeen
         echo
         echo -e "  Выполняется регистрация ${yellow}XKeen${reset}"
@@ -174,7 +174,7 @@ case "$1" in
         delete_tmp
         sleep 2
 
-        clear
+        reset
         echo
         echo -e "  ${green}Установка XKeen выполнена!${reset}"
         echo
@@ -196,7 +196,7 @@ case "$1" in
 
     -i)    # Запуск полного цикла установки
         . "$script_dir/.xkeen/import.sh"
-        clear
+        reset
         echo
         echo -e "  Запуск полного цикла установки ${yellow}XKeen${reset}"
 
@@ -208,11 +208,11 @@ case "$1" in
 
         # Устанавливаем Xray
 
-        clear
+        reset
         choice_add_xray
 
         if [ "$add_xray" = "true" ]; then
-            clear
+            reset
             echo
             download_xray
         else
@@ -237,7 +237,7 @@ case "$1" in
             logs_register_xray_status_info_console
             sleep 2
 
-            clear
+            reset
             # Устанавливаем GeoSite
             choice_geosite
 
@@ -246,7 +246,7 @@ case "$1" in
             install_geosite
             sleep 2
 
-            clear
+            reset
             # Устанавливаем GeoIP
             choice_geoip
 
@@ -255,17 +255,17 @@ case "$1" in
             install_geoip
             sleep 2
 
-            clear
+            reset
             # Настраиваем автоматические обновления
             info_cron
             choice_update_cron
             update_cron_geofile_task
-            clear
+            reset
             choice_cron_time
 
             install_cron
 
-            clear
+            reset
             echo
             install_configs
 
@@ -277,10 +277,10 @@ case "$1" in
             $initd_dir/S05crond start >/dev/null 2>&1
         fi
 
-        clear
+        reset
         choice_add_mihomo
         if [ "$add_mihomo" = "true" ]; then
-            clear
+            reset
             echo
             download_mihomo
         else
@@ -313,7 +313,7 @@ case "$1" in
 
         if [ "$xray_installed" = "installed" ] || [ "$mihomo_installed" = "installed" ]; then
             delete_register_xkeen
-            clear
+            reset
             echo
             echo -e "  Выполняется регистрация ${yellow}XKeen${reset}"
             register_xkeen_list
@@ -350,7 +350,7 @@ case "$1" in
         rm -rf "$xtmp_dir" "$mtmp_dir"
         sleep 2
 
-        clear
+        reset
         echo
 
         if [ "$xray_installed" != "installed" ] && [ "$mihomo_installed" != "installed" ]; then
@@ -433,7 +433,7 @@ case "$1" in
 
         if [ "$xkeen_build" = "Stable" ]; then
             if [ "$info_compare_xkeen" = "update" ]; then
-                clear
+                reset
                 echo -e "  Найдена новая версия ${yellow}XKeen${reset}"
                 backup_xkeen
                 download_xkeen
@@ -485,7 +485,7 @@ case "$1" in
         info_xray
         info_version_xray
 
-        clear
+        reset
         echo
 
         download_xray
@@ -527,7 +527,7 @@ case "$1" in
         info_cpu
         info_mihomo
 
-        clear
+        reset
         echo
         download_mihomo
         info_version_mihomo
@@ -563,7 +563,7 @@ case "$1" in
                 register_yq_status
                 logs_register_yq_status_info_console
                 sleep 2
-                clear
+                reset
                 echo
                 echo -e "  Установка ядра ${yellow}Mihomo${reset} ${green}выполнена${reset}"
             fi
@@ -577,7 +577,7 @@ case "$1" in
     -ugc)    # Создать или изменить существующюю задачу автообновления баз GeoFile
         command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
         info_cron
-        clear
+        reset
         echo -e "  Создание или изменение задачи автообновления баз ${yellow}GeoFile${reset}"
         choice_update_cron
         update_cron_geofile_task
@@ -589,7 +589,7 @@ case "$1" in
 
 
     -ri)    # Создать файл автозапуска XKeen
-        clear
+        reset
         $initd_dir/S24xray stop >/dev/null 2>&1
         [ -e "$initd_dir/S24Xray" ] && rm -f "$initd_dir/S24Xray"
 
@@ -609,7 +609,7 @@ case "$1" in
     -dgc)    # Удалить задачу автообновления баз GeoFile
         info_cron
 
-        clear
+        reset
         echo
         echo -e "  Удаление задачи автообновления баз ${yellow}GeoFile${reset}"
 
@@ -622,7 +622,7 @@ case "$1" in
 
 
     -dx)    # Удалить Xray
-        clear
+        reset
         echo
         command -v xray >/dev/null 2>&1 || { echo -e "  Xray ${red}не установлен${reset}"; exit 1; }
         echo -e "  Удаление ${yellow}Xray${reset}"
@@ -643,7 +643,7 @@ case "$1" in
 
 
     -dm)    # Удалить Mihomo
-        clear
+        reset
         echo
         command -v mihomo >/dev/null 2>&1 || { echo -e "  Mihomo ${red}не установлен${reset}"; exit 1; }
         echo -e "  Удаление ${yellow}Mihomo${reset}"
@@ -660,7 +660,7 @@ case "$1" in
 
 
     -dk)    # Удалить XKeen
-        clear
+        reset
         echo
         echo -e "  Удаление ${yellow}XKeen${reset}"
         opkg remove xkeen
@@ -679,7 +679,7 @@ case "$1" in
 
 
     -dgi)    # Удалить GeoIP's
-        clear
+        reset
         echo
         echo -e "  Удаление всех баз ${yellow}GeoIP${reset}"
 
@@ -692,7 +692,7 @@ case "$1" in
 
 
     -dgs)    # Удалить GeoSite's
-        clear
+        reset
         echo
         echo -e "  Удаление всех баз ${yellow}GeoSite${reset}"
 
@@ -705,13 +705,13 @@ case "$1" in
 
 
     -dt)    # Удалить временные файлы XKeen
-        clear
+        reset
         delete_tmp
     ;;
 
 
     -drx)    # Удалить регистрацию Xray
-        clear
+        reset
         echo
         echo -e "  Удаление ${yellow}регистрации Xray${reset}"
 
@@ -723,7 +723,7 @@ case "$1" in
 
 
     -drm)    # Удалить регистрацию Mihomo
-        clear
+        reset
         echo
         echo -e "  Удаление ${yellow}регистрации Mihomo${reset}"
 
@@ -735,7 +735,7 @@ case "$1" in
 
 
     -drk)    # Удалить регистрацию XKeen
-        clear
+        reset
         echo
         echo -e "  Удаление ${yellow}регистрации XKeen${reset}"
 
@@ -750,7 +750,7 @@ case "$1" in
         # Удаление задачи автообновления баз GeoFile
         info_cron
 
-        clear
+        reset
         echo
         echo -e "  Удаление задачи автообновления баз ${yellow}GeoFile${reset}"
         delete_cron_geofile
@@ -761,7 +761,7 @@ case "$1" in
         sleep 2
 
         # Удаление GeoIP's
-        clear
+        reset
         echo
         echo -e "  Удаление всех баз ${yellow}GeoIP${reset}"
 
@@ -772,7 +772,7 @@ case "$1" in
         sleep 2
 
         # Удаление GeoSite's
-        clear
+        reset
         echo
         echo -e "  Удаление всех баз ${yellow}GeoSite${reset}"
 
@@ -783,7 +783,7 @@ case "$1" in
         sleep 2
 
         # Удаление файлов конфигурации Xray
-        clear
+        reset
         echo
         echo -e "  Удаление ${yellow}конфигурационных файлов Xray${reset}"
 
@@ -795,7 +795,7 @@ case "$1" in
         sleep 2
 
         # Удаление Xray
-        clear
+        reset
         echo
         echo -e "  ${yellow}Удаление${reset} Xray"
 
@@ -809,7 +809,7 @@ case "$1" in
         sleep 2
 
         # Удаление Mihomo
-        clear
+        reset
         echo
         echo -e "  ${yellow}Удаление${reset} Mihomo"
         opkg remove mihomo_s
@@ -822,7 +822,7 @@ case "$1" in
         sleep 2
 
         # Удаление XKeen
-        clear
+        reset
         echo
         echo -e "  Удаление ${yellow}XKeen${reset}"
         opkg remove xkeen
@@ -833,7 +833,7 @@ case "$1" in
         echo -e "  Удаление XKeen ${green}выполнено${reset}"
         sleep 2
 
-        clear
+        reset
         echo
         echo -e "  Полная деинсталляция ${yellow}XKeen${reset} и всех зависимостей ${green}выполнена${reset}"
         echo -e "  Директорию резервных копий ${yellow}/opt/backups${reset} удалите вручную"
@@ -849,7 +849,7 @@ case "$1" in
 
 
     -rrk)    # Обновить регистрацию XKeen
-        clear
+        reset
         echo -e "  Обновление регистрации ${yellow}XKeen${reset}"
 
         info_cpu
@@ -874,7 +874,7 @@ case "$1" in
 
     -rrx)    # Обновить регистрацию Xray
         command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
-        clear
+        reset
         echo -e "  Обновление регистрации ${yellow}Xray${reset}"
 
         info_xray
@@ -900,7 +900,7 @@ case "$1" in
 
     -rrm)    # Обновить регистрацию Mihomo
         command -v mihomo >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Mihomo"; exit 1; }
-        clear
+        reset
         echo -e "  Обновление регистрации ${yellow}Mihomo${reset}"
 
         info_mihomo
@@ -939,7 +939,7 @@ case "$1" in
         status_file="/opt/lib/opkg/status"
         info_cpu
 
-        clear
+        reset
         echo -e "  Переустановка ${yellow}XKeen${reset}"
 
         echo
@@ -979,7 +979,7 @@ case "$1" in
 
     -g)    # Переустановка баз GeoFile
         command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
-        clear
+        reset
         info_geosite
         info_geoip
 
@@ -988,13 +988,13 @@ case "$1" in
         install_geosite
         sleep 2
 
-        clear
+        reset
         choice_geoip
         delete_geoip
         install_geoip
         sleep 2
 
-        clear
+        reset
         echo
         echo -e "  Переустановка баз GeoFile ${green}выполнена${reset}"
     ;;
@@ -1219,7 +1219,7 @@ case "$1" in
 
     -uktest)
         xkeen_info
-        clear
+        reset
         backup_xkeen
         download_xkeen_test
         install_xkeen
