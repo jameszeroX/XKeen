@@ -207,7 +207,6 @@ case "$1" in
         fi
 
         # Устанавливаем Xray
-
         clear
         choice_add_xray
 
@@ -833,7 +832,11 @@ case "$1" in
         echo -e "  Удаление XKeen ${green}выполнено${reset}"
         sleep 2
 
-        clear
+        if [ "$xkeen_build" = "Stable" ]; then
+            echo -e "\033c"
+        else
+            echo
+        fi
         echo
         echo -e "  Полная деинсталляция ${yellow}XKeen${reset} и всех зависимостей ${green}выполнена${reset}"
         echo -e "  Директорию резервных копий ${yellow}/opt/backups${reset} удалите вручную"
@@ -1070,11 +1073,13 @@ case "$1" in
 
 
     -ad)    # Можете купить кофе Skrill)
+        clear
         author_donate
     ;;
 
 
     -af)    # Обратная связь
+        clear
         author_feedback
     ;;
 
@@ -1213,13 +1218,14 @@ case "$1" in
 
 
     -diag)
+        clear
         diagnostic
     ;;
 
 
     -uktest)
-        xkeen_info
         clear
+        xkeen_info
         backup_xkeen
         download_xkeen_test
         install_xkeen
@@ -1255,6 +1261,7 @@ case "$1" in
 
 
     -fixed)
+        clear
         entware_fixed
         xkeen_info
 
@@ -1262,18 +1269,18 @@ case "$1" in
 
         if [ -z $bypass_xray ]; then
             install_xray
+            install_configs
+            info_version_xray
+            delete_register_xray
+            register_xray_list
+            register_xray_control
+            register_xray_status
+
+            register_xray_initd
+            register_autostart
+
+            fixed_register_packages
         fi
-        install_configs
-
-        register_xray_list
-        register_xray_control
-        register_xray_status
-
-        register_xray_initd
-        register_autostart
-
-        fixed_register_packages
-
         delete_tmp
     ;;
 

@@ -1,5 +1,4 @@
 diagnostic() {
-clear
 # Установка пути к файлу diagnostic
 diagnostic="/opt/diagnostic.txt"
 
