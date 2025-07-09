@@ -136,7 +136,7 @@ logs_register_xkeen_list_info_console() {
     cd "$register_dir/" || exit
 
     if [ ! -f "xkeen.list" ]; then
-        error_content="  {red}Ошибка${reset}: Файл xkeen.list не найден в директории '$register_dir/'"
+        error_content="  ${red}Ошибка${reset}: Файл xkeen.list не найден в директории '$register_dir/'"
     else
         info_content="  ${green}Успешно${reset}: Файл xkeen.list найден в директории '$register_dir/'"
     fi

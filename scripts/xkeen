@@ -1381,15 +1381,15 @@ case "$1" in
         echo -e "	-g	${gray}	GeoFile${reset}"
         echo
         echo -e "${green}Резервная копия XKeen${reset}"
-        echo -e "	-kb	${gray}	Создание{reset}"
+        echo -e "	-kb	${gray}	Создание${reset}"
         echo -e "	-kbr	${gray}	Восстановление${reset}"
         echo
         echo -e "${green}Резервная копия конфигурации Xray${reset}"
-        echo -e "	-cb	${gray}	Создание{reset}"
+        echo -e "	-cb	${gray}	Создание${reset}"
         echo -e "	-cbr	${gray}	Восстановление${reset}"
         echo
         echo -e "${green}Резервная копия конфигурации Mihomo${reset}"
-        echo -e "	-mb	${gray}	Создание{reset}"
+        echo -e "	-mb	${gray}	Создание${reset}"
         echo -e "	-mbr	${gray}	Восстановление${reset}"
         echo
         echo -e "${light_blue}Проверки${reset}"
@@ -1402,7 +1402,7 @@ case "$1" in
         echo -e "	-restart${gray}	Перезапуск${reset}"
         echo -e "	-status	${gray}	Статус работы${reset}"
         echo -e "	-auto	${gray}	Включить | Отключить автозапуск прокси-клиента${reset}"
-        echo -e "	-d	${gray}	Установить начальное время запуска прокси-клиента с роутером${reset}"
+        echo -e "	-d	${gray}	Установить задержку автозапуска прокси-клиента${reset}"
         echo -e "	-fd	${gray}	Включить | Отключить контроль файловых дескрипторов, открытых прокси-клиентом${reset}"
         echo -e "	-diag	${gray}	Выполнить диагностику${reset}"
         echo -e "	-xray	${gray}	Переключить XKeen на ядро Xray${reset}"

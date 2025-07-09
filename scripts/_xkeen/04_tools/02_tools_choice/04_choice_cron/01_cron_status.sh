@@ -57,7 +57,7 @@ choice_update_cron() {
                     fi
                     ;;
                 *)
-                    echo -e "  ${red}Некорректный ввод{reset}"
+                    echo -e "  ${red}Некорректный ввод${reset}"
                     invalid_choice=true
                     ;;
             esac
