@@ -141,7 +141,7 @@ create_user() {
 
 # Обработка модулей и портов
 get_modules() {
-    if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed_1" ]; then
+    if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed" ]; then
         for module in xt_TPROXY.ko xt_socket.ko; do
             if [ ! -f "${directory_user_modules}/${module}" ] && [ ! -f "${directory_os_modules}/${module}" ] && ! lsmod | grep -q "${module%.ko}"; then
                 proxy_stop
@@ -350,7 +350,7 @@ get_policy_mark() {
 # Получение режима прокси-клиента
 get_mode_proxy() {
     if [ -n "$port_redirect" ] && [ -n "$port_tproxy" ]; then
-        mode_proxy="Mixed_1"
+        mode_proxy="Mixed"
     elif [ -n "$port_tproxy" ]; then
         mode_proxy="TProxy"
     elif [ -n "$port_redirect" ]; then
@@ -432,7 +432,7 @@ if pidof "\$name_client" >/dev/null; then
             "\$family" -t "\$table" -N \$name_prerouting_chain || exit 0
             add_exclude_rules \$name_prerouting_chain
             case "\$mode_proxy" in
-                Mixed_1)
+                Mixed)
                     if [ "\$table" = "\$table_redirect" ]; then
                         "\$family" -w -t "\$table" -A \$name_prerouting_chain -p tcp -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
                     else
@@ -473,10 +473,10 @@ if pidof "\$name_client" >/dev/null; then
         for exclude in \$exclude_list; do
             if [ "\$exclude" = "192.168.0.0/16" ] || [ "\$exclude" = "fd00::/8" ] && [ "\$chain" != "\$name_output_chain" ] && [ -n "\$file_dns" ]; then
                 if [ -n "\${file_dns}" ]; then
-                    if [ "\$table" = "mangle" ] && [ "\$mode_proxy" = "Mixed_1" ]; then
+                    if [ "\$table" = "mangle" ] && [ "\$mode_proxy" = "Mixed" ]; then
                         "\$family" -w -t "\$table" -A "\$chain" -d "\$exclude" -p tcp --dport "\$port_dns" -j RETURN >/dev/null 2>&1
                         "\$family" -w -t "\$table" -A "\$chain" -d "\$exclude" -p udp ! --dport "\$port_dns" -j RETURN >/dev/null 2>&1
-                    elif [ "\$table" = "nat" ] && [ "\$mode_proxy" = "Mixed_1" ]; then
+                    elif [ "\$table" = "nat" ] && [ "\$mode_proxy" = "Mixed" ]; then
                         "\$family" -w -t "\$table" -A "\$chain" -d "\$exclude" -p tcp ! --dport "\$port_dns" -j RETURN >/dev/null 2>&1
                         "\$family" -w -t "\$table" -A "\$chain" -d "\$exclude" -p udp --dport "\$port_dns" -j RETURN >/dev/null 2>&1
                     elif [ "\$table" = "mangle" ] && [ "\$mode_proxy" = "TProxy" ]; then
@@ -519,7 +519,7 @@ if pidof "\$name_client" >/dev/null; then
         family="\$1"
         table="\$2"
         for net in \$networks; do
-            if [ "\$mode_proxy" = "Mixed_1" ]; then
+            if [ "\$mode_proxy" = "Mixed" ]; then
                 case "\$net" in
                     tcp)
                         table="nat"
@@ -583,7 +583,7 @@ if pidof "\$name_client" >/dev/null; then
                     ip6tables -t "\$table" -A OUTPUT -m owner ! --uid-owner \$name_profile -m conntrack ! --ctstate INVALID ! -p icmp -j \$name_output_chain >/dev/null 2>&1
                 fi
         fi
-        if [ "\$mode_proxy" = "Mixed_1" ]; then
+        if [ "\$mode_proxy" = "Mixed" ]; then
                 if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ] &&
                    ! iptables -t "\$table" -C OUTPUT -m owner ! --uid-owner \$name_profile -m conntrack ! --ctstate INVALID -p udp -j \$name_output_chain >/dev/null 2>&1; then
                     iptables -t "\$table" -A OUTPUT -m owner ! --uid-owner \$name_profile -m conntrack ! --ctstate INVALID -p udp -j \$name_output_chain >/dev/null 2>&1
@@ -753,10 +753,10 @@ proxy_start() {
             if [ -n "$policy_mark" ] && [ -z "$port_donor" ]; then
                 port_exclude=$(get_port_exclude)
             fi
-            if ! proxy_status && { [ -n "$port_donor" ] || [ -n "$port_exclude" ] || [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed_1" ]; }; then
+            if ! proxy_status && { [ -n "$port_donor" ] || [ -n "$port_exclude" ] || [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed" ]; }; then
                 get_modules
             fi
-            if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed_1" ]; then
+            if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed" ]; then
                 get_keenetic_port
             fi
         fi
@@ -814,7 +814,7 @@ proxy_start() {
                 sleep 2 && sleep "$current_delay"
                 if proxy_status; then
                     [ "$mode_proxy" != "Other" ] && configure_firewall
-                    echo -e "  Прокси-клиент ${green}запущен${reset}"
+                    echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${yellow}${mode_proxy}${reset}"
                     log_info_router "Прокси-клиент успешно запущен"
                     if [ "$check_fd" = "on" ] && [ -f "/tmp/start_fd" ] && [ ! -f "/tmp/observer_fd" ]; then
                         touch "/tmp/observer_fd"

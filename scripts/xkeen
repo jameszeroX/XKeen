@@ -832,11 +832,7 @@ case "$1" in
         echo -e "  Удаление XKeen ${green}выполнено${reset}"
         sleep 2
 
-        if [ "$xkeen_build" = "Stable" ]; then
-            echo -e "\033c"
-        else
-            echo
-        fi
+        clear
         echo
         echo -e "  Полная деинсталляция ${yellow}XKeen${reset} и всех зависимостей ${green}выполнена${reset}"
         echo -e "  Директорию резервных копий ${yellow}/opt/backups${reset} удалите вручную"
