@@ -53,6 +53,19 @@ add_ports_donor() {
     # Удаляем возможную запятую в начале
     current_ports=$(echo "$current_ports" | sed 's/^,//')
 
+    # Проверяем наличие портов (80 и 443)
+    missing_ports=""
+    if ! echo "$ports,$current_ports" | tr ',' '\n' | grep -qFx "80"; then
+        missing_ports="80"
+    fi
+    if ! echo "$ports,$current_ports" | tr ',' '\n' | grep -qFx "443"; then
+        if [ -n "$missing_ports" ]; then
+            missing_ports="$missing_ports, 443"
+        else
+            missing_ports="443"
+        fi
+    fi
+
     # Соединяем текущие порты с переданными и удаляем дубликаты
     new_ports=
     if [ -z "$current_ports" ]; then
@@ -109,6 +122,9 @@ add_ports_donor() {
         fi
     fi
 
+    if [ -n "$missing_ports" ]; then
+        echo -e "  ${red}Предупреждение${reset}: Рекомендуемые порты (${yellow}${missing_ports}${reset}) не добавлены в проксирование!"
+    fi
 }
 
 dell_ports_donor() {
@@ -146,6 +162,21 @@ dell_ports_donor() {
                 not_found_ports="$not_found_ports\n     $port"
             fi
         done
+
+        # Проверяем наличие портов (80 и 443) только если new_ports не пуст
+        if [ -n "$new_ports" ]; then
+            missing_ports=""
+            if ! echo "$new_ports" | tr ',' '\n' | grep -qFx "80"; then
+                missing_ports="80"
+            fi
+            if ! echo "$new_ports" | tr ',' '\n' | grep -qFx "443"; then
+                if [ -n "$missing_ports" ]; then
+                    missing_ports="$missing_ports, 443"
+                else
+                    missing_ports="443"
+                fi
+            fi
+        fi
     fi
 
     new_ports=$(
@@ -178,8 +209,12 @@ dell_ports_donor() {
                 echo -e "  Прокси-клиент ${yellow}не работает${reset} с портами$not_found_ports"
             fi
         fi
-    fi
 
+        if [ -n "$missing_ports" ]; then
+            echo -e "  ${red}Предупреждение${reset}: Рекомендуемые порты (${yellow}${missing_ports}${reset}) не добавлены в проксирование!"
+        fi
+
+    fi
 }
 
 add_ports_exclude() {
