@@ -425,55 +425,56 @@ case "$1" in
     ;;
 
 
-    -uk)    # Запуск обновления XKeen
+    -uk)    # Обновление XKeen (автовыбор Stable/Dev версии)
+        clear
         echo "  Проверка обновлений XKeen"
-
         xkeen_info
 
-        if [ "$xkeen_build" = "Stable" ]; then
-            if [ "$info_compare_xkeen" = "update" ]; then
-                clear
-                echo -e "  Найдена новая версия ${yellow}XKeen${reset}"
-                backup_xkeen
-                download_xkeen
-                install_xkeen
-                . "$script_dir/.xkeen/import.sh"
-
-                echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
-                delete_register_xkeen
-                logs_delete_register_xkeen_info_console
-
-                echo -e "  Выполняется регистрация новой версии ${yellow}XKeen${reset}"
-                register_xkeen_list
-                logs_register_xkeen_list_info_console
-
-                register_xkeen_control
-                logs_register_xkeen_control_info_console
-
-                register_xkeen_status
-                logs_register_xkeen_status_info_console
-
-                register_cron_initd
-                register_xray_initd
-                register_autostart
-                choice_canel_cron_select=true
-                update_cron_geofile_task
-
-                fixed_register_packages
-                delete_tmp
-
-                if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                    $initd_dir/S24xray restart on >/dev/null 2>&1
-                fi
-
-                echo -e "  Обновление XKeen ${green}выполнено${reset}"
-                else
-                echo "  Нет доступных обновлений XKeen"
-            fi
+        if [ "$xkeen_build" != "Stable" ]; then
+            download_func="download_xkeen_dev"
         else
-            echo
-            echo -e "  Обновление ${yellow}тестовой версии XKeen${reset} параметром '-uk' ${red}не предусмотрено${reset}"
+            if [ "$info_compare_xkeen" = "actual" ]; then
+                echo "  Нет доступных обновлений XKeen"
+                exit 0
+            else
+                echo -e "  Найдена новая версия ${yellow}XKeen${reset}"
+                download_func="download_xkeen"
+            fi
         fi
+
+        backup_xkeen
+        $download_func
+        install_xkeen
+        . "$script_dir/.xkeen/import.sh"
+
+        echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
+        delete_register_xkeen
+        logs_delete_register_xkeen_info_console
+
+        echo -e "  Выполняется регистрация новой версии ${yellow}XKeen${reset}"
+        register_xkeen_list
+        logs_register_xkeen_list_info_console
+
+        register_xkeen_control
+        logs_register_xkeen_control_info_console
+
+        register_xkeen_status
+        logs_register_xkeen_status_info_console
+
+        register_cron_initd
+        register_xray_initd
+        register_autostart
+        choice_canel_cron_select=true
+        update_cron_geofile_task
+
+        fixed_register_packages
+        delete_tmp
+
+        if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+            $initd_dir/S24xray restart on >/dev/null 2>&1
+        fi
+
+        echo -e "  Обновление XKeen ${green}выполнено${reset}"
     ;;
 
 
@@ -1219,39 +1220,31 @@ case "$1" in
     ;;
 
 
-    -uktest)
+    -build)
         clear
-        xkeen_info
-        backup_xkeen
-        download_xkeen_test
-        install_xkeen
-        . "$script_dir/.xkeen/import.sh"
-
-        echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
-        delete_register_xkeen
-        logs_delete_register_xkeen_info_console
-
-        echo -e "  Выполняется регистрация новой версии ${yellow}XKeen${reset}"
-        register_xkeen_list
-        logs_register_xkeen_list_info_console
-
-        register_xkeen_control
-        logs_register_xkeen_control_info_console
-
-        register_xkeen_status
-        logs_register_xkeen_status_info_console
-
-        register_cron_initd
-        register_xray_initd
-        register_autostart
-        choice_canel_cron_select=true
-        update_cron_geofile_task
-
-        fixed_register_packages
-        delete_tmp
-
-        if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-            $initd_dir/S24xray restart on >/dev/null 2>&1
+        echo
+        choice_build_xkeen
+        echo
+        if [ "$choice_build" = "Stable" ]; then
+            sed -i 's/^xkeen_build="[^"]*"/xkeen_build="Stable"/' "$xkeen_var_file"
+            if grep -q '^xkeen_build="Stable"$' "$xkeen_var_file"; then
+                echo -e "  Канал получения обновлений ${yellow}XKeen${reset} переключен на ${green}стабильную ветку${reset}"
+            else
+                echo -e "  ${red}Возникла ошибка${reset} при переключении канала обновлений"
+                unset choice_build
+            fi
+        elif [ "$choice_build" = "Dev" ]; then
+            sed -i 's/xkeen_build="Stable"/xkeen_build="Dev"/' $xkeen_var_file
+            if grep -q '^xkeen_build="Dev"$' "$xkeen_var_file"; then
+                echo -e "  Канал получения обновлений ${yellow}XKeen${reset} переключен на ${green}ветку разработки${reset}"
+            else
+                echo -e "  ${red}Возникла ошибка${reset} при переключении канала обновлений"
+                unset choice_build
+            fi
+        fi
+        if [ -n "$choice_build" ]; then
+            echo
+            echo -e "  Командой ${green}xkeen -uk${reset} вы можете обновить ${yellow}XKeen${reset} до последней версии в выбраной ветке"
         fi
     ;;
 
@@ -1405,6 +1398,7 @@ case "$1" in
         echo -e "	-d	${gray}	Установить задержку автозапуска прокси-клиента${reset}"
         echo -e "	-fd	${gray}	Включить | Отключить контроль файловых дескрипторов, открытых прокси-клиентом${reset}"
         echo -e "	-diag	${gray}	Выполнить диагностику${reset}"
+        echo -e "	-build	${gray}	Переключить канал получения обновлений XKeen (Stable/Dev версия)${reset}"
         echo -e "	-xray	${gray}	Переключить XKeen на ядро Xray${reset}"
         echo -e "	-mihomo	${gray}	Переключить XKeen на ядро Mihomo${reset}"
         echo

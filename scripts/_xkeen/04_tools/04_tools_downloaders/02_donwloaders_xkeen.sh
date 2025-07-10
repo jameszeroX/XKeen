@@ -15,7 +15,7 @@ download_xkeen() {
     rm -f "$xkeen_dist"
 }
 
-download_xkeen_test() {
-    xkeen_tar_url="$xkeen_test_url"
+download_xkeen_dev() {
+    xkeen_tar_url="$xkeen_dev_url"
     download_xkeen
 }
