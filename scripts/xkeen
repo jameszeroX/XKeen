@@ -1220,10 +1220,10 @@ case "$1" in
     ;;
 
 
-    -build)
+    -channel)
         clear
         echo
-        choice_build_xkeen
+        choice_channel_xkeen
         echo
         if [ "$choice_build" = "Stable" ]; then
             sed -i 's/^xkeen_build="[^"]*"/xkeen_build="Stable"/' "$xkeen_var_file"
@@ -1398,7 +1398,7 @@ case "$1" in
         echo -e "	-d	${gray}	Установить задержку автозапуска прокси-клиента${reset}"
         echo -e "	-fd	${gray}	Включить | Отключить контроль файловых дескрипторов, открытых прокси-клиентом${reset}"
         echo -e "	-diag	${gray}	Выполнить диагностику${reset}"
-        echo -e "	-build	${gray}	Переключить канал получения обновлений XKeen (Stable/Dev версия)${reset}"
+        echo -e "	-channel${gray}	Переключить канал получения обновлений XKeen (Stable/Dev версия)${reset}"
         echo -e "	-xray	${gray}	Переключить XKeen на ядро Xray${reset}"
         echo -e "	-mihomo	${gray}	Переключить XKeen на ядро Mihomo${reset}"
         echo

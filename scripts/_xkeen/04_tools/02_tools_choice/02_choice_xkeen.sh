@@ -1,5 +1,5 @@
 # Запрос на смену канала обновлений XKeen (Stable/Dev)
-choice_build_xkeen() {
+choice_channel_xkeen() {
     if [ "$xkeen_build" = "Stable" ]; then
         echo -e "  Текущий канал обновлений ${yellow}XKeen${reset}: Стабильная версия (${green}Stable${reset})"
         read -p "  Хотите переключиться на канал разработки? (y/N) либо (д/Н): " choice
