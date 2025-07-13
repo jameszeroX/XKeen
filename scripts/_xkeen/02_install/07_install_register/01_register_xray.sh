@@ -70,20 +70,19 @@ register_xray_initd() {
     script_file="${xinstall_dir}/07_install_register/04_register_init.sh"
     variables_to_extract="name_client name_policy table_id table_mark port_dns ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude port_donor port_exclude start_attempts start_auto check_fd arm64_fd other_fd delay_fd"
     temp_file=$(mktemp)
-    start_delay_value=20 # Задержка автозапуска по умолчанию
-    autostart="on" # Автозапуск по умолчанию
 
     if [ -f "${start_file}" ]; then
         mv "${start_file}" "${backup_paths}"
         if grep -q "^autostart=" "${backup_paths}"; then
             autostart_value=$(grep "^autostart=" "${backup_paths}" | head -n 1 | cut -d'=' -f2)
-            [ -n "$autostart_value" ] && autostart="$autostart_value"
         fi
         if grep -q "^start_delay=" "${backup_paths}"; then
             start_delay_value=$(grep "^start_delay=" "${backup_paths}" | head -n 1 | cut -d'=' -f2)
-            [ -n "$start_delay_value" ] && start_delay="$start_delay_value"
         fi
     fi
+
+    autostart="${autostart_value:-\"on\"}"
+    start_delay="${start_delay_value:-20}"
 
     if [ ! -e "${initd_file}" ]; then
         cp "${script_file}" "${initd_file}"
@@ -114,8 +113,8 @@ register_autostart() {
     cat << EOF > "${initd_dir}/S99xkeenstart"
 #!/bin/sh
 #
-autostart=${autostart_value}
-start_delay=${start_delay_value}
+autostart=${autostart}
+start_delay=${start_delay}
 #
 log_info_router() {
     logger -p notice -t "XKeen" "\$1"
