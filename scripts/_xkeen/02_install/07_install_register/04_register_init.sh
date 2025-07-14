@@ -2,7 +2,7 @@
 
 # Информация о службе
 # Краткое описание: Запуск / Остановка Xray
-# Версия: 2.26
+# Версия: 2.27
 
 # Окружение
 PATH="/opt/bin:/opt/sbin:/sbin:/bin:/usr/sbin:/usr/bin"
@@ -45,6 +45,7 @@ file_netfilter_hook="$directory_nefilter/proxy.sh"
 client_xray="$directory_binaries/xray"
 log_access="$directory_logs/$name_client/access.log"
 log_error="$directory_logs/$name_client/error.log"
+file_exclude="/opt/etc/xkeen_exclude.lst"
 
 # URL
 url_server="localhost:79"
@@ -117,6 +118,22 @@ log_warning_terminal() {
 
 log_clean() {
     [ "$name_client" = "xray" ] && : > "$log_access" && : > "$log_error"
+}
+
+get_user_ipv4_excludes() {
+    if [ -f "$file_exclude" ]; then
+        grep -v '^#' "$file_exclude" | grep -v '^$' | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//'
+    else
+        echo ""
+    fi
+}
+
+get_user_ipv6_excludes() {
+    if [ -f "$file_exclude" ]; then
+        grep -v '^#' "$file_exclude" | grep -v '^$' | grep -Eo '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//'
+    else
+        echo ""
+    fi
 }
 
 # Поиск конфигураций inbounds
@@ -309,7 +326,8 @@ get_exclude_ip4() {
                ip route get 8.8.8.8 2>/dev/null | awk '/src/ {print $NF}' ||
                ip route get 1.1.1.1 2>/dev/null | awk '/src/ {print $NF}')
     [ -n "$ipv4_eth" ] && ipv4_eth="${ipv4_eth}/32 "
-    echo "${ipv4_eth}${ipv4_exclude}" | tr -s ' '
+    user_ipv4=$(get_user_ipv4_excludes)
+    echo "${ipv4_eth}${ipv4_exclude} ${user_ipv4}" | tr -s ' ' | sed 's/^ //; s/ $//'
 }
 
 # Получение исключений IPv6
@@ -319,7 +337,8 @@ get_exclude_ip6() {
                ip -6 route get 2001:4860:4860::8888 2>/dev/null | awk '/src/ {print $NF}' ||
                ip -6 route get 2606:4700:4700::1111 2>/dev/null | awk '/src/ {print $NF}')
     [ -n "$ipv6_eth" ] && ipv6_eth="${ipv6_eth}/128 "
-    echo "${ipv6_eth}${ipv6_exclude}" | tr -s ' '
+    user_ipv6=$(get_user_ipv6_excludes)
+    echo "${ipv6_eth}${ipv6_exclude} ${user_ipv6}" | tr -s ' ' | sed 's/^ //; s/ $//'
 }
 
 # Получение метки политики
