@@ -43,6 +43,31 @@ choice_channel_xkeen() {
     done
 }
 
+change_channel_xkeen() {
+    echo
+    if [ "$choice_build" = "Stable" ]; then
+        sed -i 's/^xkeen_build="[^"]*"/xkeen_build="Stable"/' "$xkeen_var_file"
+        if grep -q '^xkeen_build="Stable"$' "$xkeen_var_file"; then
+            echo -e "  Канал получения обновлений ${yellow}XKeen${reset} переключен на ${green}стабильную ветку${reset}"
+        else
+            echo -e "  ${red}Возникла ошибка${reset} при переключении канала обновлений"
+            unset choice_build
+        fi
+    elif [ "$choice_build" = "Dev" ]; then
+        sed -i 's/xkeen_build="Stable"/xkeen_build="Dev"/' $xkeen_var_file
+        if grep -q '^xkeen_build="Dev"$' "$xkeen_var_file"; then
+            echo -e "  Канал получения обновлений ${yellow}XKeen${reset} переключен на ${green}ветку разработки${reset}"
+        else
+            echo -e "  ${red}Возникла ошибка${reset} при переключении канала обновлений"
+            unset choice_build
+        fi
+    fi
+    if [ -n "$choice_build" ]; then
+        echo
+        echo -e "  Командой ${green}xkeen -uk${reset} вы можете обновить ${yellow}XKeen${reset} до последней версии в выбраной ветке"
+    fi
+}
+
 choice_autostart_xkeen() {
     if grep -q 'autostart="on"' $initd_dir/S99xkeenstart; then
         sed -i 's/autostart="on"/autostart="off"/' $initd_dir/S99xkeenstart
