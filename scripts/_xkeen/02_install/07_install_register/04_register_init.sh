@@ -325,9 +325,9 @@ get_exclude_ip4() {
     ipv4_eth=$(ip route get 77.88.8.8 2>/dev/null | awk '/src/ {print $NF}' ||
                ip route get 8.8.8.8 2>/dev/null | awk '/src/ {print $NF}' ||
                ip route get 1.1.1.1 2>/dev/null | awk '/src/ {print $NF}')
-    [ -n "$ipv4_eth" ] && ipv4_eth="${ipv4_eth}/32 "
+    [ -n "$ipv4_eth" ] && ipv4_eth="${ipv4_eth}/32"
     user_ipv4=$(get_user_ipv4_excludes)
-    echo "${ipv4_eth}${ipv4_exclude} ${user_ipv4}" | tr -s ' ' | sed 's/^ //; s/ $//'
+    echo "${ipv4_eth} ${ipv4_exclude} ${user_ipv4}" | tr -s ' ' | sed 's/^ //; s/ $//'
 }
 
 # Получение исключений IPv6
@@ -336,9 +336,9 @@ get_exclude_ip6() {
     ipv6_eth=$(ip -6 route get 2a02:6b8::feed:0ff 2>/dev/null | awk '/src/ {print $NF}' ||
                ip -6 route get 2001:4860:4860::8888 2>/dev/null | awk '/src/ {print $NF}' ||
                ip -6 route get 2606:4700:4700::1111 2>/dev/null | awk '/src/ {print $NF}')
-    [ -n "$ipv6_eth" ] && ipv6_eth="${ipv6_eth}/128 "
+    [ -n "$ipv6_eth" ] && ipv6_eth="${ipv6_eth}/128"
     user_ipv6=$(get_user_ipv6_excludes)
-    echo "${ipv6_eth}${ipv6_exclude} ${user_ipv6}" | tr -s ' ' | sed 's/^ //; s/ $//'
+    echo "${ipv6_eth} ${ipv6_exclude} ${user_ipv6}" | tr -s ' ' | sed 's/^ //; s/ $//'
 }
 
 # Получение метки политики
