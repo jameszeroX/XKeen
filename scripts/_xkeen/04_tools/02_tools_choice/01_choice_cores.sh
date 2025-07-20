@@ -44,7 +44,6 @@ choice_add_proxy_cores() {
             *)
                 echo -e "  ${red}Некорректный ввод${reset}"
                 valid_input=false
-#                break
                 ;;
         esac
 

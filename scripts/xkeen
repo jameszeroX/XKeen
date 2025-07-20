@@ -259,7 +259,6 @@ case "$1" in
             install_configs
 
             # Создаем init для cron
-            echo
             $initd_dir/S05crond stop >/dev/null 2>&1
             [ -e "$initd_dir/S05crond" ] && rm -f "$initd_dir/S05crond"
             register_cron_initd
