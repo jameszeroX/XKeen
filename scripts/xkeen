@@ -205,13 +205,13 @@ case "$1" in
 
         xkeen_info
         logs_cpu_info_console
+        sleep 2
         if [ -z "$architecture" ]; then
             exit 1
         fi
 
-        # Устанавливаем Xray
         clear
-        choice_add_xray
+        choice_add_proxy_cores
 
         if [ "$add_xray" = "true" ]; then
             clear
@@ -224,20 +224,6 @@ case "$1" in
         if [ -z $bypass_xray ]; then
             install_xray
             xray_installed="installed"
-
-            info_version_xray
-            delete_register_xray
-
-            echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
-            register_xray_list
-            logs_register_xray_list_info_console
-
-            register_xray_control
-            logs_register_xray_control_info_console
-
-            register_xray_status
-            logs_register_xray_status_info_console
-            sleep 2
 
             clear
             # Устанавливаем GeoSite
@@ -277,10 +263,22 @@ case "$1" in
             [ -e "$initd_dir/S05crond" ] && rm -f "$initd_dir/S05crond"
             register_cron_initd
             $initd_dir/S05crond start >/dev/null 2>&1
+
+            info_version_xray
+            delete_register_xray
+
+            echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
+            register_xray_list
+            logs_register_xray_list_info_console
+
+            register_xray_control
+            logs_register_xray_control_info_console
+
+            register_xray_status
+            logs_register_xray_status_info_console
+            sleep 2
         fi
 
-        clear
-        choice_add_mihomo
         if [ "$add_mihomo" = "true" ]; then
             clear
             echo
@@ -832,7 +830,6 @@ case "$1" in
         echo
         echo -e "  Удаление ${yellow}XKeen${reset}"
         opkg remove xkeen
-        echo
         delete_tmp
 
         echo

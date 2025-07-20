@@ -28,7 +28,6 @@ choice_geosite() {
         invalid_choice=false
 
         echo 
-        echo 
         echo -e "  Выберите номер или номера действий через пробел для ${yellow}GeoSite${reset}"
         echo 
 

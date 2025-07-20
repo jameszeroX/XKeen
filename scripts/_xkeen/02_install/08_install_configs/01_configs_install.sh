@@ -14,6 +14,6 @@ install_configs() {
         cp "$file" "$install_conf_dir/"
         echo "  Добавлен шаблон конфигурационного файла Xray:"
         echo -e "  ${yellow}$filename${reset}"
-        sleep 2
+        sleep 1
     done
 }

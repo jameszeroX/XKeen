@@ -88,7 +88,7 @@ change_autostart_xkeen() {
     if grep -q 'autostart="on"' "$initd_dir/S99xkeenstart"; then
         while true; do
             echo
-            echo -e "  Включить автозагрузку ${yellow}XKeen${reset}?"
+            echo -e "  Добавить ${yellow}XKeen${reset} в автозагрузку при включении роутера?"
             echo
             echo "     1. Да"
             echo "     0. Нет"

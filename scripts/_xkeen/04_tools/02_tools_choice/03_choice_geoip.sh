@@ -28,7 +28,6 @@ choice_geoip() {
         invalid_choice=false
 
         echo 
-        echo 
         echo -e "  Выберите номер или номера действий через пробел для ${yellow}GeoIP${reset}"
         echo 
 
