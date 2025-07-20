@@ -8,7 +8,7 @@ choice_add_proxy_cores() {
         echo "     2. Mihomo"
         echo "     3. Xray + Mihomo"
         echo
-        echo "     4. Пропустить загрузку ядра проксирования, если оно уже установлено"
+        echo "     0. Пропустить загрузку ядра проксирования, если оно уже установлено"
         echo
 
         valid_input=true
@@ -19,7 +19,7 @@ choice_add_proxy_cores() {
             read -r -p "  Ваш выбор: " proxy_choice
             proxy_choice=$(echo "$proxy_choice" | sed 's/,/, /g')
 
-            if echo "$proxy_choice" | grep -qE '^[1-4]$'; then
+            if echo "$proxy_choice" | grep -qE '^[0-3]$'; then
                 break
             else
                 echo -e "  ${red}Некорректный ввод.${reset} Выберите один из предложенных вариантов"
@@ -37,7 +37,7 @@ choice_add_proxy_cores() {
                 add_xray=true
                 add_mihomo=true
                 ;;
-            4)
+            0)
                 add_xray=false
                 add_mihomo=false
                 ;;

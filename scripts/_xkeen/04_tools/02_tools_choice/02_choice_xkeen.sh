@@ -68,6 +68,22 @@ change_channel_xkeen() {
     fi
 }
 
+change_autostart_xkeen() {
+    if grep -q 'autostart="on"' $initd_dir/S99xkeenstart; then
+        sed -i 's/autostart="on"/autostart="off"/' $initd_dir/S99xkeenstart
+        if grep -q 'start_auto="on"' $initd_dir/S24xray; then
+            sed -i 's/start_auto="on"/start_auto="off"/' $initd_dir/S24xray
+        fi
+        [ -z "$bypass_autostart_msg" ] && echo -e "  Автозапуск XKeen ${red}отключен${reset}"
+    else
+        sed -i 's/autostart="off"/autostart="on"/' $initd_dir/S99xkeenstart
+        if grep -q 'start_auto="off"' $initd_dir/S24xray; then
+            sed -i 's/start_auto="off"/start_auto="on"/' $initd_dir/S24xray
+        fi
+        echo -e "  Автозапуск XKeen ${green}включен${reset}"
+    fi
+}
+
 choice_autostart_xkeen() {
     if grep -q 'autostart="on"' "$initd_dir/S99xkeenstart"; then
         while true; do
@@ -94,26 +110,10 @@ choice_autostart_xkeen() {
                     ;;
                 0)
                     bypass_autostart_msg="yes"
-                    choice_autostart_xkeen
+                    change_autostart_xkeen
                     break
                     ;;
             esac
         done
-    fi
-}
-
-change_autostart_xkeen() {
-    if grep -q 'autostart="on"' $initd_dir/S99xkeenstart; then
-        sed -i 's/autostart="on"/autostart="off"/' $initd_dir/S99xkeenstart
-        if grep -q 'start_auto="on"' $initd_dir/S24xray; then
-            sed -i 's/start_auto="on"/start_auto="off"/' $initd_dir/S24xray
-        fi
-        [ -z "$bypass_autostart_msg" ] && echo -e "  Автозапуск XKeen ${red}отключен${reset}"
-    else
-        sed -i 's/autostart="off"/autostart="on"/' $initd_dir/S99xkeenstart
-        if grep -q 'start_auto="off"' $initd_dir/S24xray; then
-            sed -i 's/start_auto="off"/start_auto="on"/' $initd_dir/S24xray
-        fi
-        echo -e "  Автозапуск XKeen ${green}включен${reset}"
     fi
 }
