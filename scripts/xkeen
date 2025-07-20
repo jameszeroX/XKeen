@@ -171,7 +171,8 @@ case "$1" in
         fixed_register_packages
 
         clear
-        change_autostart_xkeen
+        choice_autostart_xkeen
+        add_chmod_init
 
         # Удаляем временные файлы
         delete_tmp
@@ -332,7 +333,8 @@ case "$1" in
             sleep 2
 
             clear
-            change_autostart_xkeen
+            choice_autostart_xkeen
+            add_chmod_init
         fi
 
         if [ "$xray_installed" != "installed" ] && [ "$mihomo_installed" = "installed" ]; then
@@ -1109,7 +1111,7 @@ case "$1" in
 
 
     -auto)    # Смена режима запуска XKeen
-        choice_autostart_xkeen
+        change_autostart_xkeen
         add_chmod_init
     ;;
 
