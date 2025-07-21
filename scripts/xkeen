@@ -206,10 +206,10 @@ case "$1" in
 
         xkeen_info
         logs_cpu_info_console
-        sleep 2
         if [ -z "$architecture" ]; then
             exit 1
         fi
+        sleep 2
 
         clear
         choice_add_proxy_cores

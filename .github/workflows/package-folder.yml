@@ -35,5 +35,5 @@ jobs:
       - name: Commit and push archive to test folder
         run: |
           git add test/xkeen.tar.gz
-          git commit -m "[automated] Update archive in test folder of main branch" || echo "No changes"
+          git commit -m "[github-actions] automated compiling test build" || echo "No changes"
           git push origin main
