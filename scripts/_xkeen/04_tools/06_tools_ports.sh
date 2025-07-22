@@ -144,7 +144,7 @@ dell_ports_donor() {
 
     if [ -z "$ports" ]; then
         new_ports=
-        echo -e "  Все порты ${green}успешно очищены${reset}\n  При запуске прокси-клиент будет работать на ${yellow}всех${reset} портах"
+        echo -e "  Все порты ${green}успешно очищены${reset}\n  Прокси-клиент работает на ${yellow}всех${reset} портах"
     else
         for port in $(echo "$ports" | tr ',' '\n'); do
             if echo "$new_ports" \
@@ -311,7 +311,7 @@ dell_ports_exclude() {
     if [ -z "$ports" ]; then
         new_ports=
         echo -e "  ${green}Успех${reset}"
-		echo -e "  Все порты очищены\n  При запуске прокси-клиент будет работать на ${yellow}всех${reset} портах"
+		echo -e "  Все порты очищены\n  Прокси-клиент работает на ${yellow}всех${reset} портах"
     else
         for port in $(echo "$ports" | tr ',' '\n'); do
             if echo "$new_ports" \
