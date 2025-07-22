@@ -198,7 +198,7 @@ case "$1" in
     ;;
 
 
-    -i)    # Запуск полного цикла установки
+    -i|-install)    # Запуск полного цикла установки
         . "$script_dir/.xkeen/import.sh"
         clear
         echo
@@ -209,9 +209,7 @@ case "$1" in
         if [ -z "$architecture" ]; then
             exit 1
         fi
-        sleep 2
 
-        clear
         choice_add_proxy_cores
 
         if [ "$add_xray" = "true" ]; then
@@ -751,7 +749,7 @@ case "$1" in
     ;;
 
 
-    -remove)    # Полная деинсталляция XKeen и всех зависимостей
+    -r|-remove)    # Полная деинсталляция XKeen и всех зависимостей
         # Удаление задачи автообновления баз GeoFile
         info_cron
 
