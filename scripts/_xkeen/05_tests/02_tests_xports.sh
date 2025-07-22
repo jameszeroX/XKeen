@@ -64,9 +64,9 @@ tests_ports_client() {
                 printed=true
             fi
             printf "\n     %bШлюз%b %s\n     %bПорт%b %s\n     %bПротокол%b %s\n" \
-                   "$gray" "$reset" "$gateway" \
-                   "$gray" "$reset" "$port" \
-                   "$gray" "$reset" "$protocol"
+                   "$italic" "$reset" "$gateway" \
+                   "$italic" "$reset" "$port" \
+                   "$italic" "$reset" "$protocol"
         done
     else
         printf "%b\n" "  $name_client ${red}не слушает${reset} на каких-либо портах"
