@@ -31,8 +31,8 @@ choice_geosite() {
         echo -e "  Выберите номер или номера действий через пробел для ${yellow}GeoSite${reset}"
         echo 
 
-        [ "$has_missing_geosite_bases" = true ] && echo "     1. Установить отсутствующие GeoSite" || echo -e "     1. ${gray}Все доступные GeoSite установлены${reset}"
-        [ "$has_updatable_geosite_bases" = true ] && echo "     2. Обновить установленные GeoSite" || echo -e "     2. ${gray}Нет доступных GeoSite для обновления${reset}"
+        [ "$has_missing_geosite_bases" = true ] && echo "     1. Установить отсутствующие GeoSite" || echo -e "     1. ${italic}Все доступные GeoSite установлены${reset}"
+        [ "$has_updatable_geosite_bases" = true ] && echo "     2. Обновить установленные GeoSite" || echo -e "     2. ${italic}Нет доступных GeoSite для обновления${reset}"
 
         [ "$update_refilter_geosite_msg" = "true" ] && refilter_choice="Обновить" || refilter_choice="Установить"
         [ "$update_v2fly_geosite_msg" = "true" ] && v2fly_choice="Обновить" || v2fly_choice="Установить"

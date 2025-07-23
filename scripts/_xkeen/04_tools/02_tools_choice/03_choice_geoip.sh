@@ -31,8 +31,8 @@ choice_geoip() {
         echo -e "  Выберите номер или номера действий через пробел для ${yellow}GeoIP${reset}"
         echo 
 
-        [ "$has_missing_geoip_bases" = true ] && echo "     1. Установить отсутствующие GeoIP" || echo -e "     1. ${gray}Все доступные GeoIP установлены${reset}"
-        [ "$has_updatable_geoip_bases" = true ] && echo "     2. Обновить установленные GeoIP" || echo -e "     2. ${gray}Нет доступных GeoIP для обновления${reset}"
+        [ "$has_missing_geoip_bases" = true ] && echo "     1. Установить отсутствующие GeoIP" || echo -e "     1. ${italic}Все доступные GeoIP установлены${reset}"
+        [ "$has_updatable_geoip_bases" = true ] && echo "     2. Обновить установленные GeoIP" || echo -e "     2. ${italic}Нет доступных GeoIP для обновления${reset}"
 
         [ "$update_refilter_geoip_msg" = "true" ] && refilter_choice="Обновить" || refilter_choice="Установить"
         [ "$update_v2fly_geoip_msg" = "true" ] && v2fly_choice="Обновить" || v2fly_choice="Установить"
