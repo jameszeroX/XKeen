@@ -43,10 +43,13 @@ write_header() {
     echo >> "$diagnostic"
 }
 
-# 1. Ядро
+# 1. Место установки
+write_header "Entware установлена ${entware_storage}"
+
+# 2. Ядро
 write_header "XKeen работает на ядре ${name_client}"
 
-# 2. Определение доступности IPv4 и IPv6
+# 3. Определение доступности IPv4 и IPv6
 write_header "Доступность IPv4 и IPv6"
 echo "Поддержка IPv4 - $ip4_supported" >> "$diagnostic" 
 echo "Поддержка IPv6 - $ip6_supported" >> "$diagnostic" 
@@ -57,7 +60,7 @@ echo >> "$diagnostic"
 echo >> "$diagnostic"
 
 if [ $iptables_supported = "true" ]; then
-    # 3. Запись заголовка и выполнение команд iptables
+    # 4. Запись заголовка и выполнение команд iptables
     write_header "Результат таблицы NAT цепи PREROUTING IPv4"
     { iptables -t nat -nvL PREROUTING 2>&1; } >> "$diagnostic" 
     echo >> "$diagnostic"
@@ -90,7 +93,7 @@ if [ $iptables_supported = "true" ]; then
 fi
 
 if [ $ip6tables_supported = "true" ]; then
-    # 4. Запись заголовка и выполнение команд ip6tables
+    # 5. Запись заголовка и выполнение команд ip6tables
     write_header "Результат таблицы NAT цепи PREROUTING IPv6"
     { ip6tables -t nat -nvL PREROUTING 2>&1; } >> "$diagnostic" 
     echo >> "$diagnostic"
@@ -122,43 +125,43 @@ if [ $ip6tables_supported = "true" ]; then
     echo >> "$diagnostic"
 fi
 
-# 5. Копирование содержимого файла /opt/etc/ndm/netfilter.d/proxy.sh
+# 6. Копирование содержимого файла /opt/etc/ndm/netfilter.d/proxy.sh
 write_header "Содержимое файла /opt/etc/ndm/netfilter.d/proxy.sh"
 cat /opt/etc/ndm/netfilter.d/proxy.sh >> "$diagnostic" 
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
-# 6. Проверка использования SSL порта
+# 7. Проверка использования SSL порта
 write_header "Проверка использования SSL порта"
 curl -kfsS "localhost:79/rci/ip/http/ssl" | jq -r '.port' >> "$diagnostic" 
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
-# 7. Сбор данных о политике доступа
+# 8. Сбор данных о политике доступа
 write_header "Данные о политике доступа"
 curl -kfsS "localhost:79/rci/show/ip/policy" | jq -r ' .[] | select(.description | ascii_downcase == "xkeen")' >> "$diagnostic" 
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
-# 8. Сбор результатов команды ip rule show
+# 9. Сбор результатов команды ip rule show
 write_header "Результат команды ip rule show"
 ip rule show >> "$diagnostic" 
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
-# 9. Сбор результатов команды ip route show table main
+# 10. Сбор результатов команды ip route show table main
 write_header "Результат команды ip route show table main"
 ip route show table main >> "$diagnostic" 
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
-# 10. Запрос к curl для получения country, ndmhwid, product
+# 11. Запрос к curl для получения country, ndmhwid, product
 write_header "Данные из localhost:79/rci/show/defaults"
 curl -kfsS "localhost:79/rci/show/defaults" | jq -r '.country, .ndmhwid, .product' >> "$diagnostic" 
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
-# 11. Запрос версии ядра
+# 12. Запрос версии ядра
 if [ "${name_client}" = "xray" ]; then
 write_header "Версия Xray"
 xray -version >> "$diagnostic" 
@@ -174,7 +177,7 @@ ls -l /proc/$(pidof ${name_client})/fd | wc -l >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
-# 12. Запрос версии XKeen
+# 13. Запрос версии XKeen
 write_header "Версия XKeen"
 xkeen -v >> "$diagnostic" 
 echo >> "$diagnostic"

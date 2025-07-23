@@ -210,6 +210,16 @@ case "$1" in
             exit 1
         fi
 
+        tests_entware_storage
+        if [ -n "$preinstall_warn" ]; then
+            echo
+            echo -e "  ${red}Внимание${reset}: Entware установлен $entware_storage"
+            echo "  Убедитесь, что на ней достаточно свободного места, а вы обладаете необходимым опытом"
+            echo "  Сбой при такой установке не является проблемой XKeen и багрепорт не будет рассмотрен"
+            echo -e "  ${yellow}XKeen${reset} рекомендуется устанавливать на внешний ${green}USB-накопитель${reset}"
+            echo "  Можете продолжить установку на свой страх и риск, либо прервать её нажатием ctrl+c"
+        fi
+
         choice_add_proxy_cores
 
         if [ "$add_xray" = "true" ]; then
@@ -1205,6 +1215,7 @@ case "$1" in
 
 
     -diag)    # Диагностика XKeen
+        tests_entware_storage
         clear
         diagnostic
     ;;
