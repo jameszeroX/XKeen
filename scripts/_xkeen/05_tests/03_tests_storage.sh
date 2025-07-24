@@ -1,4 +1,4 @@
-# Проверка места установки Entware
+# Определение места установки Entware
 tests_entware_storage() {
     mount_point=$(mount | grep 'on /opt ')
     device=$(echo "$mount_point" | awk '{print $1}')

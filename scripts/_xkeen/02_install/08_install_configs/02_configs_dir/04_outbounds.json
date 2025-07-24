@@ -13,8 +13,7 @@
               {
                 "id": "",    // ID, присвоенный пользователю на сервере
                 "encryption": "none",
-                "flow": "xtls-rprx-vision",
-                "level": 0
+                "flow": "xtls-rprx-vision"
               }
             ]
           }
