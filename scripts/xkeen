@@ -213,10 +213,10 @@ case "$1" in
         tests_entware_storage
         if [ -n "$preinstall_warn" ]; then
             echo
-            echo -e "  ${red}Внимание${reset}: Entware установлен $entware_storage"
+            echo -e "  ${red}Внимание${reset}: Инициирована установка XKeen $entware_storage"
             echo "  Убедитесь, что на ней достаточно свободного места, а вы обладаете необходимым опытом"
             echo "  Сбой при такой установке не является проблемой XKeen и багрепорт не будет рассмотрен"
-            echo -e "  ${yellow}XKeen${reset} рекомендуется устанавливать на внешний ${green}USB-накопитель${reset}"
+            echo -e "  XKeen ${green}рекомендуется${reset} устанавливать на внешний ${green}USB-накопитель${reset}"
             echo "  Можете продолжить установку на свой страх и риск, либо прервать её нажатием ctrl+c"
         fi
 
