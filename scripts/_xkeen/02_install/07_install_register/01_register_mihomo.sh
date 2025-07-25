@@ -78,7 +78,7 @@ register_yq_status() {
     echo -e "\n$(cat new_entry.txt)" >> "$status_file"
 }
 
-register_mihomo() {
+add_mihomo_config() {
     if [ -f $install_dir/mihomo ]; then
         if [ -f "$mihomo_conf_dir/config.yaml" ]; then
             return 0

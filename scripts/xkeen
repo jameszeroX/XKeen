@@ -133,7 +133,7 @@ case "$1" in
         fi
 
         if [ -f "$install_dir/mihomo" ]; then
-            register_mihomo
+            add_mihomo_config
             delete_register_mihomo
             echo
             echo -e "  Выполняется регистрация ${yellow}Mihomo${reset}"
@@ -300,7 +300,7 @@ case "$1" in
             mihomo_installed="installed"
             info_version_mihomo
             info_version_yq
-            register_mihomo
+            add_mihomo_config
             delete_register_mihomo
             echo
             echo -e "  Выполняется регистрация ${yellow}Mihomo${reset}"
@@ -559,7 +559,7 @@ case "$1" in
                 mihomo_installed="installed"
                 info_version_mihomo
                 info_version_yq
-                register_mihomo
+                add_mihomo_config
                 delete_register_mihomo
                 echo
                 echo -e "  Выполняется регистрация ${yellow}Mihomo${reset}"
