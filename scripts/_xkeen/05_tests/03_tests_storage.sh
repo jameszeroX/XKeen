@@ -8,5 +8,7 @@ tests_entware_storage() {
     elif echo "$device" | grep -q "^/dev/ubi"; then
         entware_storage="во внутреннюю память роутера"
         preinstall_warn="true"
+    else
+        entware_storage="на неидентифицированный носитель информации"
     fi
 }
