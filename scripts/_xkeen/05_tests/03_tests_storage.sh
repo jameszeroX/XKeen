@@ -26,7 +26,7 @@ preinstall_warn() {
             echo
 
         while true; do
-            read -p "  Выберите действие [1 или 2]: " choice
+            read -p "  Выберите действие: " choice
 
             case $choice in
                 1)
