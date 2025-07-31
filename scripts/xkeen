@@ -1358,15 +1358,12 @@ case "$1" in
         echo -e "	-mb	${italic}	Создание${reset}"
         echo -e "	-mbr	${italic}	Восстановление${reset}"
         echo
-        echo -e "${light_blue}Проверки${reset}"
-        echo -e "	-tpx	${italic}	Порты, шлюз и протокол прокси-клиента${reset}"
-        echo -e "	-v	${italic}	Версия XKeen${reset}"
-        echo
         echo -e "${light_blue}Управление прокси-клиентом${reset}"
         echo -e "	-start	${italic}	Запуск${reset}"
         echo -e "	-stop	${italic}	Остановка${reset}"
         echo -e "	-restart${italic}	Перезапуск${reset}"
         echo -e "	-status	${italic}	Статус работы${reset}"
+        echo -e "	-tpx	${italic}	Порты, шлюз и протокол прокси-клиента${reset}"
         echo -e "	-auto	${italic}	Включить | Отключить автозапуск прокси-клиента${reset}"
         echo -e "	-d	${italic}	Установить задержку автозапуска прокси-клиента${reset}"
         echo -e "	-fd	${italic}	Включить | Отключить контроль файловых дескрипторов, открытых прокси-клиентом${reset}"
@@ -1378,9 +1375,10 @@ case "$1" in
         echo -e "${light_blue}Управление модулями${reset}"
         echo -e "	-modules ${italic}	Перенос модулей для XKeen в пользовательскую директорию${reset}"
         echo
-        echo -e "${light_blue}Автор${reset}"
-        echo -e "	-ad	${italic}	Если Вам полезна утилита, можете купить Мне кофе${reset}"
+        echo -e "${light_blue}О программе${reset}"
+        echo -e "	-ad	${italic}	Если Вам полезна утилита, можете поддержать разработчиков${reset}"
         echo -e "	-af	${italic}	Обратная связь${reset}"
+        echo -e "	-v	${italic}	Версия XKeen${reset}"
     ;;
 
 

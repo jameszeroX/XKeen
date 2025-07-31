@@ -6,16 +6,12 @@
       {
         "domain": [
           "xn--",
-          "regexp:^([\\w\\-\\.]+\\.)su$",
-          "regexp:^([\\w\\-\\.]+\\.)ru$",
-          "regexp:^([\\w\\-\\.]+\\.)by$",
-          "regexp:^([\\w\\-\\.]+\\.)moscow$",
+          "domain:su",
+          "domain:ru",
+          "domain:by",
+          "domain:moscow",
           "yandex",
-          "dzen.ru",
-          "domain:ya.ru",
-          "yastatic.net",
-          "tricolor.tv",
-          "ntvplus.tv"
+          "yastatic.net"
         ],
         "outboundTag": "direct"
       },
