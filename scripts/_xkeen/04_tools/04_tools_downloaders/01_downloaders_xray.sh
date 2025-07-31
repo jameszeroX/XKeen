@@ -83,18 +83,29 @@ download_xray() {
         extension="${filename##*.}"
         xray_dist=$(mktemp)
         mkdir -p "$xtmp_dir"
- 
+
         echo -e "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray"
         if curl -L -o "$xray_dist" "$download_url" &> /dev/null; then
             if [ -s "$xray_dist" ]; then
                 mv "$xray_dist" "$xtmp_dir/xray.$extension"
                 echo -e "  Xray ${green}успешно загружен${reset}"
-                return
+                return 0
             else
                 echo -e "  ${red}Ошибка${reset}: Загруженный файл Xray поврежден"
             fi
         else
-            echo -e "  ${red}Ошибка${reset}: Не удалось загрузить Xray. Проверьте соединение с интернетом или повторите позже"
+            # Попытка загрузить через прокси, если прямая загрузка не удалась
+            if curl -L -o "$xray_dist" "$gh_proxy/$download_url" &> /dev/null; then
+                if [ -s "$xray_dist" ]; then
+                    mv "$xray_dist" "$xtmp_dir/xray.$extension"
+                    echo -e "  Xray ${green}успешно загружен через прокси${reset}"
+                    return 0
+                else
+                    echo -e "  ${red}Ошибка${reset}: Загруженный файл Xray поврежден"
+                fi
+            else
+                    echo -e "  ${red}Ошибка${reset}: Не удалось загрузить Xray. Проверьте соединение с интернетом или повторите позже"
+            fi
         fi
         rm -f "$xray_dist"
         exit 1

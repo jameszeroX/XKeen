@@ -10,9 +10,11 @@ install_geoip() {
         update_flag=$4
 
         temp_file=$(mktemp)
+        
+        # Первая попытка: прямая загрузка
         if curl -L -o "$temp_file" "$url" > /dev/null 2>&1; then
-            mv "$temp_file" "$geo_dir/$filename"
-            if [ -s "$geo_dir/$filename" ]; then
+            if [ -s "$temp_file" ]; then
+                mv "$temp_file" "$geo_dir/$filename"
                 if [ "$update_flag" = true ]; then
                     echo -e "  $display_name ${green}успешно обновлен${reset}"
                 else
@@ -24,9 +26,25 @@ install_geoip() {
                 return 1
             fi
         else
-            rm -f "$temp_file"
-            echo -e "  ${red}Ошибка${reset} при загрузке $display_name. Проверьте соединение с интернетом или повторите позже"
-            return 1
+            # Вторая попытка: загрузка через прокси
+            if curl -L -o "$temp_file" "$gh_proxy/$url" > /dev/null 2>&1; then
+                if [ -s "$temp_file" ]; then
+                    mv "$temp_file" "$geo_dir/$filename"
+                    if [ "$update_flag" = true ]; then
+                        echo -e "  $display_name ${green}успешно обновлен через прокси${reset}"
+                    else
+                        echo -e "  $display_name ${green}успешно установлен через прокси${reset}"
+                    fi
+                    return 0
+                else
+                    echo -e "  ${red}Неизвестная ошибка${reset} при установке $display_name"
+                    return 1
+                fi
+            else
+                rm -f "$temp_file"
+                echo -e "  ${red}Ошибка${reset} при загрузке $display_name. Проверьте соединение с интернетом или повторите позже"
+                return 1
+            fi
         fi
     }
 
@@ -53,15 +71,15 @@ install_geoip() {
         datfile="geoip_zkeenip.dat"
         [ -L "$geo_dir/geoip_zkeenip.dat" ] && datfile="zkeenip.dat"
         process_geoip_file \
-        "$zkeenip_url" \
-        "$datfile" \
-        "GeoIP ZkeenIP" \
-        "$update_zkeenip_geoip"
+            "$zkeenip_url" \
+            "$datfile" \
+            "GeoIP ZkeenIP" \
+            "$update_zkeenip_geoip"
         # Создание симлинков для совместимости
-        if [ $datfile = "geoip_zkeenip.dat" ]; then
+        if [ "$datfile" = "geoip_zkeenip.dat" ]; then
             rm -f "$geo_dir/zkeenip.dat"
             ln -sf "$geo_dir/geoip_zkeenip.dat" "$geo_dir/zkeenip.dat"
-        elif [ $datfile = "zkeenip.dat" ]; then
+        elif [ "$datfile" = "zkeenip.dat" ]; then
             rm -f "$geo_dir/geoip_zkeenip.dat"
             ln -sf "$geo_dir/zkeenip.dat" "$geo_dir/geoip_zkeenip.dat"
         fi

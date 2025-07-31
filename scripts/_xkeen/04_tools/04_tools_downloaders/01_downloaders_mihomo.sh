@@ -14,7 +14,9 @@ download_mihomo() {
                 printf "  ${red}Нет доступа${reset} к ${yellow}jsDelivr${reset}\n"
                 echo
                 printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n
-  Проверьте соединение с интернетом или повторите позже\n"
+  Проверьте соединение с интернетом или повторите позже\n
+  Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n
+  https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md\n"
                 echo
                 exit 1
             fi
@@ -104,6 +106,7 @@ download_mihomo() {
         mihomo_dist=$(mktemp)
         mkdir -p "$mtmp_dir"
 
+        # Загрузка Yq (с попыткой через прокси)
         echo -e "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - Yq"
         if curl -L -o "$yq_dist" "$download_yq" &> /dev/null; then
             if [ -s "$yq_dist" ]; then
@@ -114,22 +117,43 @@ download_mihomo() {
                 echo -e "  ${red}Ошибка${reset}: Загруженный файл Yq поврежден"
             fi
         else
-            echo -e "  ${red}Ошибка${reset}: Не удалось загрузить Yq. Проверьте соединение с интернетом или повторите позже"
+            if curl -L -o "$yq_dist" "$gh_proxy/$download_yq" &> /dev/null; then
+                if [ -s "$yq_dist" ]; then
+                    mv "$yq_dist" "$install_dir/yq"
+                    chmod +x "$install_dir/yq"
+                    echo -e "  Yq ${green}успешно загружен через прокси${reset}"
+                else
+                    echo -e "  ${red}Ошибка${reset}: Загруженный файл Yq поврежден"
+                fi
+            else
+                echo -e "  ${red}Ошибка${reset}: Не удалось загрузить Yq. Проверьте соединение с интернетом или повторите позже"
+            fi
         fi
 
+        # Загрузка Mihomo (с попыткой через прокси)
         echo -e "  ${yellow}Выполняется загрузка${reset} выбранной версии Mihomo"
         if curl -L -o "$mihomo_dist" "$download_url" &> /dev/null; then
             if [ -s "$mihomo_dist" ]; then
                 mv "$mihomo_dist" "$mtmp_dir/mihomo.$extension"
                 echo -e "  Mihomo ${green}успешно загружен${reset}"
-                return
+                return 0
             else
                 echo -e "  ${red}Ошибка${reset}: Загруженный файл Mihomo поврежден"
             fi
         else
-            echo -e "  ${red}Ошибка${reset}: Не удалось загрузить Mihomo. Проверьте соединение с интернетом или повторите позже"
-            rm -f "$mihomo_dist" "$yq_dist"
-            exit 1
+            if curl -L -o "$mihomo_dist" "$gh_proxy/$download_url" &> /dev/null; then
+                if [ -s "$mihomo_dist" ]; then
+                    mv "$mihomo_dist" "$mtmp_dir/mihomo.$extension"
+                    echo -e "  Mihomo ${green}успешно загружен через прокси${reset}"
+                    return 0
+                else
+                    echo -e "  ${red}Ошибка${reset}: Загруженный файл Mihomo поврежден"
+                fi
+            else
+                echo -e "  ${red}Ошибка${reset}: Не удалось загрузить Mihomo. Проверьте соединение с интернетом или повторите позже"
+                rm -f "$mihomo_dist" "$yq_dist"
+                return 1
+            fi
         fi
 
         rm -f "$yq_dist" "$mihomo_dist"
