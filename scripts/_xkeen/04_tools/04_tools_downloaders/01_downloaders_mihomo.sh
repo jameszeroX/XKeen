@@ -13,10 +13,7 @@ download_mihomo() {
                 echo
                 printf "  ${red}Нет доступа${reset} к ${yellow}jsDelivr${reset}\n"
                 echo
-                printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n
-  Проверьте соединение с интернетом или повторите позже\n
-  Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n
-  https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md\n"
+                printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n  Проверьте соединение с интернетом или повторите позже\n  Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n  https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md\n"
                 echo
                 exit 1
             fi
