@@ -795,6 +795,7 @@ proxy_start() {
                     xray)
                         export XRAY_LOCATION_ASSET="$directory_app_routing"
                         export XRAY_LOCATION_CONFDIR="$directory_user_settings"
+                        find "$directory_user_settings" -name "._*.json" -delete
                         if [ "$architecture" = "arm64-v8a" ]; then
                             if [ -n "$fd_out" ]; then
                                 ulimit -SHn "$arm64_fd" && nohup su -c "$name_client run" "$name_profile" >/dev/null 2>&1 &
