@@ -14,7 +14,7 @@ author_donate() {
     echo "     3. Crypto"
     echo
     echo -e "  Поддержать разработчика форка XKeen (${green}jameszero${reset})"
-    echo "     4. Сбер/ВТБ"
+    echo "     4. Карта МИР"
     echo "     5. CloudTips/ЮMoney"
     echo "     6. Crypto"
     echo
@@ -59,11 +59,8 @@ author_donate() {
                 ;;
             4)
                 echo
-                echo -e "  Карта VISA ${yellow}Сбер${reset}"
-                echo "     4279 5202 6189 7055"
-                echo
-                echo -e "  Карта МИР ${yellow}ВТБ${reset}"
-                echo "     2200 2459 2238 1392"
+                echo -e "  ${yellow}Карта МИР${reset} ЮMoney"
+                echo "     2204 1201 2976 4110"
                 echo
                 return 0
                 ;;
