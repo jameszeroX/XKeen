@@ -236,9 +236,9 @@ get_port_redirect() {
     for file in $(find "$directory_user_settings" -name '*.json'); do
         json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
         [ -n "$json" ] || continue
-        inbounds=$(echo "$json" | jq -c '.inbounds[] | select(.protocol == "dokodemo-door" and .tag == "redirect")' 2>/dev/null)
+        inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "redirect")' 2>/dev/null)
         for inbound in $inbounds; do
-            port=$(echo "$inbound" | jq -r '.port' 2>/dev/null)
+            port=$(echo "$inbound" | jq -r '.port' 2>/dev/null | cut -d ',' -f 1)
             tproxy=$(echo "$inbound" | jq -r '.streamSettings.sockopt.tproxy // empty' 2>/dev/null)
             [ "$tproxy" != "tproxy" ] && echo "$port" && return
         done
@@ -260,9 +260,9 @@ get_port_tproxy() {
         for file in $(find "$directory_user_settings" -name '*.json'); do
             json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
             [ -n "$json" ] || continue
-            inbounds=$(echo "$json" | jq -c '.inbounds[] | select(.protocol == "dokodemo-door" and .tag == "tproxy")' 2>/dev/null)
+            inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "tproxy")' 2>/dev/null)
             for inbound in $inbounds; do
-                port=$(echo "$inbound" | jq -r '.port' 2>/dev/null)
+            port=$(echo "$inbound" | jq -r '.port' 2>/dev/null | cut -d ',' -f 1)
                 tproxy=$(echo "$inbound" | jq -r '.streamSettings.sockopt.tproxy // empty' 2>/dev/null)
                 [ "$tproxy" = "tproxy" ] && echo "$port" && return
             done
@@ -276,7 +276,7 @@ get_network_redirect() {
     for file in $(find "$directory_user_settings" -name '*.json'); do
         json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
         [ -n "$json" ] || continue
-        inbounds=$(echo "$json" | jq -c '.inbounds[] | select(.protocol == "dokodemo-door" and .tag == "redirect")' 2>/dev/null)
+        inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "redirect")' 2>/dev/null)
         for inbound in $inbounds; do
             network=$(echo "$inbound" | jq -r '.settings.network' 2>/dev/null | tr -d '[:space:]' | tr ',' ' ')
             tproxy=$(echo "$inbound" | jq -r '.streamSettings.sockopt.tproxy // empty' 2>/dev/null)
@@ -294,7 +294,7 @@ get_network_tproxy() {
         for file in $(find "$directory_user_settings" -name '*.json'); do
             json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
             [ -n "$json" ] || continue
-            inbounds=$(echo "$json" | jq -c '.inbounds[] | select(.protocol == "dokodemo-door" and .tag == "tproxy")' 2>/dev/null)
+            inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "tproxy")' 2>/dev/null)
             for inbound in $inbounds; do
                 network=$(echo "$inbound" | jq -r '.settings.network' 2>/dev/null | tr -d '[:space:]' | tr ',' ' ')
                 tproxy=$(echo "$inbound" | jq -r '.streamSettings.sockopt.tproxy // empty' 2>/dev/null)
