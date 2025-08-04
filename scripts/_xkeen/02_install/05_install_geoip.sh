@@ -66,14 +66,14 @@ install_geoip() {
             "$update_v2fly_geoip"
     fi
 
-    # Установка GeoIP ZkeenIP
+    # Установка GeoIP ZKeenIP
     if [ "$install_zkeenip_geoip" = true ] || [ "$update_zkeenip_geoip" = true ]; then
         datfile="geoip_zkeenip.dat"
         [ -L "$geo_dir/geoip_zkeenip.dat" ] && datfile="zkeenip.dat"
         process_geoip_file \
             "$zkeenip_url" \
             "$datfile" \
-            "GeoIP ZkeenIP" \
+            "GeoIP ZKeenIP" \
             "$update_zkeenip_geoip"
         # Создание симлинков для совместимости
         if [ "$datfile" = "geoip_zkeenip.dat" ]; then

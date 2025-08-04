@@ -66,14 +66,14 @@ install_geosite() {
             "$update_v2fly_geosite"
     fi
 
-    # Установка GeoSite Zkeen
+    # Установка GeoSite ZKeen
     if [ "$install_zkeen_geosite" = true ] || [ "$update_zkeen_geosite" = true ]; then
         datfile="geosite_zkeen.dat"
         [ -L "$geo_dir/geosite_zkeen.dat" ] && datfile="zkeen.dat"
         process_geosite_file \
             "$zkeen_url" \
             "$datfile" \
-            "GeoSite Zkeen" \
+            "GeoSite ZKeen" \
             "$update_zkeen_geosite"
         # Создание симлинков для совместимости
         if [ "$datfile" = "geosite_zkeen.dat" ]; then

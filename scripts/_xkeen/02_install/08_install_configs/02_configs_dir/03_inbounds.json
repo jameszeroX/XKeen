@@ -1,7 +1,7 @@
 {
   "inbounds": [
     {
-      "port": 1181,
+      "port": "1181",
       "protocol": "dokodemo-door",
       "settings": {
         "network": "tcp",
@@ -15,7 +15,7 @@
       "tag": "redirect"
     },
     {
-      "port": 1181,
+      "port": "1181",
       "protocol": "dokodemo-door",
       "settings": {
         "network": "udp",

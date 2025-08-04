@@ -40,7 +40,7 @@ choice_geosite() {
 
         echo "     3. $refilter_choice Re:filter"
         echo "     4. $v2fly_choice v2fly"
-        echo "     5. $zkeen_choice Zkeen"
+        echo "     5. $zkeen_choice ZKeen"
         echo 
         echo "     0. Пропустить"
 
@@ -132,13 +132,13 @@ choice_geosite() {
 
         [ "$install_refilter_geosite" = true ] && install_list="$install_list ${yellow}Re:filter${reset},"
         [ "$install_v2fly_geosite" = true ] && install_list="$install_list ${yellow}v2fly${reset},"
-        [ "$install_zkeen_geosite" = true ] && install_list="$install_list ${yellow}Zkeen${reset},"
+        [ "$install_zkeen_geosite" = true ] && install_list="$install_list ${yellow}ZKeen${reset},"
         [ "$update_refilter_geosite" = true ] && update_list="$update_list ${yellow}Re:filter${reset},"
         [ "$update_v2fly_geosite" = true ] && update_list="$update_list ${yellow}v2fly${reset},"
-        [ "$update_zkeen_geosite" = true ] && update_list="$update_list ${yellow}Zkeen${reset},"
+        [ "$update_zkeen_geosite" = true ] && update_list="$update_list ${yellow}ZKeen${reset},"
         [ "$choice_delete_geosite_refilter_select" = true ] && delete_list="$delete_list ${yellow}Re:filter${reset},"
         [ "$choice_delete_geosite_v2fly_select" = true ] && delete_list="$delete_list ${yellow}v2fly${reset},"
-        [ "$choice_delete_geosite_zkeen_select" = true ] && delete_list="$delete_list ${yellow}Zkeen${reset},"
+        [ "$choice_delete_geosite_zkeen_select" = true ] && delete_list="$delete_list ${yellow}ZKeen${reset},"
 
         if [ -n "$install_list" ]; then
             echo -e "  Устанавливаются следующие GeoSite: ${install_list%,}"

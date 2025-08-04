@@ -40,7 +40,7 @@ choice_geoip() {
 
         echo "     3. $refilter_choice Re:filter"
         echo "     4. $v2fly_choice v2fly"
-        echo "     5. $zkeenip_choice ZkeenIP"
+        echo "     5. $zkeenip_choice ZKeenIP"
         echo 
         echo "     0. Пропустить"
 
@@ -132,13 +132,13 @@ choice_geoip() {
 
         [ "$install_refilter_geoip" = true ] && install_list="$install_list ${yellow}Re:filter${reset},"
         [ "$install_v2fly_geoip" = true ] && install_list="$install_list ${yellow}v2fly${reset},"
-        [ "$install_zkeenip_geoip" = true ] && install_list="$install_list ${yellow}ZkeenIP${reset},"
+        [ "$install_zkeenip_geoip" = true ] && install_list="$install_list ${yellow}ZKeenIP${reset},"
         [ "$update_refilter_geoip" = true ] && update_list="$update_list ${yellow}Re:filter${reset},"
         [ "$update_v2fly_geoip" = true ] && update_list="$update_list ${yellow}v2fly${reset},"
-        [ "$update_zkeenip_geoip" = true ] && update_list="$update_list ${yellow}ZkeenIP${reset},"
+        [ "$update_zkeenip_geoip" = true ] && update_list="$update_list ${yellow}ZKeenIP${reset},"
         [ "$choice_delete_geoip_refilter_select" = true ] && delete_list="$delete_list ${yellow}Re:filter${reset},"
         [ "$choice_delete_geoip_v2fly_select" = true ] && delete_list="$delete_list ${yellow}v2fly${reset},"
-        [ "$choice_delete_geoip_zkeenip_select" = true ] && delete_list="$delete_list ${yellow}ZkeenIP${reset},"
+        [ "$choice_delete_geoip_zkeenip_select" = true ] && delete_list="$delete_list ${yellow}ZKeenIP${reset},"
 
         if [ -n "$install_list" ]; then
             echo -e "  Устанавливаются следующие GeoIP: ${install_list%,}"
