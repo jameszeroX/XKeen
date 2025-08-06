@@ -237,7 +237,7 @@ get_port_redirect() {
         [ -n "$json" ] || continue
         inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "redirect")' 2>/dev/null)
         for inbound in $inbounds; do
-            port=$(echo "$inbound" | jq -r '.port' 2>/dev/null | cut -d ',' -f 1)
+            port=$(echo "$inbound" | jq -r '.port' 2>/dev/null)
             tproxy=$(echo "$inbound" | jq -r '.streamSettings.sockopt.tproxy // empty' 2>/dev/null)
             [ "$tproxy" != "tproxy" ] && echo "$port" && return
         done
@@ -261,7 +261,7 @@ get_port_tproxy() {
             [ -n "$json" ] || continue
             inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "tproxy")' 2>/dev/null)
             for inbound in $inbounds; do
-                port=$(echo "$inbound" | jq -r '.port' 2>/dev/null | cut -d ',' -f 1)
+                port=$(echo "$inbound" | jq -r '.port' 2>/dev/null)
                 tproxy=$(echo "$inbound" | jq -r '.streamSettings.sockopt.tproxy // empty' 2>/dev/null)
                 [ "$tproxy" = "tproxy" ] && echo "$port" && return
             done
@@ -321,9 +321,9 @@ get_port_exclude() {
 # Получение исключений IPv4
 get_exclude_ip4() {
     [ "$iptables_supported" != "true" ] && return
-    ipv4_eth=$(ip route get 77.88.8.8 2>/dev/null | awk '/src/ {print $NF}' ||
-               ip route get 8.8.8.8 2>/dev/null | awk '/src/ {print $NF}' ||
-               ip route get 1.1.1.1 2>/dev/null | awk '/src/ {print $NF}')
+    ipv4_eth=$(ip route get 77.88.8.8 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}' ||
+               ip route get 8.8.8.8 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}' ||
+               ip route get 1.1.1.1 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}')
     [ -n "$ipv4_eth" ] && ipv4_eth="${ipv4_eth}/32"
     user_ipv4=$(get_user_ipv4_excludes)
     echo "${ipv4_eth} ${ipv4_exclude} ${user_ipv4}" | tr -s ' ' | sed 's/^ //; s/ $//'
@@ -332,9 +332,9 @@ get_exclude_ip4() {
 # Получение исключений IPv6
 get_exclude_ip6() {
     [ "$ip6tables_supported" != "true" ] && return
-    ipv6_eth=$(ip -6 route get 2a02:6b8::feed:0ff 2>/dev/null | awk '/src/ {print $NF}' ||
-               ip -6 route get 2001:4860:4860::8888 2>/dev/null | awk '/src/ {print $NF}' ||
-               ip -6 route get 2606:4700:4700::1111 2>/dev/null | awk '/src/ {print $NF}')
+    ipv6_eth=$(ip -6 route get 2a02:6b8::feed:0ff 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}' ||
+               ip -6 route get 2001:4860:4860::8888 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}' ||
+               ip -6 route get 2606:4700:4700::1111 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}')
     [ -n "$ipv6_eth" ] && ipv6_eth="${ipv6_eth}/128"
     user_ipv6=$(get_user_ipv6_excludes)
     echo "${ipv6_eth} ${ipv6_exclude} ${user_ipv6}" | tr -s ' ' | sed 's/^ //; s/ $//'
