@@ -1,8 +1,8 @@
 {
   "routing": {
     "rules": [
-//
-      // Российские домены через провайдера
+
+// Российские домены через провайдера
       {
         "domain": [
           "xn--",
@@ -15,22 +15,21 @@
         ],
         "outboundTag": "direct"
       },
-//
-      // Российские IP через провайдера
+
+// Российские IP через провайдера
       {
         "ip": [
-//          "ext:geoip_zkeenip.dat:ru",    // Перед использованием загрузите базу zkeenip.dat
-          "23.128.64.150" // seeip.org
+//          "ext:geoip_zkeenip.dat:ru",	// Перед использованием загрузите базу zkeenip.dat
+          "188.124.45.105/30"		// https://pr-cy.ru/browser-details/ - проверка IP
         ],
         "outboundTag": "direct"
       },
-//
-      // Остальной трафик через прокси
+
+// Остальной трафик через прокси
       {
         "network": "tcp,udp",
         "outboundTag": "vless-reality"
       }
-//
     ]
   }
 }

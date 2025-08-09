@@ -7,11 +7,11 @@
       "settings": {
         "vnext": [
           {
-            "address": "",    // IP-адрес или доменное имя сервера
-            "port": 443,    // Порт Reality. 443 обязателен
+            "address": "",	// IP-адрес или доменное имя прокси-сервера
+            "port": 443,	// Порт Reality. 443 обязателен
             "users": [
               {
-                "id": "",    // ID, присвоенный пользователю на сервере
+                "id": "",	// ID, присвоенный пользователю на сервере
                 "encryption": "none",
                 "flow": "xtls-rprx-vision"
               }
@@ -23,10 +23,9 @@
         "network": "tcp",
         "security": "reality",
         "realitySettings": {
-          "publicKey": "",    // Public Key, присвоенный пользователю на сервере
-          "fingerprint": "chrome",    // Finger Print, указанный на сервере
-          "serverName": "",    // SNI, указанный на сервере
-          "shortId": "",    // Short ID, присвоенный пользователю на сервере
+          "serverName": "",	// SNI, указанный на сервере
+          "publicKey": "",	// Public Key, присвоенный пользователю на сервере
+          "shortId": "",	// Short ID, присвоенный пользователю на сервере
           "spiderX": "/"
         }
       },

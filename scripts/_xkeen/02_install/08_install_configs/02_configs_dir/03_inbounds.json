@@ -10,7 +10,7 @@
       "sniffing": {
         "enabled": true,
         "routeOnly": true,
-        "destOverride": ["http", "tls"]
+        "destOverride": ["http","tls"]
       },
       "tag": "redirect"
     },
@@ -27,7 +27,7 @@
       "sniffing": {
         "enabled": true,
         "routeOnly": true,
-        "destOverride": ["http", "tls"]
+        "destOverride": ["http","tls","quic"]
       },
       "tag": "tproxy"
     }
