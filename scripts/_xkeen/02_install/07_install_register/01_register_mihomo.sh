@@ -86,6 +86,7 @@ add_mihomo_config() {
             mkdir $mihomo_conf_dir
         fi
             cat << EOF > "$mihomo_conf_dir/config.yaml"
+redir-port: 1181
 tproxy-port: 1181
 mixed-port: 1080
 allow-lan: true
