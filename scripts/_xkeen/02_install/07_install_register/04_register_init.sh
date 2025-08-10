@@ -232,6 +232,12 @@ get_keenetic_port() {
 
 # Получение порта для Redirect
 get_port_redirect() {
+    if [ "$name_client" = "mihomo" ]; then
+        for file in $(find "$directory_configs_app" -name '*.yaml'); do
+            port=$(yq eval '.redir-port // ""' "$file" 2>/dev/null)
+            [ -n "$port" ] && echo "$port" && return
+        done
+    else
     for file in $(find "$directory_user_settings" -name '*.json'); do
         json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
         [ -n "$json" ] || continue
@@ -242,6 +248,7 @@ get_port_redirect() {
             [ "$tproxy" != "tproxy" ] && echo "$port" && return
         done
     done
+    fi
     echo "$port_redirect"
 }
 
@@ -272,6 +279,11 @@ get_port_tproxy() {
 
 # Получение сети для Redirect
 get_network_redirect() {
+    if [ "$name_client" = "mihomo" ]; then
+        if [ -n "$port_redirect" ]; then
+            network_redirect="tcp"
+        fi
+    else
     for file in $(find "$directory_user_settings" -name '*.json'); do
         json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
         [ -n "$json" ] || continue
@@ -282,13 +294,18 @@ get_network_redirect() {
             [ "$tproxy" != "tproxy" ] && echo "$network" && return
         done
     done
+    fi
     echo "$network_redirect"
 }
 
 # Получение сети для TProxy
 get_network_tproxy() {
     if [ "$name_client" = "mihomo" ]; then
-        network_tproxy="tcp udp"
+        if [ -n "$port_redirect" ] && [ -n "$port_tproxy" ]; then
+            network_tproxy="udp"
+        elif [ -z "$port_redirect" ] && [ -n "$port_tproxy" ]; then
+            network_tproxy="tcp udp"
+        fi
     else
         for file in $(find "$directory_user_settings" -name '*.json'); do
             json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
@@ -776,10 +793,8 @@ proxy_start() {
     if [ "$start_manual" = "on" ] || [ "$start_auto" = "on" ]; then
         log_info_router "Инициирован запуск прокси-клиента"
         log_clean
-        if [ "$name_client" = "xray" ]; then
-            port_redirect=$(get_port_redirect)
-            network_redirect=$(get_network_redirect)
-        fi
+        port_redirect=$(get_port_redirect)
+        network_redirect=$(get_network_redirect)
         port_tproxy=$(get_port_tproxy)
         network_tproxy=$(get_network_tproxy)
         mode_proxy=$(get_mode_proxy)
