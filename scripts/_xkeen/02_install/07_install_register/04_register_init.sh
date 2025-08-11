@@ -340,13 +340,13 @@ get_exclude_ip4() {
     [ "$iptables_supported" != "true" ] && return
     
     # Получаем внешний IPv4
-    ipv4_ext=$(curl -4 -s --max-time 3 2ip.ru 2>/dev/null || 
-               curl -4 -s --max-time 3 ifconfig.me 2>/dev/null || 
-               curl -4 -s --max-time 3 icanhazip.com 2>/dev/null || 
-               curl -4 -s --max-time 3 ipinfo.io/ip 2>/dev/null)
+    ipv4_ext=$(curl -4 -s 2ip.ru 2>/dev/null || 
+               curl -4 -s ifconfig.me 2>/dev/null || 
+               curl -4 -s icanhazip.com 2>/dev/null || 
+               curl -4 -s ipinfo.io/ip 2>/dev/null)
     [ -n "$ipv4_ext" ] && ipv4_ext="${ipv4_ext}/32"
 
-    # Получаем провайдерский IPv4
+    # Получаем IPv4 за NAT
     ipv4_eth=$(ip route get 77.88.8.8 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}' ||
                ip route get 8.8.8.8 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}' ||
                ip route get 1.1.1.1 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}')
@@ -360,13 +360,13 @@ get_exclude_ip6() {
     [ "$ip6tables_supported" != "true" ] && return
     
     # Получаем внешний IPv6
-    ipv6_ext=$(curl -6 -s --max-time 3 api6.ipify.org 2>/dev/null || 
-               curl -6 -s --max-time 3 ident.me 2>/dev/null || 
-               curl -6 -s --max-time 3 ifconfig.me 2>/dev/null || 
-               curl -6 -s --max-time 3 icanhazip.com 2>/dev/null)
+    ipv6_ext=$(curl -6 -s api6.ipify.org 2>/dev/null || 
+               curl -6 -s ident.me 2>/dev/null || 
+               curl -6 -s ifconfig.me 2>/dev/null || 
+               curl -6 -s icanhazip.com 2>/dev/null)
     [ -n "$ipv6_ext" ] && ipv6_ext="${ipv6_ext}/128"
 
-    # Получаем провайдерский IPv6
+    # Получаем IPv6 за NAT
     ipv6_eth=$(ip -6 route get 2a02:6b8::feed:0ff 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}' ||
                ip -6 route get 2001:4860:4860::8888 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}' ||
                ip -6 route get 2606:4700:4700::1111 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}')
