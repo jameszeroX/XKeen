@@ -22,7 +22,7 @@ install_xkeen_rename
 
 add_chmod_init() {
     chmod +x $initd_dir/S24xray
-    chmod +x $initd_dir/S99xkeenstart
+    [ -f "$initd_dir/S99xkeenstart" ] && chmod +x $initd_dir/S99xkeenstart
 }
 
 # Импортируем модули
