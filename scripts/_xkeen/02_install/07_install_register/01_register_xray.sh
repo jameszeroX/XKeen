@@ -68,7 +68,7 @@ register_xray_initd() {
     backup_path="${backups_dir}/${s24xray_filename}"
     backup_paths="${backups_dir}/${s99start_filename}"
     script_file="${xinstall_dir}/07_install_register/04_register_init.sh"
-    variables_to_extract="name_client name_policy table_id table_mark port_dns ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude port_donor port_exclude start_attempts start_auto check_fd arm64_fd other_fd delay_fd"
+    variables_to_extract="name_client name_policy table_id table_mark port_dns ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude port_donor port_exclude start_attempts start_delay start_auto check_fd arm64_fd other_fd delay_fd"
     temp_file=$(mktemp)
 
     if [ -f "${start_file}" ]; then
@@ -78,6 +78,10 @@ register_xray_initd() {
         fi
         if grep -q "^start_delay=" "${backup_paths}"; then
             start_delay_value=$(grep "^start_delay=" "${backup_paths}" | head -n 1 | cut -d'=' -f2)
+        fi
+    elif [ -f "${initd_file}" ]; then
+        if grep -q "^start_auto=" "${initd_file}"; then
+            autostart_value=$(grep "^start_auto=" "${initd_file}" | head -n 1 | cut -d'=' -f2)
         fi
     fi
 
