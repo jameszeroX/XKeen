@@ -87,5 +87,5 @@ mkdir -p "$cron_dir" || { echo "Ошибка: Не удалось создать
 xray_access_log="$xray_log_dir/access.log"
 xray_error_log="$xray_log_dir/error.log"
 
-touch "$xray_access_log" || { echo "Ошибка: Не удалось создать файл $xkeen_info_log"; exit 1; }
-touch "$xray_error_log" || { echo "Ошибка: Не удалось создать файл $xkeen_error_log"; exit 1; }
+touch "$xray_access_log" || { echo "Ошибка: Не удалось создать файл $xray_access_log"; exit 1; }
+touch "$xray_error_log" || { echo "Ошибка: Не удалось создать файл $xray_error_log"; exit 1; }
