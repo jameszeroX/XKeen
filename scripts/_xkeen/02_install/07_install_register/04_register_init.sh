@@ -122,6 +122,7 @@ log_clean() {
 
 get_user_ipv4_excludes() {
     if [ -f "$file_exclude" ]; then
+        echo -n " "
         grep -v '^#' "$file_exclude" | grep -v '^$' | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//'
     else
         echo ""
@@ -130,6 +131,7 @@ get_user_ipv4_excludes() {
 
 get_user_ipv6_excludes() {
     if [ -f "$file_exclude" ]; then
+        echo -n " "
         grep -v '^#' "$file_exclude" | grep -v '^$' | grep -Eo '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//'
     else
         echo ""
@@ -345,7 +347,7 @@ get_exclude_ip4() {
                ip route get 1.1.1.1 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}')
     [ -n "$ipv4_eth" ] && ipv4_eth="${ipv4_eth}/32"
     user_ipv4=$(get_user_ipv4_excludes)
-    echo "${ipv4_eth} ${ipv4_exclude} ${user_ipv4}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
+    echo "${ipv4_eth} ${ipv4_exclude}${user_ipv4}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
 }
 
 # Получение исключений IPv6
@@ -358,7 +360,7 @@ get_exclude_ip6() {
                ip -6 route get 2606:4700:4700::1111 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}')
     [ -n "$ipv6_eth" ] && ipv6_eth="${ipv6_eth}/128"
     user_ipv6=$(get_user_ipv6_excludes)
-    echo "${ipv6_eth} ${ipv6_exclude} ${user_ipv6}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
+    echo "${ipv6_eth} ${ipv6_exclude}${user_ipv6}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
 }
 
 # Получение метки политики
