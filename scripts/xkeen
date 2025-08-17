@@ -494,6 +494,7 @@ case "$1" in
         clear
         echo
 
+        [ "$xray_installed" = "installed" ] && echo -e "  В роутере установлен Xray версии ${yellow}$xray_current_version${reset}" && echo
         download_xray
 
         if [ -z $bypass_xray ]; then
@@ -532,9 +533,12 @@ case "$1" in
         status_file="/opt/lib/opkg/status"
         info_cpu
         info_mihomo
+        info_version_mihomo
 
         clear
         echo
+
+        [ "$mihomo_installed" = "installed" ] && echo -e "  В роутере установлен Mihomo версии ${yellow}$mihomo_current_version${reset}" && echo
         download_mihomo
         info_version_mihomo
         info_version_yq
@@ -946,6 +950,9 @@ case "$1" in
 
         clear
         echo -e "  Переустановка ${yellow}XKeen${reset}"
+
+        choice_redownload_xkeen
+        [ -n "$redownload_xkeen" ] && download_xkeen
 
         echo
         install_xkeen

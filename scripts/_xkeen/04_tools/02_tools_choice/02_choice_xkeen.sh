@@ -114,3 +114,28 @@ choice_autostart_xkeen() {
         esac
     done
 }
+
+choice_redownload_xkeen() {
+    echo
+    echo -e "  Выберите вариант переустановки ${yellow}XKeen${reset}"
+    echo
+    echo "     1. Загрузить дистрибутив XKeen из интернета"
+    echo "     0. Локальная переустановка XKeen"
+    echo
+
+    while true; do
+        read -r -p "  Ваш выбор: " choice
+        case "$choice" in
+            1)
+                redownload_xkeen="yes"
+                return 0
+                ;;
+            0)
+                return 0
+                ;;
+            *)
+                echo -e "  ${red}Некорректный ввод${reset}"
+                ;;
+        esac
+    done
+}

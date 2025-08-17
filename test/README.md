@@ -1,3 +1,3 @@
-## Версия 1.1.3.8 Stable
+## Версия 1.1.3.9 Preview
 
-https://github.com/jameszeroX/XKeen/releases/tag/1.1.3.8
+- При обновлении Xray и Mihomo теперь отображается версия уже установленного в роутере бинарника
