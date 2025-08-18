@@ -947,6 +947,7 @@ case "$1" in
         . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
         status_file="/opt/lib/opkg/status"
         info_cpu
+        xkeen_info
 
         clear
         echo -e "  Переустановка ${yellow}XKeen${reset}"
