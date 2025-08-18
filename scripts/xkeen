@@ -952,7 +952,14 @@ case "$1" in
         echo -e "  Переустановка ${yellow}XKeen${reset}"
 
         choice_redownload_xkeen
-        [ -n "$redownload_xkeen" ] && download_xkeen
+        if [ -n "$redownload_xkeen" ]; then
+            if [ "$xkeen_build" = "Stable" ]; then
+                download_func="download_xkeen"
+            else
+                download_func="download_xkeen_dev"
+            fi
+            $download_func
+        fi
 
         echo
         install_xkeen
