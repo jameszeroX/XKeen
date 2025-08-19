@@ -1157,7 +1157,7 @@ case "$1" in
 
     -ap)    # Добавить порт проксирования
         shift
-        add_ports_donor "$1" 
+        add_ports_donor "$*"
         sleep 2
         add_chmod_init
         if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
@@ -1168,7 +1168,7 @@ case "$1" in
 
     -dp)    # Удалить порт проксирования
         shift
-        dell_ports_donor "$1"
+        dell_ports_donor "$*"
         sleep 2
         add_chmod_init
         if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
@@ -1190,7 +1190,7 @@ case "$1" in
 
     -ape)    # Добавить порт-исключение проксирования
         shift
-        add_ports_exclude "$1" 
+        add_ports_exclude "$*" 
         sleep 2
         add_chmod_init
         if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
@@ -1201,7 +1201,7 @@ case "$1" in
 
     -dpe)    # Удалить порт-исключение проксирования
         shift
-        dell_ports_exclude "$1"
+        dell_ports_exclude "$*"
         sleep 2
         add_chmod_init
         if pidof xray >/dev/null || pidof mihomo >/dev/null ; then

@@ -27,15 +27,62 @@ data_is_updated_excluded() {
 }
 
 normalize_ports() {
-    echo "$1" | \
-    tr '-' ':' | \
-    tr -s '[:space:]' ',' | \
-    tr -s ',' | \
-    sed 's/^,//; s/,$//' | \
-    tr ',' '\n' | \
-    sort -nu | \
-    tr '\n' ',' | \
-    sed 's/,$//'
+    input="$1"
+    result=""
+    tmpfile=$(mktemp)
+
+    # Разделяем входные данные по запятым и обрабатываем построчно
+    echo "$input" | tr ',' '\n' | while read port; do
+        # Удаляем пробелы
+        port=$(echo "$port" | tr -d '[:space:]')
+
+        # Проверяем, является ли порт диапазоном
+        if echo "$port" | grep -q '[:-]'; then
+            # Заменяем '-' на ':'
+            port=$(echo "$port" | tr '-' ':')
+            # Извлекаем начало и конец диапазона
+            start=$(echo "$port" | cut -d':' -f1)
+            end=$(echo "$port" | cut -d':' -f2)
+
+            # Проверяем, что start и end — числа и не превышают 65535
+            if ! [ "$start" -ge 0 ] 2>/dev/null || ! [ "$end" -ge 0 ] 2>/dev/null || \
+               [ "$start" -gt 65535 ] || [ "$end" -gt 65535 ]; then
+                continue
+            fi
+
+            # Если первое число больше второго, меняем их местами
+            if [ "$start" -gt "$end" ]; then
+                temp="$start"
+                start="$end"
+                end="$temp"
+            fi
+
+            # Формируем диапазон в формате start:end
+            normalized_port="$start:$end"
+        else
+            # Если это одиночный порт, проверяем, что это число и не превышает 65535
+            if ! [ "$port" -ge 0 ] 2>/dev/null || [ "$port" -gt 65535 ]; then
+                continue
+            fi
+            normalized_port="$port"
+        fi
+
+        # Добавляем нормализованный порт к временному файлу
+        if [ -z "$result" ]; then
+            echo "$normalized_port" >> "$tmpfile"
+            result="set"
+        else
+            echo ",$normalized_port" >> "$tmpfile"
+        fi
+    done
+
+    # Читаем результат из временного файла, сортируем и удаляем дубликаты
+    if [ -s "$tmpfile" ]; then
+        cat "$tmpfile" | tr -d '\n' | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//'
+    fi
+
+    # Удаляем временный файл
+    rm -f "$tmpfile"
 }
 
 add_ports_donor() {
