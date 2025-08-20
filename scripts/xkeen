@@ -433,6 +433,7 @@ case "$1" in
 
     -uk)    # Обновление XKeen (автовыбор Stable/Dev версии)
         clear
+        echo
         echo "  Проверка обновлений XKeen"
         xkeen_info
 

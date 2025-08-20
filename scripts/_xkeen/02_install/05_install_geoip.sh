@@ -69,7 +69,7 @@ install_geoip() {
     # Установка GeoIP ZKeenIP
     if [ "$install_zkeenip_geoip" = true ] || [ "$update_zkeenip_geoip" = true ]; then
         datfile="geoip_zkeenip.dat"
-        [ -L "$geo_dir/geoip_zkeenip.dat" ] && datfile="zkeenip.dat"
+        [ -L "$geo_dir/geoip_zkeenip.dat" ] || [ ! -e "$geo_dir/geoip_zkeenip.dat" ] && datfile="zkeenip.dat"
         process_geoip_file \
             "$zkeenip_url" \
             "$datfile" \
