@@ -90,6 +90,20 @@ add_ports_donor() {
         echo -e "  ${red}Ошибка${reset}: список портов не может быть пустым"
         return 1
     fi
+
+    # Проверяем наличие исключенных портов
+    excluded_ports=$(
+        awk -F= '/port_exclude/{print $2; exit}' $initd_dir/S24xray \
+        | tr -d '"' | tr -d '[:space:]'
+    )
+
+    if [ -n "$excluded_ports" ]; then
+        echo -e "  ${red}Ошибка${reset}: Невозможно добавить порты проксирования"
+        echo -e "  В исключенных указаны порты: ${yellow}$excluded_ports${reset}"
+        echo -e "  Сначала очистите исключенные порты, затем добавьте порты проксирования"
+        return 1
+    fi
+
     ports=$(normalize_ports "$1")
     current_ports=$(
         awk -F= '/port_donor/{print $2; exit}' $initd_dir/S24xray \
@@ -269,6 +283,20 @@ add_ports_exclude() {
         echo -e "  ${red}Ошибка${reset}: список портов не может быть пустым"
         return 1
     fi
+
+    # Проверяем наличие портов проксирования
+    donor_ports=$(
+        awk -F= '/port_donor/{print $2; exit}' $initd_dir/S24xray \
+        | tr -d '"' | tr -d '[:space:]'
+    )
+
+    if [ -n "$donor_ports" ]; then
+        echo -e "  ${red}Ошибка${reset}: Невозможно добавить исключаемые порты"
+        echo -e "  В портах проксирования указаны: ${yellow}$donor_ports${reset}"
+        echo -e "  Сначала очистите порты проксирования, затем добавьте исключаемые порты"
+        return 1
+    fi
+
     ports=$(normalize_ports "$1")
     current_ports=$(
         awk -F= '/port_exclude/{print $2; exit}' $initd_dir/S24xray \
