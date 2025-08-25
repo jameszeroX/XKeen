@@ -28,7 +28,6 @@ data_is_updated_excluded() {
 
 normalize_ports() {
     input="$1"
-    result=""
     tmpfile=$(mktemp)
 
     # Разделяем входные данные по запятым и обрабатываем построчно
@@ -68,17 +67,12 @@ normalize_ports() {
         fi
 
         # Добавляем нормализованный порт к временному файлу
-        if [ -z "$result" ]; then
-            echo "$normalized_port" >> "$tmpfile"
-            result="set"
-        else
-            echo ",$normalized_port" >> "$tmpfile"
-        fi
+        echo "$normalized_port" >> "$tmpfile"
     done
 
     # Читаем результат из временного файла, сортируем и удаляем дубликаты
     if [ -s "$tmpfile" ]; then
-        cat "$tmpfile" | tr -d '\n' | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//'
+        sort -n -u "$tmpfile" | tr '\n' ',' | sed 's/,$//'
     fi
 
     # Удаляем временный файл
@@ -99,7 +93,7 @@ add_ports_donor() {
 
     if [ -n "$excluded_ports" ]; then
         echo -e "  ${red}Ошибка${reset}: Невозможно добавить порты проксирования"
-        echo -e "  В исключенных указаны порты: ${yellow}$excluded_ports${reset}"
+        echo -e "  В исключениях указаны порты: ${yellow}$excluded_ports${reset}"
         echo -e "  Сначала очистите исключенные порты, затем добавьте порты проксирования"
         return 1
     fi
@@ -133,7 +127,7 @@ add_ports_donor() {
         new_ports="$ports"
     else
         if [ -n "$ports" ]; then
-            new_ports=$(echo "$current_ports,$ports" | tr ',' '\n' | sort -nu | tr '\n' ',' | sed 's/,$//')
+            new_ports=$(echo "$current_ports,$ports" | tr ',' '\n' | sort -n -u | tr '\n' ',' | sed 's/,$//')
         else
             new_ports="$current_ports"
         fi
@@ -215,6 +209,7 @@ dell_ports_donor() {
                     echo "$new_ports" \
                     | tr ',' '\n' \
                     | grep -vFx "$port" \
+                    | sort -n \
                     | tr '\n' ',' \
                     | sed 's/^,//; s/,$//'
                 )
@@ -313,7 +308,7 @@ add_ports_exclude() {
         new_ports="$ports"
     else
         if [ -n "$ports" ]; then
-            new_ports=$(echo "$current_ports,$ports" | tr ',' '\n' | sort -nu | tr '\n' ',' | sed 's/,$//')
+            new_ports=$(echo "$current_ports,$ports" | tr ',' '\n' | sort -n -u | tr '\n' ',' | sed 's/,$//')
         else
             new_ports="$current_ports"
         fi
@@ -386,7 +381,7 @@ dell_ports_exclude() {
     if [ -z "$ports" ]; then
         new_ports=
         echo -e "  ${green}Успех${reset}"
-		echo -e "  Все порты очищены\n  Прокси-клиент работает на ${yellow}всех${reset} портах"
+        echo -e "  Все порты очищены\n  Прокси-клиент работает на ${yellow}всех${reset} портах"
     else
         for port in $(echo "$ports" | tr ',' '\n'); do
             if echo "$new_ports" \
@@ -396,6 +391,7 @@ dell_ports_exclude() {
                     echo "$new_ports" \
                     | tr ',' '\n' \
                     | grep -vFx "$port" \
+                    | sort -n \
                     | tr '\n' ',' \
                     | sed 's/^,//; s/,$//'
                 )

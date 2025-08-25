@@ -27,7 +27,7 @@
       "sniffing": {
         "enabled": true,
         "routeOnly": true,
-        "destOverride": ["http","tls","quic"]
+        "destOverride": ["quic"]
       },
       "tag": "tproxy"
     }
