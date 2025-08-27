@@ -4,7 +4,7 @@ install_configs() {
         mkdir -p "$install_conf_dir"
     fi
 
-    if ls "$install_conf_dir"/*.json >/dev/null 2>&1; then
+    if ls "$install_conf_dir"/*.json >/dev/null 2>&1 || ls "$install_conf_dir"/*.jsonc >/dev/null 2>&1; then
         return 0
     fi
 

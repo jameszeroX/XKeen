@@ -140,13 +140,20 @@ get_user_ipv6_excludes() {
 
 # Поиск конфигураций inbounds
 file_inbounds() {
-    find "$directory_user_settings" -name '*.json' -exec grep -lF '"inbounds": [' {} \; -quit
+    find "$directory_user_settings" \( -name '*.json' -o -name '*.jsonc' \) -exec grep -lF '"inbounds":' {} \; -quit
 }
 [ "$name_client" = "xray" ] && file_inbounds=$(file_inbounds)
 
 # Поиск конфигураций DNS
 file_dns() {
-    find "$directory_user_settings" -name '*.json' -exec grep -lF '"dns": {' {} \; -quit
+    for file in "$directory_user_settings"/*.json "$directory_user_settings"/*.jsonc; do
+        [ -f "$file" ] || continue
+        if grep -q '"dns":' "$file" && grep -q '"servers":' "$file"; then
+            echo "$file"
+            return 0
+        fi
+    done
+    return 1
 }
 [ "$name_client" = "xray" ] && file_dns=$(file_dns)
 
@@ -240,7 +247,7 @@ get_port_redirect() {
             [ -n "$port" ] && echo "$port" && return
         done
     else
-    for file in $(find "$directory_user_settings" -name '*.json'); do
+    find "$directory_user_settings" -name '*.json' -o -name '*.jsonc' | while read file; do
         json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
         [ -n "$json" ] || continue
         inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "redirect")' 2>/dev/null)
@@ -265,7 +272,7 @@ get_port_tproxy() {
             [ -n "$port" ] && echo "$port" && return
         done
     else
-        for file in $(find "$directory_user_settings" -name '*.json'); do
+        find "$directory_user_settings" -name '*.json' -o -name '*.jsonc' | while read file; do
             json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
             [ -n "$json" ] || continue
             inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "tproxy")' 2>/dev/null)
@@ -286,7 +293,7 @@ get_network_redirect() {
             network_redirect="tcp"
         fi
     else
-    for file in $(find "$directory_user_settings" -name '*.json'); do
+    find "$directory_user_settings" -name '*.json' -o -name '*.jsonc' | while read file; do
         json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
         [ -n "$json" ] || continue
         inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "redirect")' 2>/dev/null)
@@ -309,7 +316,7 @@ get_network_tproxy() {
             network_tproxy="tcp udp"
         fi
     else
-        for file in $(find "$directory_user_settings" -name '*.json'); do
+        find "$directory_user_settings" -name '*.json' -o -name '*.jsonc' | while read file; do
             json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
             [ -n "$json" ] || continue
             inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "tproxy")' 2>/dev/null)
@@ -815,7 +822,7 @@ proxy_start() {
                     xray)
                         export XRAY_LOCATION_ASSET="$directory_app_routing"
                         export XRAY_LOCATION_CONFDIR="$directory_user_settings"
-                        find "$directory_user_settings" -name "._*.json" -delete
+                        find "$directory_user_settings" \( -name '._*.json' -o -name '._*.jsonc' \) -type f -delete
                         if [ "$architecture" = "arm64-v8a" ]; then
                             if [ -n "$fd_out" ]; then
                                 ulimit -SHn "$arm64_fd" && nohup su -c "$name_client run" "$name_profile" >/dev/null 2>&1 &

@@ -16,7 +16,7 @@ logs_delete_configs_info_console() {
     error_content=
 
     if [ -d "$install_conf_dir" ]; then
-        deleted_files=$(find "$install_conf_dir" -name "*.json" -type f)
+        deleted_files=$(find "$install_conf_dir" \( -name "*.json" -o -name "*.jsonc" \) -type f)
     fi
 
     if [ -z "$deleted_files" ]; then
