@@ -817,9 +817,18 @@ proxy_start() {
             . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
             status_file="/opt/lib/opkg/status"
             info_cpu
+            install_dir="/opt/sbin"
             while [ "$attempt" -le "$start_attempts" ]; do
                 case "$name_client" in
                     xray)
+                        if [ ! -f "$install_dir/xray" ]; then
+                            log_error_terminal "Не найден файл ${yellow}$install_dir/xray${reset}
+
+Вероятная причина - установка XKeen на внутренний накопитель и нехватка на нём места
+Выполните установку XKeen на внешний накопитель либо скопируйте файл вручную
+    "
+                            exit 1
+                        fi
                         export XRAY_LOCATION_ASSET="$directory_app_routing"
                         export XRAY_LOCATION_CONFDIR="$directory_user_settings"
                         find "$directory_user_settings" \( -name '._*.json' -o -name '._*.jsonc' \) -type f -delete
@@ -840,6 +849,17 @@ proxy_start() {
                         fi
                     ;;
                     mihomo)
+                        if [ ! -f "$install_dir/mihomo" ] || [ ! -f "$install_dir/yq" ]; then
+                            missing_files=""
+                            [ ! -f "$install_dir/yq" ] && missing_files="$install_dir/yq"
+                            [ ! -f "$install_dir/mihomo" ] && missing_files="$install_dir/mihomo $missing_files"
+                            log_error_terminal "Не найден(ы) файл(ы): ${yellow}${missing_files}${reset}
+
+Вероятная причина - установка XKeen на внутренний накопитель и нехватка на нём места
+Выполните установку XKeen на внешний накопитель либо скопируйте файл(ы) вручную
+                  "
+                            exit 1
+                        fi
                         if [ "$architecture" = "arm64-v8a" ]; then
                             if [ -n "$fd_out" ]; then
                                 ulimit -SHn "$arm64_fd" && nohup su -c "$name_client -d $directory_configs_app" "$name_profile" >/dev/null 2>&1 &
