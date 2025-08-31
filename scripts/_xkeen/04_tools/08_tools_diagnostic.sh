@@ -180,6 +180,13 @@ xkeen -v >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
+# Перезапуск XKeen
+write_header "Результат перезапуска XKeen"
+$initd_dir/S24xray restart on >/dev/null 2>&1 >> $diagnostic
+sed -i $'s/\033\\[[0-9;]*m//g' $diagnostic
+echo >> "$diagnostic"
+echo >> "$diagnostic"
+
 echo
 echo
 echo -e "  Диагностика ${green}выполнена${reset}"
