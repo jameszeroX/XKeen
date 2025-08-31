@@ -30,3 +30,11 @@ EOF
     fi
     [ -d "$xkeen_log_dir" ] && rm -rf "$xkeen_log_dir"
 }
+
+check_keen_mode() {
+    IF=$(ip -4 route show default | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
+    [ -z "$IF" ] && IF=$(ip -6 route show default | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
+    case "$IF" in
+        ""|br*|lo) keen_mode="unsupported";;
+    esac
+}

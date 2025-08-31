@@ -784,6 +784,12 @@ monitor_fd() {
 
 # Запуск прокси-клиента
 proxy_start() {
+    IF=$(ip -4 route show default | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
+    [ -z "$IF" ] && IF=$(ip -6 route show default | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
+    case "$IF" in ""|br*|lo)
+        log_error_terminal "Запуск XKeen возможен только на Keenetic в режиме ${green}роутера${reset}"
+        exit 1 ;;
+    esac
     start_manual="$1"
     if [ "$start_manual" = "on" ] || [ "$start_auto" = "on" ]; then
         log_info_router "Инициирован запуск прокси-клиента"

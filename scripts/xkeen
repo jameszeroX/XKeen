@@ -75,6 +75,11 @@ case "$1" in
         . "$script_dir/.xkeen/import.sh"
         clear
         echo
+        check_keen_mode
+        if [ -n "$keen_mode" ]; then
+        echo -e "  ${red}Ошибка${reset}: Установка XKeen возможна только на Keenetic в режиме ${green}роутера${reset}"
+            exit 1
+        fi
         echo -e "  Запуск полного цикла установки ${yellow}XKeen${reset}"
 
         xkeen_info
@@ -279,6 +284,11 @@ case "$1" in
     -io)    # Установка XKeen OffLine
         clear
         echo
+        check_keen_mode
+        if [ -n "$keen_mode" ]; then
+        echo -e "  ${red}Ошибка${reset}: Установка XKeen возможна только на Keenetic в режиме ${green}роутера${reset}"
+            exit 1
+        fi
         echo "  Установка XKeen OffLine"
 
         xkeen_info
