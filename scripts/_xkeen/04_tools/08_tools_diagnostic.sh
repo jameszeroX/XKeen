@@ -160,11 +160,11 @@ echo >> "$diagnostic"
 
 # Запрос версии ядра
 if [ "${name_client}" = "xray" ]; then
-write_header "Версия Xray"
-xray -version >> "$diagnostic" 
+    write_header "Версия Xray"
+    xray -version >> "$diagnostic" 
 elif [ "${name_client}" = "mihomo" ]; then
-write_header "Версия Mihomo"
-mihomo -v >> "$diagnostic" 
+    write_header "Версия Mihomo"
+    mihomo -v >> "$diagnostic" 
 fi
 echo >> "$diagnostic"
 echo "Разрешено файловых дескрипторов:" >> "$diagnostic"
@@ -186,6 +186,24 @@ $initd_dir/S24xray restart on >/dev/null 2>&1 >> $diagnostic
 sed -i $'s/\033\\[[0-9;]*m//g' $diagnostic
 echo >> "$diagnostic"
 echo >> "$diagnostic"
+
+if [ "${name_client}" = "xray" ]; then
+    # inbounds
+    write_header "Содержимое файла inbounds.json"
+    if ls "$install_conf_dir"/*inbounds* >/dev/null 2>&1; then
+        cat "$install_conf_dir"/*inbounds* >> /opt/diagnostic.txt
+    fi
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+    
+    # routing
+    write_header "Содержимое файла routing.json"
+    if ls "$install_conf_dir"/*routing* >/dev/null 2>&1; then
+        cat "$install_conf_dir"/*routing* >> /opt/diagnostic.txt
+    fi
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+fi
 
 echo
 echo
