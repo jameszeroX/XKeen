@@ -1,34 +1,42 @@
 {
   "routing": {
     "rules": [
-
-// Российские домены через провайдера
+      {
+        "network": "udp",
+        "port": "443",
+        "ip": ["ext:geoip_zkeenip.dat:!ru"],
+        "outboundTag": "block"
+      },
       {
         "domain": [
-          "xn--",
-          "domain:su",
-          "domain:ru",
-          "domain:by",
-          "domain:moscow",
-          "yandex",
-          "yastatic.net"
+          "ext:geosite_zkeen.dat:domains",
+          "ext:geosite_zkeen.dat:other",
+          "ext:geosite_zkeen.dat:youtube"
         ],
-        "outboundTag": "direct"
+        "outboundTag": "vless-reality"
       },
-
-// Российские IP через провайдера
       {
         "ip": [
-//          "ext:geoip_zkeenip.dat:ru",	// Перед использованием загрузите базу zkeenip.dat
-          "188.124.45.105/30"		// https://pr-cy.ru/browser-details/ - проверка IP
+          "ext:geoip_zkeenip.dat:akamai",
+          "ext:geoip_zkeenip.dat:amazon",
+          "ext:geoip_zkeenip.dat:cdn77",
+          "ext:geoip_zkeenip.dat:cloudflare",
+          "ext:geoip_zkeenip.dat:digitalocean",
+          "ext:geoip_zkeenip.dat:fastly",
+          "ext:geoip_zkeenip.dat:gcore",
+          "ext:geoip_zkeenip.dat:hetzner",
+          "ext:geoip_zkeenip.dat:linode",
+          "ext:geoip_zkeenip.dat:meta",
+          "ext:geoip_zkeenip.dat:oracle",
+          "ext:geoip_zkeenip.dat:ovh",
+          "ext:geoip_zkeenip.dat:telegram",
+          "ext:geoip_zkeenip.dat:vultr"
         ],
-        "outboundTag": "direct"
+        "outboundTag": "vless-reality"
       },
-
-// Остальной трафик через прокси
       {
         "network": "tcp,udp",
-        "outboundTag": "vless-reality"
+        "outboundTag": "direct"
       }
     ]
   }
