@@ -192,19 +192,32 @@ get_modules() {
             port_donor=""
             port_exclude=""
         else
-            if [ -n "$port_donor" ] && [ $(echo "$port_donor" | tr ',' '\n' | wc -l) -gt 15 ]; then
-                port_donor=$(echo "$port_donor" | tr ',' '\n' | head -n 15 | tr '\n' ',' | sed 's/,$//')
-                log_warning_terminal "
+            if [ -n "$port_donor" ]; then
+                if [ -n "$file_dns" ]; then
+                    port_limit=13
+                else
+                    port_limit=14
+                fi
+
+                port_count=$(echo "$port_donor" | tr -cd ',' | wc -c)
+                if [ $port_count -ge $port_limit ]; then
+                    port_donor=$(echo "$port_donor" | cut -d',' -f1-$port_limit)
+                    log_warning_terminal "
   Количество проксируемых портов превышает лимит
-  Будут оставлены первые 15: ${yellow}$port_donor${reset}
+  Будут оставлены первые ${port_limit} портов: ${yellow}$port_donor${reset}
   "
+                fi
             fi
-            if [ -n "$port_exclude" ] && [ $(echo "$port_exclude" | tr ',' '\n' | wc -l) -gt 15 ]; then
-                port_exclude=$(echo "$port_exclude" | tr ',' '\n' | head -n 15 | tr '\n' ',' | sed 's/,$//')
-                log_warning_terminal "
+
+            if [ -n "$port_exclude" ]; then
+                port_count=$(echo "$port_exclude" | tr -cd ',' | wc -c)
+                if [ $port_count -ge 14 ]; then
+                    port_exclude=$(echo "$port_exclude" | cut -d',' -f1-14)
+                    log_warning_terminal "
   Количество исключаемых портов превышает лимит
-  Будут оставлены первые 15: ${yellow}$port_exclude${reset}
+  Будут оставлены первые 14 портов: ${yellow}$port_exclude${reset}
   "
+                fi
             fi
         fi
     fi
@@ -340,7 +353,7 @@ get_port_exclude() {
     else
         port_exclude="$port_exclude_redirect"
     fi
-    port_exclude=$(echo "$port_exclude" | tr -dc '0-9,' | sed 's/,,*/,/g; s/^,//; s/,$//')
+    port_exclude=$(echo "$port_exclude" | tr -dc '0-9,:' | sed 's/,,*/,/g; s/^,//; s/,$//')
     echo "$port_exclude"
 }
 
@@ -828,10 +841,11 @@ proxy_start() {
                 case "$name_client" in
                     xray)
                         if [ ! -f "$install_dir/xray" ]; then
-                            log_error_terminal "Не найден файл ${yellow}$install_dir/xray${reset}
+                            log_error_terminal "
+  Не найден файл ${yellow}$install_dir/xray${reset}
 
-Вероятная причина - установка XKeen на внутренний накопитель и нехватка на нём места
-Выполните установку XKeen на внешний накопитель либо скопируйте файл вручную"
+  Вероятная причина - установка XKeen на внутренний накопитель и нехватка на нём места
+  Выполните установку XKeen на внешний накопитель либо скопируйте файл вручную"
                             exit 1
                         fi
                         export XRAY_LOCATION_ASSET="$directory_app_routing"
@@ -858,10 +872,11 @@ proxy_start() {
                             missing_files=""
                             [ ! -f "$install_dir/yq" ] && missing_files="$install_dir/yq"
                             [ ! -f "$install_dir/mihomo" ] && missing_files="$install_dir/mihomo $missing_files"
-                            log_error_terminal "Не найден(ы) файл(ы): ${yellow}${missing_files}${reset}
+                            log_error_terminal "
+  Не найден(ы) файл(ы): ${yellow}${missing_files}${reset}
 
-Вероятная причина - установка XKeen на внутренний накопитель и нехватка на нём места
-Выполните установку XKeen на внешний накопитель либо скопируйте файл(ы) вручную"
+  Вероятная причина - установка XKeen на внутренний накопитель и нехватка на нём места
+  Выполните установку XKeen на внешний накопитель либо скопируйте файл(ы) вручную"
                             exit 1
                         fi
                         if [ "$architecture" = "arm64-v8a" ]; then

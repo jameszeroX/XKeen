@@ -188,21 +188,27 @@ echo >> "$diagnostic"
 echo >> "$diagnostic"
 
 if [ "${name_client}" = "xray" ]; then
-    # inbounds
-    write_header "Содержимое файла inbounds.json"
+    # dns.json
+    if ls "$install_conf_dir"/*dns* >/dev/null 2>&1; then
+        write_header "Содержимое файла dns.json"
+        cat "$install_conf_dir"/*dns* >> /opt/diagnostic.txt
+        echo >> "$diagnostic"
+        echo >> "$diagnostic"
+    fi
+    # inbounds.json
     if ls "$install_conf_dir"/*inbounds* >/dev/null 2>&1; then
+        write_header "Содержимое файла inbounds.json"
         cat "$install_conf_dir"/*inbounds* >> /opt/diagnostic.txt
+        echo >> "$diagnostic"
+        echo >> "$diagnostic"
     fi
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-    
-    # routing
-    write_header "Содержимое файла routing.json"
+    # routing.json
     if ls "$install_conf_dir"/*routing* >/dev/null 2>&1; then
+        write_header "Содержимое файла routing.json"
         cat "$install_conf_dir"/*routing* >> /opt/diagnostic.txt
+        echo >> "$diagnostic"
+        echo >> "$diagnostic"
     fi
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
 fi
 
 echo
