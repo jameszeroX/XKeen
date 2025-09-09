@@ -2,7 +2,7 @@
 
 # Информация о службе
 # Краткое описание: Запуск / Остановка Xray
-# Версия: 2.27
+# Версия: 2.28
 
 # Окружение
 PATH="/opt/bin:/opt/sbin:/sbin:/bin:/usr/sbin:/usr/bin"
@@ -191,34 +191,6 @@ get_modules() {
   "
             port_donor=""
             port_exclude=""
-        else
-            if [ -n "$port_donor" ]; then
-                if [ -n "$file_dns" ]; then
-                    port_limit=13
-                else
-                    port_limit=14
-                fi
-
-                port_count=$(echo "$port_donor" | tr -cd ',' | wc -c)
-                if [ $port_count -ge $port_limit ]; then
-                    port_donor=$(echo "$port_donor" | cut -d',' -f1-$port_limit)
-                    log_warning_terminal "
-  Количество проксируемых портов превышает лимит
-  Будут оставлены первые ${port_limit} портов: ${yellow}$port_donor${reset}
-  "
-                fi
-            fi
-
-            if [ -n "$port_exclude" ]; then
-                port_count=$(echo "$port_exclude" | tr -cd ',' | wc -c)
-                if [ $port_count -ge 14 ]; then
-                    port_exclude=$(echo "$port_exclude" | cut -d',' -f1-14)
-                    log_warning_terminal "
-  Количество исключаемых портов превышает лимит
-  Будут оставлены первые 14 портов: ${yellow}$port_exclude${reset}
-  "
-                fi
-            fi
         fi
     fi
 
@@ -443,7 +415,6 @@ port_tproxy="$port_tproxy"
 port_donor="$port_donor"
 port_exclude="$port_exclude"
 port_dns="$port_dns"
-multiport_option=""
 policy_mark="$policy_mark"
 table_redirect="$table_redirect"
 table_tproxy="$table_tproxy"
@@ -574,6 +545,51 @@ if pidof "\$name_client" >/dev/null; then
             fi
         fi
     }
+    
+    # Cоздание множественных правил multiport
+    add_multiport_rules() {
+        family="\$1"
+        table="\$2"
+        net="\$3"
+
+        if [ -n "\$port_donor" ]; then
+            ports_to_process="\$port_donor"
+            dports_option="--dports"
+        elif [ -n "\$port_exclude" ]; then
+            ports_to_process="\$port_exclude"
+            dports_option="! --dports"
+        else
+            return
+        fi
+
+        # Преобразуем строку в список, по одному порту/диапазону на строку
+        ports_as_lines=\$(echo "\$ports_to_process" | tr ',' '\n')
+        
+        while [ -n "\$ports_as_lines" ]; do
+            # Берем первые 14 портов/диапазонов
+            chunk_as_lines=\$(echo "\$ports_as_lines" | head -n 14)
+            
+            # Собираем их обратно в строку, разделенную запятыми
+            chunk=\$(echo "\$chunk_as_lines" | tr '\n' ',' | sed 's/,\$//')
+            
+            multiport_chunk_option="-m multiport \$dports_option \$chunk"
+            
+            # Применяем правило для текущего блока портов/диапазонов
+            if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ]; then
+                if ! iptables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p "\$net" \$multiport_chunk_option -j \$name_prerouting_chain >/dev/null 2>&1; then
+                    iptables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p "\$net" \$multiport_chunk_option -j \$name_prerouting_chain >/dev/null 2>&1
+                fi
+            fi
+            if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ]; then
+                if ! ip6tables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p "\$net" \$multiport_chunk_option -j \$name_prerouting_chain >/dev/null 2>&1; then
+                    ip6tables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p "\$net" \$multiport_chunk_option -j \$name_prerouting_chain >/dev/null 2>&1
+                fi
+            fi
+            
+            # Получаем оставшиеся порты/диапазоны, начиная с 15-го
+            ports_as_lines=\$(echo "\$ports_as_lines" | tail -n +15)
+        done
+    }
 
     # Добавление цепочек PREROUTING
     add_prerouting() {
@@ -582,49 +598,23 @@ if pidof "\$name_client" >/dev/null; then
         for net in \$networks; do
             if [ "\$mode_proxy" = "Mixed" ]; then
                 case "\$net" in
-                    tcp)
-                        table="nat"
-                        if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ] &&
-                           ! iptables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p tcp \$multiport_option -j \$name_prerouting_chain >/dev/null 2>&1; then
-                            iptables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p tcp \$multiport_option -j \$name_prerouting_chain >/dev/null 2>&1
-                        fi
-                        if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ] &&
-                           ! ip6tables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p tcp \$multiport_option -j \$name_prerouting_chain >/dev/null 2>&1; then
-                            ip6tables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p tcp \$multiport_option -j \$name_prerouting_chain >/dev/null 2>&1
-                        fi
-                        ;;
-                    udp)
-                        table="mangle"
-                        if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ] &&
-                           ! iptables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p udp \$multiport_option -j \$name_prerouting_chain >/dev/null 2>&1; then
-                            iptables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p udp \$multiport_option -j \$name_prerouting_chain >/dev/null 2>&1
-                        fi
-                        if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ] &&
-                           ! ip6tables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p udp \$multiport_option -j \$name_prerouting_chain >/dev/null 2>&1; then
-                            ip6tables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p udp \$multiport_option -j \$name_prerouting_chain >/dev/null 2>&1
-                        fi
-                        ;;
-                    *) exit 0 ;;
+                    tcp) table="nat" ;;
+                    udp) table="mangle" ;;
+                    *) continue ;;
                 esac
+            fi
+
+            if [ -n "\$port_donor" ] || [ -n "\$port_exclude" ]; then
+                add_multiport_rules "\$family" "\$table" "\$net"
             else
-                if [ -n "\$multiport_option" ]; then
-                        if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ] &&
-                           ! iptables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p \$net \$multiport_option -j \$name_prerouting_chain >/dev/null 2>&1; then
-                            iptables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p \$net \$multiport_option -j \$name_prerouting_chain >/dev/null 2>&1
-                        fi
-                        if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ] &&
-                           ! ip6tables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p \$net \$multiport_option -j \$name_prerouting_chain >/dev/null 2>&1; then
-                            ip6tables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p \$net \$multiport_option -j \$name_prerouting_chain >/dev/null 2>&1
-                        fi
-                else
-                        if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ] &&
-                           ! iptables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1; then
-                            iptables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1
-                        fi
-                        if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ] &&
-                           ! ip6tables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1; then
-                            ip6tables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1
-                        fi
+                # Логика для случая, когда порты не указаны (проксирование всего трафика)
+                if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ] &&
+                   ! iptables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1; then
+                    iptables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1
+                fi
+                if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ] &&
+                   ! ip6tables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1; then
+                    ip6tables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1
                 fi
             fi
         done
@@ -660,8 +650,6 @@ if pidof "\$name_client" >/dev/null; then
     if [ -n "\$port_donor" ] || [ -n "\$port_exclude" ]; then
         load_modules xt_multiport.ko
         [ -n "\$file_dns" ] && [ -n "\$port_donor" ] && port_donor="\$port_dns,\$port_donor"
-        [ -n "\$port_donor" ] && multiport_option="-m multiport --dports \$port_donor"
-        [ -n "\$port_exclude" ] && [ -z "\$port_donor" ] && multiport_option="-m multiport ! --dports \$port_exclude"
     fi
 
     for family in iptables ip6tables; do
