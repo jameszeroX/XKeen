@@ -60,7 +60,7 @@ register_xkeen_initd() {
     old_start_file="${initd_dir}/S99xkeenstart"
     script_file="${xinstall_dir}/07_install_register/04_register_init.sh" 
     current_datetime=$(date "+%Y-%m-%d_%H-%M-%S")
-    variables_to_extract="name_client name_policy table_id table_mark port_dns ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude port_donor port_exclude check_host start_attempts check_fd arm64_fd other_fd delay_fd"
+    variables_to_extract="name_client name_policy table_id table_mark port_dns ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude port_donor port_exclude check_host1 check_host2 start_attempts check_fd arm64_fd other_fd delay_fd"
     source_main_backup=""
     source_start_backup=""
 

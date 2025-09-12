@@ -69,7 +69,8 @@ port_exclude=""
 port_dns="53"
 
 # Настройки запуска
-check_host="ya.ru"
+check_host1="ya.ru"
+check_host2="vk.ru"
 start_attempts=10
 start_auto="on"
 start_delay=20
@@ -793,11 +794,16 @@ proxy_start() {
         exit 1 ;;
     esac
 
-    if [ "$start_auto" = "on" ] && [ ! -f "/tmp/start_fd" ]; then
+    if [ "$start_auto" = "on" ] && [ ! -f "/tmp/start_fd" ] && ! [ -t 1 ]; then
         while true; do
             log_info_router "Проверка доступности интернета"
-            ping -c 1 "$check_host" > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
+            if ping -c 1 "$check_host1" > /dev/null 2>&1; then
+                log_info_router "Интернет доступен, выполняется запуск проксирования"
+                touch "/tmp/start_fd"
+                sleep $start_delay
+                proxy_start on
+                break
+            elif ping -c 1 "$check_host2" > /dev/null 2>&1; then
                 log_info_router "Интернет доступен, выполняется запуск проксирования"
                 touch "/tmp/start_fd"
                 sleep $start_delay

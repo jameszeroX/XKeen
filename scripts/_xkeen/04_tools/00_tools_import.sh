@@ -16,5 +16,4 @@
 . "$xtools_dir/07_tools_module.sh"
 . "$xtools_dir/08_tools_diagnostic.sh"
 . "$xtools_dir/09_tools_delay.sh"
-. "$xtools_dir/10_tools_fixed.sh"
 

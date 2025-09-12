@@ -1137,7 +1137,7 @@ case "$1" in
     ;;
 
 
-    -status)    # Проверка XKeen
+    -status)    # Состояние XKeen
         $initd_dir/S99xkeen status
     ;;
 
@@ -1148,7 +1148,7 @@ case "$1" in
     ;;
 
 
-    -fd)    # Смена режима контроля открытых файловых дескрипторов
+    -fd)    # Смена режима контроля файловых дескрипторов
         if grep -q 'check_fd="on"' $initd_dir/S99xkeen; then
             sed -i 's/check_fd="on"/check_fd="off"/' $initd_dir/S99xkeen
             echo -e "  Контроль файловых дескрипторов, открытых прокси-клиентом ${red}отключен${reset}. ${yellow}Перезагрузите роутер!${reset}"
@@ -1251,30 +1251,6 @@ case "$1" in
         choice_channel_xkeen
         change_channel_xkeen
 
-    ;;
-
-
-    -fixed)
-        clear
-        entware_fixed
-        xkeen_info
-
-        download_xray
-
-        if [ -z $bypass_xray ]; then
-            install_xray
-            install_configs
-            info_version_xray
-            delete_register_xray
-            register_xray_list
-            register_xray_control
-            register_xray_status
-
-            register_xkeen_initd
-
-            fixed_register_packages
-        fi
-        delete_tmp
     ;;
 
 
