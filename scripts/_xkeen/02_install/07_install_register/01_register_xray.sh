@@ -40,8 +40,6 @@ register_xray_list() {
     echo "/opt/etc/xray/dat" >> xray_s.list
     echo "/opt/etc/xray" >> xray_s.list
     echo "/opt/sbin/xray" >> xray_s.list
-    echo "/opt/etc/init.d/S24xray" >> xray_s.list
-    echo "/opt/etc/init.d/S99xkeenstart" >> xray_s.list
 }
 
 register_xray_status() {
@@ -58,90 +56,4 @@ register_xray_status() {
 
     # Объединение существующего содержимого и новой записи
     echo -e "\n$(cat new_entry.txt)" >> "$status_file"
-}
-
-register_xray_initd() {
-    initd_file="${initd_dir}/S24xray"
-    start_file="${initd_dir}/S99xkeenstart"
-    s24xray_filename="${current_datetime}_S24xray"
-    s99start_filename="${current_datetime}_S99xkeenstart"
-    backup_path="${backups_dir}/${s24xray_filename}"
-    backup_paths="${backups_dir}/${s99start_filename}"
-    script_file="${xinstall_dir}/07_install_register/04_register_init.sh"
-    variables_to_extract="name_client name_policy table_id table_mark port_dns ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude port_donor port_exclude start_attempts start_delay start_auto check_fd arm64_fd other_fd delay_fd"
-    temp_file=$(mktemp)
-
-    if [ -f "${start_file}" ]; then
-        mv "${start_file}" "${backup_paths}"
-        if grep -q "^autostart=" "${backup_paths}"; then
-            autostart_value=$(grep "^autostart=" "${backup_paths}" | head -n 1 | cut -d'=' -f2)
-        fi
-        if grep -q "^start_delay=" "${backup_paths}"; then
-            start_delay_value=$(grep "^start_delay=" "${backup_paths}" | head -n 1 | cut -d'=' -f2)
-        fi
-    elif [ -f "${initd_file}" ]; then
-        if grep -q "^start_auto=" "${initd_file}"; then
-            autostart_value=$(grep "^start_auto=" "${initd_file}" | head -n 1 | cut -d'=' -f2)
-        fi
-    fi
-
-    autostart="${autostart_value:-\"on\"}"
-    start_delay="${start_delay_value:-20}"
-
-    if [ ! -e "${initd_file}" ]; then
-        cp "${script_file}" "${initd_file}"
-        chmod +x "${initd_file}"
-        echo -e "  Файл автозапуска ${yellow}создан и обновлен${reset}"
-    else
-        mv "${initd_file}" "${backup_path}"
-        cat "${script_file}" > "${initd_file}"
-
-        for var in $variables_to_extract; do
-            if grep -q "^${var}=" "${backup_path}"; then
-                value=$(grep "^${var}=" "${backup_path}" | head -n 1)
-                position=$(grep -n "^${var}=" "${initd_file}" | head -n 1 | cut -d: -f1)
-
-                if [ -n "$position" ]; then
-                    sed -i "${position}s#.*#${value}#" "${initd_file}"
-                fi
-            fi
-        done
-    fi
-
-    chmod +x "${initd_file}"
-
-}
-
-register_autostart() {
-    [ -f "/opt/etc/init.d/S99xkeenrestart" ] && rm "/opt/etc/init.d/S99xkeenrestart"
-    cat << EOF > "${initd_dir}/S99xkeenstart"
-#!/bin/sh
-#
-autostart=${autostart}
-start_delay=${start_delay}
-#
-log_info_router() {
-    logger -p notice -t "XKeen" "\$1"
-}
-[ -f "/opt/etc/init.d/S99xkeenrestart" ] && rm "/opt/etc/init.d/S99xkeenrestart"
-if [ "\${autostart}" = "on" ]; then
-    HOST="ya.ru"
-    while true; do
-        log_info_router "Проверка доступности интернета"
-        ping -c 1 "\$HOST" > /dev/null 2>&1
-        if [ \$? -eq 0 ]; then
-            log_info_router "Интернет доступен, выполняется запуск проксирования"
-            touch "/tmp/start_fd"
-            sleep \$start_delay
-            /opt/etc/init.d/S24xray restart on
-            break
-        else
-            log_info_router "Интернет не доступен, ожидание доступности..."
-        fi
-        sleep 5
-    done
-fi
-EOF
-
-    chmod +x "${initd_dir}/S99xkeenstart"
 }

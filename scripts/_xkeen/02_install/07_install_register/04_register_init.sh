@@ -68,25 +68,13 @@ port_donor=""
 port_exclude=""
 port_dns="53"
 
-ip4_supported=$(ip -4 addr show | grep -q "inet " && echo true || echo false)
-ip6_supported=$(ip -6 addr show | grep -q "inet6 " && echo true || echo false)
-
-iptables_supported=false
-if [ $ip4_supported = "true" ]; then
-    iptables_supported=$(command -v iptables >/dev/null 2>&1 && echo true)
-fi
-
-ip6tables_supported=false
-if [ $ip6_supported = "true" ]; then
-    ip6tables_supported=$(command -v ip6tables >/dev/null 2>&1 && echo true)
-fi
-
 # Настройки запуска
+check_host="ya.ru"
 start_attempts=10
-start_delay=0
 start_auto="on"
+start_delay=20
 
-# Контроль открытых файловых дескрипторов
+# Контроль файловых дескрипторов
 check_fd="off"
 arm64_fd=40000
 other_fd=10000
@@ -120,6 +108,19 @@ log_clean() {
     [ "$name_client" = "xray" ] && : > "$log_access" && : > "$log_error"
 }
 
+ip4_supported=$(ip -4 addr show | grep -q "inet " && echo true || echo false)
+ip6_supported=$(ip -6 addr show | grep -q "inet6 " && echo true || echo false)
+
+iptables_supported=false
+if [ $ip4_supported = "true" ]; then
+    iptables_supported=$(command -v iptables >/dev/null 2>&1 && echo true)
+fi
+
+ip6tables_supported=false
+if [ $ip6_supported = "true" ]; then
+    ip6tables_supported=$(command -v ip6tables >/dev/null 2>&1 && echo true)
+fi
+
 get_user_ipv4_excludes() {
     if [ -f "$file_exclude" ]; then
         echo -n " "
@@ -136,6 +137,11 @@ get_user_ipv6_excludes() {
     else
         echo ""
     fi
+}
+
+# Проверка статуса прокси-клиента
+proxy_status() {
+    pidof "$name_client" >/dev/null
 }
 
 # Поиск конфигураций inbounds
@@ -757,11 +763,6 @@ clean_firewall() {
     fi
 }
 
-# Проверка статуса прокси-клиента
-proxy_status() {
-    pidof "$name_client" >/dev/null
-}
-
 # Мониторинг файловых дескрипторов
 monitor_fd() {
     if ! opkg list-installed | grep -q "^coreutils-nohup"; then
@@ -791,119 +792,137 @@ proxy_start() {
         log_error_terminal "Запуск XKeen возможен только на Keenetic в режиме ${green}роутера${reset}"
         exit 1 ;;
     esac
-    start_manual="$1"
-    if [ "$start_manual" = "on" ] || [ "$start_auto" = "on" ]; then
-        log_info_router "Инициирован запуск прокси-клиента"
-        log_clean
-        port_redirect=$(get_port_redirect)
-        network_redirect=$(get_network_redirect)
-        port_tproxy=$(get_port_tproxy)
-        network_tproxy=$(get_network_tproxy)
-        mode_proxy=$(get_mode_proxy)
-        if [ "$mode_proxy" != "Other" ]; then
-            policy_mark=$(get_policy_mark)
-            networks=$(echo "$network_redirect $network_tproxy" | tr ',' ' ' | tr -s ' ' | sort -u | tr '\n' ' ' | sed 's/^ //; s/ $//')
-            if [ -n "$policy_mark" ] && [ -z "$port_donor" ]; then
-                port_exclude=$(get_port_exclude)
+
+    if [ "$start_auto" = "on" ] && [ ! -f "/tmp/start_fd" ]; then
+        while true; do
+            log_info_router "Проверка доступности интернета"
+            ping -c 1 "$check_host" > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+                log_info_router "Интернет доступен, выполняется запуск проксирования"
+                touch "/tmp/start_fd"
+                sleep $start_delay
+                proxy_start on
+                break
+            else
+                log_info_router "Интернет не доступен, ожидание доступности..."
             fi
-            if ! proxy_status && { [ -n "$port_donor" ] || [ -n "$port_exclude" ] || [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed" ]; }; then
-                get_modules
+            sleep 5
+        done
+    else
+        start_manual="$1"
+        if [ "$start_manual" = "on" ] || [ -z "$start_manual" ]; then
+            log_info_router "Инициирован запуск прокси-клиента"
+            log_clean
+            port_redirect=$(get_port_redirect)
+            network_redirect=$(get_network_redirect)
+            port_tproxy=$(get_port_tproxy)
+            network_tproxy=$(get_network_tproxy)
+            mode_proxy=$(get_mode_proxy)
+            if [ "$mode_proxy" != "Other" ]; then
+                policy_mark=$(get_policy_mark)
+                networks=$(echo "$network_redirect $network_tproxy" | tr ',' ' ' | tr -s ' ' | sort -u | tr '\n' ' ' | sed 's/^ //; s/ $//')
+                if [ -n "$policy_mark" ] && [ -z "$port_donor" ]; then
+                    port_exclude=$(get_port_exclude)
+                fi
+                if ! proxy_status && { [ -n "$port_donor" ] || [ -n "$port_exclude" ] || [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed" ]; }; then
+                    get_modules
+                fi
+                if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed" ]; then
+                    get_keenetic_port
+                fi
             fi
-            if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed" ]; then
-                get_keenetic_port
-            fi
-        fi
-        if proxy_status; then
-            echo -e "  Прокси-клиент уже ${green}запущен${reset}"
-            log_error_terminal "Не удалось запустить $name_client, так как он уже запущен"
-        else
-            delay_increment=1
-            current_delay=$start_delay
-            attempt=1
-            create_user
-            . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
-            status_file="/opt/lib/opkg/status"
-            info_cpu
-            install_dir="/opt/sbin"
-            while [ "$attempt" -le "$start_attempts" ]; do
-                case "$name_client" in
-                    xray)
-                        if [ ! -f "$install_dir/xray" ]; then
-                            log_error_terminal "
+            if proxy_status; then
+                echo -e "  Прокси-клиент уже ${green}запущен${reset}"
+                log_error_terminal "Не удалось запустить $name_client, так как он уже запущен"
+            else
+                delay_increment=1
+                current_delay=0
+                attempt=1
+                create_user
+                . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
+                status_file="/opt/lib/opkg/status"
+                info_cpu
+                install_dir="/opt/sbin"
+                while [ "$attempt" -le "$start_attempts" ]; do
+                    case "$name_client" in
+                        xray)
+                            if [ ! -f "$install_dir/xray" ]; then
+                                log_error_terminal "
   Не найден файл ${yellow}$install_dir/xray${reset}
 
   Вероятная причина - установка XKeen на внутреннюю память и нехватка на ней места
   Выполните установку XKeen на внешний накопитель либо скопируйте файл вручную"
-                            exit 1
-                        fi
-                        export XRAY_LOCATION_ASSET="$directory_app_routing"
-                        export XRAY_LOCATION_CONFDIR="$directory_user_settings"
-                        find "$directory_user_settings" -name '._*.json' -type f -delete
-                        if [ "$architecture" = "arm64-v8a" ]; then
-                            if [ -n "$fd_out" ]; then
-                                ulimit -SHn "$arm64_fd" && nohup su -c "$name_client run" "$name_profile" >/dev/null 2>&1 &
-                                unset fd_out
-                            else
-                                ulimit -SHn "$arm64_fd" && su -c "$name_client run" "$name_profile" &
+                                exit 1
                             fi
-                        else
-                            if [ -n "$fd_out" ]; then
-                                ulimit -SHn "$other_fd" && nohup su -c "$name_client run" "$name_profile" >/dev/null 2>&1 &
-                                unset fd_out
+                            export XRAY_LOCATION_ASSET="$directory_app_routing"
+                            export XRAY_LOCATION_CONFDIR="$directory_user_settings"
+                            find "$directory_user_settings" -name '._*.json' -type f -delete
+                            if [ "$architecture" = "arm64-v8a" ]; then
+                                if [ -n "$fd_out" ]; then
+                                    ulimit -SHn "$arm64_fd" && nohup su -c "$name_client run" "$name_profile" >/dev/null 2>&1 &
+                                    unset fd_out
+                                else
+                                    ulimit -SHn "$arm64_fd" && su -c "$name_client run" "$name_profile" &
+                                fi
                             else
-                                ulimit -SHn "$other_fd" && su -c "$name_client run" "$name_profile" &
+                                if [ -n "$fd_out" ]; then
+                                    ulimit -SHn "$other_fd" && nohup su -c "$name_client run" "$name_profile" >/dev/null 2>&1 &
+                                    unset fd_out
+                                else
+                                    ulimit -SHn "$other_fd" && su -c "$name_client run" "$name_profile" &
+                                fi
                             fi
-                        fi
-                    ;;
-                    mihomo)
-                        if [ ! -f "$install_dir/mihomo" ] || [ ! -f "$install_dir/yq" ]; then
-                            missing_files=""
-                            [ ! -f "$install_dir/yq" ] && missing_files="$install_dir/yq"
-                            [ ! -f "$install_dir/mihomo" ] && missing_files="$install_dir/mihomo $missing_files"
-                            log_error_terminal "
+                        ;;
+                        mihomo)
+                            if [ ! -f "$install_dir/mihomo" ] || [ ! -f "$install_dir/yq" ]; then
+                                missing_files=""
+                                [ ! -f "$install_dir/yq" ] && missing_files="$install_dir/yq"
+                                [ ! -f "$install_dir/mihomo" ] && missing_files="$install_dir/mihomo $missing_files"
+                                log_error_terminal "
   Не найден(ы) файл(ы): ${yellow}${missing_files}${reset}
 
   Вероятная причина - установка XKeen на внутреннюю память и нехватка на ней места
   Выполните установку XKeen на внешний накопитель либо скопируйте файл(ы) вручную"
-                            exit 1
-                        fi
-                        if [ "$architecture" = "arm64-v8a" ]; then
-                            if [ -n "$fd_out" ]; then
-                                ulimit -SHn "$arm64_fd" && nohup su -c "$name_client -d $directory_configs_app" "$name_profile" >/dev/null 2>&1 &
-                                unset fd_out
-                            else
-                                ulimit -SHn "$arm64_fd" && su -c "$name_client -d $directory_configs_app" "$name_profile" &
+                                exit 1
                             fi
-                        else
-                            if [ -n "$fd_out" ]; then
-                                ulimit -SHn "$other_fd" && nohup su -c "$name_client -d $directory_configs_app" "$name_profile" >/dev/null 2>&1 &
-                                unset fd_out
+                            if [ "$architecture" = "arm64-v8a" ]; then
+                                if [ -n "$fd_out" ]; then
+                                    ulimit -SHn "$arm64_fd" && nohup su -c "$name_client -d $directory_configs_app" "$name_profile" >/dev/null 2>&1 &
+                                    unset fd_out
+                                else
+                                    ulimit -SHn "$arm64_fd" && su -c "$name_client -d $directory_configs_app" "$name_profile" &
+                                fi
                             else
-                                ulimit -SHn "$other_fd" && su -c "$name_client -d $directory_configs_app" "$name_profile" &
+                                if [ -n "$fd_out" ]; then
+                                    ulimit -SHn "$other_fd" && nohup su -c "$name_client -d $directory_configs_app" "$name_profile" >/dev/null 2>&1 &
+                                    unset fd_out
+                                else
+                                    ulimit -SHn "$other_fd" && su -c "$name_client -d $directory_configs_app" "$name_profile" &
+                                fi
                             fi
+                            ;;
+                        *) "$name_client" run -C "$directory_user_settings" & ;;
+                    esac
+                    sleep 2 && sleep "$current_delay"
+                    if proxy_status; then
+                        [ "$mode_proxy" != "Other" ] && configure_firewall
+                        echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${yellow}${mode_proxy}${reset}"
+                        log_info_router "Прокси-клиент успешно запущен"
+                        if [ "$check_fd" = "on" ] && [ -f "/tmp/start_fd" ] && [ ! -f "/tmp/observer_fd" ]; then
+                            touch "/tmp/observer_fd"
+                            monitor_fd &
                         fi
-                        ;;
-                    *) "$name_client" run -C "$directory_user_settings" & ;;
-                esac
-                sleep 2 && sleep "$current_delay"
-                if proxy_status; then
-                    [ "$mode_proxy" != "Other" ] && configure_firewall
-                    echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${yellow}${mode_proxy}${reset}"
-                    log_info_router "Прокси-клиент успешно запущен"
-                    if [ "$check_fd" = "on" ] && [ -f "/tmp/start_fd" ] && [ ! -f "/tmp/observer_fd" ]; then
-                        touch "/tmp/observer_fd"
-                        monitor_fd &
+                        return 0
                     fi
-                    return 0
-                fi
-                current_delay=$((current_delay + delay_increment))
-                attempt=$((attempt + 1))
-            done
-            echo -e "  ${red}Не удалось запустить${reset} прокси-клиент"
-            log_error_terminal "Не удалось запустить прокси-клиент"
+                    current_delay=$((current_delay + delay_increment))
+                    attempt=$((attempt + 1))
+                done
+                echo -e "  ${red}Не удалось запустить${reset} прокси-клиент"
+                log_error_terminal "Не удалось запустить прокси-клиент"
+            fi
+        else
+            clean_firewall
         fi
-    else
-        clean_firewall
     fi
 }
 
@@ -914,7 +933,7 @@ proxy_stop() {
     else
         log_info_router "Инициирована остановка прокси-клиента"
         delay_increment=1
-        current_delay=$start_delay
+        current_delay=0
         attempt=1
         while [ "$attempt" -le "$start_attempts" ]; do
             clean_firewall

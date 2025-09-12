@@ -69,7 +69,7 @@ install_geosite() {
     # Установка GeoSite ZKeen
     if [ "$install_zkeen_geosite" = true ] || [ "$update_zkeen_geosite" = true ]; then
         datfile="geosite_zkeen.dat"
-        [ -L "$geo_dir/geosite_zkeen.dat" ] || [ ! -e "$geo_dir/geosite_zkeen.dat" ] && datfile="zkeen.dat"
+        [ -L "$geo_dir/geosite_zkeen.dat" ] || [ -f "$geo_dir/zkeen.dat" ] && datfile="zkeen.dat"
         process_geosite_file \
             "$zkeen_url" \
             "$datfile" \

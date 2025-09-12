@@ -181,16 +181,16 @@ logs_delete_register_xkeen_info_console() {
     fi
 }
 
-logs_register_xray_initd_info_console() {
+logs_register_xkeen_initd_info_console() {
     info_content=
     error_content=
 
-    initd_file="$initd_dir/S24xray"
+    initd_file="$initd_dir/S99xkeen"
 
     if [ -f "$initd_file" ]; then
-        info_content="  ${green}Успешно${reset}: init скрипт Xray найден в директории '$initd_dir/'"
+        info_content="  ${green}Успешно${reset}: init скрипт XKeen найден в директории '$initd_dir/'"
     else
-        error_content="  ${red}Ошибка${reset}: init скрипт Xray не найден в директории '$initd_dir/'"
+        error_content="  ${red}Ошибка${reset}: init скрипт XKeen не найден в директории '$initd_dir/'"
     fi
 
     if [ -n "$info_content" ]; then

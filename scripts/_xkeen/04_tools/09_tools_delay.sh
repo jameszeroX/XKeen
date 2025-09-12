@@ -16,12 +16,10 @@ delay_autostart() {
     new_delay="$1"
     target_file=""
 
-    if [ -f "$initd_dir/S99xkeenstart" ]; then
-        target_file="$initd_dir/S99xkeenstart"
-    elif [ -f "$initd_dir/S24xray" ]; then
-        target_file="$initd_dir/S24xray"
+    if [ -f "$initd_dir/S99xkeen" ]; then
+        target_file="$initd_dir/S99xkeen"
     else
-        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска (S99xkeenstart или S24xray)"
+        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска S99xkeen"
         return 1
     fi
 

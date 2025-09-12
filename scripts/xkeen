@@ -21,8 +21,7 @@ install_xkeen_rename() {
 install_xkeen_rename
 
 add_chmod_init() {
-    chmod +x $initd_dir/S24xray
-    [ -f "$initd_dir/S99xkeenstart" ] && chmod +x $initd_dir/S99xkeenstart
+    chmod +x $initd_dir/S99xkeen
 }
 
 # Импортируем модули
@@ -206,8 +205,7 @@ case "$1" in
 
             fixed_register_packages
 
-            register_xray_initd
-            register_autostart
+            register_xkeen_initd
             sleep 2
 
             clear
@@ -216,13 +214,13 @@ case "$1" in
         fi
 
         if [ "$xray_installed" != "installed" ] && [ "$mihomo_installed" = "installed" ]; then
-            if [ -f "$install_dir/mihomo" ] && [ -f "$install_dir/yq" ] && grep -q 'name_client="xray"' $initd_dir/S24xray; then
-                sed -i 's/name_client="xray"/name_client="mihomo"/' $initd_dir/S24xray
+            if [ -f "$install_dir/mihomo" ] && [ -f "$install_dir/yq" ] && grep -q 'name_client="xray"' $initd_dir/S99xkeen; then
+                sed -i 's/name_client="xray"/name_client="mihomo"/' $initd_dir/S99xkeen
                 add_chmod_init
             fi
         elif  [ "$xray_installed" = "installed" ] && [ "$mihomo_installed" != "installed" ]; then
-            if [ -f "$install_dir/xray" ] && grep -q 'name_client="mihomo"' $initd_dir/S24xray; then
-                sed -i 's/name_client="mihomo"/name_client="xray"/' $initd_dir/S24xray
+            if [ -f "$install_dir/xray" ] && grep -q 'name_client="mihomo"' $initd_dir/S99xkeen; then
+                sed -i 's/name_client="mihomo"/name_client="xray"/' $initd_dir/S99xkeen
                 add_chmod_init
             fi
         fi
@@ -245,12 +243,12 @@ case "$1" in
         echo
 
         if [ "$xray_installed" = "installed" ] || [ "$mihomo_installed" = "installed" ]; then
-            if grep -q 'name_client="xray"' $initd_dir/S24xray; then
+            if grep -q 'name_client="xray"' $initd_dir/S99xkeen; then
                 echo -e "  1. Настройте конфигурацию Xray по пути '${yellow}$install_conf_dir/${reset}'"
                 echo -e "  2. Запустите XKeen командой ${yellow}xkeen -start${reset}"
                 echo -e "  3. ${green}Enjoy!${reset}"
                 echo
-            elif grep -q 'name_client="mihomo"' $initd_dir/S24xray; then
+            elif grep -q 'name_client="mihomo"' $initd_dir/S99xkeen; then
                 echo -e "  1. Настройте конфигурацию Mihomo в файле '${yellow}$mihomo_conf_dir/config.yaml${reset}'"
                 echo -e "  2. Запустите XKeen командой ${yellow}xkeen -start${reset}"
                 echo -e "  3. ${green}Enjoy!${reset}"
@@ -259,14 +257,14 @@ case "$1" in
         fi
 
         if [ "$xray_installed" = "installed" ] && [ "$mihomo_installed" = "installed" ]; then
-            if grep -q 'name_client="xray"' $initd_dir/S24xray; then
+            if grep -q 'name_client="xray"' $initd_dir/S99xkeen; then
                 echo -e "  Если хотите переключить XKeen на ядро ${yellow}Mihomo${reset}"
                 echo
                 echo -e "  1. Настройте конфигурацию Mihomo в файле '${yellow}$mihomo_conf_dir/config.yaml${reset}'"
                 echo -e "  2. Переключите ядро проксирования командой ${yellow}xkeen -mihomo${reset}"
                 echo -e "  3. Запустите XKeen командой ${yellow}xkeen -start${reset}"
                 echo -e "  4. ${green}Enjoy!${reset}"
-            elif grep -q 'name_client="mihomo"' $initd_dir/S24xray; then
+            elif grep -q 'name_client="mihomo"' $initd_dir/S99xkeen; then
                 echo -e "  Если хотите переключить XKeen на ядро ${yellow}Xray${reset}"
                 echo
                 echo -e "  1. Настройте конфигурацию Xray по пути '${yellow}$install_conf_dir/${reset}'"
@@ -380,8 +378,7 @@ case "$1" in
         register_xkeen_status
         logs_register_xkeen_status_info_console
 
-        register_xray_initd
-        register_autostart
+        register_xkeen_initd
 
         fixed_register_packages
 
@@ -431,7 +428,7 @@ case "$1" in
             install_geosite
 
             if pidof xray >/dev/null; then
-                $initd_dir/S24xray restart on >/dev/null 2>&1
+                $initd_dir/S99xkeen restart on >/dev/null 2>&1
             fi
 
             echo -e "  Обновление установленных баз GeoFile ${green}выполнено${reset}"
@@ -479,8 +476,7 @@ case "$1" in
         logs_register_xkeen_status_info_console
 
         register_cron_initd
-        register_xray_initd
-        register_autostart
+        register_xkeen_initd
         choice_canel_cron_select=true
         update_cron_geofile_task
 
@@ -488,7 +484,7 @@ case "$1" in
         delete_tmp
 
         if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-            $initd_dir/S24xray restart on >/dev/null 2>&1
+            $initd_dir/S99xkeen restart on >/dev/null 2>&1
         fi
 
         echo -e "  Обновление XKeen ${green}выполнено${reset}"
@@ -527,7 +523,7 @@ case "$1" in
 
             sleep 2
             if pidof xray >/dev/null; then
-                $initd_dir/S24xray restart on >/dev/null 2>&1
+                $initd_dir/S99xkeen restart on >/dev/null 2>&1
             fi
 
             echo
@@ -559,7 +555,7 @@ case "$1" in
 
             if [ "$mihomo_installed" = "installed" ]; then
                 if pidof mihomo >/dev/null; then
-                    $initd_dir/S24xray restart on >/dev/null 2>&1
+                    $initd_dir/S99xkeen restart on >/dev/null 2>&1
                 fi
                 echo
                 echo -e "  Обновление ядра ${yellow}Mihomo${reset} ${green}выполнено${reset}"
@@ -611,15 +607,14 @@ case "$1" in
 
     -ri)    # Создать файл автозапуска XKeen
         clear
-        $initd_dir/S24xray stop >/dev/null 2>&1
-        [ -e "$initd_dir/S24Xray" ] && rm -f "$initd_dir/S24Xray"
+        $initd_dir/S99xkeen stop >/dev/null 2>&1
+        [ -e "$initd_dir/S99xkeen" ] && rm -f "$initd_dir/S99xkeen"
 
         echo -e "  Создание файла автозапуска ${yellow}XKeen${reset}"
         sleep 1
 
-        register_xray_initd
-        register_autostart
-        logs_register_xray_initd_info_console
+        register_xkeen_initd
+        logs_register_xkeen_initd_info_console
 
         echo
         echo -e "  Создание файла автозапуска XKeen ${green}выполнено${reset}"
@@ -648,7 +643,7 @@ case "$1" in
         command -v xray >/dev/null 2>&1 || { echo -e "  Xray ${red}не установлен${reset}"; exit 1; }
         echo -e "  Удаление ${yellow}Xray${reset}"
 
-        $initd_dir/S24xray stop >/dev/null 2>&1
+        $initd_dir/S99xkeen stop >/dev/null 2>&1
         opkg remove xray_s
         rm -f "$install_dir/xray"
 
@@ -669,7 +664,7 @@ case "$1" in
         command -v mihomo >/dev/null 2>&1 || { echo -e "  Mihomo ${red}не установлен${reset}"; exit 1; }
         echo -e "  Удаление ${yellow}Mihomo${reset}"
 
-        $initd_dir/S24xray stop >/dev/null 2>&1
+        $initd_dir/S99xkeen stop >/dev/null 2>&1
         opkg remove mihomo_s
         opkg remove yq_s
         rm -f "$install_dir/mihomo" "$install_dir/yq"
@@ -820,7 +815,7 @@ case "$1" in
         echo
         echo -e "  ${yellow}Удаление${reset} Xray"
 
-        $initd_dir/S24xray stop >/dev/null 2>&1
+        $initd_dir/S99xkeen stop >/dev/null 2>&1
         opkg remove xray_s
         rm -f "$install_dir/xray"
         rm -rf "/opt/etc/xray"
@@ -991,8 +986,7 @@ case "$1" in
         logs_register_xkeen_status_info_console
 
         register_cron_initd
-        register_xray_initd
-        register_autostart
+        register_xkeen_initd
         choice_canel_cron_select=true
         update_cron_geofile_task
 
@@ -1000,7 +994,7 @@ case "$1" in
         delete_tmp
 
         if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-            $initd_dir/S24xray restart on >/dev/null 2>&1
+            $initd_dir/S99xkeen restart on >/dev/null 2>&1
         fi
 
         echo
@@ -1126,25 +1120,25 @@ case "$1" in
 
     -start)    # Запуск XKeen
         add_chmod_init
-        $initd_dir/S24xray start on
+        $initd_dir/S99xkeen start on
         ip route flush cache
     ;;
 
 
     -stop)    # Остановка XKeen
         add_chmod_init
-        $initd_dir/S24xray stop
+        $initd_dir/S99xkeen stop
     ;;
 
 
     -restart)    # Перезапуск XKeen
         add_chmod_init
-        $initd_dir/S24xray restart on
+        $initd_dir/S99xkeen restart on
     ;;
 
 
     -status)    # Проверка XKeen
-        $initd_dir/S24xray status
+        $initd_dir/S99xkeen status
     ;;
 
 
@@ -1155,11 +1149,11 @@ case "$1" in
 
 
     -fd)    # Смена режима контроля открытых файловых дескрипторов
-        if grep -q 'check_fd="on"' $initd_dir/S24xray; then
-            sed -i 's/check_fd="on"/check_fd="off"/' $initd_dir/S24xray
+        if grep -q 'check_fd="on"' $initd_dir/S99xkeen; then
+            sed -i 's/check_fd="on"/check_fd="off"/' $initd_dir/S99xkeen
             echo -e "  Контроль файловых дескрипторов, открытых прокси-клиентом ${red}отключен${reset}. ${yellow}Перезагрузите роутер!${reset}"
         else
-            sed -i 's/check_fd="off"/check_fd="on"/' $initd_dir/S24xray
+            sed -i 's/check_fd="off"/check_fd="on"/' $initd_dir/S99xkeen
             echo -e "  Контроль файловых дескрипторов, открытых прокси-клиентом ${green}включен${reset}. ${yellow}Перезагрузите роутер!${reset}"
         fi
         add_chmod_init
@@ -1172,7 +1166,7 @@ case "$1" in
         sleep 2
         add_chmod_init
         if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-            $initd_dir/S24xray restart on >/dev/null 2>&1
+            $initd_dir/S99xkeen restart on >/dev/null 2>&1
         fi
     ;;
 
@@ -1183,13 +1177,13 @@ case "$1" in
         sleep 2
         add_chmod_init
         if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-            $initd_dir/S24xray restart on >/dev/null 2>&1
+            $initd_dir/S99xkeen restart on >/dev/null 2>&1
         fi
     ;;
 
 
     -cp)    # Получить список портов проксирования
-        port_donor=$(grep -m1 '^port_donor=' /opt/etc/init.d/S24xray | cut -d'=' -f2 | tr -d '"' | tr ' ' '\n' | sed 's/^/     /')
+        port_donor=$(grep -m1 '^port_donor=' /opt/etc/init.d/S99xkeen | cut -d'=' -f2 | tr -d '"' | tr ' ' '\n' | sed 's/^/     /')
         if [ -z "$port_donor" ] || [ "$port_donor" = "     " ]
         then
             echo -e "  Прокси-клиент работает ${yellow}на всех портах${reset}"
@@ -1205,7 +1199,7 @@ case "$1" in
         sleep 2
         add_chmod_init
         if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-            $initd_dir/S24xray restart on >/dev/null 2>&1
+            $initd_dir/S99xkeen restart on >/dev/null 2>&1
         fi
     ;;
 
@@ -1216,13 +1210,13 @@ case "$1" in
         sleep 2
         add_chmod_init
         if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-            $initd_dir/S24xray restart on >/dev/null 2>&1
+            $initd_dir/S99xkeen restart on >/dev/null 2>&1
         fi
     ;;
 
 
     -cpe)    # Получить список портов, исключёных из проксирования
-        port_exclude=$(grep -m1 '^port_exclude=' /opt/etc/init.d/S24xray | cut -d'=' -f2 | tr -d '"' | tr ' ' '\n' | sed 's/^/     /')
+        port_exclude=$(grep -m1 '^port_exclude=' /opt/etc/init.d/S99xkeen | cut -d'=' -f2 | tr -d '"' | tr ' ' '\n' | sed 's/^/     /')
         if [ -z "$port_exclude" ] || [ "$port_exclude" = "     " ]
         then
             echo -e "  ${yellow}Нет портов${reset} исключенных из проксирования"
@@ -1276,8 +1270,7 @@ case "$1" in
             register_xray_control
             register_xray_status
 
-            register_xray_initd
-            register_autostart
+            register_xkeen_initd
 
             fixed_register_packages
         fi

@@ -54,13 +54,13 @@ choice_add_proxy_cores() {
 # Смена ядра проксирования на Xray
 choice_xray_core() {  
     command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Ошибка${reset}: Ядро Xray не установлено. Выполните установку командой ${yellow}xkeen -ux${reset}"; exit 1; }
-    if grep -q 'name_client="xray"' $initd_dir/S24xray; then
+    if grep -q 'name_client="xray"' $initd_dir/S99xkeen; then
         echo -e " Смена ядра ${red}не выполнена${reset}. Устройство уже работает на ядре ${yellow}Xray${reset}"
-    elif grep -q 'name_client="mihomo"' $initd_dir/S24xray; then
+    elif grep -q 'name_client="mihomo"' $initd_dir/S99xkeen; then
         if pidof "mihomo" >/dev/null; then
-            $initd_dir/S24xray stop
+            $initd_dir/S99xkeen stop
         fi
-        sed -i 's/name_client="mihomo"/name_client="xray"/' $initd_dir/S24xray
+        sed -i 's/name_client="mihomo"/name_client="xray"/' $initd_dir/S99xkeen
         add_chmod_init
         echo -e "  ${green}Выполнена${reset} смена ядра на ${yellow}Xray${reset}"
         echo -e "  Настройте конфигурацию по пути '${yellow}$install_conf_dir/${reset}'"
@@ -74,13 +74,13 @@ choice_xray_core() {
 choice_mihomo_core() {
     command -v mihomo >/dev/null 2>&1 || { echo -e "  ${red}Ошибка${reset}: Ядро Mihomo не установлено. Выполните установку командой ${yellow}xkeen -um${reset}"; exit 1; }
     command -v yq >/dev/null 2>&1 || { echo -e "  ${red}Ошибка${reset}: не установлен парсер конфигурационных файлов Mihomo - ${yellow}Yq${reset}"; exit 1; }
-    if grep -q 'name_client="mihomo"' $initd_dir/S24xray; then
+    if grep -q 'name_client="mihomo"' $initd_dir/S99xkeen; then
         echo -e " Смена ядра ${red}не выполнена${reset}. Устройство уже работает на ядре ${yellow}Mihomo${reset}"
-    elif [ -f "$install_dir/mihomo" ] && [ -f "$install_dir/yq" ] && grep -q 'name_client="xray"' $initd_dir/S24xray; then
+    elif [ -f "$install_dir/mihomo" ] && [ -f "$install_dir/yq" ] && grep -q 'name_client="xray"' $initd_dir/S99xkeen; then
         if pidof "xray" >/dev/null; then
-            $initd_dir/S24xray stop
+            $initd_dir/S99xkeen stop
         fi
-        sed -i 's/name_client="xray"/name_client="mihomo"/' $initd_dir/S24xray
+        sed -i 's/name_client="xray"/name_client="mihomo"/' $initd_dir/S99xkeen
         add_chmod_init
         echo -e "  ${green}Выполнена${reset} смена ядра на ${yellow}Mihomo${reset}"
         echo -e "  Настройте конфигурацию по пути '${yellow}$mihomo_conf_dir/${reset}'"

@@ -87,7 +87,7 @@ add_ports_donor() {
 
     # Проверяем наличие исключенных портов
     excluded_ports=$(
-        awk -F= '/port_exclude/{print $2; exit}' $initd_dir/S24xray \
+        awk -F= '/port_exclude/{print $2; exit}' $initd_dir/S99xkeen \
         | tr -d '"' | tr -d '[:space:]'
     )
 
@@ -100,7 +100,7 @@ add_ports_donor() {
 
     ports=$(normalize_ports "$1")
     current_ports=$(
-        awk -F= '/port_donor/{print $2; exit}' $initd_dir/S24xray \
+        awk -F= '/port_donor/{print $2; exit}' $initd_dir/S99xkeen \
         | tr -d '"'
     )
     current_ports=${current_ports:-""}
@@ -159,10 +159,10 @@ add_ports_donor() {
     fi
 
     tmpfile=$(mktemp)
-    awk -v new="$port_var" 'BEGIN{replaced=0} /port_donor/ && !replaced {sub(/port_donor="[^"]*"/, new); replaced=1} {print}' $initd_dir/S24xray > "$tmpfile" && mv "$tmpfile" $initd_dir/S24xray
+    awk -v new="$port_var" 'BEGIN{replaced=0} /port_donor/ && !replaced {sub(/port_donor="[^"]*"/, new); replaced=1} {print}' $initd_dir/S99xkeen > "$tmpfile" && mv "$tmpfile" $initd_dir/S99xkeen
 
     while true; do
-        if data_is_updated_donor "$initd_dir/S24xray" "$new_ports"; then
+        if data_is_updated_donor "$initd_dir/S99xkeen" "$new_ports"; then
             break
         fi
         sleep 1
@@ -185,7 +185,7 @@ add_ports_donor() {
 dell_ports_donor() {
     ports=$(normalize_ports "$1")
     current_ports=$(
-        awk -F= '/port_donor/{print $2; exit}' "$initd_dir/S24xray" \
+        awk -F= '/port_donor/{print $2; exit}' "$initd_dir/S99xkeen" \
         | tr -d '"'
     )
     new_ports="$current_ports"
@@ -254,7 +254,7 @@ dell_ports_donor() {
         first=0
         next
     }
-    {print}' "$initd_dir/S24xray" > temp && mv temp "$initd_dir/S24xray"
+    {print}' "$initd_dir/S99xkeen" > temp && mv temp "$initd_dir/S99xkeen"
 
     if [ -n "$ports" ]; then
         if [ -z "$deleted_ports" ]; then
@@ -281,7 +281,7 @@ add_ports_exclude() {
 
     # Проверяем наличие портов проксирования
     donor_ports=$(
-        awk -F= '/port_donor/{print $2; exit}' $initd_dir/S24xray \
+        awk -F= '/port_donor/{print $2; exit}' $initd_dir/S99xkeen \
         | tr -d '"' | tr -d '[:space:]'
     )
 
@@ -294,7 +294,7 @@ add_ports_exclude() {
 
     ports=$(normalize_ports "$1")
     current_ports=$(
-        awk -F= '/port_exclude/{print $2; exit}' $initd_dir/S24xray \
+        awk -F= '/port_exclude/{print $2; exit}' $initd_dir/S99xkeen \
         | tr -d '"'
     )
     current_ports=${current_ports:-""}
@@ -340,10 +340,10 @@ add_ports_exclude() {
     fi
 
     tmpfile=$(mktemp)
-    awk -v new="$port_var" 'BEGIN{replaced=0} /port_exclude/ && !replaced {sub(/port_exclude="[^"]*"/, new); replaced=1} {print}' $initd_dir/S24xray > "$tmpfile" && mv "$tmpfile" $initd_dir/S24xray
+    awk -v new="$port_var" 'BEGIN{replaced=0} /port_exclude/ && !replaced {sub(/port_exclude="[^"]*"/, new); replaced=1} {print}' $initd_dir/S99xkeen > "$tmpfile" && mv "$tmpfile" $initd_dir/S99xkeen
 
     while true; do
-        if data_is_updated_excluded "$initd_dir/S24xray" "$new_ports"; then
+        if data_is_updated_excluded "$initd_dir/S99xkeen" "$new_ports"; then
             break
         fi
         sleep 1
@@ -366,7 +366,7 @@ add_ports_exclude() {
 dell_ports_exclude() {
     ports=$(normalize_ports "$1")
     current_ports=$(
-        awk -F= '/port_exclude/{print $2; exit}' "$initd_dir/S24xray" \
+        awk -F= '/port_exclude/{print $2; exit}' "$initd_dir/S99xkeen" \
         | tr -d '"'
     )
     new_ports="$current_ports"
@@ -421,7 +421,7 @@ dell_ports_exclude() {
         first=0
         next
     }
-    {print}' "$initd_dir/S24xray" > temp && mv temp "$initd_dir/S24xray"
+    {print}' "$initd_dir/S99xkeen" > temp && mv temp "$initd_dir/S99xkeen"
 
     if [ -n "$ports" ]; then
         if [ -z "$deleted_ports" ]; then

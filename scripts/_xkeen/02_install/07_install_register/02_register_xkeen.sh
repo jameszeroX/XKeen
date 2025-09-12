@@ -35,6 +35,7 @@ register_xkeen_list() {
     # Добавление дополнительных путей
     echo "/opt/sbin/xkeen" >> xkeen.list
     echo "/opt/sbin/.xkeen" >> xkeen.list
+    echo "/opt/etc/init.d/S99xkeen" >> xkeen.list
 }
 
 register_xkeen_status() {
@@ -51,4 +52,69 @@ register_xkeen_status() {
 
     # Объединение существующего содержимого и новой записи
     printf "\n$(cat new_entry.txt)\n" >> "$status_file"
+}
+
+register_xkeen_initd() {
+    initd_file="${initd_dir}/S99xkeen"
+    old_initd_file="${initd_dir}/S24xray"
+    old_start_file="${initd_dir}/S99xkeenstart"
+    script_file="${xinstall_dir}/07_install_register/04_register_init.sh" 
+    current_datetime=$(date "+%Y-%m-%d_%H-%M-%S")
+    variables_to_extract="name_client name_policy table_id table_mark port_dns ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude port_donor port_exclude check_host start_attempts check_fd arm64_fd other_fd delay_fd"
+    source_main_backup=""
+    source_start_backup=""
+
+    if [ -f "$initd_file" ]; then
+        source_main_backup="${backups_dir}/${current_datetime}_S99xkeen"
+        mv "$initd_file" "$source_main_backup"
+        
+    elif [ -f "$old_initd_file" ] || [ -f "$old_start_file" ]; then
+        if [ -f "$old_initd_file" ]; then
+            source_main_backup="${backups_dir}/${current_datetime}_S24xray"
+            mv "$old_initd_file" "$source_main_backup"
+        fi
+        if [ -f "$old_start_file" ]; then
+            source_start_backup="${backups_dir}/${current_datetime}_S99xkeenstart"
+            mv "$old_start_file" "$source_start_backup"
+        fi
+    fi
+
+    cp "$script_file" "$initd_file"
+
+    if [ -n "$source_main_backup" ] || [ -n "$source_start_backup" ]; then
+        autostart_val=""
+        start_delay_val=""
+
+        if [ -n "$source_start_backup" ] && [ -f "$source_start_backup" ]; then
+            autostart_val=$(grep '^autostart=' "$source_start_backup" | head -n 1 | cut -d'=' -f2)
+            start_delay_val=$(grep '^start_delay=' "$source_start_backup" | head -n 1 | cut -d'=' -f2)
+        fi
+
+        if [ -n "$source_main_backup" ] && [ -f "$source_main_backup" ]; then
+            [ -z "$autostart_val" ] && autostart_val=$(grep '^start_auto=' "$source_main_backup" | head -n 1 | cut -d'=' -f2)
+            [ -z "$start_delay_val" ] && start_delay_val=$(grep '^start_delay=' "$source_main_backup" | head -n 1 | cut -d'=' -f2)
+        fi
+
+        if [ -n "$autostart_val" ]; then
+             sed -i "s|^start_auto=.*|start_auto=$autostart_val|" "$initd_file"
+        fi
+        if [ -n "$start_delay_val" ]; then
+             sed -i "s|^start_delay=.*|start_delay=$start_delay_val|" "$initd_file"
+        fi
+
+        if [ -n "$source_main_backup" ] && [ -f "$source_main_backup" ]; then
+            for var in $variables_to_extract; do
+                if grep -q "^${var}=" "$source_main_backup"; then
+                    value=$(grep "^${var}=" "$source_main_backup" | head -n 1)
+                    escaped_value=$(printf '%s\n' "$value" | sed 's:[&/\]:\\&:g')
+                    position=$(grep -n "^${var}=" "$initd_file" | head -n 1 | cut -d: -f1)
+                    if [ -n "$position" ]; then
+                        sed -i "${position}s#.*#${escaped_value}#" "$initd_file"
+                    fi
+                fi
+            done
+        fi
+    fi
+
+    chmod +x "$initd_file"
 }
