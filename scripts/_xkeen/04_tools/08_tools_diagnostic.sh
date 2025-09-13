@@ -180,13 +180,6 @@ xkeen -v >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
-# Перезапуск XKeen
-write_header "Результат перезапуска XKeen"
-$initd_dir/S99xkeen restart on >/dev/null 2>&1 >> $diagnostic
-sed -i $'s/\033\\[[0-9;]*m//g' $diagnostic
-echo >> "$diagnostic"
-echo >> "$diagnostic"
-
 if [ "${name_client}" = "xray" ]; then
     # dns.json
     if ls "$install_conf_dir"/*dns* >/dev/null 2>&1; then
