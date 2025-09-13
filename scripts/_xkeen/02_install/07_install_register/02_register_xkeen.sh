@@ -118,3 +118,8 @@ register_xkeen_initd() {
 
     chmod +x "$initd_file"
 }
+
+# Миграция скрипта
+register_xray_initd() {
+    register_xkeen_initd
+}

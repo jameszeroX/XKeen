@@ -25,6 +25,3 @@ main_dir="$script_dir/.xkeen"
 
 # Модуль справки
 . "$main_dir/about.sh"
-
-# Миграция скрипта
-register_xray_initd="register_xkeen_initd"
