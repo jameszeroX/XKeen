@@ -123,3 +123,6 @@ register_xkeen_initd() {
 register_xray_initd() {
     register_xkeen_initd
 }
+register_autostart() {
+    :
+}
