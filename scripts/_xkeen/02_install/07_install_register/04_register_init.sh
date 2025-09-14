@@ -164,6 +164,18 @@ file_dns() {
 }
 [ "$name_client" = "xray" ] && file_dns=$(file_dns)
 
+mihomo_dns() {
+    for file in "$directory_configs_app"/*.yaml; do
+        [ -f "$file" ] || continue
+        if yq -e '.dns.enable == true' "$file" >/dev/null 2>&1; then
+            echo "true"
+            return 0
+        fi
+    done
+    return 1
+}
+[ "$name_client" = "mihomo" ] && mihomo_dns=$(mihomo_dns)
+
 create_user() {
     if ! id "xkeen" >/dev/null 2>&1; then
         adduser -D -H -u 11111 -g 11111 xkeen
@@ -787,14 +799,7 @@ monitor_fd() {
 
 # Запуск прокси-клиента
 proxy_start() {
-    IF=$(ip -4 route show default | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
-    [ -z "$IF" ] && IF=$(ip -6 route show default | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
-    case "$IF" in ""|br*|lo)
-        log_error_terminal "Запуск XKeen возможен только на Keenetic в режиме ${green}роутера${reset}"
-        exit 1 ;;
-    esac
-
-    if [ "$start_auto" = "on" ] && [ ! -f "/tmp/start_fd" ] && ! [ -t 1 ]; then
+    if [ "$start_auto" = "on" ] && [ "$mihomo_dns" != "true" ] && [ ! -f "/tmp/start_fd" ] && ! [ -t 1 ]; then
         while true; do
             log_info_router "Проверка доступности интернета"
             if ping -c 1 "$check_host1" > /dev/null 2>&1; then
@@ -816,7 +821,7 @@ proxy_start() {
         done
     else
         start_manual="$1"
-        if [ "$start_manual" = "on" ] || [ -z "$start_manual" ]; then
+        if [ "$start_manual" = "on" ] || [ "$start_auto" = "on" ]; then
             log_info_router "Инициирован запуск прокси-клиента"
             log_clean
             port_redirect=$(get_port_redirect)
