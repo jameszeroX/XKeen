@@ -26,25 +26,19 @@ name_output_chain="${name_chain}_mask"
 directory_entware="/opt"
 directory_os_lib="/lib"
 directory_os_modules="$directory_os_lib/modules/$(uname -r)"
-directory_user_lib="$directory_entware/lib"
-directory_user_modules="$directory_user_lib/modules"
-directory_binaries="$directory_entware/sbin"
-directory_temporary="$directory_entware/tmp"
+directory_user_modules="$directory_entware/lib/modules"
 directory_configs="$directory_entware/etc"
-directory_variable="$directory_entware/var"
 directory_configs_app="$directory_configs/$name_client"
 directory_app_routing="$directory_configs_app/dat"
 directory_user_settings="$directory_configs_app/configs"
-directory_logs="$directory_variable/log"
-directory_logs_proxy="$directory_logs/$name_client"
-directory_ndm="$directory_configs/ndm"
-directory_nefilter="$directory_ndm/netfilter.d"
+directory_logs="$directory_entware/var/log"
+directory_nefilter="$directory_configs/ndm/netfilter.d"
 
 # Файлы
 file_netfilter_hook="$directory_nefilter/proxy.sh"
-client_xray="$directory_binaries/xray"
 log_access="$directory_logs/$name_client/access.log"
 log_error="$directory_logs/$name_client/error.log"
+mihomo_config="$directory_configs_app/config.yaml"
 file_exclude="/opt/etc/xkeen_exclude.lst"
 
 # URL
@@ -141,14 +135,10 @@ get_user_ipv6_excludes() {
 }
 
 # Проверка статуса прокси-клиента
-proxy_status() {
-    pidof "$name_client" >/dev/null
-}
+proxy_status() { pidof $name_client >/dev/null; }
 
 # Поиск конфигураций inbounds
-file_inbounds() {
-    find "$directory_user_settings" -name '*.json' -exec grep -lF '"inbounds":' {} \; -quit
-}
+file_inbounds() { find "$directory_user_settings" -name '*.json' -exec grep -lF '"inbounds":' {} \; -quit; }
 [ "$name_client" = "xray" ] && file_inbounds=$(file_inbounds)
 
 # Поиск конфигураций DNS
@@ -165,14 +155,7 @@ file_dns() {
 [ "$name_client" = "xray" ] && file_dns=$(file_dns)
 
 mihomo_dns() {
-    for file in "$directory_configs_app"/*.yaml; do
-        [ -f "$file" ] || continue
-        if yq -e '.dns.enable == true' "$file" >/dev/null 2>&1; then
-            echo "true"
-            return 0
-        fi
-    done
-    return 1
+    [ -f "$mihomo_config" ] && yq -e '.dns.enable == true' "$mihomo_config" >/dev/null 2>&1 && echo "true"
 }
 [ "$name_client" = "mihomo" ] && mihomo_dns=$(mihomo_dns)
 
@@ -246,21 +229,19 @@ get_keenetic_port() {
 # Получение порта для Redirect
 get_port_redirect() {
     if [ "$name_client" = "mihomo" ]; then
-        for file in $(find "$directory_configs_app" -name '*.yaml'); do
-            port=$(yq eval '.redir-port // ""' "$file" 2>/dev/null)
-            [ -n "$port" ] && echo "$port" && return
-        done
+        port=$(yq eval '.redir-port // ""' "$mihomo_config" 2>/dev/null)
+        [ -n "$port" ] && echo "$port"
     else
-    for file in $(find "$directory_user_settings" -name '*.json'); do
-        json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
-        [ -n "$json" ] || continue
-        inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "redirect")' 2>/dev/null)
-        for inbound in $inbounds; do
-            port=$(echo "$inbound" | jq -r '.port' 2>/dev/null)
-            tproxy=$(echo "$inbound" | jq -r '.streamSettings.sockopt.tproxy // empty' 2>/dev/null)
-            [ "$tproxy" != "tproxy" ] && echo "$port" && return
+        for file in $(find "$directory_user_settings" -name '*.json'); do
+            json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
+            [ -n "$json" ] || continue
+            inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "redirect")' 2>/dev/null)
+            for inbound in $inbounds; do
+                port=$(echo "$inbound" | jq -r '.port' 2>/dev/null)
+                tproxy=$(echo "$inbound" | jq -r '.streamSettings.sockopt.tproxy // empty' 2>/dev/null)
+                [ "$tproxy" != "tproxy" ] && echo "$port" && return
+            done
         done
-    done
     fi
     echo "$port_redirect"
 }
@@ -268,13 +249,11 @@ get_port_redirect() {
 # Получение порта для TProxy
 get_port_tproxy() {
     if [ "$name_client" = "mihomo" ]; then
-        for file in $(find "$directory_configs_app" -name '*.yaml'); do
-            port=$(yq eval '.tproxy-port // ""' "$file" 2>/dev/null)
-            if [ -z "$port" ]; then
-                port=$(yq eval '.listeners[] | select(.name == "tproxy" ) | .port // ""' "$file" 2>/dev/null)
-            fi
-            [ -n "$port" ] && echo "$port" && return
-        done
+        port=$(yq eval '.tproxy-port // ""' "$mihomo_config" 2>/dev/null)
+        if [ -z "$port" ]; then
+            port=$(yq eval '.listeners[] | select(.name == "tproxy" ) | .port // ""' "$mihomo_config" 2>/dev/null)
+        fi
+        [ -n "$port" ] && echo "$port"
     else
         for file in $(find "$directory_user_settings" -name '*.json'); do
             json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')

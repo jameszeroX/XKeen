@@ -11,37 +11,34 @@ reset="\033[0m"		# Сброс цветов
 # -------------------------------------
 # Директории
 # -------------------------------------
-tmp_dir_global="/opt/tmp"		# Временная директория общая
-tmp_dir="/opt/tmp/xkeen"		# Временная директория XKeen
-xtmp_dir="/opt/tmp/xray"		# Временная директория Xray
-mtmp_dir="/opt/tmp/mihomo"		# Временная директория Mihomo
-xkeen_log_dir="/opt/var/log/xkeen"	# Директория логов для XKeen
-xray_log_dir="/opt/var/log/xray"	# Директория логов для Xray
-initd_dir="/opt/etc/init.d"		# Директория init.d
-pid_dir="/opt/var/run"			# Директория для pid файлов
-backups_dir="/opt/backups"		# Директория для бекапов
-install_dir="/opt/sbin"			# Директория установки
-xkeen_dir="/opt/sbin/.xkeen"		# xkeen директория
-geo_dir="/opt/etc/xray/dat"		# Директория для dat
-cron_dir="/opt/var/spool/cron/crontabs"	# Директория для cron файла XKeen
-cron_file="root"			# Сron файл
+tmp_dir_global="/opt/tmp"		 # Временная директория общая
+tmp_dir="/opt/tmp/xkeen"		 # Временная директория XKeen
+xtmp_dir="/opt/tmp/xray"		 # Временная директория Xray
+mtmp_dir="/opt/tmp/mihomo"		 # Временная директория Mihomo
+xkeen_dir="/opt/sbin/.xkeen"		 # Директория скриптов XKeen
+xkeen_log_dir="/opt/var/log/xkeen"	 # Директория логов XKeen
+xray_log_dir="/opt/var/log/xray"	 # Директория логов Xray
+initd_dir="/opt/etc/init.d"		 # Директория init.d
+pid_dir="/opt/var/run"			 # Директория pid файлов
+backups_dir="/opt/backups"		 # Директория бекапов
+install_dir="/opt/sbin"			 # Директория установки
+geo_dir="/opt/etc/xray/dat"		 # Директория для dat
+cron_dir="/opt/var/spool/cron/crontabs"	 # Директория планировщика
+cron_file="root"			 # Файл планировщика
 install_conf_dir="/opt/etc/xray/configs" # Директория конфигурации Xray
-xkeen_conf_dir="$xkeen_dir/02_install/08_install_configs/02_configs_dir" # Директория шаблонов конфигурации Xray
-xkeen_var_file="$xkeen_dir/01_info/01_info_variable.sh" # Файл переменных XKeen
-mihomo_conf_dir="/opt/etc/mihomo"	# Директория конфигурации Mihomo
+mihomo_conf_dir="/opt/etc/mihomo"	 # Директория конфигурации Mihomo
+xkeen_conf_dir="$xkeen_dir/02_install/08_install_configs/02_configs_dir"
+xkeen_var_file="$xkeen_dir/01_info/01_info_variable.sh"
 register_dir="/opt/lib/opkg/info"
 status_file="/opt/lib/opkg/status"
-releases_dir="/opt/releases"
 os_modules="/lib/modules/$(uname -r)"
 user_modules="/opt/lib/modules"
-app_name=XKeen
 xkeen_current_version="1.1.3.9"
 xkeen_build="Beta"
 
 # -------------------------------------
 # Время
 # -------------------------------------
-installed_time=$(date +%s)
 existing_content=$(cat "$status_file")
 installed_size=$(du -s "$install_dir" | cut -f1)
 source_date_epoch=$(date +%s)
