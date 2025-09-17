@@ -140,7 +140,6 @@ file_dns() {
     return 1
 }
 [ "$name_client" = "xray" ] && file_dns=$(file_dns)
-[ "$name_client" = "mihomo" ] && [ -f "$mihomo_config" ] && yq -e '.dns.enable == true' "$mihomo_config" >/dev/null 2>&1 && mihomo_dns=true
 
 create_user() {
     if ! id "xkeen" >/dev/null 2>&1; then
