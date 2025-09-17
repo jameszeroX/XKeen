@@ -25,12 +25,14 @@ jobs:
         run: |
           echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
           echo "ARCHIVE_NAME=xkeen.tar.gz" >> $GITHUB_ENV
+          echo "ARCHIVE_NAME_TAR=xkeen.tar" >> $GITHUB_ENV
       - name: Create scripts archive
         run: |
           mkdir -p dist
           cd scripts
           chmod +x xkeen
           find . -type f -o -type l | sed 's|^\./||' | tar -czf "../dist/${ARCHIVE_NAME}" -T -
+          find . -type f -o -type l | sed 's|^\./||' | tar -cf "../dist/${ARCHIVE_NAME_TAR}" -T -
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -39,5 +41,6 @@ jobs:
           prerelease: ${{ github.event.inputs.prerelease }}
           files: |
             dist/${{ env.ARCHIVE_NAME }}
+            dist/${{ env.ARCHIVE_NAME_TAR }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
