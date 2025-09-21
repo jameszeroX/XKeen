@@ -35,7 +35,9 @@ file_netfilter_hook="/opt/etc/ndm/netfilter.d/proxy.sh"
 log_access="$directory_logs/$name_client/access.log"
 log_error="$directory_logs/$name_client/error.log"
 mihomo_config="$directory_configs_app/config.yaml"
-file_exclude="/opt/etc/xkeen_exclude.lst"
+file_port_proxying="/opt/etc/xkeen/port_proxying.lst"
+file_port_exclude="/opt/etc/xkeen/port_exclude.lst"
+file_ip_exclude="/opt/etc/xkeen/ip_exclude.lst"
 
 # URL
 url_server="localhost:79"
@@ -104,20 +106,80 @@ iptables_supported=$([ "$ip4_supported" = "true" ] && command -v iptables >/dev/
 ip6tables_supported=$([ "$ip6_supported" = "true" ] && command -v ip6tables >/dev/null 2>&1 && echo true || echo false)
 
 get_user_ipv4_excludes() {
-    if [ -f "$file_exclude" ]; then
+    if [ -f "$file_ip_exclude" ]; then
         echo -n " "
-        grep -v '^#' "$file_exclude" | grep -v '^$' | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//'
+        grep -v '^#' "$file_ip_exclude" | grep -v '^$' | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//'
     else
         echo ""
     fi
 }
 
 get_user_ipv6_excludes() {
-    if [ -f "$file_exclude" ]; then
+    if [ -f "$file_ip_exclude" ]; then
         echo -n " "
-        grep -v '^#' "$file_exclude" | grep -v '^$' | grep -Eo '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//'
+        grep -v '^#' "$file_ip_exclude" | grep -v '^$' | grep -Eo '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//'
     else
         echo ""
+    fi
+}
+
+# Функция обработки, валидации и очистки списка портов
+validate_and_clean_ports() {
+    input_ports="$1"
+    final_ports=""
+
+    final_ports=$(echo "$input_ports" | tr ',' '\n' | awk '
+        function is_valid(p) {
+            return p > 0 && p <= 65535 && p ~ /^[0-9]+$/
+        }
+        {
+            gsub(/ /, "", $0)
+            if ($0 == "") next;
+
+            n = split($0, a, ":")
+            if (n == 1) {
+                if (is_valid(a[1])) print a[1]
+            } else if (n == 2) {
+                if (is_valid(a[1]) && is_valid(a[2]) && a[1] < a[2]) print a[1]":"a[2]
+            }
+        }
+    ' | sort -un | tr '\n' ',' | sed 's/,$//')
+    
+    echo "$final_ports"
+}
+
+# Функция обработки пользовательских портов
+process_user_ports() {
+    user_proxy_ports=""
+    user_exclude_ports=""
+
+    if [ -f "$file_port_proxying" ]; then
+        user_proxy_ports=$(grep -v '^#' "$file_port_proxying" | grep -v '^$' | tr '\n' ',' | sed 's/,$//')
+    fi
+
+    if [ -f "$file_port_exclude" ]; then
+        user_exclude_ports=$(grep -v '^#' "$file_port_exclude" | grep -v '^$' | tr '\n' ',' | sed 's/,$//')
+    fi
+
+    if [ -n "$user_proxy_ports" ]; then
+        port_donor="${port_donor},${user_proxy_ports}"
+
+        if echo "$port_donor" | grep -qv "\(^\|,\)80\(,\|$\)"; then
+            port_donor="80,${port_donor}"
+        fi
+        if echo "$port_donor" | grep -qv "\(^\|,\)443\(,\|$\)"; then
+            port_donor="443,${port_donor}"
+        fi
+
+        port_donor=$(validate_and_clean_ports "$port_donor")
+
+    elif [ -n "$user_exclude_ports" ]; then
+        port_exclude="${port_exclude},${user_exclude_ports}"
+
+        port_exclude=$(validate_and_clean_ports "$port_exclude")
+
+    else
+        :
     fi
 }
 
@@ -524,8 +586,8 @@ if pidof "\$name_client" >/dev/null; then
             fi
         fi
     }
-    
-    # Cоздание множественных правил multiport
+
+    # Создание множественных правил multiport
     add_multiport_rules() {
         family="\$1"
         table="\$2"
@@ -541,32 +603,39 @@ if pidof "\$name_client" >/dev/null; then
             return
         fi
 
-        # Преобразуем строку в список, по одному порту/диапазону на строку
-        ports_as_lines=\$(echo "\$ports_to_process" | tr ',' '\n')
-        
-        while [ -n "\$ports_as_lines" ]; do
-            # Берем первые 14 портов/диапазонов
-            chunk_as_lines=\$(echo "\$ports_as_lines" | head -n 14)
-            
-            # Собираем их обратно в строку, разделенную запятыми
-            chunk=\$(echo "\$chunk_as_lines" | tr '\n' ',' | sed 's/,\$//')
-            
+        connmark_option=\$(echo "\$connmark_option" | sed 's/^ *//')
+
+        num_ports=\$(echo "\$ports_to_process" | tr ',' '\n' | sed '/^\$/d' | wc -l)
+
+        if [ "\$num_ports" -eq 0 ]; then
+            return
+        fi
+
+        i=1
+        while [ \$i -le \$num_ports ]; do
+            end=\$((i + 6))
+            chunk=\$(echo "\$ports_to_process" | tr ',' '\n' | sed '/^\$/d' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,\$//')
+    
+            if [ -z "\$chunk" ]; then
+                break
+            fi
+
             multiport_chunk_option="-m multiport \$dports_option \$chunk"
-            
-            # Применяем правило для текущего блока портов/диапазонов
+
+            full_rule="\$connmark_option -m conntrack ! --ctstate INVALID -p \$net \$multiport_chunk_option -j \$name_prerouting_chain"
+
             if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ]; then
-                if ! iptables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p "\$net" \$multiport_chunk_option -j \$name_prerouting_chain >/dev/null 2>&1; then
-                    iptables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p "\$net" \$multiport_chunk_option -j \$name_prerouting_chain >/dev/null 2>&1
+                if ! iptables -t "\$table" -C PREROUTING \$full_rule >/dev/null 2>&1; then
+                    iptables -t "\$table" -A PREROUTING \$full_rule >/dev/null 2>&1
                 fi
             fi
             if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ]; then
-                if ! ip6tables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p "\$net" \$multiport_chunk_option -j \$name_prerouting_chain >/dev/null 2>&1; then
-                    ip6tables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -p "\$net" \$multiport_chunk_option -j \$name_prerouting_chain >/dev/null 2>&1
+                if ! ip6tables -t "\$table" -C PREROUTING \$full_rule >/dev/null 2>&1; then
+                    ip6tables -t "\$table" -A PREROUTING \$full_rule >/dev/null 2>&1
                 fi
             fi
-            
-            # Получаем оставшиеся порты/диапазоны, начиная с 15-го
-            ports_as_lines=\$(echo "\$ports_as_lines" | tail -n +15)
+
+            i=\$((i + 7))
         done
     }
 
@@ -763,6 +832,7 @@ proxy_start() {
     start_manual="$1"
     if [ "$start_manual" = "on" ] || [ "$start_auto" = "on" ]; then
         log_clean
+        process_user_ports
         port_redirect=$(get_port_redirect)
         network_redirect=$(get_network_redirect)
         port_tproxy=$(get_port_tproxy)

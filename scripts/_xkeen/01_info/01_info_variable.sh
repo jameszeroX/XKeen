@@ -16,6 +16,7 @@ tmp_dir="/opt/tmp/xkeen"		 # Временная директория XKeen
 xtmp_dir="/opt/tmp/xray"		 # Временная директория Xray
 mtmp_dir="/opt/tmp/mihomo"		 # Временная директория Mihomo
 xkeen_dir="/opt/sbin/.xkeen"		 # Директория скриптов XKeen
+xkeen_cfg="/opt/etc/xkeen"		 # Директория конфигурации XKeen
 xkeen_log_dir="/opt/var/log/xkeen"	 # Директория логов XKeen
 xray_log_dir="/opt/var/log/xray"	 # Директория логов Xray
 initd_dir="/opt/etc/init.d"		 # Директория init.d

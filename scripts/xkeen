@@ -206,6 +206,7 @@ case "$1" in
             fixed_register_packages
 
             register_xkeen_initd
+            create_xkeen_cfg
             sleep 2
 
             clear
@@ -379,6 +380,7 @@ case "$1" in
         logs_register_xkeen_status_info_console
 
         register_xkeen_initd
+        create_xkeen_cfg
 
         fixed_register_packages
 
@@ -477,6 +479,7 @@ case "$1" in
 
         register_cron_initd
         register_xkeen_initd
+        create_xkeen_cfg
         choice_canel_cron_select=true
         update_cron_geofile_task
 
@@ -851,7 +854,7 @@ case "$1" in
         clear
         echo
         echo -e "  Полная деинсталляция ${yellow}XKeen${reset} и всех зависимостей ${green}выполнена${reset}"
-        echo -e "  Директорию резервных копий ${yellow}/opt/backups${reset} удалите вручную"
+        echo -e "  Директории резервных копий ${yellow}/opt/backups${reset} и конфигов ${yellow}/opt/etc/xkeen${reset} удалите вручную"
         echo
         echo -e "  Рекомендуется ${green}перезагрузить роутер${reset}"
         echo
@@ -987,6 +990,7 @@ case "$1" in
 
         register_cron_initd
         register_xkeen_initd
+        create_xkeen_cfg
         choice_canel_cron_select=true
         update_cron_geofile_task
 
@@ -1183,13 +1187,7 @@ case "$1" in
 
 
     -cp)    # Получить список портов проксирования
-        port_donor=$(grep -m1 '^port_donor=' /opt/etc/init.d/S99xkeen | cut -d'=' -f2 | tr -d '"' | tr ' ' '\n' | sed 's/^/     /')
-        if [ -z "$port_donor" ] || [ "$port_donor" = "     " ]
-        then
-            echo -e "  Прокси-клиент работает ${yellow}на всех портах${reset}"
-        else
-            echo -e "  Прокси-клиент работает на портах\n${green}$port_donor${reset}"
-        fi
+        get_ports_donor
     ;;
 
 
@@ -1216,13 +1214,7 @@ case "$1" in
 
 
     -cpe)    # Получить список портов, исключёных из проксирования
-        port_exclude=$(grep -m1 '^port_exclude=' /opt/etc/init.d/S99xkeen | cut -d'=' -f2 | tr -d '"' | tr ' ' '\n' | sed 's/^/     /')
-        if [ -z "$port_exclude" ] || [ "$port_exclude" = "     " ]
-        then
-            echo -e "  ${yellow}Нет портов${reset} исключенных из проксирования"
-        else
-            echo -e "  Из проксирования исключены порты\n${green}$port_exclude${reset}"
-        fi
+        get_ports_exclude
     ;;
 
 

@@ -60,7 +60,7 @@ register_xkeen_initd() {
     old_start_file="${initd_dir}/S99xkeenstart"
     script_file="${xinstall_dir}/07_install_register/04_register_init.sh" 
     current_datetime=$(date "+%Y-%m-%d_%H-%M-%S")
-    variables_to_extract="name_client name_policy table_id table_mark port_dns ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude port_donor port_exclude start_attempts check_fd arm64_fd other_fd delay_fd"
+    variables_to_extract="name_client name_policy table_id table_mark port_dns ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude port_donor port_exclude check_host1 check_host2 start_attempts check_fd arm64_fd other_fd delay_fd"
     source_main_backup=""
     source_start_backup=""
 
@@ -126,3 +126,40 @@ register_xray_initd() {
 register_autostart() {
     :
 }
+
+# Создание конфигурации XKeen
+create_xkeen_cfg() {
+    if [ ! -d "${xkeen_cfg}" ]; then
+        mkdir -p "${xkeen_cfg}"
+    fi
+    if [ -f "/opt/etc/xkeen_exclude.lst" ] && [ ! -f "${xkeen_cfg}/ip_exclude.lst" ]; then
+        mv "/opt/etc/xkeen_exclude.lst" "${xkeen_cfg}/ip_exclude.lst"
+    elif [ ! -f "${xkeen_cfg}/ip_exclude.lst" ]; then
+        cat << EOF > "${xkeen_cfg}/ip_exclude.lst"
+#192.168.0.0/16
+#2001:db8::/32
+
+# Добавьте необходимые IP и подсети без комментария # для исключения их из проксирования
+EOF
+    fi
+
+    if [ ! -f "${xkeen_cfg}/port_exclude.lst" ]; then
+        cat << EOF > "${xkeen_cfg}/port_exclude.lst"
+#
+
+# Одновременно использовать порты проксирования и исключать порты нельзя
+# Приоритет у портов проксирования
+EOF
+    fi
+
+    if [ ! -f "${xkeen_cfg}/port_proxying.lst" ]; then
+        cat << EOF > "${xkeen_cfg}/port_proxying.lst"
+#80
+#443
+#596:599
+
+# (Раскомментируйте/добавьте по образцу) единичные порты и диапазоны для проскирования
+EOF
+    fi
+}
+
