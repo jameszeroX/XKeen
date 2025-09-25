@@ -145,9 +145,9 @@ ip route show table main >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
-# Запрос к curl для получения country, ndmhwid, product
-write_header "Данные из localhost:79/rci/show/defaults"
-curl -kfsS "localhost:79/rci/show/defaults" | jq -r '.country, .ndmhwid, .product' >> "$diagnostic" 
+# Запрос к curl для получения title, model, region
+write_header "Данные из localhost:79/rci/show/version"
+curl -kfsS "localhost:79/rci/show/version" | jq -r '.title, .model, .region' >> "$diagnostic" 
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
