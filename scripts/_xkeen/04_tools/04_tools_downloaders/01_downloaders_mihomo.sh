@@ -32,7 +32,7 @@ download_mihomo() {
         echo
         echo "     0. Пропустить загрузку Mihomo"
 
-        printf "\n  Введите порядковый номер релиза Mihomo (или 0 для пропуска): "
+        printf "\n  Введите порядковый номер релиза (0 - пропустить, 9 - ручной ввод): "
         read -r choice
 
         if ! echo "$choice" | grep -Eq '^[0-9]$'; then

@@ -189,7 +189,6 @@ proxy_status() { pidof $name_client >/dev/null; }
 # Поиск конфигурации inbounds
 [ "$name_client" = "xray" ] && file_inbounds=$(find "$directory_xray_config" -name '*.json' -exec grep -lF '"inbounds":' {} \; -quit 2>/dev/null || true)
 
-
 # Поиск конфигураций DNS
 file_dns() {
     for file in "$directory_xray_config"/*.json; do
@@ -501,8 +500,8 @@ if pidof "\$name_client" >/dev/null; then
         shift 3
         [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "false" ] && return
         [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "false" ] && return
-        if ! "\$family" -t "\$table" -nL \$name_prerouting_chain >/dev/null 2>&1; then
-            "\$family" -t "\$table" -N \$name_prerouting_chain || exit 0
+        if ! "\$family" -w -t "\$table" -nL \$name_prerouting_chain >/dev/null 2>&1; then
+            "\$family" -w -t "\$table" -N \$name_prerouting_chain || exit 0
             add_exclude_rules \$name_prerouting_chain
             case "\$mode_proxy" in
                 Mixed)
@@ -530,7 +529,7 @@ if pidof "\$name_client" >/dev/null; then
             esac
         fi
         if [ "\$table" = "\$table_tproxy" ]; then
-            if ! "\$family" -t "\$table" -nL \$name_output_chain >/dev/null 2>&1; then
+            if ! "\$family" -w -t "\$table" -nL \$name_output_chain >/dev/null 2>&1; then
                 "\$family" -t "\$table" -N \$name_output_chain || exit 0
                 add_exclude_rules \$name_output_chain
                 for net in \$network_tproxy; do
@@ -573,7 +572,7 @@ if pidof "\$name_client" >/dev/null; then
             ip -"\$ip_version" rule add fwmark "\$table_mark" lookup "\$table_id" >/dev/null 2>&1
             ip -"\$ip_version" route add local default dev lo table "\$table_id" >/dev/null 2>&1
             if [ -n "\$policy_table" ]; then
-                ip -"\$ip_version" route show table "\$policy_table" | grep -Ev '^default' |
+                ip -"\$ip_version" route show table all | grep -w "\$policy_table" | grep -Ev '^default' |
                 while read route; do
                     matching_main_route=\$(ip -"\$ip_version" route show table main | grep -F "\$route")
                     ip -"\$ip_version" route add table "\$table_id" \$matching_main_route >/dev/null 2>&1
@@ -625,13 +624,13 @@ if pidof "\$name_client" >/dev/null; then
             full_rule="\$connmark_option -m conntrack ! --ctstate INVALID -p \$net \$multiport_chunk_option -j \$name_prerouting_chain"
 
             if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ]; then
-                if ! iptables -t "\$table" -C PREROUTING \$full_rule >/dev/null 2>&1; then
-                    iptables -t "\$table" -A PREROUTING \$full_rule >/dev/null 2>&1
+                if ! iptables -w -t "\$table" -C PREROUTING \$full_rule >/dev/null 2>&1; then
+                    iptables -w -t "\$table" -A PREROUTING \$full_rule >/dev/null 2>&1
                 fi
             fi
             if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ]; then
-                if ! ip6tables -t "\$table" -C PREROUTING \$full_rule >/dev/null 2>&1; then
-                    ip6tables -t "\$table" -A PREROUTING \$full_rule >/dev/null 2>&1
+                if ! ip6tables -w -t "\$table" -C PREROUTING \$full_rule >/dev/null 2>&1; then
+                    ip6tables -w -t "\$table" -A PREROUTING \$full_rule >/dev/null 2>&1
                 fi
             fi
 
@@ -657,12 +656,12 @@ if pidof "\$name_client" >/dev/null; then
             else
                 # Логика для случая, когда порты не указаны (проксирование всего трафика)
                 if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ] &&
-                   ! iptables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1; then
-                    iptables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1
+                   ! iptables -w -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1; then
+                    iptables -w -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1
                 fi
                 if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ] &&
-                   ! ip6tables -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1; then
-                    ip6tables -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1
+                   ! ip6tables -w -t "\$table" -C PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1; then
+                    ip6tables -w -t "\$table" -A PREROUTING \$connmark_option -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain >/dev/null 2>&1
                 fi
             fi
         done
@@ -674,22 +673,22 @@ if pidof "\$name_client" >/dev/null; then
         table="\$2"
         if [ "\$mode_proxy" = "TProxy" ]; then
                 if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ] &&
-                   ! iptables -t "\$table" -C OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID ! -p icmp -j \$name_output_chain >/dev/null 2>&1; then
-                    iptables -t "\$table" -A OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID ! -p icmp -j \$name_output_chain >/dev/null 2>&1
+                   ! iptables -w -t "\$table" -C OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID ! -p icmp -j \$name_output_chain >/dev/null 2>&1; then
+                    iptables -w -t "\$table" -A OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID ! -p icmp -j \$name_output_chain >/dev/null 2>&1
                 fi
                 if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ] &&
-                   ! ip6tables -t "\$table" -C OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID ! -p icmp -j \$name_output_chain >/dev/null 2>&1; then
-                    ip6tables -t "\$table" -A OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID ! -p icmp -j \$name_output_chain >/dev/null 2>&1
+                   ! ip6tables -w -t "\$table" -C OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID ! -p icmp -j \$name_output_chain >/dev/null 2>&1; then
+                    ip6tables -w -t "\$table" -A OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID ! -p icmp -j \$name_output_chain >/dev/null 2>&1
                 fi
         fi
         if [ "\$mode_proxy" = "Mixed" ]; then
                 if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ] &&
-                   ! iptables -t "\$table" -C OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID -p udp -j \$name_output_chain >/dev/null 2>&1; then
-                    iptables -t "\$table" -A OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID -p udp -j \$name_output_chain >/dev/null 2>&1
+                   ! iptables -w -t "\$table" -C OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID -p udp -j \$name_output_chain >/dev/null 2>&1; then
+                    iptables -w -t "\$table" -A OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID -p udp -j \$name_output_chain >/dev/null 2>&1
                 fi
                 if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ] &&
-                   ! ip6tables -t "\$table" -C OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID -p udp -j \$name_output_chain >/dev/null 2>&1; then
-                    ip6tables -t "\$table" -A OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID -p udp -j \$name_output_chain >/dev/null 2>&1
+                   ! ip6tables -w -t "\$table" -C OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID -p udp -j \$name_output_chain >/dev/null 2>&1; then
+                    ip6tables -w -t "\$table" -A OUTPUT -m owner ! --gid-owner \$name_profile -m conntrack ! --ctstate INVALID -p udp -j \$name_output_chain >/dev/null 2>&1
                 fi
         fi
     }
@@ -771,22 +770,22 @@ clean_firewall() {
         family="$1"
         table="$2"
         name_chain="$3"
-            if "$family" -t "$table" -nL "$name_chain" >/dev/null 2>&1; then
-                "$family" -t "$table" -F "$name_chain" >/dev/null 2>&1
-                while "$family" -w -t "$table" -nL PREROUTING | grep -q "$name_chain"; do
-                    rule_number=$("$family" -w -t "$table" -nL PREROUTING --line-numbers | grep -v "Chain" | grep -m 1 "$name_chain" | awk '{print $1}')
-                    "$family" -w -t "$table" -D PREROUTING "$rule_number" >/dev/null 2>&1
-                done
-                "$family" -w -t "$table" -X "$name_chain" >/dev/null 2>&1
-            fi
-            if "$family" -t "$table" -nL "$name_chain" >/dev/null 2>&1; then
-                "$family" -t "$table" -F "$name_chain" >/dev/null 2>&1
-                while "$family" -w -t "$table" -nL OUTPUT | grep -q "$name_chain"; do
-                    rule_number=$("$family" -w -t "$table" -nL OUTPUT --line-numbers | grep -v "Chain" | grep -m 1 "$name_chain" | awk '{print $1}')
-                    "$family" -w -t "$table" -D OUTPUT "$rule_number" >/dev/null 2>&1
-                done
-                "$family" -w -t "$table" -X "$name_chain" >/dev/null 2>&1
-            fi
+        if "$family" -w -t "$table" -nL "$name_chain" >/dev/null 2>&1; then
+            "$family" -w -t "$table" -F "$name_chain" >/dev/null 2>&1
+            while "$family" -w -t "$table" -nL PREROUTING | grep -q "$name_chain"; do
+                rule_number=$("$family" -w -t "$table" -nL PREROUTING --line-numbers | grep -v "Chain" | grep -m 1 "$name_chain" | awk '{print $1}')
+                "$family" -w -t "$table" -D PREROUTING "$rule_number" >/dev/null 2>&1
+            done
+            "$family" -w -t "$table" -X "$name_chain" >/dev/null 2>&1
+        fi
+        if "$family" -w -t "$table" -nL "$name_chain" >/dev/null 2>&1; then
+            "$family" -w -t "$table" -F "$name_chain" >/dev/null 2>&1
+            while "$family" -w -t "$table" -nL OUTPUT | grep -q "$name_chain"; do
+                rule_number=$("$family" -w -t "$table" -nL OUTPUT --line-numbers | grep -v "Chain" | grep -m 1 "$name_chain" | awk '{print $1}')
+                "$family" -w -t "$table" -D OUTPUT "$rule_number" >/dev/null 2>&1
+            done
+            "$family" -w -t "$table" -X "$name_chain" >/dev/null 2>&1
+        fi
     }
 
     for family in iptables ip6tables; do
@@ -984,7 +983,8 @@ case "$1" in
     stop) proxy_stop ;;
     status)
         if proxy_status; then
-            echo -e "  Прокси-клиент ${green}запущен${reset}"
+            mode_proxy=$(grep '^mode_proxy=' $file_netfilter_hook | awk -F'"' '{print $2}')
+            echo -e "  Прокси-клиент ${yellow}$name_client${reset} ${green}запущен${reset} в режиме ${yellow}$mode_proxy${reset}"
         else
             echo -e "  Прокси-клиент ${red}не запущен${reset}"
         fi
