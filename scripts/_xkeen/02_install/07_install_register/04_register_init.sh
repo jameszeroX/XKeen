@@ -403,16 +403,16 @@ get_policy_mark() {
     if ! proxy_status && [ -z "$policy_mark" ]; then
         if [ -z "${port_donor}" ]; then
             log_warning_terminal "
-  Политика '${green}XKeen${reset}' не найдена в веб-интерфейсе роутера
+  Политика '${green}$name_policy${reset}' не найдена в веб-интерфейсе роутера
   Не определены целевые порты для XKeen
-  Прокси будет запущен для всего устройства на всех портах
+  Прокси будет запущен для всех клиентов на всех портах
   "
             echo
         else
             log_warning_terminal "
-  Политика '${green}XKeen${reset}' не найдена в веб-интерфейсе роутера
+  Политика '${green}$name_policy${reset}' не найдена в веб-интерфейсе роутера
   Определены целевые порты для XKeen
-  Прокси будет запущен для всего устройства на портах ${port_donor}
+  Прокси будет запущен для всех клиентов на портах ${port_donor}
   "
             echo
         fi
@@ -431,7 +431,6 @@ get_mode_proxy() {
         mode_proxy="Redirect"
     else
         mode_proxy="Other"
-        log_info_router "$name_client запущен в обычном режиме. Направляйте соединения на $name_client вручную"
     fi
     echo "$mode_proxy"
 }
@@ -933,6 +932,7 @@ proxy_start() {
                 if proxy_status; then
                     [ "$mode_proxy" != "Other" ] && configure_firewall
                     echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${yellow}${mode_proxy}${reset}"
+                    [ "$mode_proxy" = "Other" ] && echo -e "  Функция прозрачного прокси ${red}не активна${reset}. Направляйте соединения на ${yellow}${name_client}${reset} вручную"
                     log_info_router "Прокси-клиент успешно запущен в режиме $mode_proxy"
                     if [ "$check_fd" = "on" ] && [ ! -f "/tmp/observer_fd" ]; then
                         touch "/tmp/observer_fd"
