@@ -1,13 +1,4 @@
 # Xray-Keenetic
-Origin <https://github.com/Skrill0/XKeen>
-
-FAQ <https://jameszero.net/faq-xkeen.htm>
-
-Telegram <https://t.me/+SZWOjSlvYpdlNmMy> (обсуждение, инструкции по установке, советы по использованию)
-
-Xray-core <https://github.com/XTLS/Xray-core>
-
-Mihomo <https://github.com/MetaCubeX/mihomo>
 
 > [!WARNING]
 > Данный материал подготовлен в научно-технических целях. Утилита XKeen предназначена для управления межсетевым экраном роутера Keenetic, защищающим домашнюю сеть. Разработчик не несёт ответственности за иное её использование. Перед использованием XKeen убедитесь, что ваши действия соответствуют законодательству вашей страны. Использование XKeen в противоправных целях строго запрещено
@@ -44,7 +35,7 @@ Mihomo <https://github.com/MetaCubeX/mihomo>
 - Возможность установки GeoIP базы [zkeenip.dat](https://github.com/jameszeroX/zkeen-ip)
 - Обновление [zkeen.dat](https://github.com/jameszeroX/zkeen-domains) и [zkeenip.dat](https://github.com/jameszeroX/zkeen-ip) по расписанию средствами XKeen
 - При недоступности GitHub API используется резервный источник релизов для XKeen, Xray и Mihomo 
-- При недоступности репозитория GitHub загрузка компонентов XKeen выполняется через прокси `ghfast.top`
+- При недоступности репозитория GitHub загрузка компонентов XKeen выполняется через прокси
 - Защита от случайного ввода дефиса вместо двоеточия при указании диапазона портов проксирования или исключения
 - Поддержка внешнего файла `/opt/etc/xkeen_exclude.lst` c IP-адресами и подсетями для исключения проксирования ([образец](https://raw.githubusercontent.com/jameszeroX/xkeen/main/xkeen_exclude.lst))
 - При установке теперь можно выбрать, добавлять ли XKeen в автозагрузку при включении роутера или нет
@@ -76,7 +67,7 @@ Mihomo <https://github.com/MetaCubeX/mihomo>
 ```
 opkg update && opkg upgrade && opkg install curl tar
 curl -OL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh
-chmod +x ./install.sh
+chmod +x install.sh
 ./install.sh
 #
 ```
@@ -89,6 +80,19 @@ xkeen -i
 #
 ```
 Установка [OffLine](https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md)
+
+
+### Источники
+Origin <https://github.com/Skrill0/XKeen>
+
+FAQ <https://jameszero.net/faq-xkeen.htm>
+
+Telegram <https://t.me/+SZWOjSlvYpdlNmMy> (обсуждение, инструкции по установке, советы по использованию)
+
+Xray-core <https://github.com/XTLS/Xray-core>
+
+Mihomo <https://github.com/MetaCubeX/mihomo>
+
 
 ### Поддержка
 Форк, как и оригинал, совершено бесплатен и не имеет каких либо ограничений по использованию. Надеюсь, мои доработки XKeen, многие из которых я сделал по Вашим просьбам, оказались полезны, так же, как и мои консультации в [телеграм-чате](https://t.me/+SZWOjSlvYpdlNmMy). Для меня очень важно понимать, что труд и время потрачены не зря. Буду благодарен за любую Вашу поддержку:
