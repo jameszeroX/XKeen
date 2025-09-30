@@ -82,18 +82,6 @@ xkeen -i
 Установка [OffLine](https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md)
 
 
-### Источники
-Origin <https://github.com/Skrill0/XKeen>
-
-FAQ <https://jameszero.net/faq-xkeen.htm>
-
-Telegram <https://t.me/+SZWOjSlvYpdlNmMy> (обсуждение, инструкции по установке, советы по использованию)
-
-Xray-core <https://github.com/XTLS/Xray-core>
-
-Mihomo <https://github.com/MetaCubeX/mihomo>
-
-
 ### Поддержка
 Форк, как и оригинал, совершено бесплатен и не имеет каких либо ограничений по использованию. Надеюсь, мои доработки XKeen, многие из которых я сделал по Вашим просьбам, оказались полезны, так же, как и мои консультации в [телеграм-чате](https://t.me/+SZWOjSlvYpdlNmMy). Для меня очень важно понимать, что труд и время потрачены не зря. Буду благодарен за любую Вашу поддержку:
 
@@ -106,3 +94,15 @@ Mihomo <https://github.com/MetaCubeX/mihomo>
 USDT, сеть TRC20: `TB9dLwzNdLB6QeKV6w4FjCACSarePb32Dg`
 
 USDT, сеть TON: `UQDHmmyz0e1K07Wf7aTVtdmcGzCPfo4Pf7uBi_Id8TDI6Da6`
+
+
+### Источники
+Origin <https://github.com/Skrill0/XKeen>
+
+FAQ <https://jameszero.net/faq-xkeen.htm>
+
+Telegram <https://t.me/+SZWOjSlvYpdlNmMy> (обсуждение, инструкции по установке, советы по использованию)
+
+Xray-core <https://github.com/XTLS/Xray-core>
+
+Mihomo <https://github.com/MetaCubeX/mihomo>
