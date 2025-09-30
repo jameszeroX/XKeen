@@ -99,10 +99,10 @@ USDT, сеть TON: `UQDHmmyz0e1K07Wf7aTVtdmcGzCPfo4Pf7uBi_Id8TDI6Da6`
 ### Источники
 Origin <https://github.com/Skrill0/XKeen>
 
-FAQ <https://jameszero.net/faq-xkeen.htm>
-
-Telegram <https://t.me/+SZWOjSlvYpdlNmMy> (обсуждение, инструкции по установке, советы по использованию)
-
 Xray-core <https://github.com/XTLS/Xray-core>
 
 Mihomo <https://github.com/MetaCubeX/mihomo>
+
+FAQ <https://jameszero.net/faq-xkeen.htm>
+
+Telegram <https://t.me/+SZWOjSlvYpdlNmMy> (обсуждение, инструкции по установке, советы по использованию)
