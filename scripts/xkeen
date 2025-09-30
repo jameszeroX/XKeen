@@ -290,7 +290,7 @@ case "$1" in
         fi
         echo "  Установка XKeen OffLine"
 
-        xkeen_info
+        info_cpu
         logs_cpu_info_console
         if [ -z "$architecture" ]; then
             exit 1
@@ -691,7 +691,7 @@ case "$1" in
         echo
         echo -e "  Установить ${yellow}XKeen${reset} заново можно командами:"
         echo
-        echo -e "  ${green}curl -OfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh${reset}"
+        echo -e "  ${green}curl -OL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh${reset}"
         echo -e "  ${green}chmod +x ./install.sh${reset}"
         echo -e "  ${green}./install.sh${reset}"
     ;;
@@ -860,7 +860,7 @@ case "$1" in
         echo
         echo -e "  Установить ${yellow}XKeen${reset} заново можно командами:"
         echo
-        echo -e "  ${green}curl -OfL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh${reset}"
+        echo -e "  ${green}curl -OL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh${reset}"
         echo -e "  ${green}chmod +x ./install.sh${reset}"
         echo -e "  ${green}./install.sh${reset}"
     ;;
