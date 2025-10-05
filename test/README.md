@@ -21,7 +21,7 @@ xkeen -uk
 ```
 В канале разработки команда `xkeen -uk` при каждом запуске загружает и устанавливает актуальную бету XKeen
 
-### Порядок установки с нуля
+### Порядок установки
 ```
 opkg update && opkg upgrade && opkg install curl tar
 curl -OL https://raw.githubusercontent.com/jameszeroX/xkeen/main/test/xkeen.tar.gz
