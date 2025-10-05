@@ -400,24 +400,28 @@ get_exclude_ip6() {
 get_policy_mark() {
     policy_mark=$(curl -kfsS "${url_server}/${url_policy}" 2>/dev/null |
         jq -r ".[] | select(.description | ascii_downcase == \"${name_policy}\") | .mark" 2>/dev/null)
-    if ! proxy_status && [ -z "$policy_mark" ]; then
-        if [ -z "${port_donor}" ]; then
-            log_warning_terminal "
+
+    if [ -n "$policy_mark" ]; then
+        echo "0x${policy_mark}"
+    else
+        if ! proxy_status ; then
+            if [ -z "${port_donor}" ]; then
+                log_warning_terminal "
   Политика '${green}$name_policy${reset}' не найдена в веб-интерфейсе роутера
   Не определены целевые порты для XKeen
   Прокси будет запущен для всех клиентов на всех портах
   "
-            echo
-        else
-            log_warning_terminal "
+                echo
+            else
+                log_warning_terminal "
   Политика '${green}$name_policy${reset}' не найдена в веб-интерфейсе роутера
   Определены целевые порты для XKeen
   Прокси будет запущен для всех клиентов на портах ${port_donor}
   "
-            echo
+                echo
+            fi
         fi
-    else
-        echo "0x${policy_mark}"
+        echo ""
     fi
 }
 
@@ -564,25 +568,50 @@ if pidof "\$name_client" >/dev/null; then
     # Настройка таблицы маршрутов
     configure_route() {
         ip_version="\$1"
-        if ! ip -"\$ip_version" rule show | grep -q "fwmark \$table_mark lookup \$table_id"; then
-            if [ -n "\$policy_mark" ]; then
-                policy_table=\$(ip rule show | awk -v policy="\$policy_mark" '\$0 ~ policy && /lookup/ && !/blackhole/{print \$NF}')
+
+        # Определяем таблицу маршрутизации
+        if [ -n "\$policy_mark" ]; then
+            policy_table=\$(ip rule show | awk -v policy="\$policy_mark" '\$0 ~ policy && /lookup/ && !/blackhole/{print \$NF}')
+            route_show_cmd="ip -\"\$ip_version\" route show table all | grep -w \"\$policy_table\""
+        else
+            route_show_cmd="ip -\"\$ip_version\" route show table main"
+        fi
+
+        # Проверяем есть ли default маршрут
+        [ \$ip_version = 4 ] && rm -f "/tmp/noinet"
+        if ! eval "\$route_show_cmd" 2>/dev/null | grep -q "^default"; then
+            [ \$ip_version = 4 ] && touch "/tmp/noinet"
+
+            # Если нет default маршрута - удаляем правило маршрутизации
+            if ip -"\$ip_version" rule show | grep -q "fwmark \$table_mark lookup \$table_id"; then
+                ip -"\$ip_version" rule del fwmark "\$table_mark" lookup "\$table_id" >/dev/null 2>&1
+                ip -"\$ip_version" route flush table "\$table_id" >/dev/null 2>&1
             fi
+            return 1
+        fi
+
+        if ! ip -"\$ip_version" rule show | grep -q "fwmark \$table_mark lookup \$table_id"; then
             ip -"\$ip_version" rule add fwmark "\$table_mark" lookup "\$table_id" >/dev/null 2>&1
             ip -"\$ip_version" route add local default dev lo table "\$table_id" >/dev/null 2>&1
-            if [ -n "\$policy_table" ]; then
-                ip -"\$ip_version" route show table all | grep -w "\$policy_table" | grep -Ev '^default' |
-                while read route; do
-                    matching_main_route=\$(ip -"\$ip_version" route show table main | grep -F "\$route")
-                    ip -"\$ip_version" route add table "\$table_id" \$matching_main_route >/dev/null 2>&1
-                done
-            else
-                ip -"\$ip_version" route show table main | grep -Ev '^default' |
-                while read route; do
-                    ip -"\$ip_version" route add table "\$table_id" \$route >/dev/null 2>&1
-                done
-            fi
+
+            # Копируем маршруты
+            eval "\$route_show_cmd" 2>/dev/null | while read route; do
+                case "\$route" in
+                    unreachable*) continue ;;
+                    default*) 
+                        # Default маршрут
+                        ip -"\$ip_version" route add table "\$table_id" \$route >/dev/null 2>&1
+                        ;;
+                    *) 
+                        # Остальные маршруты
+                        if echo "\$route" | grep -q "dev\|via"; then
+                            ip -"\$ip_version" route add table "\$table_id" \$route >/dev/null 2>&1
+                        fi
+                        ;;
+                esac
+            done
         fi
+        return 0
     }
 
     # Создание множественных правил multiport
@@ -932,6 +961,13 @@ proxy_start() {
                 if proxy_status; then
                     [ "$mode_proxy" != "Other" ] && configure_firewall
                     echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${yellow}${mode_proxy}${reset}"
+                    if curl -kfsS "${url_server}/${url_policy}" | jq --arg policy "$name_policy" -e 'any(.[]; .description | ascii_downcase == $policy)' > /dev/null; then
+                        if [ -e "/tmp/noinet" ]; then
+                            echo
+                            echo -e "  У политики ${yellow}$name_policy${reset} ${red}нет доступа в интернет${reset}"
+                            echo "  Проверьте установлена ли галка на продключении к провайдеру"
+                        fi
+                    fi
                     [ "$mode_proxy" = "Other" ] && echo -e "  Функция прозрачного прокси ${red}не активна${reset}. Направляйте соединения на ${yellow}${name_client}${reset} вручную"
                     log_info_router "Прокси-клиент успешно запущен в режиме $mode_proxy"
                     if [ "$check_fd" = "on" ] && [ ! -f "/tmp/observer_fd" ]; then

@@ -22,7 +22,7 @@ delete_register_mihomo() {
     fi
 }
 
-# Удаление регистрации xkeen
+# Удаление регистрации XKeen
 delete_register_xkeen() {
     # Удаляем соответствующие записи из файла статуса opkg
     sed -i -e '/Package: xkeen/,/Installed-Time:/d' "/opt/lib/opkg/status"

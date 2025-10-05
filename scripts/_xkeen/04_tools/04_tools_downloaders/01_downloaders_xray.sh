@@ -96,8 +96,6 @@ download_xray() {
         extension="${filename##*.}"
         xray_dist=$(mktemp)
         mkdir -p "$xtmp_dir"
-
-        echo -e "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray"
         
         echo -e "  ${yellow}Проверка${reset} доступности версии $version_selected..."
         http_status=$(curl -L -s -o /dev/null -w "%{http_code}" "$download_url")
@@ -116,6 +114,7 @@ download_xray() {
         fi
 
         # Загрузка Xray (с попыткой через прокси)
+        echo -e "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray"
         if curl -L -o "$xray_dist" "$download_url" &> /dev/null; then
             if [ -s "$xray_dist" ]; then
                 mv "$xray_dist" "$xtmp_dir/xray.$extension"

@@ -685,14 +685,18 @@ case "$1" in
         opkg remove xkeen
         delete_tmp
 
+        clear
+        echo
+        delete_all
+
+        clear
         echo
         echo -e "  Удаление XKeen ${green}выполнено${reset}"
-        echo -e "  Директорию резервных копий ${yellow}/opt/backups${reset} удалите вручную"
         echo
         echo -e "  Установить ${yellow}XKeen${reset} заново можно командами:"
         echo
         echo -e "  ${green}curl -OL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh${reset}"
-        echo -e "  ${green}chmod +x ./install.sh${reset}"
+        echo -e "  ${green}chmod +x install.sh${reset}"
         echo -e "  ${green}./install.sh${reset}"
     ;;
 
@@ -847,21 +851,18 @@ case "$1" in
         opkg remove xkeen
         delete_tmp
 
+        clear
         echo
-        echo -e "  Удаление XKeen ${green}выполнено${reset}"
-        sleep 2
+        delete_all
 
         clear
         echo
         echo -e "  Полная деинсталляция ${yellow}XKeen${reset} и всех зависимостей ${green}выполнена${reset}"
-        echo -e "  Директории резервных копий ${yellow}/opt/backups${reset} и конфигов ${yellow}/opt/etc/xkeen${reset} удалите вручную"
-        echo
-        echo -e "  Рекомендуется ${green}перезагрузить роутер${reset}"
         echo
         echo -e "  Установить ${yellow}XKeen${reset} заново можно командами:"
         echo
         echo -e "  ${green}curl -OL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh${reset}"
-        echo -e "  ${green}chmod +x ./install.sh${reset}"
+        echo -e "  ${green}chmod +x install.sh${reset}"
         echo -e "  ${green}./install.sh${reset}"
     ;;
 

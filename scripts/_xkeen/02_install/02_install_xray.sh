@@ -29,8 +29,14 @@ install_xray() {
         rm -rf "${xtmp_dir}/xray"
 
         # Фикс для новых ядер xray
-        if [ -f "$install_conf_dir"/*transport* ]; then
-            rm -f "$install_conf_dir"/*transport*
+        if [ -d "$install_conf_dir" ]; then
+            for file in "$install_conf_dir"/*; do
+                [ -f "$file" ] || continue
+                if grep "transport" "$file" >/dev/null 2>&1; then
+                    rm -f "$file"
+                fi
+            done
         fi
+
     fi
 }
