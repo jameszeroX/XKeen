@@ -52,7 +52,7 @@ table_redirect="nat"
 table_tproxy="mangle"
 
 ipv4_proxy="127.0.0.1"
-ipv4_exclude="0.0.0.0/8 10.0.0.0/8 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 224.0.0.0/4 255.255.255.255"
+ipv4_exclude="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 255.255.255.255"
 ipv6_proxy="::1"
 ipv6_exclude="::/128 ::1/128 64:ff9b::/96 2001::/32 2002::/16 fd00::/8 ff00::/8 fe80::/10"
 
@@ -546,7 +546,7 @@ if pidof "\$name_client" >/dev/null; then
     add_exclude_rules() {
         chain="\$1"
         for exclude in \$exclude_list; do
-            if [ "\$exclude" = "192.168.0.0/16" ] || [ "\$exclude" = "fd00::/8" ] && [ "\$chain" != "\$name_output_chain" ] && [ -n "\$file_dns" ]; then
+            if [ "\$exclude" = "10.0.0.0/8" ] || [ "\$exclude" = "172.16.0.0/12" ] || [ "\$exclude" = "192.168.0.0/16" ] || [ "\$exclude" = "fd00::/8" ] && [ "\$chain" != "\$name_output_chain" ] && [ -n "\$file_dns" ]; then
                 if [ -n "\${file_dns}" ]; then
                     if [ "\$table" = "mangle" ] && [ "\$mode_proxy" = "Mixed" ]; then
                         "\$family" -w -t "\$table" -A "\$chain" -d "\$exclude" -p tcp --dport "\$port_dns" -j RETURN >/dev/null 2>&1
