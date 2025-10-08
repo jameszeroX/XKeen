@@ -30,20 +30,19 @@
 
 Добавлено:
 - Поддержка ядра Mihomo
-- Возможность выбрать ядро проксирования (Xray/Mihomo) и его версию при установке XKeen
+- Возможность сменить ядро проксирования (Xray/Mihomo) параметрамии `-xray` и `-mihomo`
 - Возможность [OffLine установки](https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md) (параметр `-io`)
 - Возможность установки GeoIP базы [zkeenip.dat](https://github.com/jameszeroX/zkeen-ip)
 - Обновление [zkeen.dat](https://github.com/jameszeroX/zkeen-domains) и [zkeenip.dat](https://github.com/jameszeroX/zkeen-ip) по расписанию средствами XKeen
 - При недоступности GitHub API используется резервный источник релизов для XKeen, Xray и Mihomo 
 - При недоступности репозитория GitHub загрузка компонентов XKeen выполняется через прокси
-- Защита от случайного ввода дефиса вместо двоеточия при указании диапазона портов проксирования или исключения
-- Поддержка внешнего файла `/opt/etc/xkeen_exclude.lst` c IP-адресами и подсетями для исключения проксирования ([образец](https://raw.githubusercontent.com/jameszeroX/xkeen/main/xkeen_exclude.lst))
+- Защита от случайного ввода дефиса вместо двоеточия при указании диапазона портов проксирования или портов исключений
+- Поддержка внешнего файла `/opt/etc/xkeen_exclude.lst` c IP-адресами и подсетями для исключения из проксирования ([образец](https://raw.githubusercontent.com/jameszeroX/xkeen/main/xkeen_exclude.lst))
 - При установке теперь можно выбрать, добавлять ли XKeen в автозагрузку при включении роутера или нет
 - При пропуске установки Xray, его конфигурационные файлы и геобазы так же пропускаются и не устанавливаются
 - Mihomo и парсер yaml-файлов Yq устанавливаются и регистрируются в entware, как полноценные ipk-пакеты
 - Параметр запуска `-remove` для полной деинсталляции XKeen (ранее деинсталляцию нужно было выполнять покомпонентно)
 - Параметры запуска `-ug` (обновление геофайлов), `-ugc` (управление заданием Cron, обновляющим геофайлы), `-dgc` (удаление задания Cron, обновляющего геофайлы)
-- Параметры запуска `-mihomo` и `-xray` для смены ядра прокси-клиента
 - Параметр запуска `-um` для обновления/установки ядра Mihomo (поддерживается повышение/понижение версии)
 - Параметры запуска: `-rrm` (обновить регистрацию Mihomo), `-drm` (удалить регистрацию Mihomo)
 - Параметр запуска `-dm` для деинсталляции ядра Mihomo
@@ -69,7 +68,6 @@ opkg update && opkg upgrade && opkg install curl tar
 curl -OL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh
 chmod +x install.sh
 ./install.sh
-#
 ```
 Альтернативный вариант:
 ```
@@ -77,7 +75,6 @@ opkg update && opkg upgrade && opkg install curl tar
 curl -OL https://ghfast.top/https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz
 tar -xvzf xkeen.tar.gz -C /opt/sbin > /dev/null && rm xkeen.tar.gz
 xkeen -i
-#
 ```
 Установка [OffLine](https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md)
 
@@ -91,9 +88,9 @@ xkeen -i
 
 Карта МИР: `2204 1201 2976 4110`
 
-USDT, сеть TRC20: `TB9dLwzNdLB6QeKV6w4FjCACSarePb32Dg`
+USDT, сеть TRC20: `TQhy1LbuGe3Bz7EVrDYn67ZFLDjDBa2VNX`
 
-USDT, сеть TON: `UQDHmmyz0e1K07Wf7aTVtdmcGzCPfo4Pf7uBi_Id8TDI6Da6`
+USDT, сеть ERC20: `0x6a5DF3b5c67E1f90dF27Ff3bd2a7691Fad234EE2`
 
 
 ### Источники
