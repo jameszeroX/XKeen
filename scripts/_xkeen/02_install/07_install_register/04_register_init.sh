@@ -416,7 +416,7 @@ get_policy_mark() {
                 log_warning_terminal "
   Политика '${green}$name_policy${reset}' не найдена в веб-интерфейсе роутера
   Определены целевые порты для XKeen
-  Прокси будет запущен для всех клиентов на портах ${port_donor}
+  Прокси будет запущен для всех клиентов на портах ${yellow}${port_donor}${reset}
   "
                 echo
             fi

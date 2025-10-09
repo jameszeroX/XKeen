@@ -79,10 +79,10 @@ author_donate() {
             6)
                 echo
                 echo -e "  ${yellow}USDT${reset}, TRC20"
-                echo "     TB9dLwzNdLB6QeKV6w4FjCACSarePb32Dg"
+                echo "     TQhy1LbuGe3Bz7EVrDYn67ZFLDjDBa2VNX"
                 echo
-                echo -e "  ${yellow}USDT${reset}, TON"
-                echo "     UQDHmmyz0e1K07Wf7aTVtdmcGzCPfo4Pf7uBi_Id8TDI6Da6"
+                echo -e "  ${yellow}USDT${reset}, ERC20"
+                echo "     0x6a5DF3b5c67E1f90dF27Ff3bd2a7691Fad234EE2"
                 echo
                 return 0
                 ;;
