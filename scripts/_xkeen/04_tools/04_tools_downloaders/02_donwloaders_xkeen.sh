@@ -5,7 +5,7 @@ download_xkeen() {
     echo -e "  ${yellow}Выполняется загрузка${reset} XKeen"
 
     # Первая попытка: прямая загрузка
-    if curl -L -o "$xkeen_dist" "$xkeen_tar_url" &> /dev/null; then
+    if curl -m 10 -L -o "$xkeen_dist" "$xkeen_tar_url" &> /dev/null; then
         if [ -s "$xkeen_dist" ]; then
             mv "$xkeen_dist" "$tmp_dir/xkeen.tar.gz"
             echo -e "  XKeen ${green}успешно загружен${reset}"
@@ -15,7 +15,7 @@ download_xkeen() {
         fi
     else
         # Вторая попытка: загрузка через прокси
-        if curl -L -o "$xkeen_dist" "$gh_proxy/$xkeen_tar_url" &> /dev/null; then
+        if curl -m 10 -L -o "$xkeen_dist" "$gh_proxy/$xkeen_tar_url" &> /dev/null; then
             if [ -s "$xkeen_dist" ]; then
                 mv "$xkeen_dist" "$tmp_dir/xkeen.tar.gz"
                 echo -e "  XKeen ${green}успешно загружен через прокси${reset}"

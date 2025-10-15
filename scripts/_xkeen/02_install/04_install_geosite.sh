@@ -12,7 +12,7 @@ install_geosite() {
         temp_file=$(mktemp)
         
         # Первая попытка: прямая загрузка
-        if curl -L -o "$temp_file" "$url" > /dev/null 2>&1; then
+        if curl -m 10 -L -o "$temp_file" "$url" > /dev/null 2>&1; then
             if [ -s "$temp_file" ]; then
                 mv "$temp_file" "$geo_dir/$filename"
                 if [ "$update_flag" = true ]; then
@@ -27,7 +27,7 @@ install_geosite() {
             fi
         else
             # Вторая попытка: загрузка через прокси
-            if curl -L -o "$temp_file" "$gh_proxy/$url" > /dev/null 2>&1; then
+            if curl -m 10 -L -o "$temp_file" "$gh_proxy/$url" > /dev/null 2>&1; then
                 if [ -s "$temp_file" ]; then
                     mv "$temp_file" "$geo_dir/$filename"
                     if [ "$update_flag" = true ]; then

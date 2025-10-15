@@ -2,12 +2,12 @@
 download_xray() {
     while true; do
         printf "  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
-        RELEASE_TAGS=$(curl -s ${xray_api_url}?per_page=20 | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8) >/dev/null 2>&1
+        RELEASE_TAGS=$(curl -m 10 -s ${xray_api_url}?per_page=20 | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8) >/dev/null 2>&1
 
         if [ -z "$RELEASE_TAGS" ]; then
             echo
             printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
-            RELEASE_TAGS=$(curl -s $xray_jsd_url | jq -r '.versions[]' | head -n 8) >/dev/null 2>&1
+            RELEASE_TAGS=$(curl -m 10 -s $xray_jsd_url | jq -r '.versions[]' | head -n 8) >/dev/null 2>&1
             
             if [ -z "$RELEASE_TAGS" ]; then
                 echo
@@ -68,7 +68,7 @@ download_xray() {
             fi
         fi
 
-        if [ -z $USE_JSDELIVR ]; then
+        if [ -z "$USE_JSDELIVR" ]; then
             VERSION_ARG="$version_selected"
         else
             VERSION_ARG=v"$version_selected"
@@ -98,49 +98,121 @@ download_xray() {
         mkdir -p "$xtmp_dir"
         
         echo -e "  ${yellow}Проверка${reset} доступности версии $version_selected..."
-        http_status=$(curl -L -s -o /dev/null -w "%{http_code}" "$download_url")
         
-        if [ "$http_status" -eq 404 ]; then
-            echo -e "  ${red}Ошибка${reset}: Версия $version_selected не существует или не поддерживает архитектуру $architecture"
-            echo -e "  Проверьте правильность введенной версии и поддерживаемые архитектуры"
-            rm -f "$xray_dist"
-            sleep 2
-            continue
-        elif [ "$http_status" -ne 200 ]; then
-            echo -e "  ${red}Ошибка${reset}: Проблема с доступом к серверу (HTTP статус: $http_status)"
-            rm -f "$xray_dist"
-            sleep 2
-            continue
-        fi
+        # Функция для проверки доступности
+        check_url_availability() {
+            local url=$1
+            local timeout=$2
+            local description=$3
 
-        # Загрузка Xray (с попыткой через прокси)
-        echo -e "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray"
-        if curl -L -o "$xray_dist" "$download_url" &> /dev/null; then
-            if [ -s "$xray_dist" ]; then
-                mv "$xray_dist" "$xtmp_dir/xray.$extension"
-                echo -e "  Xray ${green}успешно загружен${reset}"
+            echo -e "  ${yellow}Проверка через $description...${reset}"
+            http_status=$(curl -m $timeout -L -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null)
+            curl_exit_code=$?
+
+            if [ $curl_exit_code -eq 28 ]; then
+                echo -e "  ${red}Таймаут${reset} при проверке через $description"
+                return 1
+            elif [ $curl_exit_code -ne 0 ]; then
+                echo -e "  ${red}Ошибка curl ($curl_exit_code)${reset} при проверке через $description"
+                return 1
+            elif [ "$http_status" -eq 200 ]; then
+                echo -e "  Версия ${green}доступна через $description${reset}"
                 return 0
+            elif [ "$http_status" -eq 404 ]; then
+                echo -e "  ${red}Версия не найдена${reset} через $description (404)"
+                return 2
             else
-                echo -e "  ${red}Ошибка${reset}: Загруженный файл Xray поврежден"
+                echo -e "  ${yellow}Проблема с доступом${reset} через $description (HTTP: $http_status)"
+                return 1
+            fi
+        }
+
+        # Проверка доступности версии
+        if [ -z "$USE_JSDELIVR" ]; then
+            if check_url_availability "$download_url" 10 "GitHub"; then
+                USE_DIRECT="true"
+            else
+                echo -e "  ${yellow}Пробуем проверить через прокси...${reset}"
+                if check_url_availability "$gh_proxy/$download_url" 10 "прокси"; then
+                    USE_PROXY="true"
+                else
+                    echo -e "  ${red}Ошибка${reset}: Версия $version_selected недоступна ни напрямую, ни через прокси"
+                    echo -e "  Возможные причины:"
+                    echo -e "  - Версия $version_selected не существует"
+                    echo -e "  - Архитектура $architecture не поддерживается"
+                    echo -e "  - Проблемы с сетью"
+                    rm -f "$xray_dist"
+                    sleep 2
+                    continue
+                fi
             fi
         else
-            if curl -L -o "$xray_dist" "$gh_proxy/$download_url" &> /dev/null; then
-                if [ -s "$xray_dist" ]; then
-                    mv "$xray_dist" "$xtmp_dir/xray.$extension"
-                    echo -e "  Xray ${green}успешно загружен через прокси${reset}"
-                    return 0
+            if ! check_url_availability "$download_url" 10 "jsDelivr"; then
+                echo -e "  ${red}Ошибка${reset}: Версия $version_selected недоступна через jsDelivr"
+                rm -f "$xray_dist"
+                sleep 2
+                continue
+            fi
+            USE_DIRECT="true"
+        fi
+
+        # Функция для загрузки
+        download_with_retry() {
+            local url=$1
+            local description=$2
+            local max_attempts=2
+
+            for attempt in $(seq 1 $max_attempts); do
+                echo -e "  ${yellow}Попытка загрузки $attempt/$max_attempts через $description...${reset}"
+
+                if curl -m 10 -L -o "$xray_dist" "$url" 2>/dev/null; then
+                    if [ -s "$xray_dist" ]; then
+                        echo -e "  Xray ${green}успешно загружен через $description${reset}"
+                        return 0
+                    else
+                        echo -e "  ${red}Ошибка${reset}: Загруженный файл Xray поврежден (пустой)"
+                        rm -f "$xray_dist"
+                        xray_dist=$(mktemp)
+                    fi
                 else
-                    echo -e "  ${red}Ошибка${reset}: Загруженный файл Xray поврежден"
+                    echo -e "  ${red}Ошибка загрузки${reset} через $description (попытка $attempt/$max_attempts)"
                 fi
+                
+                if [ $attempt -lt $max_attempts ]; then
+                    echo -e "  ${yellow}Повторная попытка через 2 секунды...${reset}"
+                    sleep 2
+                fi
+            done
+            return 1
+        }
+
+        echo -e "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray"
+        
+        if [ "$USE_PROXY" = "true" ]; then
+            if download_with_retry "$gh_proxy/$download_url" "прокси"; then
+                mv "$xray_dist" "$xtmp_dir/xray.$extension"
+                unset USE_PROXY
+                return 0
+            fi
+        else
+            if download_with_retry "$download_url" "прямое соединение"; then
+                mv "$xray_dist" "$xtmp_dir/xray.$extension"
+                return 0
             else
-                echo -e "  ${red}Ошибка${reset}: Не удалось загрузить Xray. Проверьте:"
-                echo -e "  - Существование версии $version_selected"
-                echo -e "  - Поддержку архитектуры $architecture"
-                echo -e "  - Соединение с интернетом"
+                echo -e "  ${yellow}Пробуем загрузку через прокси...${reset}"
+                if download_with_retry "$gh_proxy/$download_url" "прокси"; then
+                    mv "$xray_dist" "$xtmp_dir/xray.$extension"
+                    return 0
+                fi
             fi
         fi
         
+        # Если все попытки загрузки не удались
         rm -f "$xray_dist"
+        echo -e "  ${red}Ошибка${reset}: Не удалось загрузить Xray после всех попыток. Проверьте:"
+        echo -e "  - Существование версии $version_selected"
+        echo -e "  - Поддержку архитектуры $architecture"
+        echo -e "  - Соединение с интернетом"
         echo -e "  ${yellow}Пожалуйста, попробуйте другую версию${reset}"
         sleep 2
         continue
