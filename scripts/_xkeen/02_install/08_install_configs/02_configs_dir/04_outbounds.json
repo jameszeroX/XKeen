@@ -1,7 +1,5 @@
 {
   "outbounds": [
-
-    // Подключение через прокси
     {
       "protocol": "vless",
       "settings": {
@@ -23,22 +21,19 @@
         "network": "tcp",
         "security": "reality",
         "realitySettings": {
+          "fingerprint": "firefox",
           "serverName": "",	// SNI, указанный на сервере
-          "publicKey": "",	// Public Key, присвоенный пользователю на сервере
-          "shortId": "",	// Short ID, присвоенный пользователю на сервере
+          "publicKey": "",	// Public Key, указанный на сервере
+          "shortId": "",	// Short ID, указанный на сервере
           "spiderX": "/"
         }
       },
       "tag": "vless-reality"
     },
-
-    // Прямое подключение через провайдера
     {
       "protocol": "freedom",
       "tag": "direct"
     },
-
-    // Блокировка нежелательных подключений
     {
       "protocol": "blackhole",
       "tag": "block"

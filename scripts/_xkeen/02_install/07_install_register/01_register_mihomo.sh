@@ -108,6 +108,7 @@ sniffer:
   sniff:
     HTTP:
     TLS:
+    QUIC:
 
 proxies:
   - name: PROXY
@@ -120,35 +121,20 @@ proxies:
     udp: true
     flow: xtls-rprx-vision
     servername: ********.***
+    client-fingerprint: firefox
     reality-opts:
       public-key: *****************
       short-id: ********
-      support-x25519mlkem768: false
-    client-fingerprint: chrome
 
 geox-url:
   geosite: "https://github.com/jameszeroX/zkeen-domains/releases/latest/download/zkeen.dat"
   geoip: "https://github.com/jameszeroX/zkeen-ip/releases/latest/download/zkeenip.dat"
 
 rules:
-  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
+  - AND,((GEOIP,!RU),(NETWORK,UDP),(DST-PORT,443)),REJECT
   - GEOSITE,DOMAINS,PROXY
   - GEOSITE,OTHER,PROXY
   - GEOSITE,YOUTUBE,PROXY
-  - GEOIP,AKAMAI,PROXY
-  - GEOIP,AMAZON,PROXY
-  - GEOIP,CDN77,PROXY
-  - GEOIP,CLOUDFLARE,PROXY
-  - GEOIP,DIGITALOCEAN,PROXY
-  - GEOIP,FASTLY,PROXY
-  - GEOIP,GCORE,PROXY
-  - GEOIP,HETZNER,PROXY
-  - GEOIP,LINODE,PROXY
-  - GEOIP,META,PROXY
-  - GEOIP,ORACLE,PROXY
-  - GEOIP,OVH,PROXY
-  - GEOIP,TELEGRAM,PROXY
-  - GEOIP,VULTR,PROXY
   - MATCH,DIRECT
 EOF
 

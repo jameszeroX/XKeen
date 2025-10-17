@@ -16,26 +16,7 @@
         "outboundTag": "vless-reality"
       },
       {
-        "ip": [
-          "ext:geoip_zkeenip.dat:akamai",
-          "ext:geoip_zkeenip.dat:amazon",
-          "ext:geoip_zkeenip.dat:cdn77",
-          "ext:geoip_zkeenip.dat:cloudflare",
-          "ext:geoip_zkeenip.dat:digitalocean",
-          "ext:geoip_zkeenip.dat:fastly",
-          "ext:geoip_zkeenip.dat:gcore",
-          "ext:geoip_zkeenip.dat:hetzner",
-          "ext:geoip_zkeenip.dat:linode",
-          "ext:geoip_zkeenip.dat:meta",
-          "ext:geoip_zkeenip.dat:oracle",
-          "ext:geoip_zkeenip.dat:ovh",
-          "ext:geoip_zkeenip.dat:telegram",
-          "ext:geoip_zkeenip.dat:vultr"
-        ],
-        "outboundTag": "vless-reality"
-      },
-      {
-        "network": "tcp,udp",
+        "port": "1-65535",
         "outboundTag": "direct"
       }
     ]
