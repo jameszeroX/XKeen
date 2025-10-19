@@ -108,7 +108,13 @@ ip6tables_supported=$([ "$ip6_supported" = "true" ] && command -v ip6tables >/de
 get_user_ipv4_excludes() {
     if [ -f "$file_ip_exclude" ]; then
         echo -n " "
-        grep -v '^#' "$file_ip_exclude" | grep -v '^$' | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//'
+        sed 's/\r$//' "$file_ip_exclude" | \
+        sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | \
+        grep -v '^#' | \
+        grep -v '^$' | \
+        grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' | \
+        tr '\n' ' ' | \
+        sed 's/  */ /g; s/^ //; s/ $//'
     else
         echo ""
     fi
@@ -117,7 +123,13 @@ get_user_ipv4_excludes() {
 get_user_ipv6_excludes() {
     if [ -f "$file_ip_exclude" ]; then
         echo -n " "
-        grep -v '^#' "$file_ip_exclude" | grep -v '^$' | grep -Eo '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//'
+        sed 's/\r$//' "$file_ip_exclude" | \
+        sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | \
+        grep -v '^#' | \
+        grep -v '^$' | \
+        grep -Eo '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' | \
+        tr '\n' ' ' | \
+        sed 's/  */ /g; s/^ //; s/ $//'
     else
         echo ""
     fi
@@ -144,7 +156,7 @@ validate_and_clean_ports() {
             }
         }
     ' | sort -un | tr '\n' ',' | sed 's/,$//')
-    
+
     echo "$final_ports"
 }
 
@@ -154,11 +166,29 @@ process_user_ports() {
     user_exclude_ports=""
 
     if [ -f "$file_port_proxying" ]; then
-        user_proxy_ports=$(grep -v '^#' "$file_port_proxying" | grep -v '^$' | tr '\n' ',' | sed 's/,$//')
+        user_proxy_ports=$(
+            sed 's/\r$//' "$file_port_proxying" | \
+            sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | \
+            grep -v '^#' | \
+            grep -v '^$' | \
+            sed 's/-/:/g' | \
+            grep -E '^[0-9]+(:[0-9]+)?$' | \
+            tr '\n' ',' | \
+            sed 's/,$//'
+        )
     fi
 
     if [ -f "$file_port_exclude" ]; then
-        user_exclude_ports=$(grep -v '^#' "$file_port_exclude" | grep -v '^$' | tr '\n' ',' | sed 's/,$//')
+        user_exclude_ports=$(
+            sed 's/\r$//' "$file_port_exclude" | \
+            sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | \
+            grep -v '^#' | \
+            grep -v '^$' | \
+            sed 's/-/:/g' | \
+            grep -E '^[0-9]+(:[0-9]+)?$' | \
+            tr '\n' ',' | \
+            sed 's/,$//'
+        )
     fi
 
     if [ -n "$user_proxy_ports" ]; then
@@ -642,7 +672,7 @@ if pidof "\$name_client" >/dev/null; then
         while [ \$i -le \$num_ports ]; do
             end=\$((i + 6))
             chunk=\$(echo "\$ports_to_process" | tr ',' '\n' | sed '/^\$/d' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,\$//')
-    
+
             if [ -z "\$chunk" ]; then
                 break
             fi
@@ -766,7 +796,7 @@ else
     case "\$name_client" in
         xray)
             export XRAY_LOCATION_CONFDIR="\$directory_xray_config"
-            export XRAY_LOCATION_ASSET="\$directory_xray_asset"	    
+            export XRAY_LOCATION_ASSET="\$directory_xray_asset"
             if [ "\$architecture" = "arm64-v8a" ]; then
                 ulimit -SHn "\$arm64_fd" && su -c "\$name_client run" "\$name_profile" >/dev/null 2>&1 &
             else
