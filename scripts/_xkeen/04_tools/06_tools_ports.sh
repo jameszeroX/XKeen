@@ -110,11 +110,29 @@ process_user_ports() {
     user_exclude_ports=""
 
     if [ -f "/opt/etc/xkeen/port_proxying.lst" ]; then
-        user_proxy_ports=$(grep -v '^#' "/opt/etc/xkeen/port_proxying.lst" | grep -v '^$' | tr '\n' ',' | sed 's/,$//')
+        user_proxy_ports=$(
+            sed 's/\r$//' "/opt/etc/xkeen/port_proxying.lst" | \
+            sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | \
+            grep -v '^#' | \
+            grep -v '^$' | \
+            sed 's/-/:/g' | \
+            grep -E '^[0-9]+(:[0-9]+)?$' | \
+            tr '\n' ',' | \
+            sed 's/,$//'
+        )
     fi
 
     if [ -f "/opt/etc/xkeen/port_exclude.lst" ]; then
-        user_exclude_ports=$(grep -v '^#' "/opt/etc/xkeen/port_exclude.lst" | grep -v '^$' | tr '\n' ',' | sed 's/,$//')
+        user_exclude_ports=$(
+            sed 's/\r$//' "/opt/etc/xkeen/port_exclude.lst" | \
+            sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | \
+            grep -v '^#' | \
+            grep -v '^$' | \
+            sed 's/-/:/g' | \
+            grep -E '^[0-9]+(:[0-9]+)?$' | \
+            tr '\n' ',' | \
+            sed 's/,$//'
+        )
     fi
 
     if [ -n "$user_proxy_ports" ]; then
