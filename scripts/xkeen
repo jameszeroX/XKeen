@@ -769,10 +769,10 @@ case "$1" in
     ;;
 
 
-    -r|-remove)    # Полная деинсталляция XKeen и всех зависимостей
-        # Удаление задачи автообновления баз GeoFile
-        info_cron
+    -remove)    # Полная деинсталляция XKeen и всех зависимостей
+        choice_remove_xkeen
 
+        info_cron
         clear
         echo
         echo -e "  Удаление задачи автообновления баз ${yellow}GeoFile${reset}"

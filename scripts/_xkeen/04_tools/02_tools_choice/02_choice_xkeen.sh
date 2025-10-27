@@ -129,3 +129,27 @@ choice_redownload_xkeen() {
         esac
     done
 }
+
+choice_remove_xkeen() {
+    echo
+    echo -e "  Вы действительно хотите ${red}удалить XKeen${reset}?"
+    echo
+    echo "     1. Да, я уверен"
+    echo "     0. Нет, передумал"
+    echo
+
+    while true; do
+        read -r -p "  Ваш выбор: " choice
+        case "$choice" in
+            1)
+                return 0
+                ;;
+            0)
+                exit 0
+                ;;
+            *)
+                echo -e "  ${red}Некорректный ввод${reset}"
+                ;;
+        esac
+    done
+}
