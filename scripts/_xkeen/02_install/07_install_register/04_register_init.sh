@@ -612,35 +612,36 @@ if pidof "\$name_client" >/dev/null; then
         if ! eval "\$route_show_cmd" 2>/dev/null | grep -q "^default"; then
             [ \$ip_version = 4 ] && touch "/tmp/noinet"
 
-            # Если нет default маршрута - удаляем правило маршрутизации
-            if ip -"\$ip_version" rule show | grep -q "fwmark \$table_mark lookup \$table_id"; then
-                ip -"\$ip_version" rule del fwmark "\$table_mark" lookup "\$table_id" >/dev/null 2>&1
-                ip -"\$ip_version" route flush table "\$table_id" >/dev/null 2>&1
-            fi
-            return 1
+            # Если нет default маршрута для политики - создаём blackhole
+            ip -"\$ip_version" route flush table "\$table_id" >/dev/null 2>&1
+            ip -"\$ip_version" route add blackhole default table "\$table_id" >/dev/null 2>&1
+
+            return 0
         fi
 
+        # Очищаем таблицу и добавляем маршруты для выбранного провайдера
+        ip -"\$ip_version" route flush table "\$table_id" >/dev/null 2>&1
+    
+        eval "\$route_show_cmd" 2>/dev/null | while read route; do
+            case "\$route" in
+                unreachable*) continue ;;
+                default*)
+                    ip -"\$ip_version" route add table "\$table_id" \$route >/dev/null 2>&1
+                    ;;
+                *)
+                    if echo "\$route" | grep -q "dev\|via"; then
+                        ip -"\$ip_version" route add table "\$table_id" \$route >/dev/null 2>&1
+                    fi
+                    ;;
+            esac
+        done
+    
+        # Добавляем правило маршрутизации и локальный маршрут
         if ! ip -"\$ip_version" rule show | grep -q "fwmark \$table_mark lookup \$table_id"; then
             ip -"\$ip_version" rule add fwmark "\$table_mark" lookup "\$table_id" >/dev/null 2>&1
-            ip -"\$ip_version" route add local default dev lo table "\$table_id" >/dev/null 2>&1
-
-            # Копируем маршруты
-            eval "\$route_show_cmd" 2>/dev/null | while read route; do
-                case "\$route" in
-                    unreachable*) continue ;;
-                    default*) 
-                        # Default маршрут
-                        ip -"\$ip_version" route add table "\$table_id" \$route >/dev/null 2>&1
-                        ;;
-                    *) 
-                        # Остальные маршруты
-                        if echo "\$route" | grep -q "dev\|via"; then
-                            ip -"\$ip_version" route add table "\$table_id" \$route >/dev/null 2>&1
-                        fi
-                        ;;
-                esac
-            done
         fi
+        ip -"\$ip_version" route add local default dev lo table "\$table_id" >/dev/null 2>&1
+    
         return 0
     }
 
