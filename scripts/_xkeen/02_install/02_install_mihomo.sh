@@ -20,6 +20,7 @@ install_mihomo() {
         if gzip -d "${mihomo_archive}"; then
             mv "${mtmp_dir}/mihomo" $install_dir/
             chmod +x $install_dir/mihomo
+            echo -e "  Mihomo ${green}успешно установлен${reset}"
         fi
 
         # Удаление временных файлов

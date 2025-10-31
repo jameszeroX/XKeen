@@ -20,6 +20,7 @@ install_xray() {
         if unzip -q "${xray_archive}" -d "${xtmp_dir}/xray"; then
             mv "${xtmp_dir}/xray/xray" $install_dir/
             chmod +x $install_dir/xray
+            echo -e "  Xray ${green}успешно установлен${reset}"
         fi
 
         # Удаление архива Xray

@@ -245,7 +245,7 @@ download_mihomo() {
                     if download_with_retry "$gh_proxy/$download_yq" "$yq_dist" "прокси"; then
                         mv "$yq_dist" "$install_dir/yq"
                         chmod +x "$install_dir/yq"
-                        echo -e "  Yq ${green}успешно установлен через прокси${reset}"
+                        echo -e "  Yq ${green}успешно установлен${reset}"
                     else
                         echo -e "  ${red}Ошибка${reset}: Не удалось загрузить Yq"
                     fi

@@ -130,12 +130,41 @@ choice_redownload_xkeen() {
     done
 }
 
-choice_remove_xkeen() {
+choice_remove() {
     echo
-    echo -e "  Вы действительно хотите ${red}удалить XKeen${reset}?"
+    echo -e "  Вы действительно хотите ${red}удалить ${choice_for_remove}${reset}?"
     echo
-    echo "     1. Да, я уверен"
-    echo "     0. Нет, передумал"
+    echo "     1. Да, хочу удалить"
+    echo "     0. Нет, передумал(а)"
+    echo
+
+    while true; do
+        read -r -p "  Ваш выбор (1 или 0): " choice
+        case "$choice" in
+            1)
+                return 0
+                ;;
+            0)
+                exit 0
+                ;;
+            *)
+                echo -e "  ${red}Некорректный ввод${reset}"
+                ;;
+        esac
+    done
+}
+
+choice_port_xkeen() {
+    echo
+    if [ "$add_ports" = "donor" ]; then
+        echo -e "  Добавлять порты проксирования рекомендуется в файле ${yellow}/opt/etc/xkeen/port_proxying.lst${reset}"
+    elif [ "$add_ports" = "exclude" ]; then
+        echo -e "  Иключать порты из проксирования рекомендуется в файле ${yellow}/opt/etc/xkeen/port_exclude.lst${reset}"
+    fi
+    echo -e "  Продолжить ${red}не рекомендуемый${reset} способ?"
+    echo
+    echo "     1. Да, продолжаем"
+    echo -e "     0. Отмена, воспользуюсь ${green}рекомендуемым${reset} способом"
     echo
 
     while true; do

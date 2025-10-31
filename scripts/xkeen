@@ -626,6 +626,11 @@ case "$1" in
 
 
     -dgc)    # Удалить задачу автообновления баз GeoFile
+        clear
+        echo
+        choice_for_remove="задачу автообновления баз GeoFile"
+        choice_remove
+
         info_cron
 
         clear
@@ -641,6 +646,10 @@ case "$1" in
 
 
     -dx)    # Удалить Xray
+        clear
+        echo
+        choice_for_remove="Xray"
+        choice_remove
         clear
         echo
         command -v xray >/dev/null 2>&1 || { echo -e "  Xray ${red}не установлен${reset}"; exit 1; }
@@ -664,6 +673,10 @@ case "$1" in
     -dm)    # Удалить Mihomo
         clear
         echo
+        choice_for_remove="Mihomo"
+        choice_remove
+        clear
+        echo
         command -v mihomo >/dev/null 2>&1 || { echo -e "  Mihomo ${red}не установлен${reset}"; exit 1; }
         echo -e "  Удаление ${yellow}Mihomo${reset}"
 
@@ -679,6 +692,11 @@ case "$1" in
 
 
     -dk)    # Удалить XKeen
+        clear
+        echo
+        choice_for_remove="XKeen"
+        choice_remove
+
         clear
         echo
         echo -e "  Удаление ${yellow}XKeen${reset}"
@@ -704,6 +722,11 @@ case "$1" in
     -dgi)    # Удалить GeoIP's
         clear
         echo
+        choice_for_remove="GeoIP's"
+        choice_remove
+
+        clear
+        echo
         echo -e "  Удаление всех баз ${yellow}GeoIP${reset}"
 
         delete_geoip_key
@@ -715,6 +738,11 @@ case "$1" in
 
 
     -dgs)    # Удалить GeoSite's
+        clear
+        echo
+        choice_for_remove="GeoSite's"
+        choice_remove
+
         clear
         echo
         echo -e "  Удаление всех баз ${yellow}GeoSite${reset}"
@@ -736,6 +764,11 @@ case "$1" in
     -drx)    # Удалить регистрацию Xray
         clear
         echo
+        choice_for_remove="регистрацию Xray"
+        choice_remove
+
+        clear
+        echo
         echo -e "  Удаление ${yellow}регистрации Xray${reset}"
 
         delete_register_xray
@@ -746,6 +779,11 @@ case "$1" in
 
 
     -drm)    # Удалить регистрацию Mihomo
+        clear
+        echo
+        choice_for_remove="регистрацию Mihomo"
+        choice_remove
+
         clear
         echo
         echo -e "  Удаление ${yellow}регистрации Mihomo${reset}"
@@ -760,6 +798,11 @@ case "$1" in
     -drk)    # Удалить регистрацию XKeen
         clear
         echo
+        choice_for_remove="регистрацию XKeen"
+        choice_remove
+
+        clear
+        echo
         echo -e "  Удаление ${yellow}регистрации XKeen${reset}"
 
         delete_register_xkeen
@@ -770,7 +813,10 @@ case "$1" in
 
 
     -remove)    # Полная деинсталляция XKeen и всех зависимостей
-        choice_remove_xkeen
+        clear
+        echo
+        choice_for_remove="XKeen полностью со всеми зависимостями"
+        choice_remove
 
         info_cron
         clear

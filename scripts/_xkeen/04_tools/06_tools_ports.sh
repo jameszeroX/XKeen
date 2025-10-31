@@ -151,6 +151,8 @@ process_user_ports() {
 }
 
 add_ports_donor() {
+    add_ports="donor"
+    choice_port_xkeen
     if [ -z "$1" ]; then
         echo -e "  ${red}Ошибка${reset}: список портов не может быть пустым"
         return 1
@@ -346,6 +348,8 @@ dell_ports_donor() {
 }
 
 add_ports_exclude() {
+    add_ports="exclude"
+    choice_port_xkeen
     if [ -z "$1" ]; then
         echo -e "  ${red}Ошибка${reset}: список портов не может быть пустым"
         return 1
