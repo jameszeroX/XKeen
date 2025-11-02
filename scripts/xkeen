@@ -1266,7 +1266,15 @@ case "$1" in
 
 
     -modules)    # Перенос необходимых модулей из прошивки в пользовательскую директорию
+        clear
+        echo
         migration_modules
+    ;;
+
+    -delmodules)    # Удаление модулей из пользовательской директории
+        clear
+        echo
+        remove_modules
     ;;
 
 
