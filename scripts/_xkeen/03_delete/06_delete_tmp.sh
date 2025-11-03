@@ -8,6 +8,10 @@ delete_tmp() {
         rm "$cron_dir/root.tmp"
     fi
 
+    if [ -f "$register_dir/new_entry.txt" ]; then
+        rm "$register_dir/new_entry.txt"
+    fi
+
     if ! pidof xray >/dev/null || ! pidof mihomo >/dev/null ; then
         if [ -f "/opt/etc/ndm/netfilter.d/proxy.sh" ]; then
             rm "/opt/etc/ndm/netfilter.d/proxy.sh"

@@ -535,6 +535,7 @@ case "$1" in
 
         rm -f "$install_dir/xray_bak"
         rm -rf "$xtmp_dir"
+        delete_tmp
     ;;
 
 
@@ -591,6 +592,7 @@ case "$1" in
 
         rm -f "$install_dir/mihomo_bak"
         rm -rf "$mtmp_dir"
+        delete_tmp
     ;;
 
 
@@ -752,12 +754,6 @@ case "$1" in
 
         echo
         echo -e "  Удаление всех баз GeoSite ${green}выполнено${reset}"
-    ;;
-
-
-    -dt)    # Удалить временные файлы XKeen
-        clear
-        delete_tmp
     ;;
 
 

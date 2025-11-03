@@ -156,7 +156,6 @@ help_xkeen() {
         echo -e "	-dgi	${italic}	GeoIP${reset}"
         echo -e "	-dx	${italic}	Xray${reset}"
         echo -e "	-dm	${italic}	Mihomo${reset}"
-        echo -e "	-dt	${italic}	Временные файлы${reset}"
         echo -e "	-dk	${italic}	XKeen${reset}"
         echo
         echo -e "${red}Удаление${reset} | Задачи автообновления"
@@ -208,7 +207,8 @@ help_xkeen() {
         echo -e "	-mihomo	${italic}	Переключить XKeen на ядро Mihomo${reset}"
         echo
         echo -e "${light_blue}Управление модулями${reset}"
-        echo -e "	-modules ${italic}	Перенос модулей для XKeen в пользовательскую директорию${reset}"
+        echo -e "	-modules${italic}	Перенос модулей для XKeen в пользовательскую директорию${reset}"
+        echo -e "	-delmodules${italic}	Удаление модулей из пользовательской директории${reset}"
         echo
         echo -e "${light_blue}Информация${reset}"
         echo -e "	-about	${italic}	О программе${reset}"
