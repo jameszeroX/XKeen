@@ -463,8 +463,42 @@ case "$1" in
         install_xkeen
 
         # Перезапуск скрипта
-        exec sh "$0" -uk_post_update
+        if grep -E "^\s*-uk_post_update\s*\)" "$0" > /dev/null; then
+            exec sh "$0" -uk_post_update
+        else
+            . "$script_dir/.xkeen/import.sh"
+
+            echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
+            delete_register_xkeen
+            logs_delete_register_xkeen_info_console
+
+            echo -e "  Выполняется регистрация новой версии ${yellow}XKeen${reset}"
+            register_xkeen_list
+            logs_register_xkeen_list_info_console
+
+            register_xkeen_control
+            logs_register_xkeen_control_info_console
+
+            register_xkeen_status
+            logs_register_xkeen_status_info_console
+
+            register_cron_initd
+            register_xkeen_initd
+            create_xkeen_cfg
+            choice_canel_cron_select=true
+            update_cron_geofile_task
+
+            fixed_register_packages
+            delete_tmp
+
+            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+                $initd_dir/S99xkeen restart on >/dev/null 2>&1
+            fi
+
+            echo -e "  Обновление XKeen ${green}выполнено${reset}"
+        fi
     ;;
+
 
     -uk_post_update)
         . "$script_dir/.xkeen/import.sh"
@@ -1024,8 +1058,42 @@ case "$1" in
         install_xkeen
 
         # Перезапуск скриптa
-        exec sh "$0" -k_post_install
+        if grep -E "^\s*-k_post_install\s*\)" "$0" > /dev/null; then
+            exec sh "$0" -k_post_install
+        else
+            . "$script_dir/.xkeen/import.sh"
+            echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
+            delete_register_xkeen
+            logs_delete_register_xkeen_info_console
+
+            echo -e "  Выполняется регистрация новой версии ${yellow}XKeen${reset}"
+            register_xkeen_list
+            logs_register_xkeen_list_info_console
+
+            register_xkeen_control
+            logs_register_xkeen_control_info_console
+
+            register_xkeen_status
+            logs_register_xkeen_status_info_console
+
+            register_cron_initd
+            register_xkeen_initd
+            create_xkeen_cfg
+            choice_canel_cron_select=true
+            update_cron_geofile_task
+
+            fixed_register_packages
+            delete_tmp
+
+            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+                $initd_dir/S99xkeen restart on >/dev/null 2>&1
+            fi
+
+            echo
+            echo -e "  Переустановка XKeen ${green}выполнена${reset}"
+        fi
     ;;
+
 
     -k_post_install)
         . "$script_dir/.xkeen/import.sh"
