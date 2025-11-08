@@ -461,6 +461,12 @@ case "$1" in
         backup_xkeen
         $download_func
         install_xkeen
+
+        # Перезапуск скрипта
+        exec sh "$0" -uk_post_update
+    ;;
+
+    -uk_post_update)
         . "$script_dir/.xkeen/import.sh"
 
         echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
@@ -494,7 +500,7 @@ case "$1" in
     ;;
 
 
-    -ux)    # Обновление ядра Xray
+    -ux)    # Обновление или установка ядра Xray
         . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
         status_file="/opt/lib/opkg/status"
         info_cpu
@@ -1016,6 +1022,12 @@ case "$1" in
 
         echo
         install_xkeen
+
+        # Перезапуск скриптa
+        exec sh "$0" -k_post_install
+    ;;
+
+    -k_post_install)
         . "$script_dir/.xkeen/import.sh"
         echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
         delete_register_xkeen
@@ -1264,12 +1276,14 @@ case "$1" in
     -modules)    # Перенос необходимых модулей из прошивки в пользовательскую директорию
         clear
         echo
+        keenos_modules
         migration_modules
     ;;
 
     -delmodules)    # Удаление модулей из пользовательской директории
         clear
         echo
+        keenos_modules
         remove_modules
     ;;
 

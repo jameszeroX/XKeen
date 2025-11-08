@@ -239,11 +239,54 @@ create_user() {
     fi
 }
 
+# Загрузка модулей
+load_modules() {
+    module="$1"
+    if [ -f "${directory_os_modules}/${module}" ]; then
+        insmod "${directory_os_modules}/${module}" >/dev/null 2>&1 && return
+    elif [ -f "${directory_user_modules}/${module}" ]; then
+        insmod "${directory_user_modules}/${module}" >/dev/null 2>&1 && return
+    fi
+}
+
+# Проверка доступности owner в iptables
+is_owner_working() {
+    iptables -w -t mangle -N TEST_OWNER_CHAIN >/dev/null 2>&1 || return 1
+
+    if iptables -w -t mangle -A TEST_OWNER_CHAIN -m owner --gid-owner 65534 -j RETURN >/dev/null 2>&1; then
+        iptables -w -t mangle -F TEST_OWNER_CHAIN >/dev/null 2>&1
+        iptables -w -t mangle -X TEST_OWNER_CHAIN >/dev/null 2>&1
+        return 0
+    else
+        iptables -w -t mangle -F TEST_OWNER_CHAIN >/dev/null 2>&1
+        iptables -w -t mangle -X TEST_OWNER_CHAIN >/dev/null 2>&1
+        return 1
+    fi
+}
+
+load_owner() {
+    if is_owner_working; then
+        return 0
+    fi
+
+    load_modules xt_owner.ko
+
+    if is_owner_working; then
+        return 0
+    else
+        return 1
+    fi
+}
+load_owner
+load_modules xt_TPROXY.ko
+load_modules xt_socket.ko
+load_modules xt_multiport.ko
+
 # Обработка модулей и портов
 get_modules() {
     if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed" ]; then
         for module in xt_TPROXY.ko xt_socket.ko; do
-            if [ ! -f "${directory_user_modules}/${module}" ] && [ ! -f "${directory_os_modules}/${module}" ] && ! lsmod | grep -q "${module%.ko}"; then
+            if ! lsmod | grep -q "${module%.ko}"; then
                 proxy_stop
                 log_error_terminal "
   Модуль ${module} не найден
@@ -255,14 +298,13 @@ get_modules() {
     fi
 
     if [ -n "$port_donor" ] || [ -n "$port_exclude" ]; then
-        module="xt_multiport.ko"
-        if [ ! -f "${directory_user_modules}/${module}" ] && [ ! -f "${directory_os_modules}/${module}" ] && ! lsmod | grep -q "${module%.ko}"; then
+        if ! lsmod | grep -q xt_multiport; then
             log_warning_terminal "
   Модуль multiport не найден
   Невозможно использовать указанные порты без него
   Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
   
-  Прокси будет работать на всех портах
+  Без модуля multiport прокси будет работать на всех портах
   "
             port_donor=""
             port_exclude=""
@@ -270,15 +312,14 @@ get_modules() {
     fi
 
     if [ -n "$file_dns" ]; then
-        module="xt_owner.ko"
-        if [ ! -f "${directory_user_modules}/${module}" ] && [ ! -f "${directory_os_modules}/${module}" ] && ! lsmod | grep -q "${module%.ko}"; then
+        if ! is_owner_working; then
             file_dns=""
             log_warning_terminal "
   Модуль owner не найден
-  Невозможно использовать DNS-сервер xray без него
+  Невозможно использовать DNS-сервер Xray без него
   Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
   
-  Прокси-клиент будет запущен с использованием DNS роутера
+  Без модуля owner Xray может использовать только DNS роутера
   "
         fi
     fi
@@ -510,21 +551,6 @@ restart_script() {
 }
 
 if pidof "\$name_client" >/dev/null; then
-    # Загрузка модулей
-    load_modules() {
-        module="\$1"
-        if [ -f "\${directory_user_modules}/\${module}" ]; then
-            insmod "\${directory_user_modules}/\${module}" >/dev/null 2>&1 && return
-        elif [ -f "\${directory_os_modules}/\${module}" ]; then
-            insmod "\${directory_os_modules}/\${module}" >/dev/null 2>&1 && return
-        elif ! lsmod | grep -q "\${module%.ko}"; then
-            case "\${module}" in
-                xt_owner.ko) file_dns="" ;;
-                xt_multiport.ko) port_exclude=""; port_donor="" ;;
-            esac
-        fi
-    }
-
     # Добавление правил iptables
     add_ipt_rule() {
         family="\$1"
@@ -541,13 +567,11 @@ if pidof "\$name_client" >/dev/null; then
                     if [ "\$table" = "\$table_redirect" ]; then
                         "\$family" -w -t "\$table" -A \$name_prerouting_chain -p tcp -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
                     else
-                        load_modules xt_TPROXY.ko
                         "\$family" -w -t "\$table" -I \$name_prerouting_chain -p udp -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
                         "\$family" -w -t "\$table" -A \$name_prerouting_chain -p udp -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
                     fi
                     ;;
                 TProxy)
-                    load_modules xt_TPROXY.ko
                     for net in \$network_tproxy; do
                         "\$family" -w -t "\$table" -I \$name_prerouting_chain -p "\$net" -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
                         "\$family" -w -t "\$table" -A \$name_prerouting_chain -p "\$net" -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
@@ -753,12 +777,7 @@ if pidof "\$name_client" >/dev/null; then
 
     [ -n "\$policy_mark" ] && connmark_option="-m connmark --mark \$policy_mark"
     if [ -n "\$port_donor" ] || [ -n "\$port_exclude" ]; then
-        load_modules xt_multiport.ko
         [ -n "\$file_dns" ] && [ -n "\$port_donor" ] && port_donor="\$port_dns,\$port_donor"
-    fi
-    if [ "\$mode_proxy" != "Redirect" ]; then
-        load_modules xt_socket.ko
-        load_modules xt_owner.ko
     fi
     for family in iptables ip6tables; do
         if [ "\$family" = "ip6tables" ]; then

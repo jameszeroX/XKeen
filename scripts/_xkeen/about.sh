@@ -54,6 +54,8 @@ author_donate() {
                 echo -e "  ${yellow}USDT${reset}, ERC20 и BEP20"
                 echo "     0x4a0369a762e3a23cc08f0bbbf39e169a647a5661"
                 echo
+                echo -e "  ${light_blue}Уточните актуальность реквизитов перед переводом${reset}"
+                echo
                 return 0
                 ;;
             4)
@@ -83,6 +85,8 @@ author_donate() {
                 echo
                 echo -e "  ${yellow}USDT${reset}, ERC20"
                 echo "     0x6a5DF3b5c67E1f90dF27Ff3bd2a7691Fad234EE2"
+                echo
+                echo -e "  ${light_blue}Уточните актуальность реквизитов перед переводом${reset}"
                 echo
                 return 0
                 ;;
@@ -126,7 +130,7 @@ author_feedback() {
     echo "     https://github.com/jameszeroX"
     echo
     echo -e "  Предоставленные выше контакты предназначены ${green}для личной переписки${reset}, а ${red}не для консультаций${reset}"
-    echo "  Возникающие вопросы по XKeen, задавайте в телеграм-чате https://t.me/+SZWOjSlvYpdlNmMy"
+    echo "  Возникающие вопросы по XKeen, задавайте в телеграм-чате https://t.me/+8Cvh7oVf6cE0MWRi"
 }
 
 help_xkeen() {

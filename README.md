@@ -102,4 +102,4 @@ Mihomo <https://github.com/MetaCubeX/mihomo>
 
 FAQ <https://jameszero.net/faq-xkeen.htm>
 
-Telegram <https://t.me/+SZWOjSlvYpdlNmMy> (обсуждение, инструкции по установке, советы по использованию)
+Telegram <https://t.me/+8Cvh7oVf6cE0MWRi> (обсуждение, инструкции по установке, советы по использованию)
