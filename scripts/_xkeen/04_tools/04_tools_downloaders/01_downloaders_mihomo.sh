@@ -72,7 +72,7 @@ download_mihomo() {
         if [ -z "$USE_JSDELIVR" ]; then
             VERSION_ARG="$version_selected"
         else
-            VERSION_ARG=v"$version_selected"
+            VERSION_ARG="$version_selected"
             unset USE_JSDELIVR
         fi
 	
