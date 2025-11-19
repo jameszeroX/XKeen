@@ -1,7 +1,6 @@
 #!/bin/sh
 
-# Информация о службе
-# Краткое описание: Запуск / Остановка Xray
+# Информация о службе: Запуск / Остановка XKeen
 # Версия: 2.28
 
 # Окружение
@@ -626,46 +625,42 @@ if pidof "\$name_client" >/dev/null; then
         # Определяем таблицу маршрутизации
         if [ -n "\$policy_mark" ]; then
             policy_table=\$(ip rule show | awk -v policy="\$policy_mark" '\$0 ~ policy && /lookup/ && !/blackhole/{print \$NF}')
-            route_show_cmd="ip -\"\$ip_version\" route show table all | grep -w \"\$policy_table\""
+            route_show_cmd="ip -\$ip_version route show table all | grep -w \$policy_table"
         else
-            route_show_cmd="ip -\"\$ip_version\" route show table main"
+            route_show_cmd="ip -\$ip_version route show table main"
         fi
 
         # Проверяем есть ли default маршрут
-        [ \$ip_version = 4 ] && rm -f "/tmp/noinet"
-        if ! eval "\$route_show_cmd" 2>/dev/null | grep -q "^default"; then
-            [ \$ip_version = 4 ] && touch "/tmp/noinet"
+        check_default() {
+            eval "\$route_show_cmd" 2>/dev/null | grep -q '^default'
+        }
 
-            # Если нет default маршрута - удаляем правило маршрутизации
-            if ip -"\$ip_version" rule show | grep -q "fwmark \$table_mark lookup \$table_id"; then
-                ip -"\$ip_version" rule del fwmark "\$table_mark" lookup "\$table_id" >/dev/null 2>&1
-                ip -"\$ip_version" route flush table "\$table_id" >/dev/null 2>&1
+        if ! check_default; then
+            sleep 1
+            if ! check_default; then
+                [ "\$ip_version" = 4 ] && touch "/tmp/noinet"
+                return 1
             fi
-            return 1
         fi
 
-        if ! ip -"\$ip_version" rule show | grep -q "fwmark \$table_mark lookup \$table_id"; then
-            ip -"\$ip_version" rule add fwmark "\$table_mark" lookup "\$table_id" >/dev/null 2>&1
-            ip -"\$ip_version" route add local default dev lo table "\$table_id" >/dev/null 2>&1
+        [ "\$ip_version" = 4 ] && rm -f "/tmp/noinet"
 
-            # Копируем маршруты
-            eval "\$route_show_cmd" 2>/dev/null | while read route; do
-                case "\$route" in
-                    unreachable*) continue ;;
-                    default*) 
-                        # Default маршрут
-                        ip -"\$ip_version" route add table "\$table_id" \$route >/dev/null 2>&1
-                        ;;
-                    *) 
-                        # Остальные маршруты
-                        if echo "\$route" | grep -q "dev\|via"; then
-                            ip -"\$ip_version" route add table "\$table_id" \$route >/dev/null 2>&1
-                        fi
-                        ;;
-                esac
-            done
+        if ! ip -\$ip_version rule show | grep -q "fwmark \$table_mark lookup \$table_id"; then
+            ip -\$ip_version rule add fwmark "\$table_mark" lookup "\$table_id" >/dev/null 2>&1
+            ip -\$ip_version route add local default dev lo table "\$table_id" >/dev/null 2>&1
         fi
-        return 0
+
+        # Копируем маршруты
+        eval "\$route_show_cmd" 2>/dev/null | while read -r route; do
+            case "\$route" in
+                unreachable*|blackhole*)
+                    continue
+                    ;;
+                *)
+                    ip -\$ip_version route add table "\$table_id" \$route >/dev/null 2>&1
+                    ;;
+            esac
+        done
     }
 
     # Создание множественных правил multiport
@@ -938,7 +933,7 @@ proxy_start() {
         else
             log_info_router "Инициирован запуск прокси-клиента"
             delay_increment=1
-            current_delay=1
+            current_delay=0
             [ "$start_manual" != "on" ] && current_delay=$start_delay
             attempt=1
             create_user
@@ -1006,7 +1001,7 @@ proxy_start() {
                         ;;
                     *) "$name_client" run -C "$directory_xray_config" & ;;
                 esac
-                sleep 1 && sleep "$current_delay"
+                sleep "$current_delay"
                 if proxy_status; then
                     [ "$mode_proxy" != "Other" ] && configure_firewall
                     echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${yellow}${mode_proxy}${reset}"
@@ -1014,7 +1009,7 @@ proxy_start() {
                         if [ -e "/tmp/noinet" ]; then
                             echo
                             echo -e "  У политики ${yellow}$name_policy${reset} ${red}нет доступа в интернет${reset}"
-                            echo "  Проверьте установлена ли галка на продключении к провайдеру"
+                            echo "  Проверьте, установлена ли галка на продключении к провайдеру"
                         fi
                     fi
                     [ "$mode_proxy" = "Other" ] && echo -e "  Функция прозрачного прокси ${red}не активна${reset}. Направляйте соединения на ${yellow}${name_client}${reset} вручную"
