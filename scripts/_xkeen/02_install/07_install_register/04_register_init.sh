@@ -599,7 +599,7 @@ if pidof "\$name_client" >/dev/null; then
     add_exclude_rules() {
         chain="\$1"
         for exclude in \$exclude_list; do
-            if [ "\$exclude" = "10.0.0.0/8" ] || [ "\$exclude" = "172.16.0.0/12" ] || [ "\$exclude" = "192.168.0.0/16" ] || [ "\$exclude" = "fd00::/8" ] && [ "\$chain" != "\$name_output_chain" ] && [ -n "\$file_dns" ]; then
+            if [ "\$exclude" = "10.0.0.0/8" ] || [ "\$exclude" = "172.16.0.0/12" ] || [ "\$exclude" = "192.168.0.0/16" ] || [ "\$exclude" = "fd00::/8" ] || [ "\$exclude" = "fe80::/10" ] && [ "\$chain" != "\$name_output_chain" ] && [ -n "\$file_dns" ]; then
                 if [ -n "\${file_dns}" ]; then
                     if [ "\$table" = "mangle" ] && [ "\$mode_proxy" = "Mixed" ]; then
                         "\$family" -w -t "\$table" -A "\$chain" -d "\$exclude" -p tcp --dport "\$port_dns" -j RETURN >/dev/null 2>&1
