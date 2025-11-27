@@ -71,6 +71,8 @@ xkeen_info() {
 case "$1" in
 
     -i|-install)    # Запуск полного цикла установки
+        test_connection
+
         . "$script_dir/.xkeen/import.sh"
         clear
         echo
@@ -413,9 +415,11 @@ case "$1" in
 
 
     -ug)    # Запуск обновления баз GeoFile
-        command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
-        echo "  Обновление установленных баз GeoFile"
+        test_connection
 
+        command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
+
+        echo "  Обновление установленных баз GeoFile"
         info_geosite
         info_geoip
         if 
@@ -425,7 +429,8 @@ case "$1" in
             [ "$update_refilter_geoip" = "true" ] || \
             [ "$update_v2fly_geoip" = "true" ] || \
             [ "$update_zkeenip_geoip" = "true" ]; then
-
+            
+            echo
             install_geoip
             install_geosite
 
@@ -433,7 +438,7 @@ case "$1" in
                 $initd_dir/S99xkeen restart on >/dev/null 2>&1
             fi
 
-            echo -e "  Обновление установленных баз GeoFile ${green}выполнено${reset}"
+            echo -e "  Обновление установленных баз GeoFile ${green}завершено${reset}"
         else
             echo -e "  ${red}Не обнаружены${reset} базы GeoFile для обновления"
         fi
@@ -441,6 +446,8 @@ case "$1" in
 
 
     -uk)    # Обновление XKeen (автовыбор Stable/Dev версии)
+        test_connection
+
         clear
         echo
         echo "  Проверка обновлений XKeen"
@@ -535,6 +542,8 @@ case "$1" in
 
 
     -ux)    # Обновление или установка ядра Xray
+        test_connection
+
         . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
         status_file="/opt/lib/opkg/status"
         info_cpu
@@ -580,6 +589,8 @@ case "$1" in
 
 
     -um)    # Обновление или установка ядра Mihomo
+        test_connection
+
         . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
         status_file="/opt/lib/opkg/status"
         info_cpu
@@ -1051,7 +1062,8 @@ case "$1" in
             else
                 download_func="download_xkeen_dev"
             fi
-            $download_func
+            test_connection
+            "$download_func"
         fi
 
         echo
@@ -1130,6 +1142,8 @@ case "$1" in
 
 
     -g)    # Переустановка баз GeoFile
+        test_connection
+
         command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
         clear
         info_geosite
@@ -1188,13 +1202,6 @@ case "$1" in
     -mbr)    # Восстановление конфигурации Mihomo из резервной копии
         echo -e "  Восстановление ${yellow}конфигурации Mihomo${reset} из резервной копии"
         restore_backup_configs_mihomo
-    ;;
-
-
-    -tc)    # Тест соединения
-        echo "  Проверка интернет-соединения"
-        tests_connection
-        echo -e "  Проверка интернет-соединения ${green}выполнена${reset}"
     ;;
 
 
