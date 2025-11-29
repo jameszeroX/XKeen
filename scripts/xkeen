@@ -509,6 +509,7 @@ case "$1" in
 
     -uk_post_update)
         . "$script_dir/.xkeen/import.sh"
+        xkeen_info
 
         echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
         delete_register_xkeen
@@ -1049,7 +1050,6 @@ case "$1" in
     -k)    # Переустановка XKeen
         . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
         status_file="/opt/lib/opkg/status"
-        info_cpu
         xkeen_info
 
         clear
@@ -1109,6 +1109,8 @@ case "$1" in
 
     -k_post_install)
         . "$script_dir/.xkeen/import.sh"
+        xkeen_info
+
         echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
         delete_register_xkeen
         logs_delete_register_xkeen_info_console
