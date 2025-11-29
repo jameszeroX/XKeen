@@ -292,7 +292,7 @@ case "$1" in
         fi
         echo "  Установка XKeen OffLine"
 
-        info_cpu
+        xkeen_info
         logs_cpu_info_console
         if [ -z "$architecture" ]; then
             exit 1
