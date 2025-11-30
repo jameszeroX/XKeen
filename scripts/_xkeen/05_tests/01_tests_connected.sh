@@ -27,6 +27,7 @@ test_entware() {
         install_packages
     else
         printf "  Репозиторий Entware ${red}недоступен${reset}\n"
+        printf "  Укажите рабочее зеркало репозитория в файле ${yellow}/opt/etc/opkg.conf${reset}\n"
         exit 1
     fi
 }
