@@ -100,6 +100,8 @@ Xray-core <https://github.com/XTLS/Xray-core>
 
 Mihomo <https://github.com/MetaCubeX/mihomo>
 
+Yq <https://github.com/mikefarah/yq>
+
 FAQ <https://jameszero.net/faq-xkeen.htm>
 
 Telegram <https://t.me/+8Cvh7oVf6cE0MWRi> (обсуждение, инструкции по установке, советы по использованию)

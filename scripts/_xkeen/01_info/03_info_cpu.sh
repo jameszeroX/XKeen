@@ -41,10 +41,6 @@ info_cpu() {
 
     # Проверка Little Endian с помощью lscpu только при архитектуре "mips64" или "mips32"
     if [ "${architecture}" = 'mips64' ] || [ "${architecture}" = 'mips32' ]; then
-        if [ "${info_packages_lscpu}" = "not_installed" ]; then
-            opkg install lscpu &>/dev/null
-        fi
-
         lscpu_output="$(lscpu 2>/dev/null | tr '[:upper:]' '[:lower:]')"
         if echo "${lscpu_output}" | grep -q "little endian"; then
             architecture="${architecture}le"

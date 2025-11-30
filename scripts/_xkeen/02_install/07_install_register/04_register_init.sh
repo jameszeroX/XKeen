@@ -879,9 +879,6 @@ clean_firewall() {
 
 # Мониторинг файловых дескрипторов
 monitor_fd() {
-    if ! opkg list-installed | grep -q "^coreutils-nohup"; then
-        opkg update && opkg install coreutils-nohup
-    fi
     while true; do
         client_pid=$(pidof "$name_client")
         if [ -n "$client_pid" ] && [ -d "/proc/$client_pid/fd" ]; then

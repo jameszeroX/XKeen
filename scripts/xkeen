@@ -28,12 +28,7 @@ add_chmod_init() {
 . "$script_dir/.xkeen/import.sh"
 	
 xkeen_info() {
-    opkg update >/dev/null 2>&1
-    opkg upgrade >/dev/null 2>&1
-    # Проверяем установку пакетов
-    info_packages
-
-    # Собираем необходимую информацию о процессоре
+    # Определяем архитектуру процессора
     info_cpu
 
     # Проверяем установку Xray
@@ -63,15 +58,13 @@ xkeen_info() {
     # Проверяем версию Mihomo и Yq
     info_version_mihomo
     info_version_yq
-
-    # Устанавливаем недостающие пакеты
-    install_packages
 }
 
 case "$1" in
 
     -i|-install)    # Запуск полного цикла установки
         test_connection
+        test_entware
 
         . "$script_dir/.xkeen/import.sh"
         clear
@@ -89,7 +82,7 @@ case "$1" in
             exit 1
         fi
 
-        tests_entware_storage
+        location_entware_storage
         preinstall_warn
 
         choice_add_proxy_cores
@@ -1063,6 +1056,7 @@ case "$1" in
                 download_func="download_xkeen_dev"
             fi
             test_connection
+            test_entware
             "$download_func"
         fi
 
@@ -1374,7 +1368,7 @@ case "$1" in
 
 
     -diag)    # Диагностика XKeen
-        tests_entware_storage
+        location_entware_storage
         clear
         diagnostic
     ;;
