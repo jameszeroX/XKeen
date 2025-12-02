@@ -13,18 +13,43 @@ test_connection() {
 }
 
 test_entware() {
+    printf "  ${yellow}Проверка доступности${reset} репозитория Entware. Подождите, пожалуйста...\n"
     repo_url=$(awk '/^src/ {print $3; exit}' /opt/etc/opkg.conf)
-    
+
     if [ -z "$repo_url" ]; then
         printf "  ${red}Не удалось${reset} определить используемый репозиторий Entware\n"
         exit 1
     fi
+
+    repo_url="$repo_url/Packages.gz"
+    tmp_file="/tmp/pkg_check_$$"
     
-    if curl -m 10 -s --head "$repo_url" >/dev/null; then
-        opkg update >/dev/null 2>&1
-        opkg upgrade >/dev/null 2>&1
-        info_packages
-        install_packages
+    curl -s "$repo_url" -o "$tmp_file" 2>/dev/null &
+    pid=$!
+
+    sleep 7
+
+    if kill -0 $pid 2>/dev/null; then
+        kill $pid 2>/dev/null
+        wait $pid 2>/dev/null
+    fi
+
+    if [ -f "$tmp_file" ]; then
+        size=$(wc -c < "$tmp_file" 2>/dev/null || echo 0)
+        rm -f "$tmp_file"
+
+        if [ "$size" -gt 100000 ]; then
+            printf "  Репозиторий Entware ${green}доступен${reset}. Подолжаем...\n"
+            opkg update >/dev/null 2>&1
+            opkg upgrade >/dev/null 2>&1
+            info_packages
+            install_packages
+            return 0
+        else
+            printf "  Репозиторий Entware ${red}недоступен${reset}\n"
+            printf "  Укажите рабочее зеркало репозитория в файле ${yellow}/opt/etc/opkg.conf${reset}\n"
+            exit 1
+        fi
     else
         printf "  Репозиторий Entware ${red}недоступен${reset}\n"
         printf "  Укажите рабочее зеркало репозитория в файле ${yellow}/opt/etc/opkg.conf${reset}\n"
