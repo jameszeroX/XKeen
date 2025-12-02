@@ -2,7 +2,7 @@
 
 url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"
 if ! curl -OL "$url"; then
-    if ! curl -OL "https://ghfast.top/$url"; then
+    if ! curl -OL "https://edgeone.gh-proxy.org/$url"; then
         echo "Ошибка: не удалось загрузить xkeen.tar.gz"
         exit 1
     fi
