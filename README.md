@@ -72,7 +72,7 @@ chmod +x install.sh
 Альтернативный вариант:
 ```
 opkg update && opkg upgrade && opkg install curl tar
-curl -OL https://ghfast.top/https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz
+curl -OL https://edgeone.gh-proxy.org/https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz
 tar -xvzf xkeen.tar.gz -C /opt/sbin > /dev/null && rm xkeen.tar.gz
 xkeen -i
 ```

@@ -15,8 +15,8 @@ xkeen -io
 
 При недоступности GitHub, обновление геофайлов по планировщику работать не будет, выполняйте его вручную.
 
-Если недоступен не только GitHub, но и [репозиторий Entware](https://bin.entware.net), то перед OffLine установкой XKeen требуется вручную установить недостающие пакеты из следующего списка:
+Если недоступен не только GitHub, но и [репозиторий Entware](http://bin.entware.net), то перед OffLine установкой XKeen требуется вручную установить недостающие пакеты из следующего списка:
 ```
 curl, tar, lscpu, jq, libc, libssp, librt, libpthread, iptables, ca-bundle, coreutils-uname, coreutils-nohup
 ```
-либо прописать в файл `/opt/etc/opkg.conf` рабочее зеркало репозитория.
+либо прописать в файл `/opt/etc/opkg.conf` рабочее зеркало репозитория ([подробнее](https://github.com/jameszeroX/Entware-with-Mirror)).
