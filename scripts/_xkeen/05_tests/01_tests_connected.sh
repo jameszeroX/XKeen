@@ -23,23 +23,26 @@ test_entware() {
 
     repo_url="$repo_url/Packages.gz"
     tmp_file="/tmp/pkg_check_$$"
-    
-    curl -s "$repo_url" -o "$tmp_file" 2>/dev/null &
+
+    (curl -s "$repo_url" -o "$tmp_file" 2>/dev/null) &
     pid=$!
 
-    sleep 7
+    i=1
+    while [ $i -le 10 ]; do
+        kill -0 $pid 2>/dev/null || break
+        sleep 1
+        i=$((i + 1))
+    done
 
-    if kill -0 $pid 2>/dev/null; then
-        kill $pid 2>/dev/null
-        wait $pid 2>/dev/null
-    fi
+    kill -0 $pid 2>/dev/null 2>/dev/null && kill $pid 2>/dev/null
+    wait $pid 2>/dev/null
 
     if [ -f "$tmp_file" ]; then
         size=$(wc -c < "$tmp_file" 2>/dev/null || echo 0)
         rm -f "$tmp_file"
 
         if [ "$size" -gt 100000 ]; then
-            printf "  Репозиторий Entware ${green}доступен${reset}. Подолжаем...\n"
+            printf "  Репозиторий Entware ${green}доступен${reset}. Продолжаем...\n"
             opkg update >/dev/null 2>&1
             opkg upgrade >/dev/null 2>&1
             info_packages
