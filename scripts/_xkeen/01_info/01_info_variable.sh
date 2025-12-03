@@ -46,6 +46,12 @@ source_date_epoch=$(date +%s)
 current_datetime=$(date "+%d-%b-%y_%H-%M")
 
 # -------------------------------------
+# IP для проверки доступа в интернет
+# -------------------------------------
+conn_IP1="195.208.4.1"
+conn_IP2="77.88.44.55"
+
+# -------------------------------------
 # URL
 # -------------------------------------
 xkeen_api_url="https://api.github.com/repos/jameszeroX/xkeen/releases/latest"			# url api для XKeen

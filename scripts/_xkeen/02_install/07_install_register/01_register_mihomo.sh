@@ -86,56 +86,9 @@ add_mihomo_config() {
             mkdir $mihomo_conf_dir
         fi
             cat << EOF > "$mihomo_conf_dir/config.yaml"
-redir-port: 1182
 tproxy-port: 1181
-mixed-port: 1080
-allow-lan: true
-log-level: silent
-geodata-mode: true
-geo-auto-update: true
-geo-update-interval: 72
-find-process-mode: off
-ipv6: false
-external-ui: ui
-external-controller: 0.0.0.0:9090
-
-profile:
-  store-selected: true
-
-sniffer:
-  enable: true
-  parse-pure-ip: true
-  sniff:
-    HTTP:
-    TLS:
-    QUIC:
-
-proxies:
-  - name: PROXY
-    type: vless
-    server: ***.***.***.***
-    port: 443
-    uuid: ******-***-***-***-******
-    network: tcp
-    tls: true
-    udp: true
-    flow: xtls-rprx-vision
-    servername: ********.***
-    client-fingerprint: firefox
-    reality-opts:
-      public-key: *****************
-      short-id: ********
-
-geox-url:
-  geosite: "https://github.com/jameszeroX/zkeen-domains/releases/latest/download/zkeen.dat"
-  geoip: "https://github.com/jameszeroX/zkeen-ip/releases/latest/download/zkeenip.dat"
-
-rules:
-  - AND,((GEOIP,!RU),(NETWORK,UDP),(DST-PORT,443)),REJECT
-  - GEOSITE,DOMAINS,PROXY
-  - GEOSITE,OTHER,PROXY
-  - GEOSITE,YOUTUBE,PROXY
-  - MATCH,DIRECT
+redir-port: 1182
+# Руководство по конфигурации Mihomo - https://wiki.metacubex.one/ru/config/
 EOF
 
         echo

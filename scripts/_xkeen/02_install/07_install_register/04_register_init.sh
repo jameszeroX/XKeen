@@ -445,9 +445,8 @@ get_exclude_ip4() {
     [ "$iptables_supported" != "true" ] && return
 
     # Получаем провайдерский IPv4
-    ipv4_eth=$(ip route get 77.88.8.8 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}' ||
-               ip route get 8.8.8.8 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}' ||
-               ip route get 1.1.1.1 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}')
+    ipv4_eth=$(ip route get 195.208.4.1 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}' ||
+               ip route get 77.88.8.8 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}')
     [ -n "$ipv4_eth" ] && ipv4_eth="${ipv4_eth}/32"
     user_ipv4=$(get_user_ipv4_excludes)
     echo "${ipv4_eth} ${ipv4_exclude}${user_ipv4}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
@@ -458,9 +457,8 @@ get_exclude_ip6() {
     [ "$ip6tables_supported" != "true" ] && return
 
     # Получаем провайдерский IPv6
-    ipv6_eth=$(ip -6 route get 2a02:6b8::feed:0ff 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}' ||
-               ip -6 route get 2001:4860:4860::8888 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}' ||
-               ip -6 route get 2606:4700:4700::1111 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}')
+    ipv6_eth=$(ip -6 route get 2a0c:a9c7:8::1 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}' ||
+               ip -6 route get 2a02:6b8::feed:0ff 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}')
     [ -n "$ipv6_eth" ] && ipv6_eth="${ipv6_eth}/128"
     user_ipv6=$(get_user_ipv6_excludes)
     echo "${ipv6_eth} ${ipv6_exclude}${user_ipv6}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'

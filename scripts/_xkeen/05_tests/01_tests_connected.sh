@@ -1,8 +1,8 @@
 test_connection() {
     result=1
 
-    if ! curl -I -m 10 https://max.ru >/dev/null 2>&1 && \
-       ! curl -I -m 10 https://ok.ru >/dev/null 2>&1; then
+    if ! ping -c 2 -W 5 "$conn_IP1" >/dev/null 2>&1 && \
+       ! ping -c 2 -W 5 "$conn_IP2" >/dev/null 2>&1; then
         result=0
     fi
 
