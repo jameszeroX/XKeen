@@ -13,25 +13,25 @@ install_geosite() {
         min_size=24576  # 24 KB
 
         download() {
-            curl --fail -m 20 -L -o "$temp_file" "$1" >/dev/null 2>&1
+            curl --fail -m 10 -L -o "$temp_file" "$1" >/dev/null 2>&1
             return $?
         }
 
         printf "  Загрузка %s...\n" "$display_name"
 
+        if [ "$use_direct" = "true" ]; then
+            :
+        else
+            url="$gh_proxy/$url"
+        fi
+
         download "$url"
         if [ $? -eq 0 ]; then
             :
         else
-            printf "  Прямая загрузка ${red}не удалась${reset}, пробуем через proxy...\n"
-            download "$gh_proxy/$url"
-            if [ $? -eq 0 ]; then
-                :
-            else
-                rm -f "$temp_file"
-                printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n" "$display_name"
-                return 1
-            fi
+            rm -f "$temp_file"
+            printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n" "$display_name"
+            return 1
         fi
 
         # Проверка размера файла

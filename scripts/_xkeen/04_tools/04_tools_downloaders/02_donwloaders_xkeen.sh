@@ -2,33 +2,29 @@
 download_xkeen() {
     xkeen_dist=$(mktemp)
     mkdir -p "$tmp_dir"
-    echo -e "  ${yellow}Выполняется загрузка${reset} XKeen"
+    printf "  ${yellow}Выполняется загрузка${reset} XKeen\n"
 
-    # Первая попытка: прямая загрузка
-    if curl -m 10 -L -o "$xkeen_dist" "$xkeen_tar_url" &> /dev/null; then
+    if [ "$use_direct" = "true" ]; then
+        :
+    else
+        xkeen_tar_url="$gh_proxy/$xkeen_tar_url"
+    fi
+
+    if curl -m 10 -L -o "$xkeen_dist" "$xkeen_tar_url" 2>/dev/null; then
         if [ -s "$xkeen_dist" ]; then
             mv "$xkeen_dist" "$tmp_dir/xkeen.tar.gz"
-            echo -e "  XKeen ${green}успешно загружен${reset}"
+            printf "  XKeen ${green}успешно загружен${reset}\n"
             return 0
         else
-            echo -e "  ${red}Ошибка${reset}: Загруженный файл XKeen поврежден"
+            rm -f "$xkeen_dist"
+            printf "  ${red}Ошибка${reset}: Загруженный файл XKeen поврежден\n"
+            exit 1
         fi
     else
-        # Вторая попытка: загрузка через прокси
-        if curl -m 10 -L -o "$xkeen_dist" "$gh_proxy/$xkeen_tar_url" &> /dev/null; then
-            if [ -s "$xkeen_dist" ]; then
-                mv "$xkeen_dist" "$tmp_dir/xkeen.tar.gz"
-                echo -e "  XKeen ${green}успешно загружен через прокси${reset}"
-                return 0
-            else
-                echo -e "  ${red}Ошибка${reset}: Загруженный файл XKeen поврежден"
-            fi
-        else
-            echo -e "  ${red}Ошибка${reset}: Не удалось загрузить XKeen. Проверьте соединение с интернетом или повторите позже"
-        fi
+        rm -f "$xkeen_dist"
+        printf "  ${red}Ошибка${reset}: Не удалось загрузить XKeen\n"
+        exit 1
     fi
-    rm -f "$xkeen_dist"
-    exit 1
 }
 
 download_xkeen_dev() {

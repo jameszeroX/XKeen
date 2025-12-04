@@ -2,12 +2,16 @@
 download_xray() {
     while true; do
         printf "  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
-        RELEASE_TAGS=$(curl -m 10 -s ${xray_api_url}?per_page=20 | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8) >/dev/null 2>&1
-
+        
+        # Получаем список релизов через GitHub API
+        RELEASE_TAGS=$(curl -m 10 -s "${xray_api_url}?per_page=20" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
+        
         if [ -z "$RELEASE_TAGS" ]; then
             echo
             printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
-            RELEASE_TAGS=$(curl -m 10 -s $xray_jsd_url | jq -r '.versions[]' | head -n 8) >/dev/null 2>&1
+            
+            # Получаем список релизов через jsDelivr
+            RELEASE_TAGS=$(curl -m 10 -s "$xray_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
             
             if [ -z "$RELEASE_TAGS" ]; then
                 echo
@@ -88,7 +92,7 @@ download_xray() {
         esac
 
         if [ -z "$download_url" ]; then
-            echo -e "  ${red}Ошибка${reset}: Не удалось получить URL для загрузки Xray"
+            printf "  ${red}Ошибка${reset}: Не удалось получить URL для загрузки Xray\n"
             exit 1
         fi
 
@@ -96,14 +100,14 @@ download_xray() {
         extension="${filename##*.}"
         xray_dist=$(mktemp)
         mkdir -p "$xtmp_dir"
-        
+
         echo -e "  ${yellow}Проверка${reset} доступности версии $version_selected..."
-        
+
         # Функция для проверки доступности
         check_url_availability() {
-            local url=$1
-            local timeout=$2
-            local description=$3
+            url=$1
+            timeout=$2
+            description=$3
 
             echo -e "  ${yellow}Проверка через $description...${reset}"
             http_status=$(curl -m $timeout -L -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null)
@@ -129,92 +133,41 @@ download_xray() {
 
         # Проверка доступности версии
         if [ -z "$USE_JSDELIVR" ]; then
-            if check_url_availability "$download_url" 10 "GitHub"; then
-                USE_DIRECT="true"
-            else
-                echo -e "  ${yellow}Пробуем проверить через прокси...${reset}"
-                if check_url_availability "$gh_proxy/$download_url" 10 "прокси"; then
-                    USE_PROXY="true"
-                else
-                    echo -e "  ${red}Ошибка${reset}: Версия $version_selected недоступна ни напрямую, ни через прокси"
-                    echo -e "  Возможные причины:"
-                    echo -e "  - Версия $version_selected не существует"
-                    echo -e "  - Архитектура $architecture не поддерживается"
-                    echo -e "  - Проблемы с сетью"
-                    rm -f "$xray_dist"
-                    sleep 2
-                    continue
-                fi
+            if ! check_url_availability "$download_url" 10 "GitHub"; then
+                rm -f "$xray_dist"
+                echo -e "  ${red}Ошибка${reset}: Версия $version_selected недоступна"
+                continue
             fi
         else
             if ! check_url_availability "$download_url" 10 "jsDelivr"; then
-                echo -e "  ${red}Ошибка${reset}: Версия $version_selected недоступна через jsDelivr"
                 rm -f "$xray_dist"
-                sleep 2
+                echo -e "  ${red}Ошибка${reset}: Версия $version_selected недоступна"
                 continue
             fi
-            USE_DIRECT="true"
         fi
 
-        # Функция для загрузки
-        download_with_retry() {
-            local url=$1
-            local description=$2
-            local max_attempts=2
+        printf "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray\n"
 
-            for attempt in $(seq 1 $max_attempts); do
-                echo -e "  ${yellow}Попытка загрузки $attempt/$max_attempts через $description...${reset}"
-
-                if curl -m 10 -L -o "$xray_dist" "$url" 2>/dev/null; then
-                    if [ -s "$xray_dist" ]; then
-                        echo -e "  Xray ${green}успешно загружен через $description${reset}"
-                        return 0
-                    else
-                        echo -e "  ${red}Ошибка${reset}: Загруженный файл Xray поврежден (пустой)"
-                        rm -f "$xray_dist"
-                        xray_dist=$(mktemp)
-                    fi
-                else
-                    echo -e "  ${red}Ошибка загрузки${reset} через $description (попытка $attempt/$max_attempts)"
-                fi
-                
-                if [ $attempt -lt $max_attempts ]; then
-                    echo -e "  ${yellow}Повторная попытка через 2 секунды...${reset}"
-                    sleep 2
-                fi
-            done
-            return 1
-        }
-
-        echo -e "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray"
-        
-        if [ "$USE_PROXY" = "true" ]; then
-            if download_with_retry "$gh_proxy/$download_url" "прокси"; then
-                mv "$xray_dist" "$xtmp_dir/xray.$extension"
-                unset USE_PROXY
-                return 0
-            fi
+        if [ "$use_direct" = "true" ]; then
+            :
         else
-            if download_with_retry "$download_url" "прямое соединение"; then
+            download_url="$gh_proxy/$download_url"
+        fi
+
+        if curl -m 10 -L "$download_url" -o "$xray_dist" 2>/dev/null; then
+            if [ -s "$xray_dist" ]; then
                 mv "$xray_dist" "$xtmp_dir/xray.$extension"
+                printf "  Xray ${green}успешно загружен${reset}\n"
                 return 0
             else
-                echo -e "  ${yellow}Пробуем загрузку через прокси...${reset}"
-                if download_with_retry "$gh_proxy/$download_url" "прокси"; then
-                    mv "$xray_dist" "$xtmp_dir/xray.$extension"
-                    return 0
-                fi
+                rm -f "$xray_dist"
+                printf "  ${red}Ошибка${reset}: Загруженный файл Xray поврежден\n"
+                continue
             fi
+        else
+            rm -f "$xray_dist"
+            printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray $version_selected\n"
+            continue
         fi
-        
-        # Если все попытки загрузки не удались
-        rm -f "$xray_dist"
-        echo -e "  ${red}Ошибка${reset}: Не удалось загрузить Xray после всех попыток. Проверьте:"
-        echo -e "  - Существование версии $version_selected"
-        echo -e "  - Поддержку архитектуры $architecture"
-        echo -e "  - Соединение с интернетом"
-        echo -e "  ${yellow}Пожалуйста, попробуйте другую версию${reset}"
-        sleep 2
-        continue
     done
 }

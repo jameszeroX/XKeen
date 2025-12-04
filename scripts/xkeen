@@ -65,6 +65,8 @@ case "$1" in
     -i|-install)    # Запуск полного цикла установки
         test_connection
         test_entware
+        test_github
+        sleep 2
 
         . "$script_dir/.xkeen/import.sh"
         clear
@@ -408,10 +410,13 @@ case "$1" in
 
 
     -ug)    # Запуск обновления баз GeoFile
-        test_connection
-
         command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
+        test_connection
+        test_github
+        sleep 2
 
+        clear
+        echo
         echo "  Обновление установленных баз GeoFile"
         info_geosite
         info_geoip
@@ -440,6 +445,8 @@ case "$1" in
 
     -uk)    # Обновление XKeen (автовыбор Stable/Dev версии)
         test_connection
+        test_github
+        sleep 2
 
         clear
         echo
@@ -537,6 +544,8 @@ case "$1" in
 
     -ux)    # Обновление или установка ядра Xray
         test_connection
+        test_github
+        sleep 2
 
         . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
         status_file="/opt/lib/opkg/status"
@@ -584,6 +593,8 @@ case "$1" in
 
     -um)    # Обновление или установка ядра Mihomo
         test_connection
+        test_github
+        sleep 2
 
         . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
         status_file="/opt/lib/opkg/status"
@@ -1057,6 +1068,8 @@ case "$1" in
             fi
             test_connection
             test_entware
+            test_github
+            sleep 2
             "$download_func"
         fi
 
@@ -1138,9 +1151,11 @@ case "$1" in
 
 
     -g)    # Переустановка баз GeoFile
-        test_connection
-
         command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
+        test_connection
+        test_github
+        sleep 2
+
         clear
         info_geosite
         info_geoip
