@@ -1180,6 +1180,7 @@ case "$1" in
     -kb)    # Резервное копирование XKeen
         echo -e "  Создание резервной копии ${yellow}XKeen${reset}"
         info_version_xkeen
+        manual_backup="on"
         backup_xkeen
     ;;
 
@@ -1205,12 +1206,14 @@ case "$1" in
 
 
     -mb)    # Резервное копирование конфигурации Mihomo
+        command -v mihomo >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Mihomo"; exit 1; }
         echo -e "  Создание резервной копии ${yellow}конфигурации Mihomo${reset}"
         backup_configs_mihomo
     ;;
 
 
     -mbr)    # Восстановление конфигурации Mihomo из резервной копии
+        command -v mihomo >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Mihomo"; exit 1; }
         echo -e "  Восстановление ${yellow}конфигурации Mihomo${reset} из резервной копии"
         restore_backup_configs_mihomo
     ;;
@@ -1219,18 +1222,6 @@ case "$1" in
     -tpx)    # Показать прослушиваемые порты
         echo "  Определение прослушиваемых портов"
         tests_ports_client
-    ;;
-
-
-    -tfk)    # Проверить файлы XKeen
-        echo -e "  Проверка файлов ${yellow}XKeen${reset}"
-        echo -e "  Проверка файлов XKeen ${green}выполнена${reset}"
-    ;;
-
-
-    -tfx)    # Проверить файлы Xray
-        echo -e "  Проверка файлов ${yellow}Xray${reset}"
-        echo -e "  Проверка файлов Xray ${green}выполнена${reset}"
     ;;
 
 

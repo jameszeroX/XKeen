@@ -70,6 +70,9 @@ arm64_fd=40000
 other_fd=10000
 delay_fd=60
 
+# Резервное копирование XKeen при обновлении
+backup="on"
+
 # Функции журналирования
 log_info_router() {
     logger -p notice -t "$name_app" "$1"

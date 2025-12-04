@@ -1,5 +1,9 @@
 # Создание резервной копии XKeen
 backup_xkeen() {
+    if choice_backup_xkeen && [ -z $manual_backup ]; then
+        return 0
+    fi
+
     backup_dir="${backups_dir}/${current_datetime}_xkeen_v${xkeen_current_version}"
     mkdir -p "$backup_dir"
 
