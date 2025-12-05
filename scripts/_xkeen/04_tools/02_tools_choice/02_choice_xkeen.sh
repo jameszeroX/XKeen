@@ -182,3 +182,19 @@ choice_port_xkeen() {
         esac
     done
 }
+
+choice_backup_xkeen() {
+    xkeen_conf="$initd_dir/S99xkeen"
+    backup_value=$(grep -E '^[[:space:]]*backup[[:space:]]*=' "$xkeen_conf" | \
+                   grep -v '^[[:space:]]*#' | \
+                   tail -n 1 | \
+                   cut -d'=' -f2 | \
+                   tr -d '[:space:]"' | \
+                   tr '[:upper:]' '[:lower:]')
+
+    if [ "$backup_value" = "off" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
