@@ -21,12 +21,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Set Moscow timezone for all commands
+        run: |
+          export TZ="Europe/Moscow"
+          BUILD_TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S MSK")
+
       - name: Prepare scripts with build timestamp
         run: |
           mkdir -p scripts_for_build
           cp -r scripts/* scripts_for_build/
 
-          BUILD_TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
           sed -i "s/^build_timestamp=\".*\"/build_timestamp=\"$BUILD_TIMESTAMP\"/" \
             scripts_for_build/_xkeen/01_info/01_info_variable.sh
 
