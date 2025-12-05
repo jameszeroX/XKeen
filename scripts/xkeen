@@ -1226,7 +1226,7 @@ case "$1" in
 
 
     -v)    # Показать версию XKeen
-        echo "  Версия XKeen $xkeen_current_version $xkeen_build"
+        echo "  Версия XKeen $xkeen_current_version $xkeen_build (время сборки: $build_timestamp)"
     ;;
 
 
