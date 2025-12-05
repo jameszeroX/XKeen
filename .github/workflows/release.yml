@@ -20,19 +20,37 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        
       - name: Set up variables
         id: vars
         run: |
           echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
           echo "ARCHIVE_NAME=xkeen.tar.gz" >> $GITHUB_ENV
           echo "ARCHIVE_NAME_TAR=xkeen.tar" >> $GITHUB_ENV
-      - name: Create scripts archive
+          
+      - name: Prepare scripts with build timestamp
+        run: |
+          export TZ="Europe/Moscow"
+          BUILD_TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S MSK")
+          mkdir -p scripts_for_release
+          cp -r scripts/* scripts_for_release/
+
+          sed -i "s/^build_timestamp=\".*\"/build_timestamp=\"$BUILD_TIMESTAMP\"/" \
+            scripts_for_release/_xkeen/01_info/01_info_variable.sh
+          
+      - name: Create release archive
         run: |
           mkdir -p dist
-          cd scripts
+          cd scripts_for_release
           chmod +x xkeen
+
           find . -type f -o -type l | sed 's|^\./||' | tar -czf "../dist/${ARCHIVE_NAME}" -T -
           find . -type f -o -type l | sed 's|^\./||' | tar -cf "../dist/${ARCHIVE_NAME_TAR}" -T -
+
+      - name: Clean up temporary files
+        run: |
+          rm -rf scripts_for_release
+          
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
