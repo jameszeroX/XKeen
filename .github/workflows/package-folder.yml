@@ -21,10 +21,19 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Prepare scripts with build timestamp
+        run: |
+          mkdir -p scripts_for_build
+          cp -r scripts/* scripts_for_build/
+
+          BUILD_TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
+          sed -i "s/^build_timestamp=\".*\"/build_timestamp=\"$BUILD_TIMESTAMP\"/" \
+            scripts_for_build/_xkeen/01_info/01_info_variable.sh
+
       - name: Create tar.gz archive
         run: |
           mkdir -p output
-          cd scripts
+          cd scripts_for_build
           chmod +x xkeen
           find . -type f -o -type l | sed 's|^\./||' | tar -czf "../output/xkeen.tar.gz" -T -
 
@@ -32,6 +41,10 @@ jobs:
         run: |
           mkdir -p test
           mv output/xkeen.tar.gz test/
+
+      - name: Clean up temporary files
+        run: |
+          rm -rf scripts_for_build output
 
       - name: Commit and push archive to test folder
         run: |
