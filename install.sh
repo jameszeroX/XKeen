@@ -1,10 +1,12 @@
 #!/bin/sh
 
 url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"
-if ! curl -OL "$url"; then
-    if ! curl -OL "https://edgeone.gh-proxy.org/$url"; then
-        echo "Ошибка: не удалось загрузить xkeen.tar.gz"
-        exit 1
+if ! curl -OL -m 10 "$url"; then
+    if ! curl -OL -m 10 "https://edgeone.gh-proxy.org/$url"; then
+        if ! curl -OL -m 10 "https://ghfast.top/$url"; then
+            echo "Ошибка: не удалось загрузить xkeen.tar.gz"
+            exit 1
+        fi
     fi
 fi
 
