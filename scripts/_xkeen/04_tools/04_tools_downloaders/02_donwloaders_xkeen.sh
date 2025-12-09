@@ -4,13 +4,11 @@ download_xkeen() {
     mkdir -p "$tmp_dir"
     printf "  ${yellow}Выполняется загрузка${reset} XKeen\n"
 
-    if [ "$use_direct" = "true" ]; then
-        :
-    else
+    if [ "$use_direct" != "true" ]; then
         xkeen_tar_url="$gh_proxy/$xkeen_tar_url"
     fi
 
-    if curl -m 10 -L -o "$xkeen_dist" "$xkeen_tar_url" 2>/dev/null; then
+    if curl --connect-timeout 10 -L -o "$xkeen_dist" "$xkeen_tar_url" 2>/dev/null; then
         if [ -s "$xkeen_dist" ]; then
             mv "$xkeen_dist" "$tmp_dir/xkeen.tar.gz"
             printf "  XKeen ${green}успешно загружен${reset}\n"

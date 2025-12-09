@@ -13,7 +13,7 @@ install_geosite() {
         min_size=24576  # 24 KB
 
         download() {
-            curl --fail -m 10 -L -o "$temp_file" "$1" >/dev/null 2>&1
+            curl --fail --connect-timeout 10 -L -o "$temp_file" "$1" >/dev/null 2>&1
             return $?
         }
 

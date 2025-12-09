@@ -4,14 +4,14 @@ download_mihomo() {
         printf "  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"
         
         # Получаем список релизов через GitHub API
-        RELEASE_TAGS=$(curl -m 10 -s "${mihomo_api_url}?per_page=20" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
+        RELEASE_TAGS=$(curl --connect-timeout 10 -s "${mihomo_api_url}?per_page=20" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
         
         if [ -z "$RELEASE_TAGS" ]; then
             echo
             printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
             
             # Получаем список релизов через jsDelivr
-            RELEASE_TAGS=$(curl -m 10 -s "$mihomo_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
+            RELEASE_TAGS=$(curl --connect-timeout 10 -s "$mihomo_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
             
             if [ -z "$RELEASE_TAGS" ]; then
                 echo
@@ -39,19 +39,22 @@ download_mihomo() {
         printf "\n  Введите порядковый номер релиза (0 - пропустить, 9 - ручной ввод): "
         read -r choice
 
-        if ! echo "$choice" | grep -Eq '^[0-9]$'; then
-            printf "  ${red}Некорректный${reset} ввод. Пожалуйста, введите число\n"
-            sleep 1
-            continue
-        fi
+        case "$choice" in
+            [0-9]) ;;
+            *) 
+                printf "  ${red}Некорректный${reset} ввод. Пожалуйста, введите число\n"
+                sleep 1
+                continue
+                ;;
+        esac
 
-        if [ "$choice" -eq 0 ]; then
+        if [ "$choice" = "0" ]; then
             bypass_mihomo="true"
             printf "  Загрузка Mihomo ${yellow}пропущена${reset}\n"
             return
         fi
 
-        if [ "$choice" -eq 9 ]; then
+        if [ "$choice" = "9" ]; then
             printf "  Введите версию Mihomo для загрузки (например: v1.19.6): "
             read -r version_selected
             if [ -z "$version_selected" ]; then
@@ -64,11 +67,14 @@ download_mihomo() {
             version_selected="v$version_selected"
 
         else
-            version_selected=$(echo "$RELEASE_TAGS" | sed -n "${choice}p")
+            version_selected=$(echo "$RELEASE_TAGS" | awk -v line="$choice" 'NR == line {print $0; exit}')
             if [ -z "$version_selected" ]; then
                 printf "  Выбранный номер ${red}вне диапазона.${reset} Пожалуйста, попробуйте снова\n"
                 sleep 1
                 continue
+            fi
+            if [ "$USE_JSDELIVR" = "true" ]; then
+                version_selected="v$version_selected"
             fi
         fi
 
@@ -78,7 +84,7 @@ download_mihomo() {
             VERSION_ARG="$version_selected"
             unset USE_JSDELIVR
         fi
-	
+
         URL_BASE="${mihomo_gz_url}/$VERSION_ARG"
 
         case $architecture in
@@ -123,81 +129,113 @@ download_mihomo() {
         mihomo_dist=$(mktemp)
         mkdir -p "$mtmp_dir"
 
-        echo -e "  ${yellow}Проверка${reset} доступности версии $version_selected..."
+        if [ "$use_direct" != "true" ]; then
+            download_url="$gh_proxy/$download_url"
+            download_yq="$gh_proxy/$download_yq"
+        fi
 
-        # Функция для проверки доступности
+        printf "  ${yellow}Проверка${reset} доступности версии $version_selected...\n"
+
         check_url_availability() {
             url=$1
             timeout=$2
-            description=$3
 
-            echo -e "  ${yellow}Проверка через $description...${reset}"
-            http_status=$(curl -m $timeout -L -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null)
+            http_status=$(curl --connect-timeout "$timeout" \
+                              -I \
+                              -s \
+                              -L \
+                              -w "%{http_code}" \
+                              -o /dev/null \
+                              "$url" 2>/dev/null)
             curl_exit_code=$?
 
-            if [ $curl_exit_code -eq 28 ]; then
-                echo -e "  ${red}Таймаут${reset} при проверке через $description"
+            if [ "$curl_exit_code" -eq 0 ] && [ "$http_status" = "405" ]; then
+                # Метод HEAD не разрешен, пробуем GET с Range
+                http_status=$(curl --connect-timeout "$timeout" \
+                                  -s \
+                                  -L \
+                                  -r 0-0 \
+                                  -w "%{http_code}" \
+                                  -o /dev/null \
+                                  "$url" 2>/dev/null)
+                curl_exit_code=$?
+            fi
+
+            if [ "$curl_exit_code" -eq 28 ]; then
+                printf "  ${red}Таймаут${reset} при проверке\n"
                 return 1
-            elif [ $curl_exit_code -ne 0 ]; then
-                echo -e "  ${red}Ошибка curl ($curl_exit_code)${reset} при проверке через $description"
-                return 1
-            elif [ "$http_status" -eq 200 ]; then
-                echo -e "  Версия ${green}доступна через $description${reset}"
-                return 0
-            elif [ "$http_status" -eq 404 ]; then
-                echo -e "  ${red}Версия не найдена${reset} через $description (404)"
-                return 2
-            else
-                echo -e "  ${yellow}Проблема с доступом${reset} через $description (HTTP: $http_status)"
+            elif [ "$curl_exit_code" -ne 0 ]; then
+                printf "  ${red}Ошибка curl ($curl_exit_code)${reset} при проверке\n"
                 return 1
             fi
+
+            case "$http_status" in
+                2[0-9][0-9])
+                    printf "  Файл ${green}доступен${reset} (HTTP $http_status)\n"
+                    return 0
+                    ;;
+                404)
+                    printf "  Файл ${red}не найден${reset} (404)\n"
+                    return 2
+                    ;;
+                403)
+                    printf "  ${red}Доступ запрещен${reset} (403)\n"
+                    return 2
+                    ;;
+                000)
+                    printf "  ${red}Нет соединения${reset}\n"
+                    return 1
+                    ;;
+                *)
+                    printf "  ${yellow}Проблема с доступом${reset} (HTTP: $http_status)\n"
+                    return 1
+                    ;;
+            esac
         }
 
-        # Проверка доступности версии
-        if [ -z "$USE_JSDELIVR" ]; then
-            if ! check_url_availability "$download_url" 10 "GitHub"; then
-                rm -f "$xray_dist"
-                echo -e "  ${red}Ошибка${reset}: Версия $version_selected недоступна"
-                continue
-            fi
-        else
-            if ! check_url_availability "$download_url" 10 "jsDelivr"; then
-                rm -f "$xray_dist"
-                echo -e "  ${red}Ошибка${reset}: Версия $version_selected недоступна"
-                continue
-            fi
+        # Проверка доступности версии Mihomo
+        if ! check_url_availability "$download_url" 10; then
+            rm -f "$mihomo_dist"
+            printf "  ${red}Ошибка${reset}: Версия Mihomo $version_selected недоступна\n"
+            continue
         fi
 
         printf "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - Yq\n"
 
-        if [ "$use_direct" = "true" ]; then
-            :
-        else
-            download_yq="$gh_proxy/$download_yq"
-        fi
-
-        if curl -m 10 -L "$download_yq" -o "$yq_dist" 2>/dev/null; then
-            if [ -s "$yq_dist" ]; then
-                mv "$yq_dist" "$install_dir/yq"
-                chmod +x "$install_dir/yq"
-                printf "  Yq ${green}успешно загружен и установлен${reset}\n"
+        if check_url_availability "$download_yq" 10; then
+            if curl --connect-timeout 10 \
+                   -L \
+                   -o "$yq_dist" \
+                   "$download_yq" 2>/dev/null; then
+                if [ -s "$yq_dist" ]; then
+                    mv "$yq_dist" "$install_dir/yq"
+                    chmod +x "$install_dir/yq"
+                    printf "  Yq ${green}успешно загружен и установлен${reset}\n"
+                else
+                    printf "  ${red}Ошибка${reset}: Загруженный файл Yq поврежден\n"
+                fi
             else
-                printf "  ${red}Ошибка${reset}: Загруженный файл Yq поврежден\n"
+                printf "  ${red}Ошибка${reset}: Не удалось загрузить Yq\n"
             fi
         else
-            printf "  ${red}Ошибка${reset}: Не удалось загрузить Yq\n"
+            printf "  ${yellow}Предупреждение${reset}: Yq недоступен для загрузки, продолжение без него\n"
         fi
 
         printf "  ${yellow}Выполняется загрузка${reset} выбранной версии Mihomo\n"
 
-        if [ "$use_direct" = "true" ]; then
-            :
-        else
-            download_url="$gh_proxy/$download_url"
-        fi
+        # Загрузка Mihomo
+        if curl --connect-timeout 10 \
+               -L \
+               -o "$mihomo_dist" \
+               "$download_url" 2>/dev/null; then
 
-        if curl -m 10 -L "$download_url" -o "$mihomo_dist" 2>/dev/null; then
             if [ -s "$mihomo_dist" ]; then
+                if head -c 100 "$mihomo_dist" 2>/dev/null | grep -iq "<!DOCTYPE html\|<html\|Error\|404\|Not Found"; then
+                    rm -f "$mihomo_dist"
+                    printf "  ${red}Ошибка${reset}: Получена HTML страница ошибки вместо файла Mihomo\n"
+                    continue
+                fi
+                
                 mv "$mihomo_dist" "$mtmp_dir/mihomo.$extension"
                 printf "  Mihomo ${green}успешно загружен${reset}\n"
                 return 0
