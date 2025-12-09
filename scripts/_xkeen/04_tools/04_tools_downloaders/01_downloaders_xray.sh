@@ -178,9 +178,9 @@ download_xray() {
 
         printf "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray\n"
 
-        # Загрузка Mihomo
+        # Загрузка Xray
         if curl --connect-timeout 10 \
-               -L \
+               -fL \
                -o "$xray_dist" \
                "$download_url" 2>/dev/null; then
 

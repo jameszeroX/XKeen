@@ -8,7 +8,7 @@ download_xkeen() {
         xkeen_tar_url="$gh_proxy/$xkeen_tar_url"
     fi
 
-    if curl --connect-timeout 10 -L -o "$xkeen_dist" "$xkeen_tar_url" 2>/dev/null; then
+    if curl --connect-timeout 10 -fL -o "$xkeen_dist" "$xkeen_tar_url" 2>/dev/null; then
         if [ -s "$xkeen_dist" ]; then
             mv "$xkeen_dist" "$tmp_dir/xkeen.tar.gz"
             printf "  XKeen ${green}успешно загружен${reset}\n"

@@ -202,9 +202,10 @@ download_mihomo() {
 
         printf "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - Yq\n"
 
+        # Загрузка Yq
         if check_url_availability "$download_yq" 10; then
             if curl --connect-timeout 10 \
-                   -L \
+                   -fL \
                    -o "$yq_dist" \
                    "$download_yq" 2>/dev/null; then
                 if [ -s "$yq_dist" ]; then
@@ -225,7 +226,7 @@ download_mihomo() {
 
         # Загрузка Mihomo
         if curl --connect-timeout 10 \
-               -L \
+               -fL \
                -o "$mihomo_dist" \
                "$download_url" 2>/dev/null; then
 
