@@ -8,8 +8,8 @@ install_configs() {
         return 0
     fi
 
-    xkeen_files="$xkeen_conf_dir"/*.json
-    for file in $xkeen_files; do
+    xray_files="$xray_conf_dir"/*.json
+    for file in $xray_files; do
         filename=$(basename "$file")
         cp "$file" "$install_conf_dir/"
         echo "  Добавлен шаблон конфигурационного файла Xray:"
