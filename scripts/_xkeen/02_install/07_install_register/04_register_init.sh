@@ -625,43 +625,53 @@ if pidof "\$name_client" >/dev/null; then
 
         # Определяем таблицу маршрутизации
         if [ -n "\$policy_mark" ]; then
-            policy_table=\$(ip rule show | awk -v policy="\$policy_mark" '\$0 ~ policy && /lookup/ && !/blackhole/{print \$NF}')
-            route_show_cmd="ip -\$ip_version route show table all | grep -w \$policy_table"
+            policy_table=\$(ip rule show | awk -v policy="\$policy_mark" '\$0 ~ policy && /lookup/ && !/blackhole/ {print \$(NF)}' | sed -n '1p')
+            source_table="\$policy_table"
         else
-            route_show_cmd="ip -\$ip_version route show table main"
+            source_table="main"
         fi
 
         # Проверяем есть ли default маршрут
         check_default() {
-            eval "\$route_show_cmd" 2>/dev/null | grep -q '^default'
+            if [ \$ip_version = 6 ] && ! ip -6 route show default 2>/dev/null | grep -q .; then
+                return 0
+            fi
+            if [ "\$source_table" = "main" ]; then
+                ip -\$ip_version route show default 2>/dev/null | grep -q '^default'
+            else
+                 ip -\$ip_version route show table all 2>/dev/null | grep -E "^[[:space:]]*default .* table \$policy_table( |\$)" | \grep -vq 'unreachable'
+            fi
         }
 
-        if ! check_default; then
-            sleep 1
-            if ! check_default; then
+        attempts=0
+        max_attempts=4
+        until check_default; do
+            attempts=\$((attempts + 1))
+            if [ "\$attempts" -ge "\$max_attempts" ]; then
                 [ "\$ip_version" = 4 ] && touch "/tmp/noinet"
                 return 1
             fi
-        fi
-
+            sleep 1
+        done
         [ "\$ip_version" = 4 ] && rm -f "/tmp/noinet"
 
-        if ! ip -\$ip_version rule show | grep -q "fwmark \$table_mark lookup \$table_id"; then
-            ip -\$ip_version rule add fwmark "\$table_mark" lookup "\$table_id" >/dev/null 2>&1
-            ip -\$ip_version route add local default dev lo table "\$table_id" >/dev/null 2>&1
-        fi
+        ip -\$ip_version rule del fwmark \$table_mark lookup \$table_id >/dev/null 2>&1 || true
+        ip -\$ip_version route flush table \$table_id >/dev/null 2>&1 || true
+        ip -\$ip_version route add local default dev lo table \$table_id >/dev/null 2>&1 || true
+        ip -\$ip_version rule add fwmark \$table_mark lookup \$table_id >/dev/null 2>&1 || true
 
         # Копируем маршруты
-        eval "\$route_show_cmd" 2>/dev/null | while read -r route; do
-            case "\$route" in
-                unreachable*|blackhole*)
+        ip -\$ip_version route show table \$source_table 2>/dev/null | while read -r route_line; do
+            case "\$route_line" in
+                default*|unreachable*|blackhole*)
                     continue
                     ;;
                 *)
-                    ip -\$ip_version route add table "\$table_id" \$route >/dev/null 2>&1
+                    ip -\$ip_version route add table \$table_id \$route_line >/dev/null 2>&1 || true
                     ;;
             esac
         done
+        return 0
     }
 
     # Создание множественных правил multiport
