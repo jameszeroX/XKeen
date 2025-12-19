@@ -30,7 +30,7 @@
 
 Добавлено:
 - Поддержка ядра Mihomo
-- Возможность сменить ядро проксирования (Xray/Mihomo) параметрамии `-xray` и `-mihomo`
+- Возможность сменить ядро проксирования (Xray/Mihomo) параметрами `-xray` и `-mihomo`
 - Возможность [OffLine установки](https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md) (параметр `-io`)
 - Возможность установки GeoIP базы [zkeenip.dat](https://github.com/jameszeroX/zkeen-ip)
 - Обновление [zkeen.dat](https://github.com/jameszeroX/zkeen-domains) и [zkeenip.dat](https://github.com/jameszeroX/zkeen-ip) по расписанию средствами XKeen
@@ -62,10 +62,10 @@
 
 Все параметры запуска с их описанием доступны в справке по команде `xkeen -h`
 
-### Порядок установки
+### Рекомендуемый порядок установки/обновления
 ```
 opkg update && opkg upgrade && opkg install curl tar && cd /tmp
-curl -OL --connect-timeout 10 https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh
+curl -OL --connect-timeout 10 -m 60 https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh
 chmod +x install.sh
 ./install.sh
 ```
@@ -73,9 +73,9 @@ chmod +x install.sh
 ```
 opkg update && opkg upgrade && opkg install curl tar && cd /tmp
 url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"
-if ! curl -OL --connect-timeout 10 "$url"; then
-    if ! curl -OL --connect-timeout 10 "https://edgeone.gh-proxy.org/$url"; then
-        if ! curl -OL --connect-timeout 10 "https://ghfast.top/$url"; then
+if ! curl -OL --connect-timeout 10 -m 60 "$url"; then
+    if ! curl -OL --connect-timeout 10 -m 60 "https://edgeone.gh-proxy.org/$url"; then
+        if ! curl -OL --connect-timeout 10 -m 60 "https://ghfast.top/$url"; then
             echo "Ошибка: не удалось загрузить xkeen.tar.gz"
             exit 1
         fi
@@ -88,7 +88,7 @@ xkeen -i
 
 
 ### Поддержка
-Форк XKeen, как и оригинал, совершено бесплатен и не имеет каких либо ограничений по использованию. Надеюсь, доработки XKeen, многие из которых я сделал по Вашим просьбам, оказались полезны, так же, как и мои консультации в [телеграм-чате](https://t.me/+8Cvh7oVf6cE0MWRi). Для меня очень важно понимать, что труд и время потрачены не зря. Буду благодарен за любую Вашу поддержку:
+Форк XKeen, как и оригинал, совершено бесплатен и не имеет каких либо ограничений по использованию. Надеюсь, доработки XKeen, многие из которых я сделал по Вашим просьбам, оказались полезны, так же, как и мои сообщения в [телеграм-чате](https://t.me/+8Cvh7oVf6cE0MWRi). Для меня очень важно понимать, что труд и время потрачены не зря. Буду благодарен за любую Вашу поддержку:
 
 [CloudTips](https://pay.cloudtips.ru/p/7edb30ec)
 
