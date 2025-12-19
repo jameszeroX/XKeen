@@ -11,7 +11,7 @@ download_mihomo() {
             printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
             
             # Получаем список релизов через jsDelivr
-            RELEASE_TAGS=$(curl --connect-timeout 10 -s "$mihomo_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
+            RELEASE_TAGS=$(curl --connect-timeout 10 -m 60 -s "$mihomo_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
             
             if [ -z "$RELEASE_TAGS" ]; then
                 echo
@@ -151,7 +151,7 @@ download_mihomo() {
 
             if [ "$curl_exit_code" -eq 0 ] && [ "$http_status" = "405" ]; then
                 # Метод HEAD не разрешен, пробуем GET с Range
-                http_status=$(curl --connect-timeout "$timeout" \
+                http_status=$(curl --connect-timeout "$timeout" -m 60 \
                                   -s \
                                   -L \
                                   -r 0-0 \
@@ -204,7 +204,7 @@ download_mihomo() {
 
         # Загрузка Yq
         if check_url_availability "$download_yq" 10; then
-            if curl --connect-timeout 10 \
+            if curl --connect-timeout 10 -m 60 \
                    -fL \
                    -o "$yq_dist" \
                    "$download_yq" 2>/dev/null; then
@@ -225,7 +225,7 @@ download_mihomo() {
         printf "  ${yellow}Выполняется загрузка${reset} выбранной версии Mihomo\n"
 
         # Загрузка Mihomo
-        if curl --connect-timeout 10 \
+        if curl --connect-timeout 10 -m 60 \
                -fL \
                -o "$mihomo_dist" \
                "$download_url" 2>/dev/null; then

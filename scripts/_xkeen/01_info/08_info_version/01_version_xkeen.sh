@@ -1,11 +1,11 @@
 # Функция для получения версии из xkeen API и сохранения ее в переменной
 info_version_xkeen() {
-    version=$(curl --connect-timeout 10 -s "$xkeen_api_url" | jq -r '.tag_name // .name // ""' 2>/dev/null)
+    version=$(curl --connect-timeout 10 -m 60 -s "$xkeen_api_url" | jq -r '.tag_name // .name // ""' 2>/dev/null)
 
     if [ -z "$version" ]; then
         echo
         printf "${red}Нет доступа${reset} к ${yellow}GitHub API${reset}, пробуем ${yellow}jsDelivr${reset}...\n"
-        version=$(curl --connect-timeout 10 -s "$xkeen_jsd_url" | jq -r '.versions | first' 2>/dev/null)
+        version=$(curl --connect-timeout 10 -m 60 -s "$xkeen_jsd_url" | jq -r '.versions | first' 2>/dev/null)
 
         if [ -z "$version" ]; then
             echo
