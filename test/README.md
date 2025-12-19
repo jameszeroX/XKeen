@@ -31,7 +31,7 @@ xkeen -k
 ### Порядок установки
 ```
 opkg update && opkg upgrade && opkg install curl tar && cd /tmp
-curl -OL --connect-timeout 10 https://raw.githubusercontent.com/jameszeroX/xkeen/main/test/xkeen.tar.gz
+curl -OL --connect-timeout 10 -m 60 https://raw.githubusercontent.com/jameszeroX/xkeen/main/test/xkeen.tar.gz
 tar -xvzf xkeen.tar.gz -C /opt/sbin > /dev/null && rm xkeen.tar.gz
 xkeen -i
 ```
