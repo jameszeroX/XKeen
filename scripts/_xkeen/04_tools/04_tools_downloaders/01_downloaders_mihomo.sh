@@ -171,7 +171,7 @@ download_mihomo() {
 
             case "$http_status" in
                 2[0-9][0-9])
-                    printf "  Файл ${green}доступен${reset} (HTTP $http_status)\n"
+                    printf "  Файл ${green}доступен${reset}\n"
                     return 0
                     ;;
                 404)

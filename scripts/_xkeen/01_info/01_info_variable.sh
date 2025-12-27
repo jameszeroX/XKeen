@@ -67,7 +67,7 @@ mihomo_jsd_url="https://data.jsdelivr.com/v1/package/gh/MetaCubeX/mihomo"			# р
 mihomo_gz_url="https://github.com/MetaCubeX/mihomo/releases/download"				# url для загрузки Mihomo
 yq_dist_url="https://github.com/mikefarah/yq/releases/latest/download"				# url для загрузки Yq
 gh_proxy1="https://ghfast.top"								        # 1 прокси для загрузок с GitHub
-gh_proxy2="https://edgeone.gh-proxy.org"							# 2 прокси для загрузок с GitHub
+gh_proxy2="https://gh-proxy.com"								# 2 прокси для загрузок с GitHub
 
 # url для загрузки геофайлов
 refilter_url="https://github.com/1andrevich/Re-filter-lists/releases/latest/download/geosite.dat"
