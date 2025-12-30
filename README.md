@@ -74,7 +74,7 @@ chmod +x install.sh
 opkg update && opkg upgrade && opkg install curl tar && cd /tmp
 url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"
 if ! curl -OL --connect-timeout 10 -m 60 "$url"; then
-    if ! curl -OL --connect-timeout 10 -m 60 "https://edgeone.gh-proxy.org/$url"; then
+    if ! curl -OL --connect-timeout 10 -m 60 "https://gh-proxy.com/$url"; then
         if ! curl -OL --connect-timeout 10 -m 60 "https://ghfast.top/$url"; then
             echo "Ошибка: не удалось загрузить xkeen.tar.gz"
             exit 1
@@ -85,7 +85,6 @@ tar -xvzf xkeen.tar.gz -C /opt/sbin > /dev/null && rm xkeen.tar.gz
 xkeen -i
 ```
 Установка [OffLine](https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md)
-
 
 ### Поддержка
 Форк XKeen, как и оригинал, совершено бесплатен и не имеет каких либо ограничений по использованию. Надеюсь, доработки XKeen, многие из которых я сделал по Вашим просьбам, оказались полезны, так же, как и мои сообщения в [телеграм-чате](https://t.me/+8Cvh7oVf6cE0MWRi). Для меня очень важно понимать, что труд и время потрачены не зря. Буду благодарен за любую Вашу поддержку:
@@ -100,6 +99,7 @@ USDT, сеть TRC20: `TQhy1LbuGe3Bz7EVrDYn67ZFLDjDBa2VNX`
 
 USDT, сеть ERC20: `0x6a5DF3b5c67E1f90dF27Ff3bd2a7691Fad234EE2`
 
+<sup>Уточните актуальность крипто адресов перед переводом</sup>
 
 ### Источники
 Origin <https://github.com/Skrill0/XKeen>
