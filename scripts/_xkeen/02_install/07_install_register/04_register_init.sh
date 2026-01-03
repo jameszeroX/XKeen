@@ -222,7 +222,7 @@ proxy_status() { pidof $name_client >/dev/null; }
 [ "$name_client" = "xray" ] && file_inbounds=$(find "$directory_xray_config" -name '*.json' -exec grep -lF '"inbounds":' {} \; -quit 2>/dev/null || true)
 
 # Поиск конфигураций DNS
-file_dns() {
+file_dns_xray() {
     for file in "$directory_xray_config"/*.json; do
         [ -f "$file" ] || continue
         if grep -q '"dns":' "$file" && grep -q '"servers":' "$file"; then
@@ -232,7 +232,18 @@ file_dns() {
     done
     return 1
 }
-[ "$name_client" = "xray" ] && file_dns=$(file_dns)
+
+file_dns_mihomo() {
+        [ -f "$mihomo_config" ] || continue
+        if yq -e '.dns.enable == true' "$mihomo_config" >/dev/null 2>&1; then
+            echo "$mihomo_config"
+            return 0
+        fi
+    return 1
+}
+
+[ "$name_client" = "xray" ] && file_dns=$(file_dns_xray)
+[ "$name_client" = "mihomo" ] && file_dns=$(file_dns_mihomo)
 
 create_user() {
     if ! id "xkeen" >/dev/null 2>&1; then
