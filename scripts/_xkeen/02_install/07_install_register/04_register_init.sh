@@ -62,7 +62,7 @@ port_dns="53"
 # Настройки запуска
 start_attempts=10
 start_auto="on"
-start_delay=3
+start_delay=10
 
 # Контроль файловых дескрипторов
 check_fd="off"
