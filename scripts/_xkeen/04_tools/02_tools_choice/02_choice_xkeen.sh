@@ -198,3 +198,41 @@ choice_backup_xkeen() {
         return 1
     fi
 }
+
+change_ipv6_support() {
+    keenos=$(curl -kfsS "localhost:79/rci/show/version" 2>/dev/null | grep '"release"' | cut -d'"' -f4 | cut -d'.' -f1)
+
+    if [ -n "$keenos" ] && [ "$keenos" -ge 5 ]; then
+        if grep -q 'ipv6_support="on"' $initd_dir/S99xkeen; then
+            sed -i 's/ipv6_support="on"/ipv6_support="off"/' $initd_dir/S99xkeen
+
+            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+                echo -e "  ${yellow}Выполняется${reset}. Пожалуйста, подождите..."
+                $initd_dir/S99xkeen restart on >/dev/null 2>&1
+            else
+                [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" != "1" ] && \
+                    sysctl -w net.ipv6.conf.all.disable_ipv6="1" >/dev/null 2>&1
+                [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" != "1" ] && \
+                    sysctl -w net.ipv6.conf.default.disable_ipv6="1" >/dev/null 2>&1
+            fi
+            echo -e "  Поддержка IPv6 в KeeneticOS ${green}отключена${reset}"
+
+        elif grep -q 'ipv6_support="off"' $initd_dir/S99xkeen; then
+            sed -i 's/ipv6_support="off"/ipv6_support="on"/' $initd_dir/S99xkeen
+
+            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+                echo -e "  ${yellow}Выполняется${reset}. Пожалуйста, подождите..."
+                $initd_dir/S99xkeen restart on >/dev/null 2>&1
+            else
+                [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" != "0" ] && \
+                    sysctl -w net.ipv6.conf.all.disable_ipv6="0" >/dev/null 2>&1
+                [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" != "0" ] && \
+                    sysctl -w net.ipv6.conf.default.disable_ipv6="0" >/dev/null 2>&1
+            fi
+            echo -e "  Поддержка IPv6 в KeeneticOS ${green}включена${reset}"
+        fi
+    else
+        echo -e "Для управления компонентом ${yellow}Протокол IPv6${reset} на прошивке ниже 5.0 используйте веб-интерфейс роутера"
+        exit 1
+    fi
+}

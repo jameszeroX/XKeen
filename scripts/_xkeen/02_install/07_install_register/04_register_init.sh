@@ -73,6 +73,9 @@ delay_fd=60
 # Резервное копирование XKeen при обновлении
 backup="on"
 
+# Поддержка IPv6 (KeeneticOS 5+)
+ipv6_support="on"
+
 # Функции журналирования
 log_info_router() {
     logger -p notice -t "$name_app" "$1"
@@ -100,6 +103,24 @@ log_warning_terminal() {
 log_clean() {
     [ "$name_client" = "xray" ] && : > "$log_access" && : > "$log_error"
 }
+
+keenos=$(curl -kfsS "localhost:79/rci/show/version" 2>/dev/null | grep '"release"' | cut -d'"' -f4 | cut -d'.' -f1)
+
+if [ -n "$keenos" ] && [ "$keenos" -ge 5 ]; then
+    if [ "$ipv6_support" = "off" ]; then
+        ipv6_val="1"
+    elif [ "$ipv6_support" = "on" ]; then
+        ipv6_val="0"
+    fi
+
+    if [ -n "$ipv6_val" ]; then
+        [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" != "$ipv6_val" ] && \
+            sysctl -w net.ipv6.conf.all.disable_ipv6="$ipv6_val" >/dev/null 2>&1
+
+        [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" != "$ipv6_val" ] && \
+            sysctl -w net.ipv6.conf.default.disable_ipv6="$ipv6_val" >/dev/null 2>&1
+    fi
+fi
 
 ip4_supported=$(ip -4 addr show | grep -q "inet " && echo true || echo false)
 ip6_supported=$(ip -6 addr show | grep -q "inet6 " && echo true || echo false)

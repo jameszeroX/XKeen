@@ -209,6 +209,7 @@ help_xkeen() {
         echo -e "	-channel${italic}	Переключить канал получения обновлений XKeen (Stable/Dev версия)${reset}"
         echo -e "	-xray	${italic}	Переключить XKeen на ядро Xray${reset}"
         echo -e "	-mihomo	${italic}	Переключить XKeen на ядро Mihomo${reset}"
+        echo -e "	-ipv6	${italic}	Включить | Отключить протокол IPv6 в KeeneticOS 5+${reset}"
         echo
         echo -e "${light_blue}Управление модулями${reset}"
         echo -e "	-modules${italic}	Перенос модулей для XKeen в пользовательскую директорию${reset}"

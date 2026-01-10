@@ -1,7 +1,7 @@
 keenos_modules() {
     keenos=$(curl -kfsS "localhost:79/rci/show/version" 2>/dev/null | grep '"release"' | cut -d'"' -f4 | cut -d'.' -f1)
     modules="xt_TPROXY.ko xt_socket.ko xt_multiport.ko"
-    
+
     [ -z "$keenos" ] || [ "$keenos" -lt 5 ] && modules="$modules xt_owner.ko"
 }
 
@@ -25,7 +25,7 @@ migration_modules() {
         for module in $found_modules; do
             echo -e "    - ${yellow}$module${reset}"
         done
-        
+
         echo
         echo "  Хотите заменить их новыми копиями? (1 - Да, 0 - Нет)"
         echo -e "  Старые версии модулей будут ${red}перезаписаны${reset}"
@@ -80,7 +80,7 @@ remove_modules() {
         for module in $found_modules; do
             echo -e "    - ${yellow}$module${reset}"
         done
-        
+
         echo
         echo "  Хотите удалить все найденные модули? (1 - Да, 0 - Нет)"
         echo -e "  Убедитесь, что компонент '${yellow}Модули ядра подсистемы Netfilter${reset}' установлен"

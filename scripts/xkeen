@@ -1397,6 +1397,11 @@ while [ $# -gt 0 ]; do
         ;;
 
 
+        -ipv6)    # Включение/отключение IPv6 в KeeneticOS 5+
+            change_ipv6_support
+        ;;
+
+
         *)
             echo -e "     Неизвестный ключ: ${red}$1${reset}"
             echo -e "     Список доступных ключей: ${yellow}xkeen -h${reset}"
