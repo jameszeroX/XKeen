@@ -202,37 +202,70 @@ choice_backup_xkeen() {
 change_ipv6_support() {
     keenos=$(curl -kfsS "localhost:79/rci/show/version" 2>/dev/null | grep '"release"' | cut -d'"' -f4 | cut -d'.' -f1)
 
-    if [ -n "$keenos" ] && [ "$keenos" -ge 5 ]; then
-        if grep -q 'ipv6_support="on"' $initd_dir/S99xkeen; then
-            sed -i 's/ipv6_support="on"/ipv6_support="off"/' $initd_dir/S99xkeen
+    if [ -z "$keenos" ] || [ "$keenos" -lt 5 ]; then
+        echo -e "  Для управления компонентом ${yellow}Протокол IPv6${reset} на прошивке ниже 5.0 используйте веб-интерфейс роутера"
+        return 1
+    fi
 
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                echo -e "  ${yellow}Выполняется${reset}. Пожалуйста, подождите..."
-                $initd_dir/S99xkeen restart on >/dev/null 2>&1
-            else
-                [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" != "1" ] && \
-                    sysctl -w net.ipv6.conf.all.disable_ipv6="1" >/dev/null 2>&1
-                [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" != "1" ] && \
-                    sysctl -w net.ipv6.conf.default.disable_ipv6="1" >/dev/null 2>&1
-            fi
+    ip6_supported=$(ip -6 addr show | grep -q "inet6 " && echo true || echo false)
+
+    echo
+    echo -e "  Текущее состояние IPv6 в ${yellow}KeeneticOS${reset}:"
+    if [ "$ip6_supported" = "true" ]; then
+        echo -e "  IPv6 ${green}включён${reset}"
+        echo
+        echo "     1. Отключить IPv6"
+        echo "     0. Оставить без изменений"
+        desired_state="off"
+    else
+        echo -e "  IPv6 ${green}отключён${reset}"
+        echo
+        echo "     1. Включить IPv6"
+        echo "     0. Оставить без изменений"
+        desired_state="on"
+    fi
+
+    echo
+    while true; do
+        read -r -p "  Ваш выбор: " choice
+        if echo "$choice" | grep -qE '^[0-1]$'; then
+            case "$choice" in
+                0)
+                    return 0
+                    ;;
+                1)
+                    break
+                    ;;
+            esac
+        else
+            echo -e "  ${red}Некорректный ввод${reset}"
+        fi
+    done
+
+    sed -i "s/ipv6_support=\"[a-z]*\"/ipv6_support=\"$desired_state\"/" \
+        "$initd_dir/S99xkeen"
+
+    if pidof xray >/dev/null || pidof mihomo >/dev/null; then
+        echo -e "  ${yellow}Выполняется${reset}. Пожалуйста, подождите..."
+        "$initd_dir/S99xkeen" restart on >/dev/null 2>&1
+        if [ "$desired_state" = "off" ]; then
             echo -e "  Поддержка IPv6 в KeeneticOS ${green}отключена${reset}"
-
-        elif grep -q 'ipv6_support="off"' $initd_dir/S99xkeen; then
-            sed -i 's/ipv6_support="off"/ipv6_support="on"/' $initd_dir/S99xkeen
-
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                echo -e "  ${yellow}Выполняется${reset}. Пожалуйста, подождите..."
-                $initd_dir/S99xkeen restart on >/dev/null 2>&1
-            else
-                [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" != "0" ] && \
-                    sysctl -w net.ipv6.conf.all.disable_ipv6="0" >/dev/null 2>&1
-                [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" != "0" ] && \
-                    sysctl -w net.ipv6.conf.default.disable_ipv6="0" >/dev/null 2>&1
-            fi
+        else
             echo -e "  Поддержка IPv6 в KeeneticOS ${green}включена${reset}"
         fi
     else
-        echo -e "Для управления компонентом ${yellow}Протокол IPv6${reset} на прошивке ниже 5.0 используйте веб-интерфейс роутера"
-        exit 1
+        if [ "$desired_state" = "off" ]; then
+            [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" != "1" ] && \
+                sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
+            [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" != "1" ] && \
+                sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
+            echo -e "  Поддержка IPv6 в KeeneticOS ${green}отключена${reset}"
+        else
+            [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" != "0" ] && \
+                sysctl -w net.ipv6.conf.all.disable_ipv6=0 >/dev/null 2>&1
+            [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" != "0" ] && \
+                sysctl -w net.ipv6.conf.default.disable_ipv6=0 >/dev/null 2>&1
+            echo -e "  Поддержка IPv6 в KeeneticOS ${green}включена${reset}"
+        fi
     fi
 }
