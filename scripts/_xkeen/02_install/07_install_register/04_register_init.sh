@@ -104,23 +104,29 @@ log_clean() {
     [ "$name_client" = "xray" ] && : > "$log_access" && : > "$log_error"
 }
 
-keenos=$(curl -kfsS "localhost:79/rci/show/version" 2>/dev/null | grep '"release"' | cut -d'"' -f4 | cut -d'.' -f1)
+apply_ipv6_state() {
+    keenos=$(ndmc -c 'show version' 2>/dev/null | sed -n 's/^[[:space:]]*release:[[:space:]]*\([0-9]\).*/\1/p')
 
-if [ -n "$keenos" ] && [ "$keenos" -ge 5 ]; then
-    if [ "$ipv6_support" = "off" ]; then
-        ipv6_val="1"
-    elif [ "$ipv6_support" = "on" ]; then
-        ipv6_val="0"
+    if [ -n "$keenos" ] && [ "$keenos" -ge 5 ]; then
+        ip6_supported=$(ip -6 addr show 2>/dev/null | grep -q "inet6 " && echo true || echo false)
+
+        case "$ipv6_support" in
+            off)
+                if [ "$ip6_supported" = "true" ]; then
+                    sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
+                    sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
+                fi
+                ;;
+            on)
+                if [ "$ip6_supported" = "false" ]; then
+                    sysctl -w net.ipv6.conf.all.disable_ipv6=0 >/dev/null 2>&1
+                    sysctl -w net.ipv6.conf.default.disable_ipv6=0 >/dev/null 2>&1
+                fi
+                ;;
+        esac
     fi
-
-    if [ -n "$ipv6_val" ]; then
-        [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" != "$ipv6_val" ] && \
-            sysctl -w net.ipv6.conf.all.disable_ipv6="$ipv6_val" >/dev/null 2>&1
-
-        [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" != "$ipv6_val" ] && \
-            sysctl -w net.ipv6.conf.default.disable_ipv6="$ipv6_val" >/dev/null 2>&1
-    fi
-fi
+}
+apply_ipv6_state
 
 ip4_supported=$(ip -4 addr show | grep -q "inet " && echo true || echo false)
 ip6_supported=$(ip -6 addr show | grep -q "inet6 " && echo true || echo false)
@@ -978,7 +984,7 @@ proxy_start() {
         fi
         if proxy_status; then
             echo -e "  Прокси-клиент уже ${green}запущен${reset}"
-            [ "$mode_proxy" != "Other" ] && configure_firewall
+            [ "$mode_proxy" != "Other" ] && apply_ipv6_state && configure_firewall
             if [ "$start_manual" = "on" ]; then
                 log_error_terminal "Не удалось запустить $name_client, так как он уже запущен"
             else
@@ -1057,13 +1063,13 @@ proxy_start() {
                 esac
                 sleep 1 && sleep "$current_delay"
                 if proxy_status; then
-                    [ "$mode_proxy" != "Other" ] && configure_firewall
+                    [ "$mode_proxy" != "Other" ] && apply_ipv6_state && configure_firewall
                     echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${yellow}${mode_proxy}${reset}"
                     if curl -kfsS "${url_server}/${url_policy}" | jq --arg policy "$name_policy" -e 'any(.[]; .description | ascii_downcase == $policy)' > /dev/null; then
                         if [ -e "/tmp/noinet" ]; then
                             echo
                             echo -e "  У политики ${yellow}$name_policy${reset} ${red}нет доступа в интернет${reset}"
-                            echo "  Проверьте, установлена ли галка на продключении к провайдеру"
+                            echo "  Проверьте, установлена ли галка на подключении к провайдеру"
                         fi
                     fi
                     [ "$mode_proxy" = "Other" ] && echo -e "  Функция прозрачного прокси ${red}не активна${reset}. Направляйте соединения на ${yellow}${name_client}${reset} вручную"

@@ -1398,6 +1398,7 @@ while [ $# -gt 0 ]; do
 
 
         -ipv6)    # Включение/отключение IPv6 в KeeneticOS 5+
+            clear
             change_ipv6_support
         ;;
 

@@ -200,9 +200,10 @@ choice_backup_xkeen() {
 }
 
 change_ipv6_support() {
-    keenos=$(curl -kfsS "localhost:79/rci/show/version" 2>/dev/null | grep '"release"' | cut -d'"' -f4 | cut -d'.' -f1)
+    keenos=$(ndmc -c 'show version' 2>/dev/null | sed -n 's/^[[:space:]]*release:[[:space:]]*\([0-9]\).*/\1/p')
 
     if [ -z "$keenos" ] || [ "$keenos" -lt 5 ]; then
+        echo
         echo -e "  Для управления компонентом ${yellow}Протокол IPv6${reset} на прошивке ниже 5.0 используйте веб-интерфейс роутера"
         return 1
     fi
