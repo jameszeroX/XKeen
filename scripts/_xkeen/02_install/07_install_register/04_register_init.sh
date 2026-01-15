@@ -261,7 +261,7 @@ file_dns_xray() {
 }
 
 file_dns_mihomo() {
-        [ -f "$mihomo_config" ] || continue
+        [ -f "$mihomo_config" ] || return 1
         if yq -e '.dns.enable == true' "$mihomo_config" >/dev/null 2>&1; then
             echo "$mihomo_config"
             return 0
@@ -359,7 +359,7 @@ get_modules() {
   Невозможно использовать DNS-сервер Xray без него
   Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
   
-  Без модуля owner Xray может использовать только DNS роутера
+  Без модуля owner прокси может использовать только DNS роутера
   "
         fi
     fi
@@ -984,7 +984,7 @@ proxy_start() {
         fi
         if proxy_status; then
             echo -e "  Прокси-клиент уже ${green}запущен${reset}"
-            [ "$mode_proxy" != "Other" ] && apply_ipv6_state && configure_firewall
+            [ "$mode_proxy" != "Other" ] && configure_firewall
             if [ "$start_manual" = "on" ]; then
                 log_error_terminal "Не удалось запустить $name_client, так как он уже запущен"
             else
@@ -1061,7 +1061,7 @@ proxy_start() {
                         ;;
                     *) "$name_client" run -C "$directory_xray_config" & ;;
                 esac
-                sleep 1 && sleep "$current_delay"
+                sleep 2 && sleep "$current_delay"
                 if proxy_status; then
                     [ "$mode_proxy" != "Other" ] && apply_ipv6_state && configure_firewall
                     echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${yellow}${mode_proxy}${reset}"

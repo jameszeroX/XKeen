@@ -21,7 +21,7 @@ install_xkeen_rename() {
 install_xkeen_rename
 
 add_chmod_init() {
-    chmod +x $initd_dir/S99xkeen
+    [ -f "$initd_dir/S99xkeen" ] && chmod +x "$initd_dir/S99xkeen"
 }
 
 # Импортируем модули
@@ -208,20 +208,19 @@ while [ $# -gt 0 ]; do
 
                 clear
                 choice_autostart_xkeen
-                add_chmod_init
             fi
 
             if [ "$xray_installed" != "installed" ] && [ "$mihomo_installed" = "installed" ]; then
                 if [ -f "$install_dir/mihomo" ] && [ -f "$install_dir/yq" ] && grep -q 'name_client="xray"' $initd_dir/S99xkeen; then
                     sed -i 's/name_client="xray"/name_client="mihomo"/' $initd_dir/S99xkeen
-                    add_chmod_init
                 fi
             elif  [ "$xray_installed" = "installed" ] && [ "$mihomo_installed" != "installed" ]; then
                 if [ -f "$install_dir/xray" ] && grep -q 'name_client="mihomo"' $initd_dir/S99xkeen; then
                     sed -i 's/name_client="mihomo"/name_client="xray"/' $initd_dir/S99xkeen
-                    add_chmod_init
                 fi
             fi
+
+            add_chmod_init
 
             # Удаляем временные файлы
             delete_tmp
@@ -331,16 +330,10 @@ while [ $# -gt 0 ]; do
                 echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
                 register_xray_list
                 logs_register_xray_list_info_console
-
                 register_xray_control
                 logs_register_xray_control_info_console
-
                 register_xray_status
                 logs_register_xray_status_info_console
-
-                if [ -f "$install_dir/xray" ]; then
-                    chmod +x $install_dir/xray
-                fi
             fi
 
             if [ -f "$install_dir/mihomo" ]; then
@@ -1285,14 +1278,22 @@ while [ $# -gt 0 ]; do
 
 
         -fd)    # Смена режима контроля файловых дескрипторов
-            if grep -q 'check_fd="on"' $initd_dir/S99xkeen; then
-                sed -i 's/check_fd="on"/check_fd="off"/' $initd_dir/S99xkeen
-                echo -e "  Контроль файловых дескрипторов, открытых прокси-клиентом ${red}отключен${reset}. ${yellow}Перезагрузите роутер!${reset}"
+            if [ -f "$initd_dir/S99xkeen" ]; then
+                if grep -q 'check_fd="on"' $initd_dir/S99xkeen; then
+                    sed -i 's/check_fd="on"/check_fd="off"/' "$initd_dir/S99xkeen"
+                    echo -e "  Контроль файловых дескрипторов, открытых прокси-клиентом ${red}отключен${reset}. ${yellow}Перезагрузите роутер!${reset}"
+                elif grep -q 'check_fd="off"' $initd_dir/S99xkeen; then
+                    sed -i 's/check_fd="off"/check_fd="on"/' "$initd_dir/S99xkeen"
+                    echo -e "  Контроль файловых дескрипторов, открытых прокси-клиентом ${green}включен${reset}. ${yellow}Перезагрузите роутер!${reset}"
+                else
+                    echo -e "  Произошла ${red}ошибка${reset} при выполнении операции"
+                    return 1
+                fi
+                add_chmod_init
             else
-                sed -i 's/check_fd="off"/check_fd="on"/' $initd_dir/S99xkeen
-                echo -e "  Контроль файловых дескрипторов, открытых прокси-клиентом ${green}включен${reset}. ${yellow}Перезагрузите роутер!${reset}"
+                echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S99xkeen${reset}"
+                return 1
             fi
-            add_chmod_init
         ;;
 
 
@@ -1368,7 +1369,6 @@ while [ $# -gt 0 ]; do
         -d)    # Установка задержки автозапуска в секундах
             shift
             delay_autostart "$1"
-            sleep 2
             add_chmod_init
         ;;
 

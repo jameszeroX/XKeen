@@ -19,7 +19,7 @@ delay_autostart() {
     if [ -f "$initd_dir/S99xkeen" ]; then
         target_file="$initd_dir/S99xkeen"
     else
-        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска S99xkeen"
+        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S99xkeen${reset}"
         return 1
     fi
 
@@ -57,7 +57,6 @@ delay_autostart() {
 
     while true; do
         if data_is_updated_exclude "$target_file" "$new_delay"; then
-            echo -e "  ${green}Успех${reset}"
             echo -e "  Установлена задержка автозапуска XKeen ${yellow}${new_delay} секунд(ы)${reset}"
             break
         fi
