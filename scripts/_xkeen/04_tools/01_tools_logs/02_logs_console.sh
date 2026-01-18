@@ -447,6 +447,37 @@ logs_delete_register_mihomo_info_console() {
     fi
 }
 
+logs_delete_register_yq_info_console() {
+    info_content=
+    error_content=
+
+    if [ ! -f "$register_dir/yq_s.list" ]; then
+        info_content="  ${green}Успешно${reset}: Файл yq_s.list не найден в директории '$register_dir/'"
+    else
+        error_content="  ${red}Ошибка${reset}: Файл yq_s.list найден в директории '$register_dir/'"
+    fi
+
+    if [ ! -f "$register_dir/yq_s.control" ]; then
+        info_content="${info_content}\n  ${green}Успешно${reset}: Файл yq_s.control не найден в директории '$register_dir/'"
+    else
+        error_content="${error_content}\n  ${red}Ошибка${reset}: Файл yq_s.control найден в директории '$register_dir/'"
+    fi
+
+    if ! grep -q 'Package: yq_s' "$status_file"; then
+        info_content="${info_content}\n  ${green}Успешно${reset}: Регистрация пакета yq не обнаружена в '$status_file'"
+    else
+        error_content="${error_content}\n  ${red}Ошибка${reset}: Регистрация пакета yq обнаружена в '$status_file'"
+    fi
+
+    if [ -n "$info_content" ]; then
+        echo -e "$info_content"
+    fi
+
+    if [ -n "$error_content" ]; then
+        echo -e "$error_content"
+    fi
+}
+
 logs_delete_cron_geofile_info_console() {
     info_content=
     

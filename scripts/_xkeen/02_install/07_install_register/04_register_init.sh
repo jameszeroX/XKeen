@@ -1105,7 +1105,7 @@ proxy_stop() {
             killall -q -9 "$name_client"
                 sleep 1 && sleep "$current_delay"
             if ! proxy_status; then
-                echo -e "  Прокси-клиент ${yellow}остановлен${reset}"
+                echo -e "  Прокси-клиент ${red}остановлен${reset}"
                 log_info_router "Прокси-клиент успешно остановлен"
                 return 0
             fi

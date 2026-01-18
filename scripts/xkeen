@@ -555,27 +555,52 @@ while [ $# -gt 0 ]; do
             if [ -z $bypass_xray ]; then
                 install_xray
 
-                echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}Xray${reset}"
-                delete_register_xray
-                logs_delete_register_xray_info_console
+                if [ "$xray_installed" = "installed" ]; then
+                    echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}Xray${reset}"
+                    delete_register_xray
+                    logs_delete_register_xray_info_console
 
-                echo -e "  Выполняется регистрация новой версии ${yellow}Xray${reset}"
-                register_xray_list
-                logs_register_xray_list_info_console
+                    echo -e "  Выполняется регистрация новой версии ${yellow}Xray${reset}"
+                    register_xray_list
+                    logs_register_xray_list_info_console
+                    register_xray_control
+                    logs_register_xray_control_info_console
+                    register_xray_status
+                    logs_register_xray_status_info_console
 
-                register_xray_control
-                logs_register_xray_control_info_console
+                    sleep 2
+                    if pidof xray >/dev/null; then
+                        $initd_dir/S99xkeen restart on >/dev/null 2>&1
+                    fi
 
-                register_xray_status
-                logs_register_xray_status_info_console
+                    echo
+                    echo -e "  Обновление ядра Xray ${green}выполнено${reset}"
+                else
+                    xray_installed="installed"
+                    info_version_xray
 
-                sleep 2
-                if pidof xray >/dev/null; then
-                    $initd_dir/S99xkeen restart on >/dev/null 2>&1
+                    if [ -f "$install_dir/xray" ]; then
+                        install_configs
+        
+                        if [ ! -d "$geo_dir" ]; then
+                            mkdir -p "$geo_dir"
+                        fi
+
+                        delete_register_xray
+                        echo
+                        echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
+                        register_xray_list
+                        logs_register_xray_list_info_console
+                        register_xray_control
+                        logs_register_xray_control_info_console
+                        register_xray_status
+                        logs_register_xray_status_info_console
+                        sleep 2
+                        clear
+                        echo
+                        echo -e "  Установка ядра ${yellow}Xray${reset} ${green}выполнена${reset}"
+                    fi
                 fi
-
-                echo
-                echo -e "  Обновление ядра Xray ${green}выполнено${reset}"
             fi
 
             rm -f "$install_dir/xray_bak"
@@ -607,6 +632,25 @@ while [ $# -gt 0 ]; do
                 install_mihomo
 
                 if [ "$mihomo_installed" = "installed" ]; then
+                    echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}Mihomo${reset}"
+                    delete_register_mihomo
+                    logs_delete_register_mihomo_info_console
+                    logs_delete_register_yq_info_console
+
+                    echo -e "  Выполняется регистрация новой версии ${yellow}Mihomo${reset}"
+                    register_mihomo_list
+                    logs_register_mihomo_list_info_console
+                    register_mihomo_control
+                    logs_register_mihomo_control_info_console
+                    register_mihomo_status
+                    logs_register_mihomo_status_info_console
+                    register_yq_list
+                    logs_register_yq_list_info_console
+                    register_yq_control
+                    logs_register_yq_control_info_console
+                    register_yq_status
+                    logs_register_yq_status_info_console
+
                     if pidof mihomo >/dev/null; then
                         $initd_dir/S99xkeen restart on >/dev/null 2>&1
                     fi
@@ -835,6 +879,7 @@ while [ $# -gt 0 ]; do
 
             delete_register_mihomo
             logs_delete_register_mihomo_info_console
+            logs_delete_register_yq_info_console
 
             echo -e "  Удаление регистрации Mihomo ${green}выполнено${reset}"
         ;;
@@ -1020,6 +1065,7 @@ while [ $# -gt 0 ]; do
 
             delete_register_mihomo
             logs_delete_register_mihomo_info_console
+            logs_delete_register_yq_info_console
 
             register_mihomo_list
             logs_register_mihomo_list_info_console

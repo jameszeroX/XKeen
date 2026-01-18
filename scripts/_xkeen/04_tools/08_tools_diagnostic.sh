@@ -23,10 +23,10 @@ echo
 echo "  Выполняется диагностика. Пожалуйста, подождите..."
 
 # Создаем файл diagnostic
-touch "$diagnostic" 
+touch "$diagnostic"
 
 # Очищаем файл diagnostic перед записью новых данных
-> "$diagnostic" 
+> "$diagnostic"
 
 # Функция для записи заголовка в файл
 write_header() {
@@ -41,43 +41,43 @@ write_header "XKeen работает на ядре ${name_client}\nи устан
 
 # Определение доступности IPv4 и IPv6
 write_header "Доступность IPv4 и IPv6"
-echo "Поддержка IPv4 - $ip4_supported" >> "$diagnostic" 
-echo "Поддержка IPv6 - $ip6_supported" >> "$diagnostic" 
-echo >> "$diagnostic" 
-echo "Поддержка iptables - $iptables_supported" >> "$diagnostic" 
-echo "Поддержка i6ptables - $ip6tables_supported" >> "$diagnostic" 
+echo "Поддержка IPv4 - $ip4_supported" >> "$diagnostic"
+echo "Поддержка IPv6 - $ip6_supported" >> "$diagnostic"
+echo >> "$diagnostic"
+echo "Поддержка iptables - $iptables_supported" >> "$diagnostic"
+echo "Поддержка i6ptables - $ip6tables_supported" >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
 if [ $iptables_supported = "true" ]; then
     # Запись заголовка и выполнение команд iptables
     write_header "Результат таблицы NAT цепи PREROUTING IPv4"
-    { iptables -w -t nat -nvL PREROUTING 2>&1; } >> "$diagnostic" 
+    { iptables -w -t nat -nvL PREROUTING 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
-    
+
     write_header "Результат таблицы NAT цепи xkeen IPv4"
-    { iptables -w -t nat -nvL xkeen 2>&1; } >> "$diagnostic" 
+    { iptables -w -t nat -nvL xkeen 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
-    
+
     write_header "Результат таблицы MANGLE цепи PREROUTING IPv4"
-    { iptables -w -t mangle -nvL PREROUTING 2>&1; } >> "$diagnostic" 
+    { iptables -w -t mangle -nvL PREROUTING 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
-    
+
     write_header "Результат таблицы MANGLE цепи xkeen IPv4"
-    { iptables -w -t mangle -nvL xkeen 2>&1; } >> "$diagnostic" 
+    { iptables -w -t mangle -nvL xkeen 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
-    
+
     write_header "Результат таблицы MANGLE цепи OUTPUT IPv4"
-    { iptables -w -t mangle -nvL OUTPUT 2>&1; } >> "$diagnostic" 
+    { iptables -w -t mangle -nvL OUTPUT 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
-    
+
     write_header "Результат таблицы MANGLE цепи xkeen_mask IPv4"
-    { iptables -w -t mangle -nvL xkeen_mask 2>&1; } >> "$diagnostic" 
+    { iptables -w -t mangle -nvL xkeen_mask 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
 fi
@@ -85,91 +85,95 @@ fi
 if [ $ip6tables_supported = "true" ]; then
     # Запись заголовка и выполнение команд ip6tables
     write_header "Результат таблицы NAT цепи PREROUTING IPv6"
-    { ip6tables -w -t nat -nvL PREROUTING 2>&1; } >> "$diagnostic" 
+    { ip6tables -w -t nat -nvL PREROUTING 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
-    
+
     write_header "Результат таблицы NAT цепи xkeen IPv6"
-    { ip6tables -w -t nat -nvL xkeen 2>&1; } >> "$diagnostic" 
+    { ip6tables -w -t nat -nvL xkeen 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
-    
+
     write_header "Результат таблицы MANGLE цепи PREROUTING IPv6"
-    { ip6tables -w -t mangle -nvL PREROUTING 2>&1; } >> "$diagnostic" 
+    { ip6tables -w -t mangle -nvL PREROUTING 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
-    
+
     write_header "Результат таблицы MANGLE цепи xkeen IPv6"
-    { ip6tables -w -t mangle -nvL xkeen 2>&1; } >> "$diagnostic" 
+    { ip6tables -w -t mangle -nvL xkeen 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
-    
+
     write_header "Результат таблицы MANGLE цепи OUTPUT IPv6"
-    { ip6tables -w -t mangle -nvL OUTPUT 2>&1; } >> "$diagnostic" 
+    { ip6tables -w -t mangle -nvL OUTPUT 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
-    
+
     write_header "Результат таблицы MANGLE цепи xkeen_mask IPv6"
-    { ip6tables -w -t mangle -nvL xkeen_mask 2>&1; } >> "$diagnostic" 
+    { ip6tables -w -t mangle -nvL xkeen_mask 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
 fi
 
 # Копирование содержимого файла /opt/etc/ndm/netfilter.d/proxy.sh
 write_header "Содержимое файла /opt/etc/ndm/netfilter.d/proxy.sh"
-cat /opt/etc/ndm/netfilter.d/proxy.sh >> "$diagnostic" 
+if [ -f "/opt/etc/ndm/netfilter.d/proxy.sh" ]; then
+    cat /opt/etc/ndm/netfilter.d/proxy.sh >> "$diagnostic"
+else
+    echo "Файл /opt/etc/ndm/netfilter.d/proxy.sh не найден" >> "$diagnostic"
+fi
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
 # Проверка использования SSL порта
 write_header "Проверка использования SSL порта"
-curl -kfsS "localhost:79/rci/ip/http/ssl" | jq -r '.port' >> "$diagnostic" 
+curl -kfsS "localhost:79/rci/ip/http/ssl" | jq -r '.port' >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
 # Сбор данных о политике доступа
 write_header "Данные о политике доступа"
-curl -kfsS "localhost:79/rci/show/ip/policy" | jq -r ' .[] | select(.description | ascii_downcase == "xkeen")' >> "$diagnostic" 
+curl -kfsS "localhost:79/rci/show/ip/policy" | jq -r ' .[] | select(.description | ascii_downcase == "xkeen")' >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
 # Сбор результатов команды ip rule show
 write_header "Результат команды ip rule show"
-ip rule show >> "$diagnostic" 
+ip rule show >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
 # Сбор результатов команды ip route show table main
 write_header "Результат команды ip route show table main"
-ip route show table main >> "$diagnostic" 
+ip route show table main >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
 # Запрос к curl для получения title, model, region
 write_header "Данные из localhost:79/rci/show/version"
-curl -kfsS "localhost:79/rci/show/version" | jq -r '.title, .model, .region' >> "$diagnostic" 
+curl -kfsS "localhost:79/rci/show/version" | jq -r '.title, .model, .region' >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
 # Запрос версии ядра
 if [ "${name_client}" = "xray" ]; then
     write_header "Версия Xray"
-    xray -version >> "$diagnostic" 
+    xray -version >> "$diagnostic"
 elif [ "${name_client}" = "mihomo" ]; then
     write_header "Версия Mihomo"
-    mihomo -v >> "$diagnostic" 
+    mihomo -v >> "$diagnostic"
 fi
 echo >> "$diagnostic"
 echo "Разрешено файловых дескрипторов:" >> "$diagnostic"
-grep 'Max open files' "/proc/$(pidof ${name_client})/limits" | awk '{print $4}' >> "$diagnostic" 
+grep 'Max open files' "/proc/$(pidof ${name_client})/limits" | awk '{print $4}' >> "$diagnostic"
 echo "Использовано файловых дескрипторов:" >> "$diagnostic"
-ls -l /proc/$(pidof ${name_client})/fd | wc -l >> "$diagnostic" 
+ls -l /proc/$(pidof ${name_client})/fd | wc -l >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
 # Запрос версии XKeen
 write_header "Версия XKeen"
-xkeen -v >> "$diagnostic" 
+xkeen -v >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 

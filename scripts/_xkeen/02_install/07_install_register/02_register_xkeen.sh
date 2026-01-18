@@ -51,7 +51,10 @@ register_xkeen_status() {
     existing_content=$(cat "$status_file")
 
     # Объединение существующего содержимого и новой записи
-    printf "\n$(cat new_entry.txt)\n" >> "$status_file"
+    echo "" >> "$status_file"
+    cat new_entry.txt >> "$status_file"
+    echo "" >> "$status_file"
+    sed -i '/^$/{N;/^\n$/D}' "$status_file"
 }
 
 register_xkeen_initd() {
@@ -165,4 +168,3 @@ EOF
 EOF
     fi
 }
-

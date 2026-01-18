@@ -55,5 +55,8 @@ register_xray_status() {
     existing_content=$(cat "$status_file")
 
     # Объединение существующего содержимого и новой записи
-    echo -e "\n$(cat new_entry.txt)" >> "$status_file"
+    echo "" >> "$status_file"
+    cat new_entry.txt >> "$status_file"
+    echo "" >> "$status_file"
+    sed -i '/^$/{N;/^\n$/D}' "$status_file"
 }
