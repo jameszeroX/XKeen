@@ -1004,12 +1004,13 @@ proxy_start() {
             while [ "$attempt" -le "$start_attempts" ]; do
                 case "$name_client" in
                     xray)
-                        if [ ! -f "$install_dir/xray" ]; then
+                        if [ ! -x "$install_dir/xray" ]; then
                             log_error_terminal "
-  Не найден файл ${yellow}$install_dir/xray${reset}
+  Не найден исполняемый файл ${yellow}$install_dir/xray${reset}
 
   Вероятная причина - установка XKeen на внутреннюю память и нехватка на ней места
-  Выполните установку XKeen на внешний накопитель либо скопируйте файл вручную"
+  Выполните установку XKeen на внешний накопитель, либо скопируйте файл вручную,
+  а так же проверьте, назначены ли права на выполнение"
                             exit 1
                         fi
                         export XRAY_LOCATION_CONFDIR="$directory_xray_config"
@@ -1032,15 +1033,16 @@ proxy_start() {
                         fi
                     ;;
                     mihomo)
-                        if [ ! -f "$install_dir/mihomo" ] || [ ! -f "$install_dir/yq" ]; then
+                        if [ ! -x "$install_dir/mihomo" ] || [ ! -x "$install_dir/yq" ]; then
                             missing_files=""
-                            [ ! -f "$install_dir/yq" ] && missing_files="$install_dir/yq"
-                            [ ! -f "$install_dir/mihomo" ] && missing_files="$install_dir/mihomo $missing_files"
+                            [ ! -x "$install_dir/yq" ] && missing_files="$install_dir/yq"
+                            [ ! -x "$install_dir/mihomo" ] && missing_files="$install_dir/mihomo $missing_files"
                             log_error_terminal "
-  Не найден(ы) файл(ы): ${yellow}${missing_files}${reset}
+  Не найден(ы) исполняемый(е) файл(ы): ${yellow}${missing_files}${reset}
 
   Вероятная причина - установка XKeen на внутреннюю память и нехватка на ней места
-  Выполните установку XKeen на внешний накопитель либо скопируйте файл(ы) вручную"
+  Выполните установку XKeen на внешний накопитель, либо скопируйте файл(ы) вручную,
+  а так же проверьте, назначены ли права на выполнение"
                             exit 1
                         fi
                         if [ "$architecture" = "arm64-v8a" ]; then
