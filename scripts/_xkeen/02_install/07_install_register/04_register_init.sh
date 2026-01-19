@@ -7,9 +7,10 @@
 PATH="/opt/bin:/opt/sbin:/sbin:/bin:/usr/sbin:/usr/bin"
 
 # Цвета
-green="\033[32m"
-red="\033[31m"
-yellow="\033[33m"
+green="\033[92m"
+red="\033[91m"
+yellow="\033[93m"
+light_blue="\033[96m"
 reset="\033[0m"
 
 # Имена
@@ -958,6 +959,19 @@ monitor_fd() {
     done
 }
 
+missing_files_template='
+  '"${light_blue}"'Отсутствуют исполняемые файлы:'"${reset}"'
+  '"${yellow}"'%s'"${reset}"'
+
+  '"${green}"'Возможные причины:'"${reset}"'
+  • XKeen установлен во внутреннюю память и на ней недостаточно места
+  • У файла отсутствуют права на выполнение
+
+  '"${green}"'Рекомендуемые действия:'"${reset}"'
+  1. Переустановите XKeen на внешний накопитель
+  2. Либо скопируйте недостающий файл вручную и сделайте исполняемым
+'
+
 # Запуск прокси-клиента
 proxy_start() {
     start_manual="$1"
@@ -1005,12 +1019,8 @@ proxy_start() {
                 case "$name_client" in
                     xray)
                         if [ ! -x "$install_dir/xray" ]; then
-                            log_error_terminal "
-  Не найден исполняемый файл ${yellow}$install_dir/xray${reset}
-
-  Вероятная причина - установка XKeen на внутреннюю память и нехватка на ней места
-  Выполните установку XKeen на внешний накопитель, либо скопируйте файл вручную,
-  а так же проверьте, назначены ли права на выполнение"
+                            missing_files="$install_dir/xray"
+                            log_error_terminal "$(printf "$missing_files_template" "$missing_files")"
                             exit 1
                         fi
                         export XRAY_LOCATION_CONFDIR="$directory_xray_config"
@@ -1036,13 +1046,8 @@ proxy_start() {
                         if [ ! -x "$install_dir/mihomo" ] || [ ! -x "$install_dir/yq" ]; then
                             missing_files=""
                             [ ! -x "$install_dir/yq" ] && missing_files="$install_dir/yq"
-                            [ ! -x "$install_dir/mihomo" ] && missing_files="$install_dir/mihomo $missing_files"
-                            log_error_terminal "
-  Не найден(ы) исполняемый(е) файл(ы): ${yellow}${missing_files}${reset}
-
-  Вероятная причина - установка XKeen на внутреннюю память и нехватка на ней места
-  Выполните установку XKeen на внешний накопитель, либо скопируйте файл(ы) вручную,
-  а так же проверьте, назначены ли права на выполнение"
+                            [ ! -x "$install_dir/mihomo" ] && missing_files="$install_dir/mihomo\n  $missing_files"
+                            log_error_terminal "$(printf "$missing_files_template" "$missing_files")"
                             exit 1
                         fi
                         if [ "$architecture" = "arm64-v8a" ]; then
