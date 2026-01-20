@@ -678,7 +678,7 @@ if pidof "\$name_client" >/dev/null; then
             if [ "\$source_table" = "main" ]; then
                 ip -\$ip_version route show default 2>/dev/null | grep -q '^default'
             else
-                 ip -\$ip_version route show table all 2>/dev/null | grep -E "^[[:space:]]*default .* table \$policy_table( |\$)" | \grep -vq 'unreachable'
+                 ip -\$ip_version route show table all 2>/dev/null | grep -E "^[[:space:]]*default .* table \$policy_table([[:space:]]|$)" | grep -vq 'unreachable' >/dev/null
             fi
         }
 
