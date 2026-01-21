@@ -165,29 +165,44 @@ get_user_ipv6_excludes() {
     fi
 }
 
-# Функция обработки, валидации и очистки списка портов
+# Функция обработки, валидации и нормализации списка портов
 validate_and_clean_ports() {
     input_ports="$1"
-    final_ports=""
 
-    final_ports=$(echo "$input_ports" | tr ',' '\n' | awk '
+    echo "$input_ports" | tr ',' '\n' | awk '
         function is_valid(p) {
-            return p > 0 && p <= 65535 && p ~ /^[0-9]+$/
+            return p ~ /^[0-9]+$/ && p > 0 && p <= 65535
         }
         {
-            gsub(/ /, "", $0)
-            if ($0 == "") next;
+            gsub(/[[:space:]]/, "", $0)
+            if ($0 == "") next
 
             n = split($0, a, ":")
+
             if (n == 1) {
-                if (is_valid(a[1])) print a[1]
-            } else if (n == 2) {
-                if (is_valid(a[1]) && is_valid(a[2]) && a[1] < a[2]) print a[1]":"a[2]
+                if (is_valid(a[1])) {
+                    print a[1]
+                }
+            }
+
+            else if (n == 2) {
+                if (is_valid(a[1]) && is_valid(a[2])) {
+                    start = a[1]
+                    end   = a[2]
+
+                    if (start > end) {
+                        tmp = start
+                        start = end
+                        end = tmp
+                    }
+
+                    if (start < end) {
+                        print start ":" end
+                    }
+                }
             }
         }
-    ' | sort -un | tr '\n' ',' | sed 's/,$//')
-
-    echo "$final_ports"
+    ' | sort -n -u | tr '\n' ',' | sed 's/,$//'
 }
 
 # Функция обработки пользовательских портов
@@ -731,7 +746,7 @@ if pidof "\$name_client" >/dev/null; then
 
         connmark_option=\$(echo "\$connmark_option" | sed 's/^ *//')
 
-        num_ports=\$(echo "\$ports_to_process" | tr ',' '\n' | sed '/^\$/d' | wc -l)
+        num_ports=\$(echo "\$ports_to_process" | tr ',' '\n' | sed '/^$/d' | wc -l)
 
         if [ "\$num_ports" -eq 0 ]; then
             return
@@ -740,7 +755,7 @@ if pidof "\$name_client" >/dev/null; then
         i=1
         while [ \$i -le \$num_ports ]; do
             end=\$((i + 6))
-            chunk=\$(echo "\$ports_to_process" | tr ',' '\n' | sed '/^\$/d' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,\$//')
+            chunk=\$(echo "\$ports_to_process" | tr ',' '\n' | sed '/^$/d' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,$//')
 
             if [ -z "\$chunk" ]; then
                 break
