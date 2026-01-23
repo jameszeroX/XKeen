@@ -1449,6 +1449,12 @@ while [ $# -gt 0 ]; do
         ;;
 
 
+        -dns)    # Включение/отключение перенаправления DNS в прокси
+            clear
+            change_proxy_dns
+        ;;
+
+
         *)
             echo -e "     Неизвестный ключ: ${red}$1${reset}"
             echo -e "     Список доступных ключей: ${yellow}xkeen -h${reset}"

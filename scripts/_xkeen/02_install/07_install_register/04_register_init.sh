@@ -59,6 +59,7 @@ ipv6_exclude="::/128 ::1/128 64:ff9b::/96 2001::/32 2002::/16 fd00::/8 ff00::/8 
 port_donor=""
 port_exclude=""
 port_dns="53"
+proxy_dns="on"
 
 # Настройки запуска
 start_attempts=10
@@ -266,23 +267,27 @@ proxy_status() { pidof $name_client >/dev/null; }
 
 # Поиск конфигураций DNS
 file_dns_xray() {
-    for file in "$directory_xray_config"/*.json; do
-        [ -f "$file" ] || continue
-        if grep -q '"dns":' "$file" && grep -q '"servers":' "$file"; then
-            echo "$file"
-            return 0
-        fi
-    done
-    return 1
+    if [ "$proxy_dns" = "on" ]; then
+        for file in "$directory_xray_config"/*.json; do
+            [ -f "$file" ] || continue
+            if grep -q '"dns":' "$file" && grep -q '"servers":' "$file"; then
+                echo "$file"
+                return 0
+            fi
+        done
+        return 1
+    fi
 }
 
 file_dns_mihomo() {
+    if [ "$proxy_dns" = "on" ]; then
         [ -f "$mihomo_config" ] || return 1
         if yq -e '.dns.enable == true' "$mihomo_config" >/dev/null 2>&1; then
             echo "$mihomo_config"
             return 0
         fi
-    return 1
+        return 1
+    fi
 }
 
 [ "$name_client" = "xray" ] && file_dns=$(file_dns_xray)
@@ -693,7 +698,7 @@ if pidof "\$name_client" >/dev/null; then
             if [ "\$source_table" = "main" ]; then
                 ip -\$ip_version route show default 2>/dev/null | grep -q '^default'
             else
-                 ip -\$ip_version route show table all 2>/dev/null | grep -E "^[[:space:]]*default .* table \$policy_table([[:space:]]|$)" | grep -vq 'unreachable' >/dev/null
+                ip -\$ip_version route show table all 2>/dev/null | grep -E "^[[:space:]]*default .* table \$policy_table([[:space:]]|$)" | grep -vq 'unreachable' >/dev/null
             fi
         }
 

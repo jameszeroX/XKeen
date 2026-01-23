@@ -280,6 +280,65 @@ change_ipv6_support() {
         echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S99xkeen${reset}"
         return 1
     fi
+}
 
+change_proxy_dns() {
+    if [ ! -f "$initd_dir/S99xkeen" ]; then
+        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S99xkeen${reset}"
+        return 1
+    fi
 
+    current_state=$(grep -E '^[[:space:]]*proxy_dns=' "$initd_dir/S99xkeen" | tail -n 1 | cut -d'=' -f2 | tr -d '"[:space:]')
+
+    echo
+    echo -e "  ${red}Внимание!${reset} Значение данного параметра без соответствующих настроек прокси-клиента ${green}игнорируется${reset}"
+    echo
+    echo -e "  Текущее состояние перехвата ${yellow}DNS${reset}:"
+
+    if [ "$current_state" = "on" ]; then
+        echo -e "  DNS-запросы ${green}перехватываются${reset} и направляются на прокси"
+        echo
+        echo "     1. Отключить перехват DNS и обрабатывать запросы роутером"
+        echo "     0. Оставить без изменений"
+        desired_state="off"
+    else
+        echo -e "  DNS-запросы ${green}обрабатываются роутером${reset}"
+        echo
+        echo "     1. Включить перехват и пересылку DNS-запросов на прокси"
+        echo "     0. Оставить без изменений"
+        desired_state="on"
+    fi
+
+    echo
+    while true; do
+        read -r -p "  Ваш выбор: " choice
+        if echo "$choice" | grep -qE '^[0-1]$'; then
+            case "$choice" in
+                0)
+                    return 0
+                    ;;
+                1)
+                    break
+                    ;;
+            esac
+        else
+            echo -e "  ${red}Некорректный ввод${reset}"
+        fi
+    done
+
+    sed -i "s/proxy_dns=\"[a-z]*\"/proxy_dns=\"$desired_state\"/" "$initd_dir/S99xkeen"
+
+    if grep -q "proxy_dns=\"$desired_state\"" "$initd_dir/S99xkeen"; then
+        if [ "$desired_state" = "on" ]; then
+            echo -e "  Перехват DNS ${green}включён${reset}"
+        else
+            echo -e "  Перехват DNS ${red}отключён${reset}"
+        fi
+
+        echo
+        echo -e "  Для применения изменений необходимо ${green}перезапустить XKeen${reset}"
+    else
+        echo -e "  ${red}Произошла ошибка${reset} при изменении настройки proxy_dns"
+        return 1
+    fi
 }
