@@ -949,16 +949,11 @@ clean_firewall() {
 
         [ "$family" = "iptables"  ] && [ "$iptables_supported"  != "true" ] && return
         [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ] && return
-    
-        while "$family" -w -t mangle -C PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; do
-            rule_num=$(
-                "$family" -w -t mangle -nL PREROUTING --line-numbers | awk '/CONNMARK/ && /restore/ {print $1; exit}'
-            )
-            [ -n "$rule_num" ] || break
-            "$family" -w -t mangle -D PREROUTING "$rule_num" >/dev/null 2>&1
+
+        while "$family" -w -t mangle -D PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; do
+            :
         done
     }
-
 
     for family in iptables ip6tables; do
         for chain in nat mangle; do
