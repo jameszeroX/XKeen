@@ -790,7 +790,7 @@ if pidof "\$name_client" >/dev/null; then
         family="\$1"
         table="\$2"
 
-        if [ "\$table" = "mangle" ]; then
+        if [ "\$table" = "mangle" ] && [ "\$mode_proxy" != "Redirect" ]; then
             if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ]; then
                 if ! iptables -w -t "\$table" -C PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; then
                     iptables -w -t "\$table" -I PREROUTING 1 -j CONNMARK --restore-mark >/dev/null 2>&1
@@ -944,11 +944,28 @@ clean_firewall() {
         fi
     }
 
+    clean_connmark_restore() {
+        family="$1"
+
+        [ "$family" = "iptables"  ] && [ "$iptables_supported"  != "true" ] && return
+        [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ] && return
+    
+        while "$family" -w -t mangle -C PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; do
+            rule_num=$(
+                "$family" -w -t mangle -nL PREROUTING --line-numbers | awk '/CONNMARK/ && /restore/ {print $1; exit}'
+            )
+            [ -n "$rule_num" ] || break
+            "$family" -w -t mangle -D PREROUTING "$rule_num" >/dev/null 2>&1
+        done
+    }
+
+
     for family in iptables ip6tables; do
         for chain in nat mangle; do
             clean_run "$family" "$chain" "$name_prerouting_chain"
             clean_run "$family" "$chain" "$name_output_chain"
         done
+        clean_connmark_restore "$family"
     done
 
     if command -v ip >/dev/null 2>&1; then
