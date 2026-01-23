@@ -926,33 +926,28 @@ clean_firewall() {
         family="$1"
         table="$2"
         name_chain="$3"
+
         if "$family" -w -t "$table" -nL "$name_chain" >/dev/null 2>&1; then
             "$family" -w -t "$table" -F "$name_chain" >/dev/null 2>&1
+
             while "$family" -w -t "$table" -nL PREROUTING | grep -q "$name_chain"; do
-                rule_number=$("$family" -w -t "$table" -nL PREROUTING --line-numbers | grep -v "Chain" | grep -m 1 "$name_chain" | awk '{print $1}')
+                rule_number=$("$family" -w -t "$table" -nL PREROUTING --line-numbers | grep -m 1 "$name_chain" | awk '{print $1}')
                 "$family" -w -t "$table" -D PREROUTING "$rule_number" >/dev/null 2>&1
             done
-            "$family" -w -t "$table" -X "$name_chain" >/dev/null 2>&1
-        fi
-        if "$family" -w -t "$table" -nL "$name_chain" >/dev/null 2>&1; then
-            "$family" -w -t "$table" -F "$name_chain" >/dev/null 2>&1
+
             while "$family" -w -t "$table" -nL OUTPUT | grep -q "$name_chain"; do
-                rule_number=$("$family" -w -t "$table" -nL OUTPUT --line-numbers | grep -v "Chain" | grep -m 1 "$name_chain" | awk '{print $1}')
+                rule_number=$("$family" -w -t "$table" -nL OUTPUT --line-numbers | grep -m 1 "$name_chain" | awk '{print $1}')
                 "$family" -w -t "$table" -D OUTPUT "$rule_number" >/dev/null 2>&1
             done
+
             "$family" -w -t "$table" -X "$name_chain" >/dev/null 2>&1
         fi
-    }
 
-    clean_connmark_restore() {
-        family="$1"
-
-        [ "$family" = "iptables"  ] && [ "$iptables_supported"  != "true" ] && return
-        [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ] && return
-
-        while "$family" -w -t mangle -D PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; do
-            :
-        done
+        if [ "$table" = "mangle" ]; then
+            while "$family" -w -t mangle -D PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; do
+                :
+            done
+        fi
     }
 
     for family in iptables ip6tables; do
@@ -960,7 +955,6 @@ clean_firewall() {
             clean_run "$family" "$chain" "$name_prerouting_chain"
             clean_run "$family" "$chain" "$name_output_chain"
         done
-        clean_connmark_restore "$family"
     done
 
     if command -v ip >/dev/null 2>&1; then
