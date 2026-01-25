@@ -178,24 +178,30 @@ echo >> "$diagnostic"
 echo >> "$diagnostic"
 
 if [ "${name_client}" = "xray" ]; then
+    if [ -d "$install_conf_dir" ]; then
+        write_header "Содержимое директории configs"
+        ls -p /opt/etc/xray/configs >> /opt/diagnostic.txt
+        echo >> "$diagnostic"
+        echo >> "$diagnostic"
+    fi
     # dns.json
-    if ls "$install_conf_dir"/*dns* >/dev/null 2>&1; then
+    if ls "$install_conf_dir"/*dns*.json >/dev/null 2>&1; then
         write_header "Содержимое файла dns.json"
-        cat "$install_conf_dir"/*dns* >> /opt/diagnostic.txt
+        cat "$install_conf_dir"/*dns*.json >> /opt/diagnostic.txt
         echo >> "$diagnostic"
         echo >> "$diagnostic"
     fi
     # inbounds.json
-    if ls "$install_conf_dir"/*inbounds* >/dev/null 2>&1; then
+    if ls "$install_conf_dir"/*inbounds*.json >/dev/null 2>&1; then
         write_header "Содержимое файла inbounds.json"
-        cat "$install_conf_dir"/*inbounds* >> /opt/diagnostic.txt
+        cat "$install_conf_dir"/*inbounds*.json >> /opt/diagnostic.txt
         echo >> "$diagnostic"
         echo >> "$diagnostic"
     fi
     # routing.json
-    if ls "$install_conf_dir"/*routing* >/dev/null 2>&1; then
+    if ls "$install_conf_dir"/*routing*.json >/dev/null 2>&1; then
         write_header "Содержимое файла routing.json"
-        cat "$install_conf_dir"/*routing* >> /opt/diagnostic.txt
+        cat "$install_conf_dir"/*routing*.json >> /opt/diagnostic.txt
         echo >> "$diagnostic"
         echo >> "$diagnostic"
     fi
