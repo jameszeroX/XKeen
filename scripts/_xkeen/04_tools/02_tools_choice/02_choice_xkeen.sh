@@ -208,7 +208,7 @@ choice_backup_xkeen() {
 }
 
 change_ipv6_support() {
-    keenos=$(ndmc -c 'show version' 2>/dev/null | sed -n 's/^[[:space:]]*release:[[:space:]]*\([0-9]\).*/\1/p')
+    keenos=$(curl -kfsS "localhost:79/rci/show/version" | jq -r '.release' | cut -c1)
 
     if [ -z "$keenos" ] || [ "$keenos" -lt 5 ]; then
         echo

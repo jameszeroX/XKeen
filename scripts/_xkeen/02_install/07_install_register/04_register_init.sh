@@ -140,7 +140,7 @@ wait_for_webui() {
 }
 
 apply_ipv6_state() {
-    keenos=$(ndmc -c 'show version' 2>/dev/null | sed -n 's/^[[:space:]]*release:[[:space:]]*\([0-9]\).*/\1/p')
+    keenos=$(curl -kfsS "$url_server/rci/show/version" | jq -r '.release' | cut -c1)
 
     if [ -n "$keenos" ] && [ "$keenos" -ge 5 ]; then
         ip6_supported=$(ip -6 addr show 2>/dev/null | grep -q "inet6 " && echo true || echo false)
