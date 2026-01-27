@@ -212,7 +212,7 @@ change_ipv6_support() {
 
     if [ -z "$keenos" ] || [ "$keenos" -lt 5 ]; then
         echo
-        echo -e "  Для управления компонентом ${yellow}Протокол IPv6${reset} на прошивке ниже 5.0 используйте веб-интерфейс роутера"
+        echo -e "  Для управления ${yellow}протоколом IPv6${reset} обновите прошивку Keenetic до 5+ версии"
         return 1
     fi
 

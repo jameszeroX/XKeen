@@ -43,7 +43,8 @@ file_ip_exclude="/opt/etc/xkeen/ip_exclude.lst"
 url_server="localhost:79"
 url_policy="rci/show/ip/policy"
 url_keenetic_port="rci/ip/http"
-url_https_port="rci/ip/static"
+url_redirect_port="rci/ip/static"
+url_version="rci/show/version"
 
 # Настройки правил iptables
 table_id="111"
@@ -140,7 +141,7 @@ wait_for_webui() {
 }
 
 apply_ipv6_state() {
-    keenos=$(curl -kfsS "$url_server/rci/show/version" | jq -r '.release' | cut -c1)
+    keenos=$(curl -kfsS "$url_server/$url_version" | jq -r '.release' | cut -c1)
 
     if [ -n "$keenos" ] && [ "$keenos" -ge 5 ]; then
         ip6_supported=$(ip -6 addr show 2>/dev/null | grep -q "inet6 " && echo true || echo false)
@@ -511,7 +512,7 @@ get_network_tproxy() {
 
 # Получение исключенных портов
 get_port_exclude() {
-    result=$(curl -kfsS "${url_server}/${url_https_port}" 2>/dev/null)
+    result=$(curl -kfsS "${url_server}/${url_redirect_port}" 2>/dev/null)
     port_exclude_redirect=$(echo "$result" | jq -r '.[] | if has("to-port") then .["to-port"] else .port end' 2>/dev/null |
         grep -E -v '(^|,)80($|,)|(^|,)443($|,)' | tr '\n' ',' | sed 's/,$//')
     if [ -n "$port_exclude" ]; then
