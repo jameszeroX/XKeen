@@ -42,7 +42,7 @@ file_ip_exclude="/opt/etc/xkeen/ip_exclude.lst"
 # URL
 url_server="localhost:79"
 url_policy="rci/show/ip/policy"
-url_keenetic_port="rci/ip/http/ssl"
+url_keenetic_port="rci/ip/http"
 url_https_port="rci/ip/static"
 
 # Настройки правил iptables
@@ -106,6 +106,39 @@ log_clean() {
     [ "$name_client" = "xray" ] && : > "$log_access" && : > "$log_error"
 }
 
+# Получение портов Keenetic
+get_keenetic_port() {
+    ports=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null \
+        | jq -r '.port, (.ssl.port // empty)' 2>/dev/null)
+
+    for p in $ports; do
+        [ "$p" = "443" ] && return 1
+    done
+
+    echo "$ports"
+    return 0
+}
+
+wait_for_webui() {
+    ports="$(get_keenetic_port)"
+    [ -z "$ports" ] && return 1
+
+    i=0
+    max_wait=60
+
+    while [ "$i" -lt "$max_wait" ]; do
+        for p in $ports; do
+            if netstat -ltn 2>/dev/null | grep -q "[.:]$p[[:space:]]"; then
+                return 0
+            fi
+        done
+        sleep 1
+        i=$((i + 1))
+    done
+
+    return 1
+}
+
 apply_ipv6_state() {
     keenos=$(ndmc -c 'show version' 2>/dev/null | sed -n 's/^[[:space:]]*release:[[:space:]]*\([0-9]\).*/\1/p')
 
@@ -114,7 +147,10 @@ apply_ipv6_state() {
 
         case "$ipv6_support" in
             off)
-                if [ "$ip6_supported" = "true" ]; then
+                if ! wait_for_webui; then
+                    log_error_router "Отключение IPv6 не выполнено"
+                    return 0
+                elif [ "$ip6_supported" = "true" ]; then
                     sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
                     sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
                 fi
@@ -383,21 +419,6 @@ get_modules() {
   Без модуля owner прокси может использовать только DNS роутера
   "
         fi
-    fi
-}
-
-# Получение порта Keenetic
-get_keenetic_port() {
-    result=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null)
-    keenetic_port=$(echo "$result" | jq -r '.port' 2>/dev/null)
-    if [ "$keenetic_port" = "443" ]; then
-        log_error_terminal "
-  ${red}Порт 443 занят${reset} сервисами Keenetic
-  
-  Освободите его на странице 'Пользователи и доступ' веб-интерфейса роутера
-  "
-        proxy_stop
-        exit 1
     fi
 }
 
@@ -1019,7 +1040,15 @@ proxy_start() {
                 get_modules
             fi
             if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed" ]; then
-                get_keenetic_port
+                keenetic_ssl="$(get_keenetic_port)" || {
+                    log_error_terminal "
+  ${red}Порт 443 занят${reset} сервисами Keenetic
+
+  Освободите его на странице 'Пользователи и доступ' веб-интерфейса роутера
+"
+                    proxy_stop
+                    exit 1
+                }
             fi
         fi
         if proxy_status; then
@@ -1096,7 +1125,7 @@ proxy_start() {
                 esac
                 sleep 2 && sleep "$current_delay"
                 if proxy_status; then
-                    [ "$mode_proxy" != "Other" ] && apply_ipv6_state && configure_firewall
+                    [ "$mode_proxy" != "Other" ] && configure_firewall
                     echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${yellow}${mode_proxy}${reset}"
                     if curl -kfsS "${url_server}/${url_policy}" | jq --arg policy "$name_policy" -e 'any(.[]; .description | ascii_downcase == $policy)' > /dev/null; then
                         if [ -e "/tmp/noinet" ]; then
