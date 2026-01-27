@@ -180,7 +180,7 @@ echo >> "$diagnostic"
 if [ "${name_client}" = "xray" ]; then
     if [ -d "$install_conf_dir" ]; then
         write_header "Содержимое директории configs"
-        ls -p /opt/etc/xray/configs >> /opt/diagnostic.txt
+        ls -p "$install_conf_dir" >> /opt/diagnostic.txt
         echo >> "$diagnostic"
         echo >> "$diagnostic"
     fi

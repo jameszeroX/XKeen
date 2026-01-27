@@ -64,7 +64,7 @@ proxy_dns="on"
 # Настройки запуска
 start_attempts=10
 start_auto="on"
-start_delay=10
+start_delay=30
 
 # Контроль файловых дескрипторов
 check_fd="off"
