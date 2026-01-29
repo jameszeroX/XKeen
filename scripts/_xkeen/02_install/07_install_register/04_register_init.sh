@@ -649,6 +649,9 @@ if pidof "\$name_client" >/dev/null; then
                 Mixed)
                     if [ "\$table" = "\$table_redirect" ]; then
                         "\$family" -w -t "\$table" -A \$name_prerouting_chain -p tcp -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
+                        if [ -n "\$policy_mark" ]; then
+                            "\$family" -w -t "\$table" -A \$name_prerouting_chain -p tcp -m connmark --mark \$policy_mark -j CONNMARK --save-mark >/dev/null 2>&1
+                        fi
                     else
                         "\$family" -w -t "\$table" -I \$name_prerouting_chain -p udp -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
                         "\$family" -w -t "\$table" -A \$name_prerouting_chain -p udp -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
@@ -663,6 +666,9 @@ if pidof "\$name_client" >/dev/null; then
                 Redirect)
                     for net in \$network_redirect; do
                         "\$family" -w -t "\$table" -A \$name_prerouting_chain -p "\$net" -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
+                    if [ -n "\$policy_mark" ]; then
+                            "\$family" -w -t "\$table" -A \$name_prerouting_chain -p "\$net" -m connmark --mark \$policy_mark -j CONNMARK --save-mark >/dev/null 2>&1
+                    fi
                     done
                     ;;
                 *) exit 0 ;;
@@ -825,6 +831,19 @@ if pidof "\$name_client" >/dev/null; then
                     ip6tables -w -t "\$table" -I PREROUTING 1 -j CONNMARK --restore-mark >/dev/null 2>&1
                 fi
             fi
+        elif [ "\$table" = "nat" ] && { [ "\$mode_proxy" = "Mixed" ] || [ "\$mode_proxy" = "Redirect" ]; }; then
+            if [ -n "\$policy_mark" ]; then
+                if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ]; then
+                    if ! iptables -w -t "\$table" -C PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; then
+                        iptables -w -t "\$table" -I PREROUTING 1 -j CONNMARK --restore-mark >/dev/null 2>&1
+                    fi
+                fi
+                if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ]; then
+                    if ! ip6tables -w -t "\$table" -C PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; then
+                        ip6tables -w -t "\$table" -I PREROUTING 1 -j CONNMARK --restore-mark >/dev/null 2>&1
+                    fi
+                fi
+            fi
         fi
 
         for net in \$networks; do
@@ -967,11 +986,9 @@ clean_firewall() {
             "$family" -w -t "$table" -X "$name_chain" >/dev/null 2>&1
         fi
 
-        if [ "$table" = "mangle" ]; then
-            while "$family" -w -t mangle -D PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; do
-                :
-            done
-        fi
+        while "$family" -w -t "$table" -D PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; do
+            :
+        done
     }
 
     for family in iptables ip6tables; do
