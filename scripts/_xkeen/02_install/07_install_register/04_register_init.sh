@@ -141,28 +141,30 @@ wait_for_webui() {
 }
 
 apply_ipv6_state() {
-    keenos=$(curl -kfsS "$url_server/$url_version" | jq -r '.release' | cut -c1)
+    if ! wait_for_webui; then
+        log_error_router "Отключение IPv6 не выполнено"
+        return 0
+    else
+        keenos=$(curl -kfsS "$url_server/$url_version" | jq -r '.release' | cut -c1)
 
-    if [ -n "$keenos" ] && [ "$keenos" -ge 5 ]; then
-        ip6_supported=$(ip -6 addr show 2>/dev/null | grep -q "inet6 " && echo true || echo false)
+        if [ -n "$keenos" ] && [ "$keenos" -ge 5 ]; then
+            ip6_supported=$(ip -6 addr show 2>/dev/null | grep -q "inet6 " && echo true || echo false)
 
-        case "$ipv6_support" in
-            off)
-                if ! wait_for_webui; then
-                    log_error_router "Отключение IPv6 не выполнено"
-                    return 0
-                elif [ "$ip6_supported" = "true" ]; then
-                    sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
-                    sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
-                fi
-                ;;
-            on)
-                if [ "$ip6_supported" = "false" ]; then
-                    sysctl -w net.ipv6.conf.all.disable_ipv6=0 >/dev/null 2>&1
-                    sysctl -w net.ipv6.conf.default.disable_ipv6=0 >/dev/null 2>&1
-                fi
-                ;;
-        esac
+            case "$ipv6_support" in
+                off)
+                    if [ "$ip6_supported" = "true" ]; then
+                        sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
+                        sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
+                    fi
+                    ;;
+                on)
+                    if [ "$ip6_supported" = "false" ]; then
+                        sysctl -w net.ipv6.conf.all.disable_ipv6=0 >/dev/null 2>&1
+                        sysctl -w net.ipv6.conf.default.disable_ipv6=0 >/dev/null 2>&1
+                    fi
+                    ;;
+            esac
+        fi
     fi
 }
 apply_ipv6_state
