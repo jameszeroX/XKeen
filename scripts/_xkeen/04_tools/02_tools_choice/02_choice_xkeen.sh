@@ -163,7 +163,6 @@ choice_remove() {
 }
 
 choice_port_xkeen() {
-    echo
     if [ "$add_ports" = "donor" ]; then
         echo -e "  Добавлять порты проксирования рекомендуется в файле ${yellow}/opt/etc/xkeen/port_proxying.lst${reset}"
     elif [ "$add_ports" = "exclude" ]; then

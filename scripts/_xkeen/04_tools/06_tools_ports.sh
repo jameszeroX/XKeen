@@ -1,3 +1,13 @@
+show_deprecation_warning() {
+    echo ""
+    echo -e "  ${red}Внимание!${reset} Данная команда устарела и скоро будет удалена из XKeen"
+    echo "  Добавлять/удалять порты проксирования и исключения из проксирования"
+    echo -e "  рекомендуется в конфигурационных файлах папки ${yellow}/opt/etc/xkeen/${reset}"
+    echo ""
+    echo -e "  ${italic}Следующий далее вывод команды оставлен для обратной совместимости${reset}"
+    echo ""
+}
+
 data_is_updated_donor() {
     file=$1
     new_ports=$2
@@ -151,6 +161,8 @@ process_user_ports() {
 }
 
 add_ports_donor() {
+    show_deprecation_warning
+
     add_ports="donor"
     choice_port_xkeen
     if [ -z "$1" ]; then
@@ -277,6 +289,8 @@ add_ports_donor() {
 }
 
 dell_ports_donor() {
+    show_deprecation_warning
+
     ports=$(normalize_ports "$1")
     current_ports=$(
         awk -F= '/^port_donor/{print $2; exit}' "$initd_dir/S99xkeen" \
@@ -348,6 +362,8 @@ dell_ports_donor() {
 }
 
 add_ports_exclude() {
+    show_deprecation_warning
+
     add_ports="exclude"
     choice_port_xkeen
     if [ -z "$1" ]; then
@@ -452,6 +468,8 @@ add_ports_exclude() {
 }
 
 dell_ports_exclude() {
+    show_deprecation_warning
+
     ports=$(normalize_ports "$1")
     current_ports=$(
         awk -F= '/^port_exclude/{print $2; exit}' "$initd_dir/S99xkeen" \
