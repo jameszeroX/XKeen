@@ -684,9 +684,13 @@ if pidof "\$name_client" >/dev/null; then
             if ! "\$family" -w -t "\$table" -nL \$name_output_chain >/dev/null 2>&1; then
                 "\$family" -t "\$table" -N \$name_output_chain || exit 0
                 add_exclude_rules \$name_output_chain
-                for net in \$network_tproxy; do
-                    "\$family" -w -t "\$table" -A \$name_output_chain -p "\$net" -j CONNMARK --set-mark "\$table_mark" >/dev/null 2>&1
-                done
+                if [ "\$mode_proxy" = "Mixed" ]; then
+                    "\$family" -w -t "\$table" -A \$name_output_chain -p udp -j CONNMARK --set-mark "\$table_mark" >/dev/null 2>&1
+                else
+                    for net in \$network_tproxy; do
+                        "\$family" -w -t "\$table" -A \$name_output_chain -p "\$net" -j CONNMARK --set-mark "\$table_mark" >/dev/null 2>&1
+                    done
+                fi
             fi
         fi
     }
