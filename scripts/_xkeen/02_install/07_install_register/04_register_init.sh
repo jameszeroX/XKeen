@@ -302,7 +302,7 @@ process_user_ports() {
 proxy_status() { pidof $name_client >/dev/null; }
 
 # Поиск конфигурации inbounds
-[ "$name_client" = "xray" ] && file_inbounds=$(find "$directory_xray_config" -name '*.json' -exec grep -lF '"inbounds":' {} \; -quit 2>/dev/null || true)
+[ "$name_client" = "xray" ] && file_inbounds=$(find "$directory_xray_config" -maxdepth 1 -name '*.json' -exec grep -lF '"inbounds":' {} \; -quit 2>/dev/null || true)
 
 # Поиск конфигураций DNS
 file_dns_xray() {
@@ -431,7 +431,7 @@ get_port_redirect() {
         port=$(yq eval '.redir-port // ""' "$mihomo_config" 2>/dev/null)
         [ -n "$port" ] && echo "$port"
     else
-        for file in $(find "$directory_xray_config" -name '*.json'); do
+        for file in $(find "$directory_xray_config" -maxdepth 1 -name '*.json'); do
             json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
             [ -n "$json" ] || continue
             inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "redirect")' 2>/dev/null)
@@ -454,7 +454,7 @@ get_port_tproxy() {
         fi
         [ -n "$port" ] && echo "$port"
     else
-        for file in $(find "$directory_xray_config" -name '*.json'); do
+        for file in $(find "$directory_xray_config" -maxdepth 1 -name '*.json'); do
             json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
             [ -n "$json" ] || continue
             inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "tproxy")' 2>/dev/null)
@@ -475,7 +475,7 @@ get_network_redirect() {
             network_redirect="tcp"
         fi
     else
-    for file in $(find "$directory_xray_config" -name '*.json'); do
+    for file in $(find "$directory_xray_config" -maxdepth 1 -name '*.json'); do
         json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
         [ -n "$json" ] || continue
         inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "redirect")' 2>/dev/null)
@@ -498,7 +498,7 @@ get_network_tproxy() {
             network_tproxy="tcp udp"
         fi
     else
-        for file in $(find "$directory_xray_config" -name '*.json'); do
+        for file in $(find "$directory_xray_config" -maxdepth 1 -name '*.json'); do
             json=$(sed 's/\/\/.*$//' "$file" | tr -d '[:space:]')
             [ -n "$json" ] || continue
             inbounds=$(echo "$json" | jq -c '.inbounds[] | select((.protocol == "dokodemo-door" or .protocol == "tunnel") and .tag == "tproxy")' 2>/dev/null)
@@ -1093,7 +1093,7 @@ proxy_start() {
                         fi
                         export XRAY_LOCATION_CONFDIR="$directory_xray_config"
                         export XRAY_LOCATION_ASSET="$directory_xray_asset"
-                        find "$directory_xray_config" -name '._*.json' -type f -delete
+                        find "$directory_xray_config" -maxdepth 1 -name '._*.json' -type f -delete
                         if [ "$architecture" = "arm64-v8a" ]; then
                             if [ -n "$fd_out" ]; then
                                 ulimit -SHn "$arm64_fd" && nohup su -c "$name_client run" "$name_profile" >/dev/null 2>&1 &
