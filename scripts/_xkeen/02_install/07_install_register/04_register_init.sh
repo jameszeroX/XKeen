@@ -648,27 +648,33 @@ if pidof "\$name_client" >/dev/null; then
             case "\$mode_proxy" in
                 Mixed)
                     if [ "\$table" = "\$table_redirect" ]; then
-                        "\$family" -w -t "\$table" -A \$name_prerouting_chain -p tcp -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
                         if [ -n "\$policy_mark" ]; then
-                            "\$family" -w -t "\$table" -A \$name_prerouting_chain -p tcp -m connmark --mark \$policy_mark -j CONNMARK --save-mark >/dev/null 2>&1
+                            "\$family" -w -t "\$table" -I \$name_prerouting_chain -p tcp -m connmark --mark \$policy_mark -j CONNMARK --save-mark >/dev/null 2>&1
                         fi
+                        "\$family" -w -t "\$table" -A \$name_prerouting_chain -p tcp -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
                     else
-                        "\$family" -w -t "\$table" -I \$name_prerouting_chain -p udp -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
+                        if [ -n "\$policy_mark" ]; then
+                            "\$family" -w -t "\$table" -I \$name_prerouting_chain -p udp -m connmark --mark \$policy_mark -j CONNMARK --save-mark >/dev/null 2>&1
+                        fi
+                        "\$family" -w -t "\$table" -A \$name_prerouting_chain -p udp -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
                         "\$family" -w -t "\$table" -A \$name_prerouting_chain -p udp -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
                     fi
                     ;;
                 TProxy)
                     for net in \$network_tproxy; do
-                        "\$family" -w -t "\$table" -I \$name_prerouting_chain -p "\$net" -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
+                        if [ -n "\$policy_mark" ]; then
+                            "\$family" -w -t "\$table" -I \$name_prerouting_chain -p "\$net" -m connmark --mark \$policy_mark -j CONNMARK --save-mark >/dev/null 2>&1
+                        fi
+                        "\$family" -w -t "\$table" -A \$name_prerouting_chain -p "\$net" -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
                         "\$family" -w -t "\$table" -A \$name_prerouting_chain -p "\$net" -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
                     done
                     ;;
                 Redirect)
                     for net in \$network_redirect; do
+                        if [ -n "\$policy_mark" ]; then
+                                "\$family" -w -t "\$table" -I \$name_prerouting_chain -p "\$net" -m connmark --mark \$policy_mark -j CONNMARK --save-mark >/dev/null 2>&1
+                        fi
                         "\$family" -w -t "\$table" -A \$name_prerouting_chain -p "\$net" -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
-                    if [ -n "\$policy_mark" ]; then
-                            "\$family" -w -t "\$table" -A \$name_prerouting_chain -p "\$net" -m connmark --mark \$policy_mark -j CONNMARK --save-mark >/dev/null 2>&1
-                    fi
                     done
                     ;;
                 *) exit 0 ;;
