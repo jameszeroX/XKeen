@@ -653,7 +653,7 @@ if pidof "\$name_client" >/dev/null; then
                         if [ -n "\$policy_mark" ]; then
                             "\$family" -w -t "\$table" -I \$name_prerouting_chain -p udp -m connmark --mark \$policy_mark -j CONNMARK --save-mark >/dev/null 2>&1
                         fi
-                        "\$family" -w -t "\$table" -A \$name_prerouting_chain -p udp -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
+                        "\$family" -w -t "\$table" -I \$name_prerouting_chain -p udp -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
                         "\$family" -w -t "\$table" -A \$name_prerouting_chain -p udp -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
                     fi
                     ;;
@@ -662,7 +662,7 @@ if pidof "\$name_client" >/dev/null; then
                         if [ -n "\$policy_mark" ]; then
                             "\$family" -w -t "\$table" -I \$name_prerouting_chain -p "\$net" -m connmark --mark \$policy_mark -j CONNMARK --save-mark >/dev/null 2>&1
                         fi
-                        "\$family" -w -t "\$table" -A \$name_prerouting_chain -p "\$net" -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
+                        "\$family" -w -t "\$table" -I \$name_prerouting_chain -p "\$net" -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
                         "\$family" -w -t "\$table" -A \$name_prerouting_chain -p "\$net" -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
                     done
                     ;;
@@ -678,13 +678,9 @@ if pidof "\$name_client" >/dev/null; then
             if ! "\$family" -w -t "\$table" -nL \$name_output_chain >/dev/null 2>&1; then
                 "\$family" -t "\$table" -N \$name_output_chain || exit 0
                 add_exclude_rules \$name_output_chain
-                if [ "\$mode_proxy" = "Mixed" ]; then
-                    "\$family" -w -t "\$table" -A \$name_output_chain -p udp -j CONNMARK --set-mark "\$table_mark" >/dev/null 2>&1
-                else
-                    for net in \$network_tproxy; do
-                        "\$family" -w -t "\$table" -A \$name_output_chain -p "\$net" -j CONNMARK --set-mark "\$table_mark" >/dev/null 2>&1
-                    done
-                fi
+                for net in \$network_tproxy; do
+                    "\$family" -w -t "\$table" -A \$name_output_chain -p "\$net" -j CONNMARK --set-mark "\$table_mark" >/dev/null 2>&1
+                done
             fi
         fi
     }
