@@ -112,24 +112,31 @@ get_keenetic_port() {
     ports=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null \
         | jq -r '.port, (.ssl.port // empty)' 2>/dev/null)
 
+    if [ -z "$ports" ]; then
+        ports=$(ndmc -c 'show ip service' 2>/dev/null \
+            | awk '$1=="service-name:"&&($2=="HTTP"||$2=="HTTPS"){f=1} f&&$1=="port:"{print $2;f=0}')
+    fi
+
     for p in $ports; do
         [ "$p" = "443" ] && return 1
     done
+
+    [ -n "$ports" ] || return 1
 
     echo "$ports"
     return 0
 }
 
 wait_for_webui() {
-    ports="$(get_keenetic_port)"
-    [ -z "$ports" ] && return 1
+    ports="$(get_keenetic_port)" || return 1
+    [ -n "$ports" ] || return 1
 
     i=0
     max_wait=60
 
     while [ "$i" -lt "$max_wait" ]; do
         for p in $ports; do
-            if netstat -ltn 2>/dev/null | grep -q "[.:]$p[[:space:]]"; then
+            if netstat -ltn 2>/dev/null | awk '{print $4}' | grep -Eq "(:|\\.)$p$"; then
                 return 0
             fi
         done
@@ -155,6 +162,7 @@ apply_ipv6_state() {
                     if [ "$ip6_supported" = "true" ]; then
                         sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
                         sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
+                        log_info_router "Отключение IPv6 выполнено"
                     fi
                     ;;
                 on)
@@ -973,11 +981,9 @@ clean_firewall() {
             "$family" -w -t "$table" -X "$name_chain" >/dev/null 2>&1
         fi
 
-        if [ "$table" = "mangle" ]; then
             while "$family" -w -t mangle -D PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; do
                 :
             done
-        fi
     }
 
     for family in iptables ip6tables; do
@@ -1050,6 +1056,7 @@ proxy_start() {
             fi
             if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed" ]; then
                 keenetic_ssl="$(get_keenetic_port)" || {
+                    log_error_router "Порт 443 занят сервисами Keenetic"
                     log_error_terminal "
   ${red}Порт 443 занят${reset} сервисами Keenetic
 
