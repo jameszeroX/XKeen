@@ -109,6 +109,8 @@ log_clean() {
 
 # Получение портов Keenetic
 get_keenetic_port() {
+    ports=""
+
     ports=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null \
         | jq -r '.port, (.ssl.port // empty)' 2>/dev/null)
 
@@ -121,6 +123,17 @@ get_keenetic_port() {
         [ "$p" = "443" ] && return 1
     done
 
+    if [ -z "$ports" ]; then
+        ndmc -c 'ip http port 8080' >/dev/null 2>&1
+        ndmc -c 'ip http port 80' >/dev/null 2>&1
+        ndmc -c 'system configuration save' >/dev/null 2>&1
+
+        sleep 2
+
+        ports=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null \
+            | jq -r '.port, (.ssl.port // empty)' 2>/dev/null)
+    fi
+
     [ -n "$ports" ] || return 1
 
     echo "$ports"
@@ -128,11 +141,11 @@ get_keenetic_port() {
 }
 
 wait_for_webui() {
-    ports="$(get_keenetic_port)" || return 1
+    ports="$(get_keenetic_port | grep -E '^[0-9]+$')" || return 1
     [ -n "$ports" ] || return 1
 
     i=0
-    max_wait=60
+    max_wait=10
 
     while [ "$i" -lt "$max_wait" ]; do
         for p in $ports; do
@@ -149,7 +162,6 @@ wait_for_webui() {
 
 apply_ipv6_state() {
     if ! wait_for_webui; then
-        log_error_router "Отключение IPv6 не выполнено"
         return 0
     else
         keenos=$(curl -kfsS "$url_server/$url_version" | jq -r '.release' | cut -c1)
@@ -981,9 +993,9 @@ clean_firewall() {
             "$family" -w -t "$table" -X "$name_chain" >/dev/null 2>&1
         fi
 
-            while "$family" -w -t mangle -D PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; do
-                :
-            done
+        while "$family" -w -t mangle -D PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; do
+            :
+        done
     }
 
     for family in iptables ip6tables; do
