@@ -209,7 +209,7 @@ help_xkeen() {
         echo -e "	-channel${italic}	Переключить канал получения обновлений XKeen (Stable/Dev версия)${reset}"
         echo -e "	-xray	${italic}	Переключить XKeen на ядро Xray${reset}"
         echo -e "	-mihomo	${italic}	Переключить XKeen на ядро Mihomo${reset}"
-        echo -e "	-ipv6	${italic}	Включить | Отключить протокол IPv6 в KeeneticOS 5+${reset}"
+        echo -e "	-ipv6	${italic}	Включить | Отключить протокол IPv6 в KeeneticOS${reset}"
         echo -e "	-dns	${italic}	Включить | Отключить перенаправление DNS в прокси (при соответствующей настройке)${reset}"
         echo
         echo -e "${light_blue}Управление модулями${reset}"

@@ -44,7 +44,6 @@ url_server="localhost:79"
 url_policy="rci/show/ip/policy"
 url_keenetic_port="rci/ip/http"
 url_redirect_port="rci/ip/static"
-url_version="rci/show/version"
 
 # Настройки правил iptables
 table_id="111"
@@ -76,7 +75,7 @@ delay_fd=60
 # Резервное копирование XKeen при обновлении
 backup="on"
 
-# Поддержка IPv6 (KeeneticOS 5+)
+# Поддержка IPv6
 ipv6_support="on"
 
 # Функции журналирования
@@ -161,36 +160,32 @@ wait_for_webui() {
 }
 
 apply_ipv6_state() {
+    ipv6_disabled=
+    ipv6_disabled=$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null || echo "0")
+
+    [ "$ipv6_disabled" -eq 1 ] && return 0
+
+    [ "$ipv6_support" != "off" ] && return 0
+
+    ip -6 addr show 2>/dev/null | grep -q "inet6 " || return 0
+
     if ! wait_for_webui; then
+        log_error_router "Веб-интерфейс роутера недоступен"
+        return 1
+    fi
+
+    sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
+    sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
+    if [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 1 ] &&
+       [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 1 ]; then
+        log_info_router "Отключение IPv6 выполнено"
         return 0
-    else
-        keenos=$(curl -kfsS "$url_server/$url_version" | jq -r '.release' | cut -c1)
-
-        if [ -n "$keenos" ] && [ "$keenos" -ge 5 ]; then
-            ip6_supported=$(ip -6 addr show 2>/dev/null | grep -q "inet6 " && echo true || echo false)
-
-            case "$ipv6_support" in
-                off)
-                    if [ "$ip6_supported" = "true" ]; then
-                        sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
-                        sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
-                        log_info_router "Отключение IPv6 выполнено"
-                    fi
-                    ;;
-                on)
-                    if [ "$ip6_supported" = "false" ]; then
-                        sysctl -w net.ipv6.conf.all.disable_ipv6=0 >/dev/null 2>&1
-                        sysctl -w net.ipv6.conf.default.disable_ipv6=0 >/dev/null 2>&1
-                    fi
-                    ;;
-            esac
-        fi
     fi
 }
 apply_ipv6_state
 
-ip4_supported=$(ip -4 addr show | grep -q "inet " && echo true || echo false)
-ip6_supported=$(ip -6 addr show | grep -q "inet6 " && echo true || echo false)
+ip4_supported=$(ip -4 addr show 2>/dev/null | grep -q "inet " && echo true || echo false)
+ip6_supported=$(ip -6 addr show 2>/dev/null | grep -q "inet6 " && echo true || echo false)
 
 iptables_supported=$([ "$ip4_supported" = "true" ] && command -v iptables >/dev/null 2>&1 && echo true || echo false)
 ip6tables_supported=$([ "$ip6_supported" = "true" ] && command -v ip6tables >/dev/null 2>&1 && echo true || echo false)
@@ -1067,7 +1062,7 @@ proxy_start() {
                 get_modules
             fi
             if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed" ]; then
-                keenetic_ssl="$(get_keenetic_port)" || {
+                keenetic_ssl="$(get_keenetic_port | grep -E '^[0-9]+$')" || {
                     log_error_router "Порт 443 занят сервисами Keenetic"
                     log_error_terminal "
   ${red}Порт 443 занят${reset} сервисами Keenetic
