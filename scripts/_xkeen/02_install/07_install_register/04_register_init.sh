@@ -113,11 +113,6 @@ get_keenetic_port() {
     ports=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null \
         | jq -r '.port, (.ssl.port // empty)' 2>/dev/null)
 
-    if [ -z "$ports" ]; then
-        ports=$(ndmc -c 'show ip service' 2>/dev/null \
-            | awk '$1=="service-name:"&&($2=="HTTP"||$2=="HTTPS"){f=1} f&&$1=="port:"{print $2;f=0}')
-    fi
-
     for p in $ports; do
         [ "$p" = "443" ] && return 1
     done

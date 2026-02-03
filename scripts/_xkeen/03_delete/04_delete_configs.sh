@@ -2,6 +2,6 @@
 
 delete_configs() {
     if [ -d "$install_conf_dir" ]; then
-        find "$install_conf_dir" -name '*.json' -type f -delete
+        find "$install_conf_dir" -maxdepth 1 -name '*.json' -type f -delete
     fi
 }

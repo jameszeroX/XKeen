@@ -22,15 +22,15 @@ register_xray_list() {
     touch xray_s.list
 
 # Генерация списка файлов
-    find /opt/etc/xray/dat -type f | while read -r file; do
+    find /opt/etc/xray/dat -maxdepth 1 -name "*.dat" -type f | while read -r file; do
         echo "$file" >> xray_s.list
     done
 
-    find /opt/etc/xray/configs -type f | while read -r file; do
+    find /opt/etc/xray/configs -maxdepth 1 -name "*.json" -type f | while read -r file; do
         echo "$file" >> xray_s.list
     done
 
-    find /opt/var/log/xray -type f | while read -r file; do
+    find /opt/var/log/xray -maxdepth 1 -name "*.log" -type f | while read -r file; do
         echo "$file" >> xray_s.list
     done
 
