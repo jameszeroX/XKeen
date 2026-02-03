@@ -254,15 +254,15 @@ change_ipv6_support() {
         if pidof xray >/dev/null || pidof mihomo >/dev/null; then
             echo -e "  ${yellow}Выполняется${reset}. Пожалуйста, подождите..."
             "$initd_dir/S99xkeen" restart on >/dev/null 2>&1
-            if [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 1 ] &&
-               [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 1 ]; then
-                echo -e "  Поддержка IPv6 в KeeneticOS ${green}отключена${reset}"
-            elif [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 0 ] &&
-               [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 0 ]; then
-                echo -e "  Поддержка IPv6 в KeeneticOS ${green}включена${reset}"
-            else
-                echo -e "  ${red}Ошибка${reset} при смене статуса IPv6"
-            fi
+        fi
+        if [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 1 ] &&
+           [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 1 ]; then
+            echo -e "  Поддержка IPv6 в KeeneticOS ${green}отключена${reset}"
+        elif [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 0 ] &&
+           [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 0 ]; then
+            echo -e "  Поддержка IPv6 в KeeneticOS ${green}включена${reset}"
+        else
+            echo -e "  ${red}Ошибка${reset} при смене статуса IPv6"
         fi
     else
         echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S99xkeen${reset}"
