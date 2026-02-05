@@ -1057,7 +1057,7 @@ proxy_start() {
                 get_modules
             fi
             if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed" ]; then
-                keenetic_ssl="$(get_keenetic_port | grep -E '^[0-9]+$')" || {
+                keenetic_ssl="$(get_keenetic_port)" || {
                     log_error_router "Порт 443 занят сервисами Keenetic"
                     log_error_terminal "
   ${red}Порт 443 занят${reset} сервисами Keenetic
