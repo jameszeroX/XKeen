@@ -32,9 +32,6 @@ EOF
 }
 
 check_keen_mode() {
-    IF=$(ip -4 route show default | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
-    [ -z "$IF" ] && IF=$(ip -6 route show default | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
-    case "$IF" in
-        ""|br*|lo) keen_mode="unsupported";;
-    esac
+    [ "$(sysctl -n net.ipv4.ip_forward 2>/dev/null)" = "1" ] && return 0
+    keen_mode="unsupported"
 }
