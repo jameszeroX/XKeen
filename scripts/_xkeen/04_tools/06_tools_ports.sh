@@ -1,4 +1,4 @@
-show_deprecation_warning() {
+show_deprecation_warning_port() {
     echo ""
     echo -e "  ${red}Внимание!${reset} Данная команда устарела и скоро будет удалена из XKeen"
     echo "  Добавлять/удалять порты проксирования и исключения из проксирования"
@@ -161,7 +161,7 @@ process_user_ports() {
 }
 
 add_ports_donor() {
-    show_deprecation_warning
+    show_deprecation_warning_port
 
     add_ports="donor"
     choice_port_xkeen
@@ -289,7 +289,7 @@ add_ports_donor() {
 }
 
 dell_ports_donor() {
-    show_deprecation_warning
+    show_deprecation_warning_port
 
     ports=$(normalize_ports "$1")
     current_ports=$(
@@ -362,7 +362,7 @@ dell_ports_donor() {
 }
 
 add_ports_exclude() {
-    show_deprecation_warning
+    show_deprecation_warning_port
 
     add_ports="exclude"
     choice_port_xkeen
@@ -468,7 +468,7 @@ add_ports_exclude() {
 }
 
 dell_ports_exclude() {
-    show_deprecation_warning
+    show_deprecation_warning_port
 
     ports=$(normalize_ports "$1")
     current_ports=$(
