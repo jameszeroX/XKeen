@@ -830,18 +830,18 @@ if pidof "\$name_client" >/dev/null; then
         family="\$1"
         table="\$2"
 
-        if [ "\$table" = "mangle" ] && [ "\$mode_proxy" != "Redirect" ]; then
-            if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ]; then
-                if ! iptables -w -t "\$table" -C PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; then
-                    iptables -w -t "\$table" -I PREROUTING 1 -j CONNMARK --restore-mark >/dev/null 2>&1
-                fi
-            fi
-            if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ]; then
-                if ! ip6tables -w -t "\$table" -C PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; then
-                    ip6tables -w -t "\$table" -I PREROUTING 1 -j CONNMARK --restore-mark >/dev/null 2>&1
-                fi
-            fi
-        fi
+        # if [ "\$table" = "mangle" ] && [ "\$mode_proxy" != "Redirect" ]; then
+            # if [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "true" ]; then
+                # if ! iptables -w -t "\$table" -C PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; then
+                    # iptables -w -t "\$table" -I PREROUTING 1 -j CONNMARK --restore-mark >/dev/null 2>&1
+                # fi
+            # fi
+            # if [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "true" ]; then
+                # if ! ip6tables -w -t "\$table" -C PREROUTING -j CONNMARK --restore-mark >/dev/null 2>&1; then
+                    # ip6tables -w -t "\$table" -I PREROUTING 1 -j CONNMARK --restore-mark >/dev/null 2>&1
+                # fi
+            # fi
+        # fi
 
         for net in \$networks; do
             if [ "\$mode_proxy" = "Mixed" ]; then
