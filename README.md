@@ -76,7 +76,7 @@ xkeen -h
 
 Требуется роутер **Keenetic**/**Netcraze** с предварительно установленной средой Entware
 
-Рекомендуемый способ:
+Вариант 1:
 
 ```bash
 opkg update && opkg upgrade && opkg install curl tar && cd /tmp
@@ -86,7 +86,7 @@ chmod +x install.sh
 ./install.sh
 ```
 
-Альтернативный способ:
+Вариант 2:
 
 ```bash
 opkg update && opkg upgrade && opkg install curl tar && cd /tmp
