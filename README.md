@@ -81,8 +81,7 @@ xkeen -h
 ```bash
 opkg update && opkg upgrade && opkg install curl tar && cd /tmp
 url="https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh"
-curl -OL --connect-timeout 10 -m 60 "$url"
-chmod +x install.sh
+curl -OL "$url" && chmod +x install.sh
 ./install.sh
 ```
 
@@ -91,8 +90,7 @@ chmod +x install.sh
 ```bash
 opkg update && opkg upgrade && opkg install curl tar && cd /tmp
 url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"
-curl -OL --connect-timeout 10 -m 60 "$url"
-tar -xvzf xkeen.tar.gz -C /opt/sbin > /dev/null && rm xkeen.tar.gz
+curl -OL "$url" && tar -xvzf xkeen.tar.gz -C /opt/sbin > /dev/null && rm xkeen.tar.gz
 xkeen -i
 ```
 
@@ -120,6 +118,7 @@ xkeen -i
 - SubKeen — https://github.com/V2as/SubKeen
 - Mihomo Studio — https://github.com/l-ptrol/mihomo_studio
 - Конвертер JSON-подписок — https://sngvy.github.io/json-sub-to-outbounds
+- Mihomo HWID Subscription Installer — https://github.com/dorian6996/Mihomo-HWID-Subscription
 
 ---
 
