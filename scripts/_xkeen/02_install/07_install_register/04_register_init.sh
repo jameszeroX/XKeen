@@ -816,13 +816,12 @@ if pidof "\$name_client" >/dev/null; then
         fi
 
         if [ "\$table" = "\$table_tproxy" ]; then
-            if ! ipt -nL \$name_output_chain >/dev/null 2>&1; then
-                ipt -N \$name_output_chain || exit 0
-                add_exclude_rules \$name_output_chain
-                for net in \$network_tproxy; do
-                    ipt -A \$name_output_chain -p "\$net" -j CONNMARK --set-mark "\$table_mark" >/dev/null 2>&1
-                done
-            fi
+            ipt -N \$name_output_chain 2>/dev/null || true
+            ipt -F \$name_output_chain
+            add_exclude_rules \$name_output_chain
+            for net in \$network_tproxy; do
+                ipt -A \$name_output_chain -p "\$net" -j CONNMARK --set-mark "\$table_mark" >/dev/null 2>&1
+            done
         fi
     }
 
