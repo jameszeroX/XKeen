@@ -17,7 +17,6 @@ install_packages() {
     fi
 }
 
-install_packages "$info_packages_lscpu" "lscpu"
 install_packages "$info_packages_curl" "curl"
 install_packages "$info_packages_jq" "jq"
 install_packages "$info_packages_libc" "libc"

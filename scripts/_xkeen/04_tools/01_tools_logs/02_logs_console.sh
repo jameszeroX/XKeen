@@ -1,14 +1,17 @@
 # Обратная связь в консоль
 
 logs_cpu_info_console() {
-        echo
-        echo -e "  Набор инструкций процессора: ${yellow}$architecture${reset}"
-	
-    if [ -z "$architecture" ]; then
-        echo -e "  Процессор ${red}не поддерживается${reset} XKeen"
-    else
-        echo -e "  Процессор ${green}поддерживается${reset} XKeen"
-    fi
+    echo
+    echo -e "  Набор инструкций процессора: ${yellow}$architecture${reset}"
+    
+    case "$architecture" in
+        arm64-v8a|mips32le|mips32)
+            echo -e "  Процессор ${green}поддерживается${reset} XKeen"
+            ;;
+        *)
+            echo -e "  Процессор ${red}не поддерживается${reset} XKeen"
+            ;;
+    esac
 }
 
 logs_delete_configs_info_console() {
@@ -184,8 +187,6 @@ logs_delete_register_xkeen_info_console() {
 logs_register_xkeen_initd_info_console() {
     info_content=
     error_content=
-
-    initd_file="$initd_dir/S99xkeen"
 
     if [ -f "$initd_file" ]; then
         info_content="  ${green}Успешно${reset}: init скрипт XKeen найден в директории '$initd_dir/'"

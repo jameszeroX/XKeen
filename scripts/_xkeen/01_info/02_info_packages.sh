@@ -10,10 +10,6 @@ info_packages() {
     fi
 }
 
-# Проверка наличия пакета "lscpu"
-info_packages "lscpu"
-info_packages_lscpu=$package_status
-
 # Проверка наличия пакета "coreutils-uname"
 info_packages "coreutils-uname"
 info_packages_uname=$package_status

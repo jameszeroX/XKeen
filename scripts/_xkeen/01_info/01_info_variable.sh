@@ -34,9 +34,19 @@ register_dir="/opt/lib/opkg/info"
 status_file="/opt/lib/opkg/status"
 os_modules="/lib/modules/$(uname -r)"
 user_modules="/opt/lib/modules"
-xkeen_current_version="1.1.3.9"
-xkeen_build="Stable"
+xkeen_current_version="1.1.3.10"
+xkeen_build="Beta"
 build_timestamp=""
+
+# -------------------------------------
+# Файлы
+# -------------------------------------
+file_port_proxying="$xkeen_cfg/port_proxying.lst"
+file_port_exclude="$xkeen_cfg/port_exclude.lst"
+file_ip_exclude="$xkeen_cfg/ip_exclude.lst"
+xkeen_config="$xkeen_cfg/xkeen.json"
+initd_file="$initd_dir/S99xkeen"
+initd_cron="$initd_dir/S05crond"
 
 # -------------------------------------
 # Время
@@ -65,7 +75,8 @@ xray_zip_url="https://github.com/XTLS/Xray-core/releases/download"				# url дл
 mihomo_api_url="https://api.github.com/repos/MetaCubeX/mihomo/releases"				# url api для Mihomo
 mihomo_jsd_url="https://data.jsdelivr.com/v1/package/gh/MetaCubeX/mihomo"			# резервный url api для Mihomo
 mihomo_gz_url="https://github.com/MetaCubeX/mihomo/releases/download"				# url для загрузки Mihomo
-yq_dist_url="https://github.com/mikefarah/yq/releases/latest/download"				# url для загрузки Yq
+#yq_dist_url="https://github.com/mikefarah/yq/releases/latest/download"				# url для загрузки Yq latest
+yq_dist_url="https://github.com/mikefarah/yq/releases/download/v4.50.1"				# url для загрузки Yq stable
 gh_proxy1="https://ghfast.top"								        # 1 прокси для загрузок с GitHub
 gh_proxy2="https://gh-proxy.com"								# 2 прокси для загрузок с GitHub
 
@@ -95,3 +106,6 @@ xray_error_log="$xray_log_dir/error.log"
 
 touch "$xray_access_log" || { echo "Ошибка: Не удалось создать файл $xray_access_log"; exit 1; }
 touch "$xray_error_log" || { echo "Ошибка: Не удалось создать файл $xray_error_log"; exit 1; }
+
+# Таймаут curl
+[ -e "/tmp/toff" ] && curl_timeout="" || curl_timeout="-m 180"

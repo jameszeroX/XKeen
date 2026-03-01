@@ -9,7 +9,7 @@ register_xkeen_control() {
     cat << EOF > "$register_dir/xkeen.control"
 Package: xkeen
 Version: $xkeen_current_version
-Depends: jq, curl, lscpu, coreutils-uname, coreutils-nohup, iptables
+Depends: jq, curl, coreutils-uname, coreutils-nohup, iptables
 Source: Skrill
 SourceName: xkeen
 Section: net
@@ -42,7 +42,7 @@ register_xkeen_status() {
     # Генерация новой записи
     echo "Package: xkeen" > new_entry.txt
     echo "Version: $xkeen_current_version" >> new_entry.txt
-    echo "Depends: jq, curl, lscpu, coreutils-uname, coreutils-nohup, iptables" >> new_entry.txt
+    echo "Depends: jq, curl, coreutils-uname, coreutils-nohup, iptables" >> new_entry.txt
     echo "Status: install user installed" >> new_entry.txt
     echo "Architecture: $status_architecture" >> new_entry.txt
     echo "Installed-Time: $(date +%s)" >> new_entry.txt
@@ -58,12 +58,11 @@ register_xkeen_status() {
 }
 
 register_xkeen_initd() {
-    initd_file="${initd_dir}/S99xkeen"
     old_initd_file="${initd_dir}/S24xray"
     old_start_file="${initd_dir}/S99xkeenstart"
     script_file="${xinstall_dir}/07_install_register/04_register_init.sh" 
     current_datetime=$(date "+%Y-%m-%d_%H-%M-%S")
-    variables_to_extract="name_client name_policy table_id table_mark port_dns ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude port_donor port_exclude start_attempts check_fd arm64_fd other_fd delay_fd backup ipv6_support proxy_dns"
+    variables_to_extract="name_client name_policy table_id table_mark ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude proxy_dns start_attempts check_fd arm64_fd other_fd delay_fd backup ipv6_support"
     source_main_backup=""
     source_start_backup=""
 
@@ -138,10 +137,10 @@ create_xkeen_cfg() {
     if [ ! -d "${xkeen_cfg}" ]; then
         mkdir -p "${xkeen_cfg}"
     fi
-    if [ -f "/opt/etc/xkeen_exclude.lst" ] && [ ! -f "${xkeen_cfg}/ip_exclude.lst" ]; then
-        mv "/opt/etc/xkeen_exclude.lst" "${xkeen_cfg}/ip_exclude.lst"
-    elif [ ! -f "${xkeen_cfg}/ip_exclude.lst" ]; then
-        cat << EOF > "${xkeen_cfg}/ip_exclude.lst"
+    if [ -f "/opt/etc/xkeen_exclude.lst" ] && [ ! -f "$file_ip_exclude" ]; then
+        mv "/opt/etc/xkeen_exclude.lst" "$file_ip_exclude"
+    elif [ ! -f "$file_ip_exclude" ]; then
+        cat << EOF > "$file_ip_exclude"
 #192.168.0.0/16
 #2001:db8::/32
 
@@ -149,8 +148,8 @@ create_xkeen_cfg() {
 EOF
     fi
 
-    if [ ! -f "${xkeen_cfg}/port_exclude.lst" ]; then
-        cat << EOF > "${xkeen_cfg}/port_exclude.lst"
+    if [ ! -f "$file_port_exclude" ]; then
+        cat << EOF > "$file_port_exclude"
 #
 
 # Одновременно использовать порты проксирования и исключать порты нельзя
@@ -158,13 +157,19 @@ EOF
 EOF
     fi
 
-    if [ ! -f "${xkeen_cfg}/port_proxying.lst" ]; then
-        cat << EOF > "${xkeen_cfg}/port_proxying.lst"
+    if [ ! -f "$file_port_proxying" ]; then
+        cat << EOF > "$file_port_proxying"
 #80
 #443
 #596:599
 
 # (Раскомментируйте/добавьте по образцу) единичные порты и диапазоны для проскирования
+EOF
+    fi
+    if [ ! -f "$xkeen_config" ]; then
+        cat << EOF > "$xkeen_config"
+{
+}
 EOF
     fi
 }

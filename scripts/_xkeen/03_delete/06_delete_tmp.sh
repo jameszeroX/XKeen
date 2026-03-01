@@ -1,21 +1,17 @@
 # Удаление временных файлов и директорий
 delete_tmp() {
-    if [ -d "$tmp_dir_global/xkeen" ]; then
-        rm -r "$tmp_dir_global/xkeen"
-    fi
-
-    if [ -f "$cron_dir/root.tmp" ]; then
-        rm "$cron_dir/root.tmp"
-    fi
-
-    if [ -f "$register_dir/new_entry.txt" ]; then
-        rm "$register_dir/new_entry.txt"
-    fi
+    [ -d "$tmp_dir_global/xkeen" ] && rm -rf "$tmp_dir_global/xkeen"
+    [ -f "$cron_dir/root.tmp" ] && rm -f "$cron_dir/root.tmp"
+    [ -f "$register_dir/new_entry.txt" ] && rm -f "$register_dir/new_entry.txt"
+    [ -f "$install_dir/xray_bak" ] && rm -f "$install_dir/xray_bak"
+    [ -f "$install_dir/mihomo_bak" ] && rm -f "$install_dir/mihomo_bak"
+    [ -d "$xtmp_dir" ] && rm -rf "$xtmp_dir"
+    [ -d "$mtmp_dir" ] && rm -rf "$mtmp_dir"
+    [ -f "/tmp/xkrun" ] && rm -f "/tmp/xkrun"
+    [ -f "/tmp/toff" ] && rm -f "/tmp/toff"
 
     if ! pidof xray >/dev/null && ! pidof mihomo >/dev/null ; then
-        if [ -f "/opt/etc/ndm/netfilter.d/proxy.sh" ]; then
-            rm "/opt/etc/ndm/netfilter.d/proxy.sh"
-        fi
+        [ -f "/opt/etc/ndm/netfilter.d/proxy.sh" ] && rm "/opt/etc/ndm/netfilter.d/proxy.sh"
     fi
 
     echo

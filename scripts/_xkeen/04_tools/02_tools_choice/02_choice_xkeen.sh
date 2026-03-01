@@ -65,12 +65,12 @@ change_channel_xkeen() {
 }
 
 change_autostart_xkeen() {
-    if [ -f "$initd_dir/S99xkeen" ]; then
-        if grep -q 'start_auto="on"' $initd_dir/S99xkeen; then
-            sed -i 's/start_auto="on"/start_auto="off"/' "$initd_dir/S99xkeen"
+    if [ -f "$initd_file" ]; then
+        if grep -q 'start_auto="on"' $initd_file; then
+            sed -i 's/start_auto="on"/start_auto="off"/' "$initd_file"
             [ -z "$bypass_autostart_msg" ] && echo -e "  Автозапуск XKeen ${red}отключен${reset}"
-        elif grep -q 'start_auto="off"' $initd_dir/S99xkeen; then
-            sed -i 's/start_auto="off"/start_auto="on"/' "$initd_dir/S99xkeen"
+        elif grep -q 'start_auto="off"' $initd_file; then
+            sed -i 's/start_auto="off"/start_auto="on"/' "$initd_file"
             echo -e "  Автозапуск XKeen ${green}включен${reset}"
         else
             echo -e "  Произошла ${red}ошибка${reset} при выполнении операции"
@@ -83,7 +83,7 @@ change_autostart_xkeen() {
 }
 
 choice_autostart_xkeen() {
-    if [ -f "$initd_dir/S99xkeen" ] && grep -q 'start_auto="off"' $initd_dir/S99xkeen; then
+    if [ -f "$initd_file" ] && grep -q 'start_auto="off"' $initd_file; then
         return 1
     fi
 
@@ -164,9 +164,9 @@ choice_remove() {
 
 choice_port_xkeen() {
     if [ "$add_ports" = "donor" ]; then
-        echo -e "  Добавлять порты проксирования рекомендуется в файле ${yellow}/opt/etc/xkeen/port_proxying.lst${reset}"
+        echo -e "  Добавлять порты проксирования рекомендуется в файле ${yellow}${file_port_proxying}${reset}"
     elif [ "$add_ports" = "exclude" ]; then
-        echo -e "  Иключать порты из проксирования рекомендуется в файле ${yellow}/opt/etc/xkeen/port_exclude.lst${reset}"
+        echo -e "  Иключать порты из проксирования рекомендуется в файле ${yellow}${file_port_exclude}${reset}"
     fi
     echo -e "  Продолжить ${red}не рекомендуемый${reset} способ?"
     echo
@@ -191,8 +191,7 @@ choice_port_xkeen() {
 }
 
 choice_backup_xkeen() {
-    xkeen_conf="$initd_dir/S99xkeen"
-    backup_value=$(grep -E '^[[:space:]]*backup[[:space:]]*=' "$xkeen_conf" | \
+    backup_value=$(grep -E '^[[:space:]]*backup[[:space:]]*=' "$initd_file" | \
                    grep -v '^[[:space:]]*#' | \
                    tail -n 1 | \
                    cut -d'=' -f2 | \
@@ -242,8 +241,8 @@ change_ipv6_support() {
         fi
     done
 
-    if [ -f "$initd_dir/S99xkeen" ]; then
-        sed -i "s/ipv6_support=\"[a-z]*\"/ipv6_support=\"$desired_state\"/" "$initd_dir/S99xkeen"
+    if [ -f "$initd_file" ]; then
+        sed -i "s/ipv6_support=\"[a-z]*\"/ipv6_support=\"$desired_state\"/" "$initd_file"
             if [ "$desired_state" = "off" ]; then
                 sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
                 sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
@@ -253,7 +252,7 @@ change_ipv6_support() {
             fi
         if pidof xray >/dev/null || pidof mihomo >/dev/null; then
             echo -e "  ${yellow}Выполняется${reset}. Пожалуйста, подождите..."
-            "$initd_dir/S99xkeen" restart on >/dev/null 2>&1
+            "$initd_file" restart on >/dev/null 2>&1
         fi
         if [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 1 ] &&
            [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 1 ]; then
@@ -271,12 +270,12 @@ change_ipv6_support() {
 }
 
 change_proxy_dns() {
-    if [ ! -f "$initd_dir/S99xkeen" ]; then
+    if [ ! -f "$initd_file" ]; then
         echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S99xkeen${reset}"
         return 1
     fi
 
-    current_state=$(grep -E '^[[:space:]]*proxy_dns=' "$initd_dir/S99xkeen" | tail -n 1 | cut -d'=' -f2 | tr -d '"[:space:]')
+    current_state=$(grep -m 1 -E '^[[:space:]]*proxy_dns=' "$initd_file" | cut -d'=' -f2 | tr -d '"[:space:]')
 
     echo
     echo -e "  ${red}Внимание!${reset} Значение данного параметра без соответствующих настроек прокси-клиента ${green}игнорируется${reset}"
@@ -314,9 +313,9 @@ change_proxy_dns() {
         fi
     done
 
-    sed -i "s/proxy_dns=\"[a-z]*\"/proxy_dns=\"$desired_state\"/" "$initd_dir/S99xkeen"
+    sed -i "s/proxy_dns=\"[a-z]*\"/proxy_dns=\"$desired_state\"/" "$initd_file"
 
-    if grep -q "proxy_dns=\"$desired_state\"" "$initd_dir/S99xkeen"; then
+    if grep -q "proxy_dns=\"$desired_state\"" "$initd_file"; then
         if [ "$desired_state" = "on" ]; then
             echo -e "  Перехват DNS ${green}включён${reset}"
         else

@@ -31,7 +31,7 @@ choice_geosite() {
         echo -e "  Выберите номер или номера действий через пробел для ${yellow}GeoSite${reset}"
         echo 
 
-        [ "$has_missing_geosite_bases" = true ] && echo "     1. Установить отсутствующие GeoSite" || echo -e "     1. ${italic}Все доступные GeoSite установлены${reset}"
+        [ "$has_missing_geosite_bases" = true ] && echo "     1. Установить отсутствующие и обновить установленные GeoSite" || echo -e "     1. ${italic}Все доступные GeoSite установлены${reset}"
         [ "$has_updatable_geosite_bases" = true ] && echo "     2. Обновить установленные GeoSite" || echo -e "     2. ${italic}Нет доступных GeoSite для обновления${reset}"
 
         [ "$update_refilter_geosite_msg" = "true" ] && refilter_choice="Обновить" || refilter_choice="Установить"
@@ -73,9 +73,15 @@ choice_geosite() {
                             invalid_choice=true
                         fi
                     else
+                        # Установка отсутствующих
                         [ "$update_refilter_geosite_msg" != "true" ] && install_refilter_geosite=true
                         [ "$update_v2fly_geosite_msg" != "true" ] && install_v2fly_geosite=true
                         [ "$update_zkeen_geosite_msg" != "true" ] && install_zkeen_geosite=true
+                        
+                        # Обновление установленных
+                        [ "$update_refilter_geosite_msg" = "true" ] && update_refilter_geosite=true
+                        [ "$update_v2fly_geosite_msg" = "true" ] && update_v2fly_geosite=true
+                        [ "$update_zkeen_geosite_msg" = "true" ] && update_zkeen_geosite=true
                     fi
                     ;;
                 2)

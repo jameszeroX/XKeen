@@ -17,9 +17,9 @@ test_connection() {
 download_with_check() {
     url="$1"
     output_file="$2"
-    min_size="${3:-100000}"
+    min_size="${3:-300000}"
 
-    (curl --connect-timeout 10 -m 60 -s -L "$url" -o "$output_file" 2>/dev/null) &
+    (curl --connect-timeout 10 $curl_timeout -s -L "$url" -o "$output_file" 2>/dev/null) &
     pid=$!
 
     i=1

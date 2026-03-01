@@ -21,8 +21,12 @@ install_xkeen_rename() {
 install_xkeen_rename
 
 add_chmod_init() {
-    [ -f "$initd_dir/S99xkeen" ] && chmod +x "$initd_dir/S99xkeen"
+    [ -f "$initd_file" ] && chmod +x "$initd_file"
 }
+
+for arg in "$@"; do
+    [ "$arg" = "-toff" ] && touch "/tmp/toff"
+done
 
 # Импортируем модули
 . "$script_dir/.xkeen/import.sh"
@@ -59,6 +63,7 @@ xkeen_info() {
     info_version_mihomo
     info_version_yq
 }
+
 while [ $# -gt 0 ]; do
     case "$1" in
 
@@ -80,14 +85,20 @@ while [ $# -gt 0 ]; do
 
             xkeen_info
             logs_cpu_info_console
-            if [ -z "$architecture" ]; then
-                exit 1
-            fi
+
+            case "$architecture" in
+                arm64-v8a|mips32le|mips32) ;;
+                *) exit 1 ;;
+            esac
 
             location_entware_storage
             preinstall_warn
 
             choice_add_proxy_cores
+
+            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+                $initd_file stop >/dev/null 2>&1
+            fi
 
             if [ "$add_xray" = "true" ]; then
                 clear
@@ -202,6 +213,7 @@ while [ $# -gt 0 ]; do
 
                 fixed_register_packages
 
+                migrate_ports_from_initd
                 register_xkeen_initd
                 create_xkeen_cfg
                 sleep 2
@@ -211,12 +223,12 @@ while [ $# -gt 0 ]; do
             fi
 
             if [ "$xray_installed" != "installed" ] && [ "$mihomo_installed" = "installed" ]; then
-                if [ -f "$install_dir/mihomo" ] && [ -f "$install_dir/yq" ] && grep -q 'name_client="xray"' $initd_dir/S99xkeen; then
-                    sed -i 's/name_client="xray"/name_client="mihomo"/' $initd_dir/S99xkeen
+                if [ -f "$install_dir/mihomo" ] && [ -f "$install_dir/yq" ] && grep -q 'name_client="xray"' $initd_file; then
+                    sed -i 's/name_client="xray"/name_client="mihomo"/' $initd_file
                 fi
             elif  [ "$xray_installed" = "installed" ] && [ "$mihomo_installed" != "installed" ]; then
-                if [ -f "$install_dir/xray" ] && grep -q 'name_client="mihomo"' $initd_dir/S99xkeen; then
-                    sed -i 's/name_client="mihomo"/name_client="xray"/' $initd_dir/S99xkeen
+                if [ -f "$install_dir/xray" ] && grep -q 'name_client="mihomo"' $initd_file; then
+                    sed -i 's/name_client="mihomo"/name_client="xray"/' $initd_file
                 fi
             fi
 
@@ -224,8 +236,6 @@ while [ $# -gt 0 ]; do
 
             # Удаляем временные файлы
             delete_tmp
-            rm -f "$install_dir/xray_bak" "$install_dir/mihomo_bak"
-            rm -rf "$xtmp_dir" "$mtmp_dir"
             sleep 2
 
             clear
@@ -240,12 +250,12 @@ while [ $# -gt 0 ]; do
             echo
 
             if [ "$xray_installed" = "installed" ] || [ "$mihomo_installed" = "installed" ]; then
-                if grep -q 'name_client="xray"' $initd_dir/S99xkeen; then
+                if grep -q 'name_client="xray"' $initd_file; then
                     echo -e "  1. Настройте конфигурацию Xray по пути '${yellow}$install_conf_dir/${reset}'"
                     echo -e "  2. Запустите XKeen командой ${yellow}xkeen -start${reset}"
                     echo -e "  3. ${green}Enjoy!${reset}"
                     echo
-                elif grep -q 'name_client="mihomo"' $initd_dir/S99xkeen; then
+                elif grep -q 'name_client="mihomo"' $initd_file; then
                     echo -e "  1. Настройте конфигурацию Mihomo в файле '${yellow}$mihomo_conf_dir/config.yaml${reset}'"
                     echo -e "  2. Запустите XKeen командой ${yellow}xkeen -start${reset}"
                     echo -e "  3. ${green}Enjoy!${reset}"
@@ -254,14 +264,14 @@ while [ $# -gt 0 ]; do
             fi
 
             if [ "$xray_installed" = "installed" ] && [ "$mihomo_installed" = "installed" ]; then
-                if grep -q 'name_client="xray"' $initd_dir/S99xkeen; then
+                if grep -q 'name_client="xray"' $initd_file; then
                     echo -e "  Если хотите переключить XKeen на ядро ${yellow}Mihomo${reset}"
                     echo
                     echo -e "  1. Настройте конфигурацию Mihomo в файле '${yellow}$mihomo_conf_dir/config.yaml${reset}'"
                     echo -e "  2. Переключите ядро проксирования командой ${yellow}xkeen -mihomo${reset}"
                     echo -e "  3. Запустите XKeen командой ${yellow}xkeen -start${reset}"
                     echo -e "  4. ${green}Enjoy!${reset}"
-                elif grep -q 'name_client="mihomo"' $initd_dir/S99xkeen; then
+                elif grep -q 'name_client="mihomo"' $initd_file; then
                     echo -e "  Если хотите переключить XKeen на ядро ${yellow}Xray${reset}"
                     echo
                     echo -e "  1. Настройте конфигурацию Xray по пути '${yellow}$install_conf_dir/${reset}'"
@@ -288,9 +298,11 @@ while [ $# -gt 0 ]; do
 
             xkeen_info
             logs_cpu_info_console
-            if [ -z "$architecture" ]; then
-                exit 1
-            fi
+
+            case "$architecture" in
+                arm64-v8a|mips32le|mips32) ;;
+                *) exit 1 ;;
+            esac
 
             if [ -f "$install_dir/xray" ]; then
                 chmod +x $install_dir/xray
@@ -315,6 +327,10 @@ while [ $# -gt 0 ]; do
                 echo -e "  Страница загрузок yq: ${yellow}https://github.com/mikefarah/yq/releases/latest${reset}"
                 echo
                 exit 1
+            fi
+
+            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+                $initd_file stop >/dev/null 2>&1
             fi
 
             if [ -f "$install_dir/xray" ]; then
@@ -369,6 +385,7 @@ while [ $# -gt 0 ]; do
             register_xkeen_status
             logs_register_xkeen_status_info_console
 
+            migrate_ports_from_initd
             register_xkeen_initd
             create_xkeen_cfg
 
@@ -426,7 +443,7 @@ while [ $# -gt 0 ]; do
                 install_geosite
 
                 if pidof xray >/dev/null; then
-                    $initd_dir/S99xkeen restart on >/dev/null 2>&1
+                    $initd_file restart on >/dev/null 2>&1
                 fi
 
                 echo -e "  Обновление установленных баз GeoFile ${green}завершено${reset}"
@@ -458,6 +475,10 @@ while [ $# -gt 0 ]; do
                 fi
             fi
 
+            if pidof xray >/dev/null || pidof mihomo >/dev/null; then
+                $initd_file stop >/dev/null 2>&1 && touch "/tmp/xkrun"
+            fi
+
             backup_xkeen
             $download_func
             install_xkeen
@@ -483,6 +504,7 @@ while [ $# -gt 0 ]; do
                 logs_register_xkeen_status_info_console
 
                 register_cron_initd
+                migrate_ports_from_initd
                 register_xkeen_initd
                 create_xkeen_cfg
                 choice_canel_cron_select=true
@@ -491,9 +513,7 @@ while [ $# -gt 0 ]; do
                 fixed_register_packages
                 delete_tmp
 
-                if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                    $initd_dir/S99xkeen restart on >/dev/null 2>&1
-                fi
+                [ -e "/tmp/xkrun" ] && $initd_file start on >/dev/null 2>&1
 
                 echo -e "  Обновление XKeen ${green}выполнено${reset}"
             fi
@@ -501,7 +521,7 @@ while [ $# -gt 0 ]; do
 
 
         -uk_post_update)
-            . "$script_dir/.xkeen/import.sh"
+            . "/opt/sbin/.xkeen/import.sh"
             xkeen_info
 
             echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
@@ -519,6 +539,7 @@ while [ $# -gt 0 ]; do
             logs_register_xkeen_status_info_console
 
             register_cron_initd
+            migrate_ports_from_initd
             register_xkeen_initd
             create_xkeen_cfg
             choice_canel_cron_select=true
@@ -527,9 +548,7 @@ while [ $# -gt 0 ]; do
             fixed_register_packages
             delete_tmp
 
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                $initd_dir/S99xkeen restart on >/dev/null 2>&1
-            fi
+            [ -e "/tmp/xkrun" ] && $initd_file start on >/dev/null 2>&1
 
             echo -e "  Обновление XKeen ${green}выполнено${reset}"
         ;;
@@ -570,7 +589,7 @@ while [ $# -gt 0 ]; do
 
                     sleep 2
                     if pidof xray >/dev/null; then
-                        $initd_dir/S99xkeen restart on >/dev/null 2>&1
+                        $initd_file restart on >/dev/null 2>&1
                     fi
 
                     echo
@@ -603,8 +622,6 @@ while [ $# -gt 0 ]; do
                 fi
             fi
 
-            rm -f "$install_dir/xray_bak"
-            rm -rf "$xtmp_dir"
             delete_tmp
         ;;
 
@@ -652,7 +669,7 @@ while [ $# -gt 0 ]; do
                     logs_register_yq_status_info_console
 
                     if pidof mihomo >/dev/null; then
-                        $initd_dir/S99xkeen restart on >/dev/null 2>&1
+                        $initd_file restart on >/dev/null 2>&1
                     fi
                     echo
                     echo -e "  Обновление ядра ${yellow}Mihomo${reset} ${green}выполнено${reset}"
@@ -683,8 +700,6 @@ while [ $# -gt 0 ]; do
                 fi
             fi
 
-            rm -f "$install_dir/mihomo_bak"
-            rm -rf "$mtmp_dir"
             delete_tmp
         ;;
 
@@ -705,12 +720,13 @@ while [ $# -gt 0 ]; do
 
         -ri)    # Создать файл автозапуска XKeen
             clear
-            $initd_dir/S99xkeen stop >/dev/null 2>&1
-            [ -e "$initd_dir/S99xkeen" ] && rm -f "$initd_dir/S99xkeen"
+            $initd_file stop >/dev/null 2>&1
+            [ -e "$initd_file" ] && rm -f "$initd_file"
 
             echo -e "  Создание файла автозапуска ${yellow}XKeen${reset}"
             sleep 1
 
+            migrate_ports_from_initd
             register_xkeen_initd
             logs_register_xkeen_initd_info_console
 
@@ -750,7 +766,7 @@ while [ $# -gt 0 ]; do
             command -v xray >/dev/null 2>&1 || { echo -e "  Xray ${red}не установлен${reset}"; exit 1; }
             echo -e "  Удаление ${yellow}Xray${reset}"
 
-            $initd_dir/S99xkeen stop >/dev/null 2>&1
+            $initd_file stop >/dev/null 2>&1
             opkg remove xray_s
             rm -f "$install_dir/xray"
 
@@ -775,7 +791,7 @@ while [ $# -gt 0 ]; do
             command -v mihomo >/dev/null 2>&1 || { echo -e "  Mihomo ${red}не установлен${reset}"; exit 1; }
             echo -e "  Удаление ${yellow}Mihomo${reset}"
 
-            $initd_dir/S99xkeen stop >/dev/null 2>&1
+            $initd_file stop >/dev/null 2>&1
             opkg remove mihomo_s
             opkg remove yq_s
             rm -f "$install_dir/mihomo" "$install_dir/yq"
@@ -958,7 +974,7 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  ${yellow}Удаление${reset} Xray"
 
-            $initd_dir/S99xkeen stop >/dev/null 2>&1
+            $initd_file stop >/dev/null 2>&1
             opkg remove xray_s
             rm -f "$install_dir/xray"
             rm -rf "/opt/etc/xray"
@@ -1112,6 +1128,10 @@ while [ $# -gt 0 ]; do
                 "$download_func"
             fi
 
+            if pidof xray >/dev/null || pidof mihomo >/dev/null; then
+                $initd_file stop >/dev/null 2>&1 && touch "/tmp/xkrun"
+            fi
+
             echo
             install_xkeen
 
@@ -1135,6 +1155,7 @@ while [ $# -gt 0 ]; do
                 logs_register_xkeen_status_info_console
 
                 register_cron_initd
+                migrate_ports_from_initd
                 register_xkeen_initd
                 create_xkeen_cfg
                 choice_canel_cron_select=true
@@ -1143,9 +1164,7 @@ while [ $# -gt 0 ]; do
                 fixed_register_packages
                 delete_tmp
 
-                if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                    $initd_dir/S99xkeen restart on >/dev/null 2>&1
-                fi
+                [ -e "/tmp/xkrun" ] && $initd_file start on >/dev/null 2>&1
 
                 echo
                 echo -e "  Переустановка XKeen ${green}выполнена${reset}"
@@ -1154,7 +1173,7 @@ while [ $# -gt 0 ]; do
 
 
         -k_post_install)
-            . "$script_dir/.xkeen/import.sh"
+            . "/opt/sbin/.xkeen/import.sh"
             xkeen_info
 
             echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
@@ -1172,6 +1191,7 @@ while [ $# -gt 0 ]; do
             logs_register_xkeen_status_info_console
 
             register_cron_initd
+            migrate_ports_from_initd
             register_xkeen_initd
             create_xkeen_cfg
             choice_canel_cron_select=true
@@ -1180,9 +1200,7 @@ while [ $# -gt 0 ]; do
             fixed_register_packages
             delete_tmp
 
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                $initd_dir/S99xkeen restart on >/dev/null 2>&1
-            fi
+            [ -e "/tmp/xkrun" ] && $initd_file start on >/dev/null 2>&1
 
             echo
             echo -e "  Переустановка XKeen ${green}выполнена${reset}"
@@ -1295,25 +1313,25 @@ while [ $# -gt 0 ]; do
 
         -start)    # Запуск XKeen
             add_chmod_init
-            $initd_dir/S99xkeen start on
+            $initd_file start on
             ip route flush cache
         ;;
 
 
         -stop)    # Остановка XKeen
             add_chmod_init
-            $initd_dir/S99xkeen stop
+            $initd_file stop
         ;;
 
 
         -restart)    # Перезапуск XKeen
             add_chmod_init
-            $initd_dir/S99xkeen restart on
+            $initd_file restart on
         ;;
 
 
         -status)    # Состояние XKeen
-            $initd_dir/S99xkeen status
+            $initd_file status
         ;;
 
 
@@ -1324,12 +1342,12 @@ while [ $# -gt 0 ]; do
 
 
         -fd)    # Смена режима контроля файловых дескрипторов
-            if [ -f "$initd_dir/S99xkeen" ]; then
-                if grep -q 'check_fd="on"' $initd_dir/S99xkeen; then
-                    sed -i 's/check_fd="on"/check_fd="off"/' "$initd_dir/S99xkeen"
+            if [ -f "$initd_file" ]; then
+                if grep -q 'check_fd="on"' $initd_file; then
+                    sed -i 's/check_fd="on"/check_fd="off"/' "$initd_file"
                     echo -e "  Контроль файловых дескрипторов, открытых прокси-клиентом ${red}отключен${reset}. ${yellow}Перезагрузите роутер!${reset}"
-                elif grep -q 'check_fd="off"' $initd_dir/S99xkeen; then
-                    sed -i 's/check_fd="off"/check_fd="on"/' "$initd_dir/S99xkeen"
+                elif grep -q 'check_fd="off"' $initd_file; then
+                    sed -i 's/check_fd="off"/check_fd="on"/' "$initd_file"
                     echo -e "  Контроль файловых дескрипторов, открытых прокси-клиентом ${green}включен${reset}. ${yellow}Перезагрузите роутер!${reset}"
                 else
                     echo -e "  Произошла ${red}ошибка${reset} при выполнении операции"
@@ -1348,8 +1366,8 @@ while [ $# -gt 0 ]; do
             add_ports_donor "$*"
             sleep 2
             add_chmod_init
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                $initd_dir/S99xkeen restart on >/dev/null 2>&1
+            if pidof xray >/dev/null || pidof mihomo >/dev/null; then
+                $initd_file restart on >/dev/null 2>&1
             fi
         ;;
 
@@ -1359,8 +1377,8 @@ while [ $# -gt 0 ]; do
             dell_ports_donor "$*"
             sleep 2
             add_chmod_init
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                $initd_dir/S99xkeen restart on >/dev/null 2>&1
+            if pidof xray >/dev/null || pidof mihomo >/dev/null; then
+                $initd_file restart on >/dev/null 2>&1
             fi
         ;;
 
@@ -1375,8 +1393,8 @@ while [ $# -gt 0 ]; do
             add_ports_exclude "$*" 
             sleep 2
             add_chmod_init
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                $initd_dir/S99xkeen restart on >/dev/null 2>&1
+            if pidof xray >/dev/null || pidof mihomo >/dev/null; then
+                $initd_file restart on >/dev/null 2>&1
             fi
         ;;
 
@@ -1386,8 +1404,8 @@ while [ $# -gt 0 ]; do
             dell_ports_exclude "$*"
             sleep 2
             add_chmod_init
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                $initd_dir/S99xkeen restart on >/dev/null 2>&1
+            if pidof xray >/dev/null || pidof mihomo >/dev/null; then
+                $initd_file restart on >/dev/null 2>&1
             fi
         ;;
 
@@ -1400,14 +1418,12 @@ while [ $# -gt 0 ]; do
         -modules)    # Перенос необходимых модулей из прошивки в пользовательскую директорию
             clear
             echo
-            keenos_modules
             migration_modules
         ;;
 
         -delmodules)    # Удаление модулей из пользовательской директории
             clear
             echo
-            keenos_modules
             remove_modules
         ;;
 
@@ -1452,6 +1468,11 @@ while [ $# -gt 0 ]; do
         -dns)    # Включение/отключение перенаправления DNS в прокси
             clear
             change_proxy_dns
+        ;;
+
+
+        -toff)    # Отключение таймаута при меделенной загрузке с GitHub
+            :
         ;;
 
 

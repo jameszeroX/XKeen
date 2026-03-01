@@ -4,14 +4,14 @@ download_mihomo() {
         printf "  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"
         
         # Получаем список релизов через GitHub API
-        RELEASE_TAGS=$(curl --connect-timeout 10 -s "${mihomo_api_url}?per_page=20" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
+        RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "${mihomo_api_url}?per_page=20" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
         
         if [ -z "$RELEASE_TAGS" ]; then
             echo
             printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
             
             # Получаем список релизов через jsDelivr
-            RELEASE_TAGS=$(curl --connect-timeout 10 -m 60 -s "$mihomo_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
+            RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "$mihomo_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
             
             if [ -z "$RELEASE_TAGS" ]; then
                 echo
@@ -100,18 +100,6 @@ download_mihomo() {
                 download_url="$URL_BASE/mihomo-linux-mips-hardfloat-$VERSION_ARG.gz"
                 download_yq="$yq_dist_url/yq_linux_mips"
             ;;
-            "mips64")
-                download_url="$URL_BASE/mihomo-linux-mips64-$VERSION_ARG.gz"
-                download_yq="$yq_dist_url/yq_linux_mips64"
-            ;;
-            "mips64le")
-                download_url="$URL_BASE/mihomo-linux-mips64le-$VERSION_ARG.gz"
-                download_yq="$yq_dist_url/yq_linux_mips64le"
-            ;;
-            "arm32-v5")
-                download_url="$URL_BASE/mihomo-linux-armv5-$VERSION_ARG.gz"
-                download_yq="$yq_dist_url/yq_linux_arm"
-            ;;
             *)
                 download_url=
                 download_yq=
@@ -151,7 +139,7 @@ download_mihomo() {
 
             if [ "$curl_exit_code" -eq 0 ] && [ "$http_status" = "405" ]; then
                 # Метод HEAD не разрешен, пробуем GET с Range
-                http_status=$(curl --connect-timeout "$timeout" -m 60 \
+                http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
                                   -s \
                                   -L \
                                   -r 0-0 \
@@ -204,7 +192,7 @@ download_mihomo() {
 
         # Загрузка Yq
         if check_url_availability "$download_yq" 10; then
-            if curl --connect-timeout 10 -m 60 \
+            if curl --connect-timeout 10 $curl_timeout \
                    -fL \
                    -o "$yq_dist" \
                    "$download_yq" 2>/dev/null; then
@@ -225,7 +213,7 @@ download_mihomo() {
         printf "  ${yellow}Выполняется загрузка${reset} выбранной версии Mihomo\n"
 
         # Загрузка Mihomo
-        if curl --connect-timeout 10 -m 60 \
+        if curl --connect-timeout 10 $curl_timeout \
                -fL \
                -o "$mihomo_dist" \
                "$download_url" 2>/dev/null; then

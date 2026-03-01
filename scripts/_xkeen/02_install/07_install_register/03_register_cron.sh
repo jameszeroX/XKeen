@@ -6,14 +6,13 @@ register_cron_initd() {
     fi
 
     # Определение переменных
-    initd_file="${initd_dir}/S05crond"
     s05crond_filename="${current_datetime}_S05crond"
     required_script_version="0.5"
 
     # Проверка наличия файла S05crond
-    if [ -e "${initd_file}" ]; then
+    if [ -e "${initd_cron}" ]; then
         # Получение текущей версии скрипта
-        script_version=$(grep 'version=' "${initd_file}" | grep -o '[0-9.]\+')
+        script_version=$(grep 'version=' "${initd_cron}" | grep -o '[0-9.]\+')
 
         # Проверка версии скрипта
         if [ "${script_version}" != "${required_script_version}" ]; then
@@ -21,7 +20,7 @@ register_cron_initd() {
             backup_path="${backups_dir}/${s05crond_filename}"
 
             # Перемещение файла в каталог резервных копий с новым именем
-            mv "${initd_file}" "${backup_path}"
+            mv "${initd_cron}" "${backup_path}"
             echo -e "  Ваш файл '${green}S05crond${reset}' перемещен в каталог резервных копий '${yellow}${backup_path}${reset}'"
         fi
     fi
@@ -98,8 +97,8 @@ exit 0'
     
     # Создание или замена файла, если версия скрипта не соответствует требуемой версии 
     if [ "${script_version}" != "${required_script_version}" ]; then 
-        echo -e "${script_content}" > "${initd_file}" 
-        chmod +x "${initd_file}" 
+        echo -e "${script_content}" > "${initd_cron}" 
+        chmod +x "${initd_cron}" 
     fi 
 }
 

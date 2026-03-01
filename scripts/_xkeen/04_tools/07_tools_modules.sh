@@ -1,21 +1,13 @@
 show_deprecation_warning() {
     echo -e "  ${red}Внимание!${reset} Данная команда устарела и скоро будет удалена из XKeen"
     echo -e "  Рекомендуется не удалять компонент '${yellow}Модули ядра подсистемы Netfilter${reset}'"
-    echo "  и использовать актуальные, обновляющиеся модули из прошивки Keenetic"
+    echo -e "  и использовать обновляющиеся, ${green}актуальные модули из прошивки Keenetic${reset}"
     echo
-    echo -e "  ${italic}Следующий далее вывод команды оставлен для обратной совместимости${reset}"
-    echo
-}
-
-keenos_modules() {
-    keenos=$(curl -kfsS "localhost:79/rci/show/version" 2>/dev/null | grep '"release"' | cut -d'"' -f4 | cut -d'.' -f1)
-    modules="xt_TPROXY.ko xt_socket.ko xt_multiport.ko"
-
-    [ -z "$keenos" ] || [ "$keenos" -lt 5 ] && modules="$modules xt_owner.ko"
 }
 
 migration_modules() {
     show_deprecation_warning
+    modules="xt_TPROXY.ko xt_socket.ko xt_multiport.ko"
 
     echo "  Выберите дальнейшее действие"
     echo
@@ -27,6 +19,7 @@ migration_modules() {
         read -r -p "  Ваш выбор: " choice
         case "$choice" in
             1)
+                echo -e "  ${green}Отличный выбор${reset}"
                 exit 0
                 ;;
             0)
@@ -99,6 +92,7 @@ migration_modules() {
 }
 
 remove_modules() {
+    modules="xt_TPROXY.ko xt_socket.ko xt_multiport.ko"
     found_modules=""
 
     for module in $modules; do

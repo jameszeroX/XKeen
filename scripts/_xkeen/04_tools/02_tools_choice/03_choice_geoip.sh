@@ -31,7 +31,7 @@ choice_geoip() {
         echo -e "  Выберите номер или номера действий через пробел для ${yellow}GeoIP${reset}"
         echo 
 
-        [ "$has_missing_geoip_bases" = true ] && echo "     1. Установить отсутствующие GeoIP" || echo -e "     1. ${italic}Все доступные GeoIP установлены${reset}"
+        [ "$has_missing_geoip_bases" = true ] && echo "     1. Установить отсутствующие и обновить установленные GeoIP" || echo -e "     1. ${italic}Все доступные GeoIP установлены${reset}"
         [ "$has_updatable_geoip_bases" = true ] && echo "     2. Обновить установленные GeoIP" || echo -e "     2. ${italic}Нет доступных GeoIP для обновления${reset}"
 
         [ "$update_refilter_geoip_msg" = "true" ] && refilter_choice="Обновить" || refilter_choice="Установить"
@@ -73,9 +73,15 @@ choice_geoip() {
                             invalid_choice=true
                         fi
                     else
+                        # Установка отсутствующих
                         [ "$update_refilter_geoip_msg" != "true" ] && install_refilter_geoip=true
                         [ "$update_v2fly_geoip_msg" != "true" ] && install_v2fly_geoip=true
                         [ "$update_zkeenip_geoip_msg" != "true" ] && install_zkeenip_geoip=true
+                        
+                        # Обновление установленных
+                        [ "$update_refilter_geoip_msg" = "true" ] && update_refilter_geoip=true
+                        [ "$update_v2fly_geoip_msg" = "true" ] && update_v2fly_geoip=true
+                        [ "$update_zkeenip_geoip_msg" = "true" ] && update_zkeenip_geoip=true
                     fi
                     ;;
                 2)
