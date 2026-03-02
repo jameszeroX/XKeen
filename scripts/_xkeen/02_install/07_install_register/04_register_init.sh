@@ -779,41 +779,40 @@ if pidof "\$name_client" >/dev/null; then
         [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "false" ] && return
         [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "false" ] && return
 
-        if ! ipt -nL \$name_prerouting_chain >/dev/null 2>&1; then
-            ipt -N \$name_prerouting_chain || exit 0
-            add_exclude_rules \$name_prerouting_chain
+        ipt -N \$name_prerouting_chain 2>/dev/null || true
+        ipt -F \$name_prerouting_chain
+        add_exclude_rules \$name_prerouting_chain
 
-            case "\$mode_proxy" in
-                Mixed)
-                    if [ "\$table" = "\$table_redirect" ]; then
-                        ipt -I \$name_prerouting_chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
-                        ipt -A \$name_prerouting_chain -p tcp -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
-                    else
-                        ipt -I \$name_prerouting_chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
-                        ipt -A \$name_prerouting_chain -p udp -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
-                        ipt -A \$name_prerouting_chain -p udp -j CONNMARK --save-mark >/dev/null 2>&1
-                        ipt -A \$name_prerouting_chain -p udp -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
-                    fi
-                    ;;
-                TProxy)
-                    for net in \$network_tproxy; do
-                        ipt -C \$name_prerouting_chain -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
-                        ipt -I \$name_prerouting_chain 1 -m conntrack --ctstate DNAT -j RETURN
-                        ipt -A \$name_prerouting_chain -p "\$net" -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
-                        ipt -A \$name_prerouting_chain -p "\$net" -j CONNMARK --save-mark >/dev/null 2>&1
-                        ipt -A \$name_prerouting_chain -p "\$net" -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
-                    done
-                    ;;
-                Redirect)
-                    for net in \$network_redirect; do
-                        ipt -C \$name_prerouting_chain -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
-                        ipt -I \$name_prerouting_chain 1 -m conntrack --ctstate DNAT -j RETURN
-                        ipt -A \$name_prerouting_chain -p "\$net" -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
-                    done
-                    ;;
-                *) exit 0 ;;
-            esac
-        fi
+        case "\$mode_proxy" in
+            Mixed)
+                if [ "\$table" = "\$table_redirect" ]; then
+                    ipt -I \$name_prerouting_chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
+                    ipt -A \$name_prerouting_chain -p tcp -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
+                else
+                    ipt -I \$name_prerouting_chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
+                    ipt -A \$name_prerouting_chain -p udp -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
+                    ipt -A \$name_prerouting_chain -p udp -j CONNMARK --save-mark >/dev/null 2>&1
+                    ipt -A \$name_prerouting_chain -p udp -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
+                fi
+                ;;
+            TProxy)
+                for net in \$network_tproxy; do
+                    ipt -C \$name_prerouting_chain -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
+                    ipt -I \$name_prerouting_chain 1 -m conntrack --ctstate DNAT -j RETURN
+                    ipt -A \$name_prerouting_chain -p "\$net" -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
+                    ipt -A \$name_prerouting_chain -p "\$net" -j CONNMARK --save-mark >/dev/null 2>&1
+                    ipt -A \$name_prerouting_chain -p "\$net" -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
+                done
+                ;;
+            Redirect)
+                for net in \$network_redirect; do
+                    ipt -C \$name_prerouting_chain -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
+                    ipt -I \$name_prerouting_chain 1 -m conntrack --ctstate DNAT -j RETURN
+                    ipt -A \$name_prerouting_chain -p "\$net" -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
+                done
+                ;;
+            *) exit 0 ;;
+        esac
 
         if [ "\$table" = "\$table_tproxy" ]; then
             ipt -N \$name_output_chain 2>/dev/null || true
