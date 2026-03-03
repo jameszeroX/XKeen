@@ -138,12 +138,13 @@ help_xkeen() {
         echo -e "${yellow}Установка${reset}"
         echo -e "	-i	${italic}	Основной режим установки XKeen + Xray + GeoFile + Mihomo${reset}"
         echo -e "	-io	${italic}	OffLine установка XKeen${reset}"
+        echo -e "	-toff	${italic}	Отключение таймаута при меделенной загрузке с GitHub (xkeen -i -toff)${reset}"
         echo
         echo -e "${yellow}Обновление${reset}"
         echo -e "	-uk	${italic}	XKeen${reset}"
         echo -e "	-ug	${italic}	GeoFile${reset}"
-        echo -e "	-ux	${italic}	Xray${reset} (повышение/понижение версии)"
-        echo -e "	-um	${italic}	Mihomo${reset} (повышение/понижение версии)"
+        echo -e "	-ux	${italic}	Xray (повышение/понижение версии)${reset}"
+        echo -e "	-um	${italic}	Mihomo (повышение/понижение версии)${reset}"
         echo
         echo -e "${yellow}Включение или изменение задачи автообновления${reset}"
         echo -e "	-ugc	${italic}	GeoFile${reset}"
@@ -211,7 +212,6 @@ help_xkeen() {
         echo -e "	-mihomo	${italic}	Переключить XKeen на ядро Mihomo${reset}"
         echo -e "	-ipv6	${italic}	Включить | Отключить протокол IPv6 в KeeneticOS${reset}"
         echo -e "	-dns	${italic}	Включить | Отключить перенаправление DNS в прокси${reset}"
-        echo -e "	-toff	${italic}	Отключение таймаута при меделенной загрузке с GitHub${reset}"
         echo
         echo -e "${light_blue}Управление модулями${reset}"
         echo -e "	-modules${italic}	Перенос модулей для XKeen в пользовательскую директорию${reset}"

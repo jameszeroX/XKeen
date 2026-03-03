@@ -796,18 +796,18 @@ if pidof "\$name_client" >/dev/null; then
                 fi
                 ;;
             TProxy)
+                ipt -C \$name_prerouting_chain -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
+                ipt -I \$name_prerouting_chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
                 for net in \$network_tproxy; do
-                    ipt -C \$name_prerouting_chain -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
-                    ipt -I \$name_prerouting_chain 1 -m conntrack --ctstate DNAT -j RETURN
                     ipt -A \$name_prerouting_chain -p "\$net" -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
                     ipt -A \$name_prerouting_chain -p "\$net" -j CONNMARK --save-mark >/dev/null 2>&1
                     ipt -A \$name_prerouting_chain -p "\$net" -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
                 done
                 ;;
             Redirect)
+                ipt -C \$name_prerouting_chain -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
+                ipt -I \$name_prerouting_chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
                 for net in \$network_redirect; do
-                    ipt -C \$name_prerouting_chain -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
-                    ipt -I \$name_prerouting_chain 1 -m conntrack --ctstate DNAT -j RETURN
                     ipt -A \$name_prerouting_chain -p "\$net" -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
                 done
                 ;;
@@ -901,7 +901,7 @@ if pidof "\$name_client" >/dev/null; then
             chunk=\$(echo "\$ports" | tr ',' '\n' | sed '/^$/d' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,$//')
             [ -z "\$chunk" ] && break
             rule="-m connmark --mark \$connmark -m conntrack ! --ctstate INVALID -p \$net -m multiport \$dports_opt \$chunk -j \$name_prerouting_chain"
-            ipt -C PREROUTING \$rule >/dev/null 2>&1 || ipt -A PREROUTING \$rule
+            ipt -C PREROUTING \$rule >/dev/null 2>&1 || ipt -A PREROUTING \$rule >/dev/null 2>&1
             i=\$((i + 7))
         done
     }
@@ -924,7 +924,7 @@ if pidof "\$name_client" >/dev/null; then
                 # Если режим "all" (порты не заданы) - проксируем все порты
                 if [ "\$pmode" = "all" ]; then
                     ipt -C PREROUTING -m connmark --mark "0x\$pmark" -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain" >/dev/null 2>&1 ||
-                    ipt -A PREROUTING -m connmark --mark "0x\$pmark" -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain"
+                    ipt -A PREROUTING -m connmark --mark "0x\$pmark" -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain" >/dev/null 2>&1
                 else
                     # Иначе используем конкретные порты
                     add_multiport_rules "\$family" "\$table" "\$net" "0x\$pmark" "\$pports" "\$pmode"
@@ -941,12 +941,12 @@ if pidof "\$name_client" >/dev/null; then
                 else
                     # Политика xkeen, когда порты не указаны (проксирование на всех портах)
                     ipt -C PREROUTING -m connmark --mark "\$policy_mark" -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain" >/dev/null 2>&1 ||
-                    ipt -A PREROUTING -m connmark --mark "\$policy_mark" -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain"
+                    ipt -A PREROUTING -m connmark --mark "\$policy_mark" -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain" >/dev/null 2>&1
                 fi
             elif [ -z "\$user_policies" ]; then
                 # Если нет ни xkeen, ни пользовательских политик -> перехватываем всё (без connmark)
                 ipt -C PREROUTING -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain" >/dev/null 2>&1 ||
-                ipt -A PREROUTING -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain"
+                ipt -A PREROUTING -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain" >/dev/null 2>&1
             fi
         done
     }
@@ -967,7 +967,7 @@ if pidof "\$name_client" >/dev/null; then
             [ -z "\$mark" ] && continue
             for proto in udp tcp; do
                 ipt -C _NDM_HOTSPOT_DNSREDIR -p "\$proto" -m mark --mark "\$mark" -m pkttype --pkt-type unicast -m "\$proto" --dport 53 -j REDIRECT --to-ports 53 >/dev/null 2>&1 ||
-                ipt -I _NDM_HOTSPOT_DNSREDIR -p "\$proto" -m mark --mark "\$mark" -m pkttype --pkt-type unicast -m "\$proto" --dport 53 -j REDIRECT --to-ports 53
+                ipt -I _NDM_HOTSPOT_DNSREDIR -p "\$proto" -m mark --mark "\$mark" -m pkttype --pkt-type unicast -m "\$proto" --dport 53 -j REDIRECT --to-ports 53 >/dev/null 2>&1
             done
         done
     }
