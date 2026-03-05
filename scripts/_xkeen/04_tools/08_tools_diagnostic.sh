@@ -167,31 +167,58 @@ xkeen -v >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
+# Запрос конфигурационных файлов XKeen
+if ls "$file_port_proxying" >/dev/null 2>&1; then
+    write_header "Порты проксирования"
+    cat "$file_port_proxying" >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+fi
+if ls "$file_port_exclude" >/dev/null 2>&1; then
+    write_header "Исключенные порты"
+    cat "$file_port_exclude" >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+fi
+if ls "$file_ip_exclude" >/dev/null 2>&1; then
+    write_header "Исключенные IP"
+    cat "$file_ip_exclude" >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+fi
+if ls "$xkeen_config" >/dev/null 2>&1; then
+    write_header "Файл xkeen.json"
+    cat "$xkeen_config" >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+fi
+
+# Запрос конфигурационных файлов Xray
 if [ "${name_client}" = "xray" ]; then
     if [ -d "$install_conf_dir" ]; then
         write_header "Содержимое директории configs"
-        ls -p "$install_conf_dir" >> /opt/diagnostic.txt
+        ls -p "$install_conf_dir" >> "$diagnostic"
         echo >> "$diagnostic"
         echo >> "$diagnostic"
     fi
     # dns.json
     if ls "$install_conf_dir"/*dns*.json >/dev/null 2>&1; then
         write_header "Содержимое файла dns.json"
-        cat "$install_conf_dir"/*dns*.json >> /opt/diagnostic.txt
+        cat "$install_conf_dir"/*dns*.json >> "$diagnostic"
         echo >> "$diagnostic"
         echo >> "$diagnostic"
     fi
     # inbounds.json
     if ls "$install_conf_dir"/*inbounds*.json >/dev/null 2>&1; then
         write_header "Содержимое файла inbounds.json"
-        cat "$install_conf_dir"/*inbounds*.json >> /opt/diagnostic.txt
+        cat "$install_conf_dir"/*inbounds*.json >> "$diagnostic"
         echo >> "$diagnostic"
         echo >> "$diagnostic"
     fi
     # routing.json
     if ls "$install_conf_dir"/*routing*.json >/dev/null 2>&1; then
         write_header "Содержимое файла routing.json"
-        cat "$install_conf_dir"/*routing*.json >> /opt/diagnostic.txt
+        cat "$install_conf_dir"/*routing*.json >> "$diagnostic"
         echo >> "$diagnostic"
         echo >> "$diagnostic"
     fi

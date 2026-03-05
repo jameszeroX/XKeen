@@ -933,7 +933,7 @@ if pidof "\$name_client" >/dev/null; then
                     add_multiport_rules "\$family" "\$table" "\$net" "0x\$pmark" "\$pports" "\$pmode"
                 fi
             done
-    
+
             # Политика xkeen (стандартная)
             if [ -n "\$policy_mark" ]; then
 
@@ -946,10 +946,35 @@ if pidof "\$name_client" >/dev/null; then
                     ipt -C PREROUTING -m connmark --mark "\$policy_mark" -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain" >/dev/null 2>&1 ||
                     ipt -A PREROUTING -m connmark --mark "\$policy_mark" -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain" >/dev/null 2>&1
                 fi
-            elif [ -z "\$user_policies" ]; then
-                # Если нет ни xkeen, ни пользовательских политик -> перехватываем всё (без connmark)
-                ipt -C PREROUTING -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain" >/dev/null 2>&1 ||
-                ipt -A PREROUTING -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain" >/dev/null 2>&1
+            # НЕТ политики xkeen
+            else
+                # но заданы порты проксирования
+                if [ -n "\$port_donor" ]; then
+                    num_ports=\$(echo "\$port_donor" | tr ',' '\n' | wc -l)
+                    i=1
+                    while [ "\$i" -le "\$num_ports" ]; do
+                        end=\$((i+6))
+                        chunk=\$(echo "\$port_donor" | tr ',' '\n' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,$//')
+                        ipt -C PREROUTING -m conntrack ! --ctstate INVALID -p "\$net" -m multiport --dports "\$chunk" -j "\$name_prerouting_chain" >/dev/null 2>&1 ||
+                        ipt -A PREROUTING -m conntrack ! --ctstate INVALID -p "\$net" -m multiport --dports "\$chunk" -j "\$name_prerouting_chain" >/dev/null 2>&1
+                        i=\$((i+7))
+                    done
+                # заданы порты исключения
+                elif [ -n "\$port_exclude" ]; then
+                    num_ports=\$(echo "\$port_exclude" | tr ',' '\n' | wc -l)
+                    i=1
+                    while [ "\$i" -le "\$num_ports" ]; do
+                        end=\$((i+6))
+                        chunk=\$(echo "\$port_exclude" | tr ',' '\n' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,$//')
+                        ipt -C PREROUTING -m conntrack ! --ctstate INVALID -p "\$net" -m multiport ! --dports "\$chunk" -j "\$name_prerouting_chain" >/dev/null 2>&1 ||
+                        ipt -A PREROUTING -m conntrack ! --ctstate INVALID -p "\$net" -m multiport ! --dports "\$chunk" -j "\$name_prerouting_chain" >/dev/null 2>&1
+                        i=\$((i+7))
+                    done
+                # Если нет ни xkeen, ни пользовательских политик -> перехватываем всё
+                else
+                    ipt -C PREROUTING -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain" >/dev/null 2>&1 ||
+                    ipt -A PREROUTING -m conntrack ! --ctstate INVALID -j "\$name_prerouting_chain" >/dev/null 2>&1
+                fi
             fi
         done
     }
