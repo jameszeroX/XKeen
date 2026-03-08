@@ -64,147 +64,6 @@ change_channel_xkeen() {
     fi
 }
 
-change_autostart_xkeen() {
-    if [ -f "$initd_file" ]; then
-        if grep -q 'start_auto="on"' $initd_file; then
-            sed -i 's/start_auto="on"/start_auto="off"/' "$initd_file"
-            [ -z "$bypass_autostart_msg" ] && echo -e "  Автозапуск XKeen ${red}отключен${reset}"
-        elif grep -q 'start_auto="off"' $initd_file; then
-            sed -i 's/start_auto="off"/start_auto="on"/' "$initd_file"
-            echo -e "  Автозапуск XKeen ${green}включен${reset}"
-        else
-            echo -e "  Произошла ${red}ошибка${reset} при выполнении операции"
-            return 1
-        fi
-    else
-        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S99xkeen${reset}"
-        return 1
-    fi
-}
-
-choice_autostart_xkeen() {
-    if [ -f "$initd_file" ] && grep -q 'start_auto="off"' $initd_file; then
-        return 1
-    fi
-
-    echo
-    echo -e "  Добавить ${yellow}XKeen${reset} в автозагрузку при включении роутера?"
-    echo
-    echo "     1. Да"
-    echo "     0. Нет"
-    echo
-
-    while true; do
-        read -r -p "  Ваш выбор: " choice
-        case "$choice" in
-            1)
-                echo -e "  Автозагрузка XKeen ${green}включена${reset}"
-                return 0
-                ;;
-            0)
-                bypass_autostart_msg="yes"
-                change_autostart_xkeen
-                return 0
-                ;;
-            *)
-                echo -e "  ${red}Некорректный ввод${reset}"
-                ;;
-        esac
-    done
-}
-
-choice_redownload_xkeen() {
-    echo
-    echo -e "  Выберите вариант переустановки ${yellow}XKeen${reset}"
-    echo
-    echo "     1. Загрузить дистрибутив XKeen из интернета"
-    echo "     0. Локальная переустановка XKeen"
-    echo
-
-    while true; do
-        read -r -p "  Ваш выбор: " choice
-        case "$choice" in
-            1)
-                redownload_xkeen="yes"
-                return 0
-                ;;
-            0)
-                return 0
-                ;;
-            *)
-                echo -e "  ${red}Некорректный ввод${reset}"
-                ;;
-        esac
-    done
-}
-
-choice_remove() {
-    echo
-    echo -e "  Вы действительно хотите ${red}удалить ${choice_for_remove}${reset}?"
-    echo
-    echo "     1. Да, хочу удалить"
-    echo "     0. Нет, передумал(а)"
-    echo
-
-    while true; do
-        read -r -p "  Ваш выбор (1 или 0): " choice
-        case "$choice" in
-            1)
-                return 0
-                ;;
-            0)
-                exit 0
-                ;;
-            *)
-                echo -e "  ${red}Некорректный ввод${reset}"
-                ;;
-        esac
-    done
-}
-
-choice_port_xkeen() {
-    if [ "$add_ports" = "donor" ]; then
-        echo -e "  Добавлять порты проксирования рекомендуется в файле ${yellow}${file_port_proxying}${reset}"
-    elif [ "$add_ports" = "exclude" ]; then
-        echo -e "  Иключать порты из проксирования рекомендуется в файле ${yellow}${file_port_exclude}${reset}"
-    fi
-    echo -e "  Продолжить ${red}не рекомендуемый${reset} способ?"
-    echo
-    echo "     1. Да, продолжаем"
-    echo -e "     0. Отмена, воспользуюсь ${green}рекомендуемым${reset} способом"
-    echo
-
-    while true; do
-        read -r -p "  Ваш выбор: " choice
-        case "$choice" in
-            1)
-                return 0
-                ;;
-            0)
-                exit 0
-                ;;
-            *)
-                echo -e "  ${red}Некорректный ввод${reset}"
-                ;;
-        esac
-    done
-}
-
-choice_backup_xkeen() {
-    backup_value=$(grep -E '^[[:space:]]*backup[[:space:]]*=' "$initd_file" | \
-                   grep -v '^[[:space:]]*#' | \
-                   tail -n 1 | \
-                   cut -d'=' -f2 | \
-                   tr -d '[:space:]"' | \
-                   tr '[:upper:]' '[:lower:]')
-
-    if [ "$backup_value" = "off" ]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
 change_ipv6_support() {
     ip -6 addr show 2>/dev/null | grep -q "inet6 " && ip6_supported="true" || ip6_supported="false"
 
@@ -257,6 +116,7 @@ change_ipv6_support() {
         if [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 1 ] &&
            [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 1 ]; then
             echo -e "  Поддержка IPv6 в KeeneticOS ${green}отключена${reset}"
+            echo "  Убедитесь, что она так же отключена в веб-интерфейсе роутера"
         elif [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 0 ] &&
            [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 0 ]; then
             echo -e "  Поддержка IPv6 в KeeneticOS ${green}включена${reset}"
@@ -269,63 +129,57 @@ change_ipv6_support() {
     fi
 }
 
+choice_backup_xkeen() {
+    backup_value=$(awk -F= '/^[[:space:]]*backup[[:space:]]*=/ && $0 !~ /^[[:space:]]*#/ { gsub(/"| /,"",$2); print tolower($2) }' "$initd_file")
+    [ "$backup_value" = "off" ]
+}
+
+choice_autostart_xkeen() {
+    if [ -f "$initd_file" ] && grep -q 'start_auto="off"' "$initd_file"; then
+        return 1
+    fi
+
+    if choice_menu \
+        "Добавить ${yellow}XKeen${reset} в автозагрузку при включении роутера?" \
+        "Да" \
+        "Нет"; then
+        echo -e "  Автозагрузка XKeen ${green}включена${reset}"
+        return 0
+    else
+        bypass_autostart_msg="yes"
+        change_autostart_xkeen
+        return 0
+    fi
+}
+
+choice_redownload_xkeen() {
+    if choice_menu \
+        "Выберите вариант переустановки ${yellow}XKeen${reset}" \
+        "Загрузить дистрибутив XKeen из интернета" \
+        "Локальная переустановка XKeen"; then
+        redownload_xkeen="yes"
+    fi
+}
+
+choice_remove() {
+    if choice_menu \
+        "Вы действительно хотите ${red}удалить ${choice_for_remove}${reset}?" \
+        "Да, хочу удалить" \
+        "Нет, передумал(а)"; then
+        return 0
+    else
+        exit 0
+    fi
+}
+
+change_autostart_xkeen() {
+    toggle_param "start_auto" "автозапуска XKeen" "none"
+}
+
 change_proxy_dns() {
-    if [ ! -f "$initd_file" ]; then
-        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S99xkeen${reset}"
-        return 1
-    fi
+    toggle_param "proxy_dns" "перехвата DNS" "restart"
+}
 
-    current_state=$(grep -m 1 -E '^[[:space:]]*proxy_dns=' "$initd_file" | cut -d'=' -f2 | tr -d '"[:space:]')
-
-    echo
-    echo -e "  ${red}Внимание!${reset} Значение данного параметра без соответствующих настроек прокси-клиента ${green}игнорируется${reset}"
-    echo
-    echo -e "  Текущее состояние перехвата ${yellow}DNS${reset}:"
-
-    if [ "$current_state" = "on" ]; then
-        echo -e "  DNS-запросы ${green}перехватываются${reset} и направляются на прокси"
-        echo
-        echo "     1. Отключить перехват DNS и обрабатывать запросы роутером"
-        echo "     0. Оставить без изменений"
-        desired_state="off"
-    else
-        echo -e "  DNS-запросы ${green}обрабатываются роутером${reset}"
-        echo
-        echo "     1. Включить перехват и пересылку DNS-запросов на прокси"
-        echo "     0. Оставить без изменений"
-        desired_state="on"
-    fi
-
-    echo
-    while true; do
-        read -r -p "  Ваш выбор: " choice
-        if echo "$choice" | grep -qE '^[0-1]$'; then
-            case "$choice" in
-                0)
-                    return 0
-                    ;;
-                1)
-                    break
-                    ;;
-            esac
-        else
-            echo -e "  ${red}Некорректный ввод${reset}"
-        fi
-    done
-
-    sed -i "s/proxy_dns=\"[a-z]*\"/proxy_dns=\"$desired_state\"/" "$initd_file"
-
-    if grep -q "proxy_dns=\"$desired_state\"" "$initd_file"; then
-        if [ "$desired_state" = "on" ]; then
-            echo -e "  Перехват DNS ${green}включён${reset}"
-        else
-            echo -e "  Перехват DNS ${red}отключён${reset}"
-        fi
-
-        echo
-        echo -e "  Для применения изменений необходимо ${green}перезапустить XKeen${reset}"
-    else
-        echo -e "  ${red}Произошла ошибка${reset} при изменении настройки proxy_dns"
-        return 1
-    fi
+change_file_descriptors() {
+    toggle_param "check_fd" "контроля файловых дескрипторов" "reboot"
 }

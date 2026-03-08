@@ -24,19 +24,97 @@ input_concordance_list() {
     done
 }
 
-# Функция для ввода только цифровых символов
-input_digits() {
-    prompt_message="${1:-Введите числа: }"
-    error_message="${2:-${red}Некорректный ввод.${reset} Буквенные выражения не принимаются, ${yellow}используйте цифры${reset}.}"
+toggle_param() {
+    param="$1"
+    description="$2"
+    restart_needed="$3"
+
+    if [ ! -f "$initd_file" ]; then
+        echo -e "  ${red}Ошибка${reset}: Не найден файл ${yellow}S99xkeen${reset}"
+        return 1
+    fi
+
+    current_state=$(grep -m 1 -E "^[[:space:]]*$param=" "$initd_file" | cut -d'=' -f2 | tr -d '"[:space:]')
+
+    echo
+    echo -e "  Текущее состояние ${description}:"
+
+    if [ "$current_state" = "on" ]; then
+        echo -e "  ${green}Включено${reset}"
+        echo
+        echo "     1. Отключить"
+        echo "     0. Оставить без изменений"
+        desired_state="off"
+    else
+        echo -e "  ${red}Отключено${reset}"
+        echo
+        echo "     1. Включить"
+        echo "     0. Оставить без изменений"
+        desired_state="on"
+    fi
+
+    echo
+    while true; do
+        read -r -p "  Ваш выбор: " choice
+        case "$choice" in
+            0)
+                return 0
+                ;;
+            1)
+                break
+                ;;
+            *)
+                echo -e "  ${red}Некорректный ввод${reset}"
+                ;;
+        esac
+    done
+
+    if awk -v param="$param" -v value="$desired_state" '
+        !found && $0 ~ "^[[:space:]]*" param "=" {
+            sub(/"[^"]*"/, "\"" value "\"")
+            found=1
+        }
+        {print}
+        ' "$initd_file" > "$initd_file.tmp" && mv "$initd_file.tmp" "$initd_file"; then
+        if [ "$desired_state" = "on" ]; then
+            echo -e "  Новое состояние ${description} ${green}включено${reset}"
+        else
+            echo -e "  Новое состояние ${description} ${red}отключено${reset}"
+        fi
+
+        if [ "$restart_needed" = "reboot" ]; then
+            echo
+            echo -e "  ${yellow}Перезагрузите роутер для применения изменений${reset}"
+        elif [ "$restart_needed" = "restart" ]; then
+            echo
+            echo -e "  ${yellow}Перезапустите XKeen для применения изменений${reset}"
+        fi
+
+        add_chmod_init
+    else
+        echo -e "  ${red}Ошибка${reset} при изменении параметра $param"
+        return 1
+    fi
+}
+
+choice_menu() {
+    title="$1"
+    option_yes="$2"
+    option_no="$3"
+
+    echo
+    [ -n "$title" ] && echo -e "  $title"
+    echo
+    echo "     1. $option_yes"
+    echo "     0. $option_no"
+    echo
 
     while true; do
-        read -r -p "  $prompt_message" input
-        input=$(echo "$input" | sed 's/,/, /g')
-        if echo "$input" | grep -qE '^[0-9 ]+$'; then
-            echo "$input"
-            return 0
-        else
-            echo -e "  $error_message"
-        fi
+        read -r -p "  Ваш выбор: " choice
+        case "$choice" in
+            1) return 0 ;;
+            0) return 1 ;;
+            *) echo -e "  ${red}Некорректный ввод${reset}" ;;
+        esac
     done
 }

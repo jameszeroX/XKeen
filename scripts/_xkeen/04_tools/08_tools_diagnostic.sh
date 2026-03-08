@@ -70,11 +70,6 @@ if [ $iptables_supported = "true" ]; then
     { iptables -w -t mangle -nvL xkeen 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
-
-    write_header "Результат таблицы MANGLE цепи xkeen_mask IPv4"
-    { iptables -w -t mangle -nvL xkeen_mask 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
 fi
 
 if [ $ip6tables_supported = "true" ]; then
@@ -96,11 +91,6 @@ if [ $ip6tables_supported = "true" ]; then
 
     write_header "Результат таблицы MANGLE цепи xkeen IPv6"
     { ip6tables -w -t mangle -nvL xkeen 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы MANGLE цепи xkeen_mask IPv6"
-    { ip6tables -w -t mangle -nvL xkeen_mask 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
 fi

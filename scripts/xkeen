@@ -1114,6 +1114,7 @@ while [ $# -gt 0 ]; do
             clear
             echo -e "  Переустановка ${yellow}XKeen${reset}"
 
+            echo
             choice_redownload_xkeen
             if [ -n "$redownload_xkeen" ]; then
                 if [ "$xkeen_build" = "Stable" ]; then
@@ -1336,28 +1337,15 @@ while [ $# -gt 0 ]; do
 
 
         -auto)    # Смена режима запуска XKeen
+            clear
             change_autostart_xkeen
             add_chmod_init
         ;;
 
 
         -fd)    # Смена режима контроля файловых дескрипторов
-            if [ -f "$initd_file" ]; then
-                if grep -q 'check_fd="on"' $initd_file; then
-                    sed -i 's/check_fd="on"/check_fd="off"/' "$initd_file"
-                    echo -e "  Контроль файловых дескрипторов, открытых прокси-клиентом ${red}отключен${reset}. ${yellow}Перезагрузите роутер!${reset}"
-                elif grep -q 'check_fd="off"' $initd_file; then
-                    sed -i 's/check_fd="off"/check_fd="on"/' "$initd_file"
-                    echo -e "  Контроль файловых дескрипторов, открытых прокси-клиентом ${green}включен${reset}. ${yellow}Перезагрузите роутер!${reset}"
-                else
-                    echo -e "  Произошла ${red}ошибка${reset} при выполнении операции"
-                    return 1
-                fi
-                add_chmod_init
-            else
-                echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S99xkeen${reset}"
-                return 1
-            fi
+            clear
+            change_file_descriptors
         ;;
 
 
