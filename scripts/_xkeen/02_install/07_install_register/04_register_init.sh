@@ -101,7 +101,7 @@ log_warning_terminal() {
     echo -e "${yellow}Предупреждение${reset}: $1" >&2
 }
 
-for cmd in jq yq curl grep awk sed; do
+for cmd in jq curl grep awk sed; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
          log_error_terminal "Не найдена необходимая утилита: ${yellow}$cmd${reset}"
          exit 1
@@ -204,7 +204,6 @@ validate_xkeen_json() {
         return 0
     fi
     if ! jq empty "$xkeen_config" 2>/dev/null; then
-        error_output=$(yq '.' "$xkeen_config" 2>&1)
             log_error_terminal "
   Валидация JSON: файл ${light_blue}xkeen.json${reset} содержит синтаксические ошибки
   Запуск прокси невозможен
@@ -212,8 +211,8 @@ validate_xkeen_json() {
         exit 1
     fi
 
-    if ! yq -e '.xkeen.policy[]? | .name' "$xkeen_config" >/dev/null 2>&1; then
-        if yq -e '.xkeen' "$xkeen_config" >/dev/null 2>&1; then
+    if ! jq -e '.xkeen.policy[]? | .name' "$xkeen_config" >/dev/null 2>&1; then
+        if jq -e '.xkeen' "$xkeen_config" >/dev/null 2>&1; then
             log_error_terminal "
   Файл ${light_blue}xkeen.json${reset} имеет неверную структуру
   Запуск прокси невозможен
