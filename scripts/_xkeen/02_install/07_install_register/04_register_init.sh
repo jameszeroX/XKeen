@@ -203,7 +203,7 @@ validate_xkeen_json() {
     if [ ! -f "$xkeen_config" ]; then
         return 0
     fi
-    if ! jq empty "$xkeen_config" 2>/dev/null; then
+    if ! jq -e . "$xkeen_config" >/dev/null 2>&1; then
             log_error_terminal "
   Валидация JSON: файл ${light_blue}xkeen.json${reset} содержит синтаксические ошибки
   Запуск прокси невозможен
