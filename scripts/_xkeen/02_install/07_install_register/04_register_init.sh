@@ -1105,7 +1105,6 @@ clean_firewall() {
     for family in iptables ip6tables; do
         for chain in nat mangle; do
             clean_run "$family" "$chain" "$name_chain"
-            clean_run "$family" "$chain" xkeen_mask # clean deprecated chain
             "$family" -t "$chain" -S PREROUTING | grep "multiport" | grep "RETURN" | \
             while read -r rule; do
                 rule=${rule#-A PREROUTING }
