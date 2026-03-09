@@ -106,14 +106,10 @@ register_xkeen_initd() {
 
         if [ -n "$source_main_backup" ] && [ -f "$source_main_backup" ]; then
             for var in $variables_to_extract; do
-                if grep -q "^${var}=" "$source_main_backup"; then
-                    value=$(grep "^${var}=" "$source_main_backup" | head -n 1)
-                    escaped_value=$(printf '%s\n' "$value" | sed 's:[&/\]:\\&:g')
-                    position=$(grep -n "^${var}=" "$initd_file" | head -n 1 | cut -d: -f1)
-                    if [ -n "$position" ]; then
-                        sed -i "${position}s#.*#${escaped_value}#" "$initd_file"
-                    fi
-                fi
+                value=$(grep -m1 "^${var}=" "$source_main_backup") || continue
+                escaped_value=$(printf '%s\n' "$value" | sed 's:[&#/]:\\&:g')
+                position=$(grep -n "^${var}=" "$initd_file" | head -n 1 | cut -d: -f1)
+                [ -n "$position" ] && sed -i "${position}s#.*#${escaped_value}#" "$initd_file"
             done
         fi
     fi

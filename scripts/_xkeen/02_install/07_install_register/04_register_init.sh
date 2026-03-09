@@ -19,7 +19,6 @@ name_app="XKeen"
 name_policy="xkeen"
 name_profile="xkeen"
 name_chain="xkeen"
-name_prerouting_chain="$name_chain"
 
 # Директории
 directory_os_modules="/lib/modules/$(uname -r)"
@@ -64,7 +63,7 @@ proxy_dns="off"
 # Настройки запуска
 start_attempts=10
 start_auto="on"
-start_delay=30
+start_delay=20
 
 # Контроль файловых дескрипторов
 check_fd="off"
@@ -174,7 +173,7 @@ apply_ipv6_state() {
         return 1
     fi
 
-    sleep 3
+    sleep 5
     sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
     sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
     if [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 1 ] &&
@@ -693,7 +692,7 @@ mode_proxy="$mode_proxy"
 network_redirect="$network_redirect"
 network_tproxy="$network_tproxy"
 networks="$networks"
-name_prerouting_chain="$name_prerouting_chain"
+name_chain="$name_chain"
 port_redirect="$port_redirect"
 port_tproxy="$port_tproxy"
 port_donor="$port_donor"
@@ -874,9 +873,9 @@ if pidof "\$name_client" >/dev/null; then
             chunk=\$(echo "\$ports" | tr ',' '\n' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,$//')
             [ -z "\$chunk" ] && break
             if [ -n "\$mark" ]; then
-                 rule="-m connmark --mark \$mark -m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j \$name_prerouting_chain"
+                 rule="-m connmark --mark \$mark -m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j \$name_chain"
             else
-                 rule="-m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j \$name_prerouting_chain"
+                 rule="-m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j \$name_chain"
             fi
             ipt -C PREROUTING \$rule >/dev/null 2>&1 || ipt -A PREROUTING \$rule >/dev/null 2>&1
             i=\$((i + 7))
@@ -897,7 +896,7 @@ if pidof "\$name_client" >/dev/null; then
             echo "\$user_policies" | while IFS='|' read -r pmark pmode pports; do
                 [ -z "\$pmark" ] && continue
                 if [ "\$pmode" = "all" ]; then
-                    rule_catch="-m connmark --mark 0x\$pmark -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain"
+                    rule_catch="-m connmark --mark 0x\$pmark -m conntrack ! --ctstate INVALID -j \$name_chain"
                     ipt -C PREROUTING \$rule_catch >/dev/null 2>&1 || ipt -A PREROUTING \$rule_catch >/dev/null 2>&1
                 elif [ "\$pmode" = "include" ]; then
                     add_multiport_rules "\$family" "\$table" "\$net" "0x\$pmark" "\$pports"
@@ -912,7 +911,7 @@ if pidof "\$name_client" >/dev/null; then
                         ipt -C PREROUTING \$rule >/dev/null 2>&1 || ipt -A PREROUTING \$rule >/dev/null 2>&1
                         i=\$((i + 7))
                     done
-                    rule_catch="-m connmark --mark 0x\$pmark -m conntrack ! --ctstate INVALID -p \$net -j \$name_prerouting_chain"
+                    rule_catch="-m connmark --mark 0x\$pmark -m conntrack ! --ctstate INVALID -p \$net -j \$name_chain"
                     ipt -C PREROUTING \$rule_catch >/dev/null 2>&1 || ipt -A PREROUTING \$rule_catch >/dev/null 2>&1
                 fi
             done
@@ -934,11 +933,11 @@ if pidof "\$name_client" >/dev/null; then
                         ipt -C PREROUTING \$rule >/dev/null 2>&1 || ipt -A PREROUTING \$rule >/dev/null 2>&1
                         i=\$((i + 7))
                     done
-                    rule_catch="-m connmark --mark \$policy_mark -m conntrack ! --ctstate INVALID -p \$net -j \$name_prerouting_chain"
+                    rule_catch="-m connmark --mark \$policy_mark -m conntrack ! --ctstate INVALID -p \$net -j \$name_chain"
                     ipt -C PREROUTING \$rule_catch >/dev/null 2>&1 || ipt -A PREROUTING \$rule_catch >/dev/null 2>&1
                 else
                     # Политика xkeen, когда порты не указаны (проксирование на всех портах)
-                    rule_catch="-m connmark --mark \$policy_mark -m conntrack ! --ctstate INVALID -j \$name_prerouting_chain"
+                    rule_catch="-m connmark --mark \$policy_mark -m conntrack ! --ctstate INVALID -j \$name_chain"
                     ipt -C PREROUTING \$rule_catch >/dev/null 2>&1 || ipt -A PREROUTING \$rule_catch >/dev/null 2>&1
                 fi
             # НЕТ политики xkeen
@@ -950,7 +949,7 @@ if pidof "\$name_client" >/dev/null; then
                     while [ "\$i" -le "\$num_ports" ]; do
                         end=\$((i+6))
                         chunk=\$(echo "\$port_donor" | tr ',' '\n' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,$//')
-                        rule_catch="-m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j \$name_prerouting_chain"
+                        rule_catch="-m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j \$name_chain"
                         ipt -C PREROUTING \$rule_catch >/dev/null 2>&1 || ipt -A PREROUTING \$rule_catch >/dev/null 2>&1
                         i=\$((i+7))
                     done
@@ -965,10 +964,10 @@ if pidof "\$name_client" >/dev/null; then
                         ipt -C PREROUTING \$rule >/dev/null 2>&1 || ipt -A PREROUTING \$rule >/dev/null 2>&1
                         i=\$((i+7))
                     done
-                   ipt -A PREROUTING -m conntrack ! --ctstate INVALID -p \$net -j "\$name_prerouting_chain" >/dev/null 2>&1
+                   ipt -A PREROUTING -m conntrack ! --ctstate INVALID -p \$net -j "\$name_chain" >/dev/null 2>&1
                 # Если нет ни xkeen, ни пользовательских политик -> перехватываем всё
                 else
-                    rule_catch="-m conntrack ! --ctstate INVALID -j \$name_prerouting_chain"
+                    rule_catch="-m conntrack ! --ctstate INVALID -j \$name_chain"
                     ipt -C PREROUTING \$rule_catch >/dev/null 2>&1 || ipt -A PREROUTING \$rule_catch >/dev/null 2>&1
                 fi
             fi
@@ -1012,16 +1011,16 @@ if pidof "\$name_client" >/dev/null; then
         fi
         if [ -n "\$port_redirect" ] && [ -n "\$port_tproxy" ]; then
             for table in "\$table_tproxy" "\$table_redirect"; do
-                add_ipt_rule "\$family" "\$table" "\$name_prerouting_chain"
+                add_ipt_rule "\$family" "\$table" "\$name_chain"
                 add_prerouting "\$family" "\$table"
             done
         elif [ -z "\$port_redirect" ] && [ -n "\$port_tproxy" ]; then
             table="\$table_tproxy"
-            add_ipt_rule "\$family" "\$table" "\$name_prerouting_chain"
+            add_ipt_rule "\$family" "\$table" "\$name_chain"
             add_prerouting "\$family" "\$table"
         elif [ -n "\$port_redirect" ] && [ -z "\$port_tproxy" ]; then
             table="\$table_redirect"
-            add_ipt_rule "\$family" "\$table" "\$name_prerouting_chain"
+            add_ipt_rule "\$family" "\$table" "\$name_chain"
             add_prerouting "\$family" "\$table"
         fi
 
@@ -1105,7 +1104,7 @@ clean_firewall() {
 
     for family in iptables ip6tables; do
         for chain in nat mangle; do
-            clean_run "$family" "$chain" "$name_prerouting_chain"
+            clean_run "$family" "$chain" "$name_chain"
             clean_run "$family" "$chain" xkeen_mask # clean deprecated chain
             "$family" -t "$chain" -S PREROUTING | grep "multiport" | grep "RETURN" | \
             while read -r rule; do
@@ -1313,6 +1312,7 @@ proxy_start() {
                         fi
                         monitor_fd &
                         echo $! > "$file_pid_fd"
+                        log_info_router "Запущен контроль файловых дескрипторов $name_client"
                     fi
                     return 0
                 fi

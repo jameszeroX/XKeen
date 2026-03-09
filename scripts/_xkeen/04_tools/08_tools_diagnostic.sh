@@ -70,6 +70,11 @@ if [ $iptables_supported = "true" ]; then
     { iptables -w -t mangle -nvL xkeen 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
+
+    write_header "Результат таблицы NAT цепи _NDM_HOTSPOT_DNSREDIR IPv4"
+    { iptables -w -t nat -nvL _NDM_HOTSPOT_DNSREDIR 2>&1; } >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
 fi
 
 if [ $ip6tables_supported = "true" ]; then
@@ -91,6 +96,11 @@ if [ $ip6tables_supported = "true" ]; then
 
     write_header "Результат таблицы MANGLE цепи xkeen IPv6"
     { ip6tables -w -t mangle -nvL xkeen 2>&1; } >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+
+    write_header "Результат таблицы NAT цепи _NDM_HOTSPOT_DNSREDIR IPv6"
+    { ip6tables -w -t nat -nvL _NDM_HOTSPOT_DNSREDIR 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
 fi

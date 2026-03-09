@@ -1112,9 +1112,9 @@ while [ $# -gt 0 ]; do
             xkeen_info
 
             clear
+            echo
             echo -e "  Переустановка ${yellow}XKeen${reset}"
 
-            echo
             choice_redownload_xkeen
             if [ -n "$redownload_xkeen" ]; then
                 if [ "$xkeen_build" = "Stable" ]; then
