@@ -101,6 +101,13 @@ log_warning_terminal() {
     echo -e "${yellow}Предупреждение${reset}: $1" >&2
 }
 
+for cmd in jq yq curl grep awk sed; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+         log_error_terminal "Не найдена необходимая утилита: ${yellow}$cmd${reset}"
+         exit 1
+    fi
+done
+
 log_clean() {
     [ "$name_client" = "xray" ] && : > "$log_access" && : > "$log_error"
 }
@@ -1030,23 +1037,20 @@ else
     . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
     status_file="/opt/lib/opkg/status"
     info_cpu
+
+    fd_limit="\$other_fd"
+    [ "\$architecture" = "arm64-v8a" ] && fd_limit="\$arm64_fd"
+    ulimit -SHn "\$fd_limit"
+
     case "\$name_client" in
         xray)
             export XRAY_LOCATION_CONFDIR="\$directory_xray_config"
             export XRAY_LOCATION_ASSET="\$directory_xray_asset"
-            if [ "\$architecture" = "arm64-v8a" ]; then
-                ulimit -SHn "\$arm64_fd" && su -c "\$name_client run" "\$name_profile" >/dev/null 2>&1 &
-            else
-                ulimit -SHn "\$other_fd" && su -c "\$name_client run" "\$name_profile" >/dev/null 2>&1 &
-            fi
+            su -c "\$name_client run" "\$name_profile" >/dev/null 2>&1 &
         ;;
         mihomo)
             export CLASH_HOME_DIR="\$directory_configs_app"
-            if [ "\$architecture" = "arm64-v8a" ]; then
-                ulimit -SHn "\$arm64_fd" && su -c "\$name_client" "\$name_profile" >/dev/null 2>&1 &
-            else
-                ulimit -SHn "\$other_fd" && su -c "\$name_client" "\$name_profile" >/dev/null 2>&1 &
-            fi
+            su -c "\$name_client" "\$name_profile" >/dev/null 2>&1 &
         ;;
     esac
     sleep 5
@@ -1132,9 +1136,11 @@ monitor_fd() {
             current=$(ls -1 /proc/$client_pid/fd 2>/dev/null | wc -l)
             if [ "$limit" -gt 0 ] && [ "$current" -gt $((limit * 90 / 100)) ]; then
                 log_warning_router "$name_client открыл $current из $limit файловых дескрипторов, инициирован перезапуск"
+                rm -f "$file_pid_fd"
                 fd_out=true
                 proxy_stop
                 proxy_start "on"
+                exit 0
             fi
         fi
         sleep "$delay_fd"
@@ -1246,20 +1252,18 @@ proxy_start() {
                         export XRAY_LOCATION_CONFDIR="$directory_xray_config"
                         export XRAY_LOCATION_ASSET="$directory_xray_asset"
                         find "$directory_xray_config" -maxdepth 1 -name '._*.json' -type f -delete
-                        if [ "$architecture" = "arm64-v8a" ]; then
-                            if [ -n "$fd_out" ]; then
-                                ulimit -SHn "$arm64_fd" && nohup su -c "$name_client run" "$name_profile" >/dev/null 2>&1 &
-                                unset fd_out
-                            else
-                                ulimit -SHn "$arm64_fd" && su -c "$name_client run" "$name_profile" &
-                            fi
+                        fd_limit="$other_fd"
+                        [ "$architecture" = "arm64-v8a" ] && fd_limit="$arm64_fd"
+                        ulimit -SHn "$fd_limit"
+                        
+                        cmd_args="$name_profile"
+                        [ "$name_client" = "xray" ] && cmd_args="run $name_profile"
+                        
+                        if [ -n "$fd_out" ]; then
+                            nohup su -c "$name_client $cmd_args" >/dev/null 2>&1 &
+                            unset fd_out
                         else
-                            if [ -n "$fd_out" ]; then
-                                ulimit -SHn "$other_fd" && nohup su -c "$name_client run" "$name_profile" >/dev/null 2>&1 &
-                                unset fd_out
-                            else
-                                ulimit -SHn "$other_fd" && su -c "$name_client run" "$name_profile" &
-                            fi
+                            su -c "$name_client $cmd_args" &
                         fi
                     ;;
                     mihomo)
@@ -1271,20 +1275,18 @@ proxy_start() {
                             exit 1
                         fi
                         export CLASH_HOME_DIR="$directory_configs_app"
-                        if [ "$architecture" = "arm64-v8a" ]; then
-                            if [ -n "$fd_out" ]; then
-                                ulimit -SHn "$arm64_fd" && nohup su -c "$name_client" "$name_profile" >/dev/null 2>&1 &
-                                unset fd_out
-                            else
-                                ulimit -SHn "$arm64_fd" && su -c "$name_client" "$name_profile" &
-                            fi
+                        fd_limit="$other_fd"
+                        [ "$architecture" = "arm64-v8a" ] && fd_limit="$arm64_fd"
+                        ulimit -SHn "$fd_limit"
+                        
+                        cmd_args="$name_profile"
+                        [ "$name_client" = "mihomo" ] && cmd_args="$name_profile"
+                        
+                        if [ -n "$fd_out" ]; then
+                            nohup su -c "$name_client $cmd_args" >/dev/null 2>&1 &
+                            unset fd_out
                         else
-                            if [ -n "$fd_out" ]; then
-                                ulimit -SHn "$other_fd" && nohup su -c "$name_client" "$name_profile" >/dev/null 2>&1 &
-                                unset fd_out
-                            else
-                                ulimit -SHn "$other_fd" && su -c "$name_client" "$name_profile" &
-                            fi
+                            su -c "$name_client $cmd_args" &
                         fi
                         ;;
                     *) "$name_client" run -C "$directory_xray_config" & ;;
@@ -1306,7 +1308,7 @@ proxy_start() {
                     log_info_router "Прокси-клиент успешно запущен в режиме $mode_proxy"
                         if [ "$check_fd" = "on" ]; then
                         if [ -f "$file_pid_fd" ]; then
-                            kill -9 "$(cat "$file_pid_fd")" 2>/dev/null
+                            kill "$(cat "$file_pid_fd")" 2>/dev/null
                             rm -f "$file_pid_fd"
                         fi
                         monitor_fd &
@@ -1331,13 +1333,13 @@ proxy_stop() {
     if ! proxy_status; then
         echo -e "  Прокси-клиент ${red}не запущен${reset}"
         if [ -f "$file_pid_fd" ]; then
-            kill -9 "$(cat "$file_pid_fd")" 2>/dev/null
+            kill "$(cat "$file_pid_fd")" 2>/dev/null
             rm -f "$file_pid_fd"
         fi
     else
         log_info_router "Инициирована остановка прокси-клиента"
         if [ -f "$file_pid_fd" ]; then
-            kill -9 "$(cat "$file_pid_fd")" 2>/dev/null
+            kill "$(cat "$file_pid_fd")" 2>/dev/null
             rm -f "$file_pid_fd"
         fi
         delay_increment=1
@@ -1346,7 +1348,7 @@ proxy_stop() {
         while [ "$attempt" -le "$start_attempts" ]; do
             clean_firewall
             killall -q -9 "$name_client"
-                sleep 1 && sleep "$current_delay"
+            sleep 1 && sleep "$current_delay"
             if ! proxy_status; then
                 echo -e "  Прокси-клиент ${red}остановлен${reset}"
                 log_info_router "Прокси-клиент успешно остановлен"
