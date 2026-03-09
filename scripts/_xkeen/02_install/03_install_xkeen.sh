@@ -18,7 +18,7 @@ if [ -d "${install_dir}/_xkeen" ]; then
     rm -rf "${install_dir}/.xkeen"
     mv "${install_dir}/_xkeen" "${install_dir}/.xkeen"
 else
-    echo -e "  ${red}Ошибка${reset}: _xkeen не была правильно перенесена"
+    echo -e "  \${red}Ошибка\${reset}: _xkeen не была правильно перенесена"
 fi
 
 # Удаление архива
@@ -29,6 +29,7 @@ EOF
         "${install_script}"
     fi
     [ -d "$xkeen_log_dir" ] && rm -rf "$xkeen_log_dir"
+    [ -f "$install_script" ] && rm -f "$install_script"
 }
 
 check_keen_mode() {

@@ -509,11 +509,11 @@ while [ $# -gt 0 ]; do
                 create_xkeen_cfg
                 choice_canel_cron_select=true
                 update_cron_geofile_task
-
                 fixed_register_packages
-                delete_tmp
 
                 [ -e "/tmp/xkrun" ] && $initd_file start on >/dev/null 2>&1
+
+                delete_tmp
 
                 echo -e "  Обновление XKeen ${green}выполнено${reset}"
             fi
@@ -544,11 +544,11 @@ while [ $# -gt 0 ]; do
             create_xkeen_cfg
             choice_canel_cron_select=true
             update_cron_geofile_task
-
             fixed_register_packages
-            delete_tmp
 
             [ -e "/tmp/xkrun" ] && $initd_file start on >/dev/null 2>&1
+
+            delete_tmp
 
             echo -e "  Обновление XKeen ${green}выполнено${reset}"
         ;;
@@ -1161,11 +1161,11 @@ while [ $# -gt 0 ]; do
                 create_xkeen_cfg
                 choice_canel_cron_select=true
                 update_cron_geofile_task
-
                 fixed_register_packages
-                delete_tmp
 
                 [ -e "/tmp/xkrun" ] && $initd_file start on >/dev/null 2>&1
+
+                delete_tmp
 
                 echo
                 echo -e "  Переустановка XKeen ${green}выполнена${reset}"
@@ -1197,11 +1197,11 @@ while [ $# -gt 0 ]; do
             create_xkeen_cfg
             choice_canel_cron_select=true
             update_cron_geofile_task
-
             fixed_register_packages
-            delete_tmp
 
             [ -e "/tmp/xkrun" ] && $initd_file start on >/dev/null 2>&1
+
+            delete_tmp
 
             echo
             echo -e "  Переустановка XKeen ${green}выполнена${reset}"
