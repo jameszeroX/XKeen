@@ -224,47 +224,40 @@ validate_xkeen_json() {
     return 0
 }
 
+clean_lst() {
+    sed -e 's/\r$//' \
+        -e 's/^[[:space:]]*//' \
+        -e 's/[[:space:]]*$//' \
+        -e '/^#/d' \
+        -e '/^$/d' "$1"
+}
+
 get_user_ipv4_excludes() {
-    if [ -f "$file_ip_exclude" ]; then
-        echo -n " "
-        sed 's/\r$//' "$file_ip_exclude" | \
-        sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | \
-        grep -v '^#' | \
-        grep -v '^$' | \
-        grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' | \
-        tr '\n' ' ' | \
-        sed 's/  */ /g; s/^ //; s/ $//'
-    else
-        echo ""
-    fi
+    [ -f "$file_ip_exclude" ] || return
+
+    printf ' '
+    clean_lst "$file_ip_exclude" |
+    grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' |
+    tr '\n' ' ' |
+    sed 's/  */ /g; s/^ //; s/ $//'
 }
 
 get_user_ipv6_excludes() {
-    if [ -f "$file_ip_exclude" ]; then
-        echo -n " "
-        sed 's/\r$//' "$file_ip_exclude" | \
-        sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | \
-        grep -v '^#' | \
-        grep -v '^$' | \
-        grep -Eo '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' | \
-        tr '\n' ' ' | \
-        sed 's/  */ /g; s/^ //; s/ $//'
-    else
-        echo ""
-    fi
+    [ -f "$file_ip_exclude" ] || return
+
+    printf ' '
+    clean_lst "$file_ip_exclude" |
+    grep -Eo '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' |
+    tr '\n' ' ' |
+    sed 's/  */ /g; s/^ //; s/ $//'
 }
 
 read_ports_from_file() {
-    file="$1"
+    file_ports="$1"
+    [ -f "$file_ports" ] || return
 
-    [ -f "$file" ] || return
-
-    sed 's/\r$//' "$file" | \
-    sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | \
-    grep -v '^#' | \
-    grep -v '^$' | \
-    tr '\n' ',' | \
-    sed 's/,$//'
+    clean_lst "$file_ports" |
+    tr '\n' ',' | sed 's/,$//'
 }
 
 # Функция обработки, валидации и нормализации списка портов
@@ -342,25 +335,27 @@ file_dns_xray() {
         for file in "$directory_xray_config"/*.json; do
             [ -f "$file" ] || continue
             if grep -q '"dns":' "$file" && grep -q '"servers":' "$file"; then
-                echo "$file"
+                echo "true"
                 return 0
             fi
         done
-        return 1
     fi
+    echo "false"
+    return 1
 }
 
 file_dns_mihomo() {
     if [ "$proxy_dns" = "on" ]; then
-        [ -f "$mihomo_config" ] || return 1
-        if yq -e '.dns.enable == true' "$mihomo_config" >/dev/null 2>&1; then
-            echo "$mihomo_config"
+        if [ -f "$mihomo_config" ] && yq -e '.dns.enable == true' "$mihomo_config" >/dev/null 2>&1; then
+            echo "true"
             return 0
         fi
-        return 1
     fi
+    echo "false"
+    return 1
 }
 
+file_dns="false"
 [ "$name_client" = "xray" ] && file_dns=$(file_dns_xray)
 [ "$name_client" = "mihomo" ] && file_dns=$(file_dns_mihomo)
 
@@ -449,7 +444,7 @@ get_port_redirect() {
         done
     fi
 
-    echo "$port_redirect"
+    echo ""
 }
 
 # Получение порта для TProxy
@@ -483,7 +478,7 @@ get_port_tproxy() {
         done
     fi
 
-    echo "$port_tproxy"
+    echo ""
 }
 
 # Получение сети для Redirect
@@ -600,7 +595,7 @@ get_exclude_ip6() {
 # Получение метки политики
 get_policy_mark() {
     if [ -n "$api_policy_json" ]; then
-        policy_mark=$(echo "$api_policy_json" | jq -r ".[] | select(.description | ascii_downcase == \"${name_policy}\") | .mark" 2>/dev/null)
+        policy_mark=$(echo "$api_policy_json" | jq -r --arg pname "$name_policy" '.[] | select(.description | ascii_downcase == ($pname | ascii_downcase)) | .mark' 2>/dev/null)
     fi
 
     if [ -n "$policy_mark" ]; then
@@ -639,7 +634,7 @@ check_policy_name_conflict() {
 resolve_user_policies() {
     get_user_policies | while IFS='|' read -r pname pports; do
         if [ -n "$api_policy_json" ]; then
-            mark=$(echo "$api_policy_json" | jq -r ".[] | select(.description | ascii_downcase == \"${pname}\") | .mark" 2>/dev/null)
+            mark=$(echo "$api_policy_json" | jq -r --arg pname "$pname" '.[] | select(.description | ascii_downcase == ($pname | ascii_downcase)) | .mark' 2>/dev/null)
         fi
 
         [ -z "$mark" ] && continue
@@ -660,7 +655,7 @@ resolve_user_policies() {
                     ;;
             esac
 
-            if [ -n "${file_dns}" ] && [ "$proxy_dns" = "on" ] && [ "$mode" = "include" ]; then
+            if [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ] && [ "$mode" = "include" ]; then
                 echo "$ports" | tr ',' '\n' | grep -q '^53$' || ports="53,$ports"
             fi
 
@@ -740,17 +735,21 @@ if pidof "\$name_client" >/dev/null; then
     add_exclude_rules() {
         chain="\$1"
         for exclude in \$exclude_list; do
-            if [ "\$exclude" = "10.0.0.0/8" ] || [ "\$exclude" = "172.16.0.0/12" ] || [ "\$exclude" = "192.168.0.0/16" ] || [ "\$exclude" = "fd00::/8" ] || [ "\$exclude" = "fe80::/10" ] && [ -n "\$file_dns" ] && [ "\$proxy_dns" = "on" ]; then
-                if [ "\$table" = "mangle" ] && [ "\$mode_proxy" = "Mixed" ]; then
-                    ipt -A "\$chain" -d "\$exclude" -p tcp --dport 53 -j RETURN >/dev/null 2>&1
-                    ipt -A "\$chain" -d "\$exclude" -p udp ! --dport 53 -j RETURN >/dev/null 2>&1
-                elif [ "\$table" = "nat" ] && [ "\$mode_proxy" = "Mixed" ]; then
-                    ipt -A "\$chain" -d "\$exclude" -p tcp ! --dport 53 -j RETURN >/dev/null 2>&1
-                    ipt -A "\$chain" -d "\$exclude" -p udp --dport 53 -j RETURN >/dev/null 2>&1
-                elif [ "\$table" = "mangle" ] && [ "\$mode_proxy" = "TProxy" ]; then
-                    ipt -A "\$chain" -d "\$exclude" -p tcp ! --dport 53 -j RETURN >/dev/null 2>&1
-                    ipt -A "\$chain" -d "\$exclude" -p udp ! --dport 53 -j RETURN >/dev/null 2>&1
-                fi
+            if [ "\$file_dns" = "true" ] && [ "\$proxy_dns" = "on" ]; then
+                case "\$exclude" in
+                    10.0.0.0/8|172.16.0.0/12|192.168.0.0/16|fd00::/8|fe80::/10)
+                    if [ "\$table" = "mangle" ] && [ "\$mode_proxy" = "Mixed" ]; then
+                        ipt -A "\$chain" -d "\$exclude" -p tcp --dport 53 -j RETURN >/dev/null 2>&1
+                        ipt -A "\$chain" -d "\$exclude" -p udp ! --dport 53 -j RETURN >/dev/null 2>&1
+                    elif [ "\$table" = "nat" ] && [ "\$mode_proxy" = "Mixed" ]; then
+                        ipt -A "\$chain" -d "\$exclude" -p tcp ! --dport 53 -j RETURN >/dev/null 2>&1
+                        ipt -A "\$chain" -d "\$exclude" -p udp --dport 53 -j RETURN >/dev/null 2>&1
+                    elif [ "\$table" = "mangle" ] && [ "\$mode_proxy" = "TProxy" ]; then
+                        ipt -A "\$chain" -d "\$exclude" -p tcp ! --dport 53 -j RETURN >/dev/null 2>&1
+                        ipt -A "\$chain" -d "\$exclude" -p udp ! --dport 53 -j RETURN >/dev/null 2>&1
+                    fi
+                    ;;
+                esac
             else
                 ipt -A "\$chain" -d "\$exclude" -j RETURN >/dev/null 2>&1
             fi
@@ -869,6 +868,7 @@ if pidof "\$name_client" >/dev/null; then
         net="\$3"
         mark="\$4"
         ports="\$5"
+        target="\$6"
 
         [ -z "\$ports" ] && return
 
@@ -879,9 +879,9 @@ if pidof "\$name_client" >/dev/null; then
             chunk=\$(echo "\$ports" | tr ',' '\n' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,$//')
             [ -z "\$chunk" ] && break
             if [ -n "\$mark" ]; then
-                 rule="-m connmark --mark \$mark -m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j \$name_chain"
+                 rule="-m connmark --mark \$mark -m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j \$target"
             else
-                 rule="-m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j \$name_chain"
+                 rule="-m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j \$target"
             fi
             ipt -C PREROUTING \$rule >/dev/null 2>&1 || ipt -A PREROUTING \$rule >/dev/null 2>&1
             i=\$((i + 7))
@@ -905,18 +905,10 @@ if pidof "\$name_client" >/dev/null; then
                     rule_catch="-m connmark --mark 0x\$pmark -m conntrack ! --ctstate INVALID -j \$name_chain"
                     ipt -C PREROUTING \$rule_catch >/dev/null 2>&1 || ipt -A PREROUTING \$rule_catch >/dev/null 2>&1
                 elif [ "\$pmode" = "include" ]; then
-                    add_multiport_rules "\$family" "\$table" "\$net" "0x\$pmark" "\$pports"
+                    add_multiport_rules "\$family" "\$table" "\$net" "0x\$pmark" "\$pports" "\$name_chain"
                 elif [ "\$pmode" = "exclude" ]; then
-                    num_ports=\$(echo "\$pports" | tr ',' '\n' | wc -l)
-                    i=1
-                    while [ "\$i" -le "\$num_ports" ]; do
-                        end=\$((i + 6))
-                        chunk=\$(echo "\$pports" | tr ',' '\n' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,$//')
-                        [ -z "\$chunk" ] && break
-                        rule="-m connmark --mark 0x\$pmark -m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j RETURN"
-                        ipt -C PREROUTING \$rule >/dev/null 2>&1 || ipt -A PREROUTING \$rule >/dev/null 2>&1
-                        i=\$((i + 7))
-                    done
+                    add_multiport_rules "\$family" "\$table" "\$net" "0x\$pmark" "\$pports" "RETURN"
+                    
                     rule_catch="-m connmark --mark 0x\$pmark -m conntrack ! --ctstate INVALID -p \$net -j \$name_chain"
                     ipt -C PREROUTING \$rule_catch >/dev/null 2>&1 || ipt -A PREROUTING \$rule_catch >/dev/null 2>&1
                 fi
@@ -926,19 +918,11 @@ if pidof "\$name_client" >/dev/null; then
             if [ -n "\$policy_mark" ]; then
                 # заданы порты проксирования
                 if [ -n "\$port_donor" ]; then
-                    add_multiport_rules "\$family" "\$table" "\$net" "\$policy_mark" "\$port_donor"
+                    add_multiport_rules "\$family" "\$table" "\$net" "\$policy_mark" "\$port_donor" "\$name_chain"
                 # заданы порты исключения
                 elif [ -n "\$port_exclude" ]; then
-                    num_ports=\$(echo "\$port_exclude" | tr ',' '\n' | wc -l)
-                    i=1
-                    while [ "\$i" -le "\$num_ports" ]; do
-                        end=\$((i + 6))
-                        chunk=\$(echo "\$port_exclude" | tr ',' '\n' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,$//')
-                        [ -z "\$chunk" ] && break
-                        rule="-m connmark --mark \$policy_mark -m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j RETURN"
-                        ipt -C PREROUTING \$rule >/dev/null 2>&1 || ipt -A PREROUTING \$rule >/dev/null 2>&1
-                        i=\$((i + 7))
-                    done
+                    add_multiport_rules "\$family" "\$table" "\$net" "\$policy_mark" "\$port_exclude" "RETURN"
+                    
                     rule_catch="-m connmark --mark \$policy_mark -m conntrack ! --ctstate INVALID -p \$net -j \$name_chain"
                     ipt -C PREROUTING \$rule_catch >/dev/null 2>&1 || ipt -A PREROUTING \$rule_catch >/dev/null 2>&1
                 else
@@ -950,27 +934,12 @@ if pidof "\$name_client" >/dev/null; then
             else
                 # заданы порты проксирования
                 if [ -n "\$port_donor" ]; then
-                    num_ports=\$(echo "\$port_donor" | tr ',' '\n' | wc -l)
-                    i=1
-                    while [ "\$i" -le "\$num_ports" ]; do
-                        end=\$((i+6))
-                        chunk=\$(echo "\$port_donor" | tr ',' '\n' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,$//')
-                        rule_catch="-m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j \$name_chain"
-                        ipt -C PREROUTING \$rule_catch >/dev/null 2>&1 || ipt -A PREROUTING \$rule_catch >/dev/null 2>&1
-                        i=\$((i+7))
-                    done
+                    add_multiport_rules "\$family" "\$table" "\$net" "" "\$port_donor" "\$name_chain"
                 # заданы порты исключения
                 elif [ -n "\$port_exclude" ]; then
-                    num_ports=\$(echo "\$port_exclude" | tr ',' '\n' | wc -l)
-                    i=1
-                    while [ "\$i" -le "\$num_ports" ]; do
-                        end=\$((i+6))
-                        chunk=\$(echo "\$port_exclude" | tr ',' '\n' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,$//')
-                        rule="-m conntrack ! --ctstate INVALID -p \$net -m multiport --dports \$chunk -j RETURN"
-                        ipt -C PREROUTING \$rule >/dev/null 2>&1 || ipt -A PREROUTING \$rule >/dev/null 2>&1
-                        i=\$((i+7))
-                    done
-                   ipt -A PREROUTING -m conntrack ! --ctstate INVALID -p \$net -j "\$name_chain" >/dev/null 2>&1
+                    add_multiport_rules "\$family" "\$table" "\$net" "" "\$port_exclude" "RETURN"
+                    
+                    ipt -A PREROUTING -m conntrack ! --ctstate INVALID -p \$net -j "\$name_chain" >/dev/null 2>&1
                 # Если нет ни xkeen, ни пользовательских политик -> перехватываем всё
                 else
                     rule_catch="-m conntrack ! --ctstate INVALID -j \$name_chain"
@@ -1001,9 +970,9 @@ if pidof "\$name_client" >/dev/null; then
         done
     }
 
-    [ -n "\$policy_mark" ] && connmark_option="-m connmark --mark \$policy_mark"
+    [ -n "\$policy_mark" ]
     if [ -n "\$port_donor" ] || [ -n "\$port_exclude" ]; then
-        [ -n "\$file_dns" ] && [ "\$proxy_dns" = "on" ] && [ -n "\$port_donor" ] && port_donor="53,\$port_donor"
+        [ "\$file_dns" = "true" ] && [ "\$proxy_dns" = "on" ] && [ -n "\$port_donor" ] && port_donor="53,\$port_donor"
     fi
     for family in iptables ip6tables; do
         if [ "\$family" = "ip6tables" ]; then
