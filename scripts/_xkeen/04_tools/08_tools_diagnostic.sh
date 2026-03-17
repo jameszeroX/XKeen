@@ -107,7 +107,7 @@ fi
 
 # Информация об ipset
 if command -v ipset >/dev/null 2>&1; then
-    sets=$(ipset list -n 2>/dev/null | grep -v '^_NDM_')
+    sets=$(ipset list -n 2>/dev/null | grep -v '^_NDM_' | grep -v '^_UPNP')
     if [ -n "$sets" ]; then
         write_header "Списки ipset и количество записей в каждом"
         total=0

@@ -136,19 +136,19 @@ author_feedback() {
 help_xkeen() {
         echo
         echo -e "${yellow}Установка${reset}"
-        echo -e "	-i	${italic}	Основной режим установки XKeen + Xray + GeoFile + Mihomo${reset}"
+        echo -e "	-i	${italic}	Основной режим установки XKeen + Xray + GeoFile/GeoIPSET + Mihomo${reset}"
         echo -e "	-io	${italic}	OffLine установка XKeen${reset}"
         echo -e "	-toff	${italic}	Отключение таймаута при меделенной загрузке с GitHub (xkeen -i -toff)${reset}"
-        echo -e "	-gips	${italic}	Добавить в исключения проксирования IP-подсети России${reset}"
+        echo -e "	-gips	${italic}	Добавить в исключения проксирования IP-подсети России (GeoIPSET)${reset}"
         echo
         echo -e "${yellow}Обновление${reset}"
         echo -e "	-uk	${italic}	XKeen${reset}"
-        echo -e "	-ug	${italic}	GeoFile${reset}"
+        echo -e "	-ug	${italic}	GeoFile/GeoIPSET${reset}"
         echo -e "	-ux	${italic}	Xray (повышение/понижение версии)${reset}"
         echo -e "	-um	${italic}	Mihomo (повышение/понижение версии)${reset}"
         echo
         echo -e "${yellow}Включение или изменение задачи автообновления${reset}"
-        echo -e "	-ugc	${italic}	GeoFile${reset}"
+        echo -e "	-ugc	${italic}	GeoFile/GeoIPSET${reset}"
         echo
         echo -e "${yellow}Регистрация в системе${reset}"
         echo -e "	-rrk	${italic}	XKeen${reset}"
@@ -166,7 +166,7 @@ help_xkeen() {
         echo -e "	-dk	${italic}	XKeen${reset}"
         echo
         echo -e "${red}Удаление${reset} | Задачи автообновления"
-        echo -e "	-dgc	${italic}	GeoFile${reset}"
+        echo -e "	-dgc	${italic}	GeoFile/GeoIPSET${reset}"
         echo
         echo -e "${red}Удаление${reset} | Регистрации в системе"
         echo -e "	-drk	${italic}	XKeen${reset}"
