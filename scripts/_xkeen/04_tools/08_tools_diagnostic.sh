@@ -105,6 +105,25 @@ if [ $ip6tables_supported = "true" ]; then
     echo >> "$diagnostic"
 fi
 
+# Информация об ipset
+if command -v ipset >/dev/null 2>&1; then
+    sets=$(ipset list -n 2>/dev/null | grep -v '^_NDM_')
+    if [ -n "$sets" ]; then
+        write_header "Списки ipset и количество записей в каждом"
+        total=0
+        echo "$sets" | while read -r set; do
+            count=$(ipset save "$set" 2>/dev/null | grep -c '^add')
+            printf "%-30s %s\n" "$set" "$count" >> "$diagnostic"
+            total=$((total + count))
+            echo "$total" > /tmp/.ipset_total
+        done
+        echo >> "$diagnostic"
+        echo "Всего записей во всех списках: $(cat /tmp/.ipset_total 2>/dev/null)" >> "$diagnostic"
+        rm -f /tmp/.ipset_total
+        echo >> "$diagnostic"; echo >> "$diagnostic"
+    fi
+fi
+
 # Копирование содержимого файла /opt/etc/ndm/netfilter.d/proxy.sh
 write_header "Содержимое файла /opt/etc/ndm/netfilter.d/proxy.sh"
 if [ -f "/opt/etc/ndm/netfilter.d/proxy.sh" ]; then
@@ -167,25 +186,7 @@ xkeen -v >> "$diagnostic"
 echo >> "$diagnostic"
 echo >> "$diagnostic"
 
-# Запрос конфигурационных файлов XKeen
-if ls "$file_port_proxying" >/dev/null 2>&1; then
-    write_header "Порты проксирования"
-    cat "$file_port_proxying" >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-fi
-if ls "$file_port_exclude" >/dev/null 2>&1; then
-    write_header "Исключенные порты"
-    cat "$file_port_exclude" >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-fi
-if ls "$file_ip_exclude" >/dev/null 2>&1; then
-    write_header "Исключенные IP"
-    cat "$file_ip_exclude" >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-fi
+# Запрос конфигурационного файла XKeen
 if ls "$xkeen_config" >/dev/null 2>&1; then
     write_header "Файл xkeen.json"
     cat "$xkeen_config" >> "$diagnostic"

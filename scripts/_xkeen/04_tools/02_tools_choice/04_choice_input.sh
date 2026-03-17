@@ -30,44 +30,46 @@ toggle_param() {
     restart_needed="$3"
 
     if [ ! -f "$initd_file" ]; then
-        echo -e "  ${red}Ошибка${reset}: Не найден файл ${yellow}S99xkeen${reset}"
+        echo -e "  ${red}Ошибка${reset}: Не найден файл ${yellow}S05xkeen${reset}"
         return 1
     fi
 
     current_state=$(grep -m 1 -E "^[[:space:]]*$param=" "$initd_file" | cut -d'=' -f2 | tr -d '"[:space:]')
 
-    echo
-    echo -e "  Текущее состояние ${description}:"
-
-    if [ "$current_state" = "on" ]; then
-        echo -e "  ${green}Включено${reset}"
-        echo
-        echo "     1. Отключить"
-        echo "     0. Оставить без изменений"
-        desired_state="off"
+    if [ "$bypass_autostart_msg" = "yes" ]; then
+        if [ "$current_state" = "on" ]; then
+            desired_state="off"
+        else
+            desired_state="on"
+        fi
     else
-        echo -e "  ${red}Отключено${reset}"
         echo
-        echo "     1. Включить"
-        echo "     0. Оставить без изменений"
-        desired_state="on"
-    fi
+        echo -e "  Текущее состояние ${description}:"
 
-    echo
-    while true; do
-        read -r -p "  Ваш выбор: " choice
-        case "$choice" in
-            0)
-                return 0
-                ;;
-            1)
-                break
-                ;;
-            *)
-                echo -e "  ${red}Некорректный ввод${reset}"
-                ;;
-        esac
-    done
+        if [ "$current_state" = "on" ]; then
+            echo -e "  ${green}Включено${reset}"
+            echo
+            echo "     1. Отключить"
+            echo "     0. Оставить без изменений"
+            desired_state="off"
+        else
+            echo -e "  ${red}Отключено${reset}"
+            echo
+            echo "     1. Включить"
+            echo "     0. Оставить без изменений"
+            desired_state="on"
+        fi
+
+        echo
+        while true; do
+            read -r -p "  Ваш выбор: " choice
+            case "$choice" in
+                0) return 0 ;;
+                1) break ;;
+                *) echo -e "  ${red}Некорректный ввод${reset}" ;;
+            esac
+        done
+    fi
 
     if awk -v param="$param" -v value="$desired_state" '
         !found && $0 ~ "^[[:space:]]*" param "=" {
@@ -75,7 +77,10 @@ toggle_param() {
             found=1
         }
         {print}
-        ' "$initd_file" > "$initd_file.tmp" && mv "$initd_file.tmp" "$initd_file"; then
+    ' "$initd_file" > "$initd_file.tmp" && mv "$initd_file.tmp" "$initd_file"; then
+
+        [ "$bypass_autostart_msg" = "yes" ] && return 0
+
         if [ "$desired_state" = "on" ]; then
             echo -e "  Новое состояние ${description} ${green}включено${reset}"
         else

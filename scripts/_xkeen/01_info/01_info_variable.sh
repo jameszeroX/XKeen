@@ -17,6 +17,7 @@ xtmp_dir="/opt/tmp/xray"		 # Временная директория Xray
 mtmp_dir="/opt/tmp/mihomo"		 # Временная директория Mihomo
 xkeen_dir="/opt/sbin/.xkeen"		 # Директория скриптов XKeen
 xkeen_cfg="/opt/etc/xkeen"		 # Директория конфигурации XKeen
+ipset_cfg="$xkeen_cfg/ipset"		 # Директория IPSET
 xkeen_log_dir="/opt/var/log/xkeen"	 # Директория логов XKeen
 xray_log_dir="/opt/var/log/xray"	 # Директория логов Xray
 initd_dir="/opt/etc/init.d"		 # Директория init.d
@@ -34,7 +35,7 @@ register_dir="/opt/lib/opkg/info"
 status_file="/opt/lib/opkg/status"
 os_modules="/lib/modules/$(uname -r)"
 user_modules="/opt/lib/modules"
-xkeen_current_version="1.1.3.10"
+xkeen_current_version="2.0"
 xkeen_build="Beta"
 build_timestamp=""
 
@@ -44,8 +45,10 @@ build_timestamp=""
 file_port_proxying="$xkeen_cfg/port_proxying.lst"
 file_port_exclude="$xkeen_cfg/port_exclude.lst"
 file_ip_exclude="$xkeen_cfg/ip_exclude.lst"
+ru_exclude_ipv4="$ipset_cfg/ru_exclude_ipv4.lst"
+ru_exclude_ipv6="$ipset_cfg/ru_exclude_ipv6.lst"
 xkeen_config="$xkeen_cfg/xkeen.json"
-initd_file="$initd_dir/S99xkeen"
+initd_file="$initd_dir/S05xkeen"
 initd_cron="$initd_dir/S05crond"
 
 # -------------------------------------
@@ -75,8 +78,7 @@ xray_zip_url="https://github.com/XTLS/Xray-core/releases/download"				# url дл
 mihomo_api_url="https://api.github.com/repos/MetaCubeX/mihomo/releases"				# url api для Mihomo
 mihomo_jsd_url="https://data.jsdelivr.com/v1/package/gh/MetaCubeX/mihomo"			# резервный url api для Mihomo
 mihomo_gz_url="https://github.com/MetaCubeX/mihomo/releases/download"				# url для загрузки Mihomo
-#yq_dist_url="https://github.com/mikefarah/yq/releases/latest/download"				# url для загрузки Yq latest
-yq_dist_url="https://github.com/mikefarah/yq/releases/download/v4.50.1"				# url для загрузки Yq stable
+yq_dist_url="https://github.com/jameszeroX/yq/releases/latest/download"				# url для загрузки Yq
 gh_proxy1="https://ghfast.top"								        # 1 прокси для загрузок с GitHub
 gh_proxy2="https://gh-proxy.com"								# 2 прокси для загрузок с GitHub
 
@@ -87,6 +89,8 @@ v2fly_url="https://github.com/v2fly/domain-list-community/releases/latest/downlo
 v2flyip_url="https://github.com/loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat"
 zkeen_url="https://github.com/jameszeroX/zkeen-domains/releases/latest/download/zkeen.dat"
 zkeenip_url="https://github.com/jameszeroX/zkeen-ip/releases/latest/download/zkeenip.dat"
+geoipv4_url="https://github.com/jameszeroX/zkeen-ip/releases/latest/download/ru"
+geoipv6_url="https://github.com/jameszeroX/zkeen-ip/releases/latest/download/ru6"
 
 # -------------------------------------
 # Создание директорий и файлов

@@ -1,5 +1,4 @@
 # Обратная связь в консоль
-
 logs_cpu_info_console() {
     echo
     echo -e "  Набор инструкций процессора: ${yellow}$architecture${reset}"
@@ -29,37 +28,6 @@ logs_delete_configs_info_console() {
         for file in $deleted_files; do
             echo -e "    $file"
         done
-    fi
-}
-
-logs_delete_geoip_info_console() {
-    info_content=
-    error_content=
-
-    if [ -f "$geo_dir/geoip_antifilter.dat" ]; then
-        error_content="  ${red}Ошибка${reset}: Файл geoip_antifilter.dat не удален\n"
-    else
-        info_content="  ${green}Успешно${reset}: Файл geoip_antifilter.dat отсутствует в директории '$geo_dir'\n"
-    fi
-
-    if [ -f "$geo_dir/geoip_v2fly.dat" ]; then
-        error_content="${error_content}  ${red}Ошибка${reset}: Файл geoip_v2fly.dat не удален\n"
-    else
-        info_content="${info_content}  ${green}Успешно${reset}: Файл geoip_v2fly.dat отсутствует в директории '$geo_dir'\n"
-    fi
-
-    if [ -f "$geo_dir/geoip_zkeenip.dat" ]; then
-        error_content="${error_content}  ${red}Ошибка${reset}: Файл geoip_zkeenip.dat не удален\n"
-    else
-        info_content="${info_content}  ${green}Успешно${reset}: Файл geoip_zkeenip.dat отсутствует в директории '$geo_dir'\n"
-    fi
-
-    if [ -n "$error_content" ]; then
-        echo -e "  ${yellow}Проверка${reset} выполнения операции"
-        echo -e "$error_content"
-    else
-		echo -e "  ${yellow}Проверка${reset} выполнения операции"
-        echo -e "$info_content"
     fi
 }
 
@@ -94,6 +62,64 @@ logs_delete_geosite_info_console() {
     fi
 }
 
+logs_delete_geoip_info_console() {
+    info_content=
+    error_content=
+
+    if [ -f "$geo_dir/geoip_antifilter.dat" ]; then
+        error_content="  ${red}Ошибка${reset}: Файл geoip_antifilter.dat не удален\n"
+    else
+        info_content="  ${green}Успешно${reset}: Файл geoip_antifilter.dat отсутствует в директории '$geo_dir'\n"
+    fi
+
+    if [ -f "$geo_dir/geoip_v2fly.dat" ]; then
+        error_content="${error_content}  ${red}Ошибка${reset}: Файл geoip_v2fly.dat не удален\n"
+    else
+        info_content="${info_content}  ${green}Успешно${reset}: Файл geoip_v2fly.dat отсутствует в директории '$geo_dir'\n"
+    fi
+
+    if [ -f "$geo_dir/geoip_zkeenip.dat" ]; then
+        error_content="${error_content}  ${red}Ошибка${reset}: Файл geoip_zkeenip.dat не удален\n"
+    else
+        info_content="${info_content}  ${green}Успешно${reset}: Файл geoip_zkeenip.dat отсутствует в директории '$geo_dir'\n"
+    fi
+
+    if [ -n "$error_content" ]; then
+        echo -e "  ${yellow}Проверка${reset} выполнения операции"
+        echo -e "$error_content"
+    else
+        echo -e "  ${yellow}Проверка${reset} выполнения операции"
+        echo -e "$info_content"
+    fi
+}
+
+logs_delete_geoipset_info_console() {
+    info_content=
+    error_content=
+
+    if [ -f "$ru_exclude_ipv4" ]; then
+        error_content="  ${red}Ошибка${reset}: Файл ru_exclude_ipv4.lst не удален"
+    else
+        info_content="  ${green}Успешно${reset}: Файл ru_exclude_ipv4.lst отсутствует в директории '$ipset_cfg'"
+    fi
+
+    if [ -f "$ru_exclude_ipv6" ]; then
+        error_content6="  ${red}Ошибка${reset}: Файл ru_exclude_ipv6.lst не удален\n"
+    else
+        info_content6="  ${green}Успешно${reset}: Файл ru_exclude_ipv6.lst отсутствует в директории '$ipset_cfg'\n"
+    fi
+
+    if [ -n "$error_content" ]; then
+        echo -e "  ${yellow}Проверка${reset} выполнения операции"
+        echo -e "$error_content"
+        echo -e "$error_content6"
+    else
+        echo -e "  ${yellow}Проверка${reset} выполнения операции"
+        echo -e "$info_content"
+        echo -e "$info_content6"
+    fi
+}
+
 logs_register_xkeen_status_info_console() {
     info_content=
     error_content=
@@ -105,11 +131,11 @@ logs_register_xkeen_status_info_console() {
     fi
     
     if [ -n "$info_content" ]; then
-		echo -e "$info_content"
+        echo -e "$info_content"
     fi
     
     if [ -n "$error_content" ]; then
-		echo -e "$error_content"
+        echo -e "$error_content"
     fi
 }
 

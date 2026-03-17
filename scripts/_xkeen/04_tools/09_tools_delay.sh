@@ -1,64 +1,49 @@
-data_is_updated_exclude() {
-    file="$1"
-    new_delay="$2"
-    current_delay=$(
-        awk -F= '/start_delay/{print $2; exit}' "$file" \
-        | tr -d '"'
-    )
-    if [ "$current_delay" = "$new_delay" ]; then
-        return 0
-    else
-        return 1
-    fi
+get_current_delay() {
+    awk -F= '/^[[:space:]]*start_delay=/{print $2; exit}' "$1" | tr -d '[:space:]"'
 }
 
 delay_autostart() {
     new_delay="$1"
-    target_file=""
 
-    if [ -f "$initd_file" ]; then
-        target_file="$initd_file"
-    else
-        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S99xkeen${reset}"
+    if [ ! -f "$initd_file" ]; then
+        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S05xkeen${reset}"
         return 1
     fi
 
-    # Вывод текущей задержки автозапуска
+    current_delay=$(get_current_delay "$initd_file")
+
     if [ -z "$new_delay" ]; then
-        current_delay=$(
-            awk -F= '/start_delay/{print $2; exit}' "$target_file" \
-            | tr -d '[:space:]'
-        )
-        current_delay=${current_delay:-""}
-        echo -e "  Текущая задержка автозапуска XKeen ${yellow}$current_delay секунд(ы)${reset}"
-        return 1
+        echo -e "  Текущая задержка автозапуска XKeen ${yellow}${current_delay} секунд(ы)${reset}"
+        return 0
     fi
 
-    # Проверка, что new_delay - это число
-    if ! [ "$new_delay" -eq "$new_delay" ] 2>/dev/null; then
-        echo -e "  ${red}Ошибка${reset}"
-        echo "  Новая задержка должна быть числом"
-        return 1
-    fi
-
-    current_delay=$(
-        awk -F= '/start_delay/{print $2; exit}' "$target_file" \
-        | tr -d '[:space:]'
-    )
-    current_delay=${current_delay:-""}
+    case "$new_delay" in
+        ''|*[!0-9]*)
+            echo -e "  ${red}Ошибка${reset}"
+            echo "  Новая задержка должна быть числом"
+            return 1
+        ;;
+    esac
 
     if [ "$current_delay" = "$new_delay" ]; then
         echo "  Обновление задержки автозапуска XKeen не требуется"
         return 0
-    else
-        tmpfile=$(mktemp)
-        awk -v new_delay="start_delay=$new_delay" 'BEGIN{replaced=0} /start_delay/ && !replaced {sub(/start_delay=[^ ]*/, new_delay); replaced=1} {print}' "$target_file" > "$tmpfile" && mv "$tmpfile" "$target_file"
     fi
 
-    while true; do
-        if data_is_updated_exclude "$target_file" "$new_delay"; then
-            echo -e "  Установлена задержка автозапуска XKeen ${yellow}${new_delay} секунд(ы)${reset}"
-            break
-        fi
-    done
+    tmpfile=$(mktemp) || return 1
+
+    awk -v d="$new_delay" '
+    /^[[:space:]]*start_delay=/ && !done {
+        sub(/=.*/, "=" d)
+        done=1
+    }
+    {print}
+    ' "$initd_file" > "$tmpfile" && mv "$tmpfile" "$initd_file"
+
+    if [ "$(get_current_delay "$initd_file")" = "$new_delay" ]; then
+        echo -e "  Установлена задержка автозапуска XKeen ${yellow}${new_delay} секунд(ы)${reset}"
+    else
+        echo -e "  ${red}Ошибка${reset}: не удалось обновить параметр"
+        return 1
+    fi
 }

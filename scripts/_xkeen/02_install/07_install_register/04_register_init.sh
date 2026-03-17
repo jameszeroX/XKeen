@@ -28,6 +28,7 @@ directory_xray_config="$directory_configs_app/configs"
 directory_xray_asset="$directory_configs_app/dat"
 directory_logs="/opt/var/log"
 xkeen_cfg="/opt/etc/xkeen"
+ipset_cfg="$xkeen_cfg/ipset"
 
 # Файлы
 file_netfilter_hook="/opt/etc/ndm/netfilter.d/proxy.sh"
@@ -39,6 +40,8 @@ file_port_exclude="$xkeen_cfg/port_exclude.lst"
 file_ip_exclude="$xkeen_cfg/ip_exclude.lst"
 xkeen_config="$xkeen_cfg/xkeen.json"
 file_pid_fd="/var/run/xkeen_fd.pid"
+ru_exclude_ipv4="$ipset_cfg/ru_exclude_ipv4.lst"
+ru_exclude_ipv6="$ipset_cfg/ru_exclude_ipv6.lst"
 
 # URL
 url_server="localhost:79"
@@ -51,6 +54,7 @@ table_id="111"
 table_mark="0x111"
 table_redirect="nat"
 table_tproxy="mangle"
+custom_mark=""
 
 ipv4_proxy="127.0.0.1"
 ipv4_exclude="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 255.255.255.255"
@@ -90,21 +94,20 @@ log_error_router() {
     logger -p error -t "$name_app" "$1"
 }
 
+log_warning_terminal() {
+    echo
+    echo -e "${yellow}Предупреждение${reset}: $1" >&2
+}
+
 log_error_terminal() {
     echo
     echo -e "${red}Ошибка${reset}: $1" >&2
     exit 1
 }
 
-log_warning_terminal() {
-    echo
-    echo -e "${yellow}Предупреждение${reset}: $1" >&2
-}
-
-for cmd in jq curl grep awk sed; do
+for cmd in jq curl grep awk sed ipset; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
          log_error_terminal "Не найдена необходимая утилита: ${yellow}$cmd${reset}"
-         exit 1
     fi
 done
 
@@ -217,46 +220,39 @@ validate_xkeen_json() {
   Файл ${light_blue}xkeen.json${reset} имеет неверную структуру
   Запуск прокси невозможен
 "
-        exit 1
         fi
     fi
 
     return 0
 }
 
-clean_lst() {
-    sed -e 's/\r$//' \
-        -e 's/^[[:space:]]*//' \
-        -e 's/[[:space:]]*$//' \
-        -e '/^#/d' \
-        -e '/^$/d' "$1"
-}
-
-get_user_ipv4_excludes() {
+# Функция загрузки пользовательских исключений в ipset
+load_user_ipset() {
     [ -f "$file_ip_exclude" ] || return
 
-    printf ' '
-    clean_lst "$file_ip_exclude" |
-    grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' |
-    tr '\n' ' ' |
-    sed 's/  */ /g; s/^ //; s/ $//'
+    if [ "$iptables_supported" = "true" ]; then
+        ipset create user_exclude hash:net family inet -exist
+        ipset flush user_exclude
+        sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file_ip_exclude" |
+        grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' |
+        awk '{print "add user_exclude "$1}' | ipset restore -exist
+    fi
+
+    if [ "$ip6tables_supported" = "true" ]; then
+        ipset create user_exclude6 hash:net family inet6 -exist
+        ipset flush user_exclude6
+        sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file_ip_exclude" |
+        grep -Eo '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' |
+        awk '{print "add user_exclude6 "$1}' | ipset restore -exist
+    fi
 }
 
-get_user_ipv6_excludes() {
-    [ -f "$file_ip_exclude" ] || return
-
-    printf ' '
-    clean_lst "$file_ip_exclude" |
-    grep -Eo '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' |
-    tr '\n' ' ' |
-    sed 's/  */ /g; s/^ //; s/ $//'
-}
-
+# Функция чтения пользовательских портов из файлов
 read_ports_from_file() {
     file_ports="$1"
     [ -f "$file_ports" ] || return
 
-    clean_lst "$file_ports" |
+    sed -e 's/\r$//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^#/d' -e '/^$/d' "$file_ports" |
     tr '\n' ',' | sed 's/,$//'
 }
 
@@ -319,7 +315,6 @@ process_user_ports() {
   Заданы и порты проксирования, и порты исключения
   Используйте, что-то одно
 "
-        exit 1
     fi
 }
 
@@ -576,8 +571,7 @@ get_exclude_ip4() {
     ipv4_eth=$(ip route get 195.208.4.1 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}' ||
                ip route get 77.88.8.8 2>/dev/null | grep -o 'src [0-9.]\+' | awk '{print $2}')
     [ -n "$ipv4_eth" ] && ipv4_eth="${ipv4_eth}/32"
-    user_ipv4=$(get_user_ipv4_excludes)
-    echo "${ipv4_eth} ${ipv4_exclude}${user_ipv4}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
+    echo "${ipv4_eth} ${ipv4_exclude}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
 }
 
 # Получение исключений IPv6
@@ -588,8 +582,7 @@ get_exclude_ip6() {
     ipv6_eth=$(ip -6 route get 2a0c:a9c7:8::1 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}' ||
                ip -6 route get 2a02:6b8::feed:0ff 2>/dev/null | awk -F 'src ' '{print $2}' | awk '{print $1}')
     [ -n "$ipv6_eth" ] && ipv6_eth="${ipv6_eth}/128"
-    user_ipv6=$(get_user_ipv6_excludes)
-    echo "${ipv6_eth} ${ipv6_exclude}${user_ipv6}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
+    echo "${ipv6_eth} ${ipv6_exclude}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
 }
 
 # Получение метки политики
@@ -625,7 +618,6 @@ check_policy_name_conflict() {
   Переименуйте пользовательскую политику в json-файле
   Запуск ${yellow}$name_client${reset} ${red}отменен${reset}
 "
-            exit 1
         fi
     fi
 }
@@ -699,6 +691,7 @@ port_tproxy="$port_tproxy"
 port_donor="$port_donor"
 port_exclude="$port_exclude"
 policy_mark="$policy_mark"
+custom_mark="$custom_mark"
 user_policies="$user_policies"
 table_redirect="$table_redirect"
 table_tproxy="$table_tproxy"
@@ -756,6 +749,24 @@ if pidof "\$name_client" >/dev/null; then
         done
     }
 
+    add_ipset_exclude() {
+        base_set="\$1"
+        set_type="\${2:-hash:net}"
+
+        if [ "\$family" = "ip6tables" ]; then
+            set_name="\${base_set}6"
+            ipset_family="inet6"
+        else
+            set_name="\$base_set"
+            ipset_family="inet"
+        fi
+
+        ipset create "\$set_name" "\$set_type" family "\$ipset_family" -exist || return
+
+        ipt -C "\$chain" -m set --match-set "\$set_name" dst -j RETURN >/dev/null 2>&1 ||
+        ipt -I "\$chain" 1 -m set --match-set "\$set_name" dst -j RETURN >/dev/null 2>&1
+    }
+
     # Добавление правил iptables
     add_ipt_rule() {
         family="\$1"
@@ -779,9 +790,15 @@ if pidof "\$name_client" >/dev/null; then
                 Mixed)
                     if [ "\$table" = "\$table_redirect" ]; then
                         ipt -I \$chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
+                        add_ipset_exclude ext_exclude hash:ip
+                        add_ipset_exclude geo_exclude hash:net
+                        add_ipset_exclude user_exclude hash:net
                         ipt -A \$chain -p tcp -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
                     else
                         ipt -I \$chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
+                        add_ipset_exclude ext_exclude hash:ip
+                        add_ipset_exclude geo_exclude hash:net
+                        add_ipset_exclude user_exclude hash:net
                         ipt -A \$chain -p udp -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
                         ipt -A \$chain -p udp -m mark ! --mark 0 -j CONNMARK --save-mark >/dev/null 2>&1
                         ipt -A \$chain -p udp -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
@@ -791,6 +808,9 @@ if pidof "\$name_client" >/dev/null; then
                     ipt -C \$chain -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
                     ipt -I \$chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
                     for net in \$network_tproxy; do
+                        add_ipset_exclude ext_exclude hash:ip
+                        add_ipset_exclude geo_exclude hash:net
+                        add_ipset_exclude user_exclude hash:net
                         ipt -A \$chain -p "\$net" -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
                         if [ "\$net" = "udp" ]; then
                             ipt -A \$chain -p "\$net" -m mark ! --mark 0 -j CONNMARK --save-mark >/dev/null 2>&1
@@ -801,6 +821,9 @@ if pidof "\$name_client" >/dev/null; then
                 Redirect)
                     ipt -C \$chain -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
                     ipt -I \$chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
+                    add_ipset_exclude ext_exclude hash:ip
+                    add_ipset_exclude geo_exclude hash:net
+                    add_ipset_exclude user_exclude hash:net
                     for net in \$network_redirect; do
                         ipt -A \$chain -p "\$net" -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
                     done
@@ -955,6 +978,7 @@ if pidof "\$name_client" >/dev/null; then
 
         all_marks=""
         [ -n "\$policy_mark" ] && all_marks="\$policy_mark"
+        [ -n "\$custom_mark" ] && all_marks="\$custom_mark \$all_marks"
         
         if [ -n "\$user_policies" ]; then
             user_marks=\$(echo "\$user_policies" | awk -F'|' '{if (\$1 != "") print "0x"\$1}')
@@ -1034,27 +1058,18 @@ EOL
 clean_firewall() {
     [ -f "$file_netfilter_hook" ] && : > "$file_netfilter_hook"
 
-    dns_p_mark=$(echo "$policy_mark" | sed 's/0x//')
-    dns_all_marks=""
-    [ -n "$dns_p_mark" ] && dns_all_marks="$dns_p_mark"
-    dns_u_policies=$(resolve_user_policies)
-    if [ -n "$dns_u_policies" ]; then
-        dns_u_marks=$(echo "$dns_u_policies" | awk -F'|' '{if ($1 != "") print $1}')
-        dns_all_marks="$dns_all_marks $dns_u_marks"
-    fi
+    get_ipver_support
 
     for family in iptables ip6tables; do
         [ "$family" = "iptables" ] && [ "$iptables_supported" != "true" ] && continue
         [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ] && continue
 
-        for mark in $dns_all_marks; do
-            [ -z "$mark" ] && continue
-            for proto in udp tcp; do
-                while "$family" -w -t nat -C _NDM_HOTSPOT_DNSREDIR -p "$proto" -m mark --mark "0x$mark" -m pkttype --pkt-type unicast -m "$proto" --dport 53 -j REDIRECT --to-ports 53 >/dev/null 2>&1; do
-                    "$family" -w -t nat -D _NDM_HOTSPOT_DNSREDIR -p "$proto" -m mark --mark "0x$mark" -m pkttype --pkt-type unicast -m "$proto" --dport 53 -j REDIRECT --to-ports 53 >/dev/null 2>&1
-                done
+        if "$family" -w -t nat -nL _NDM_HOTSPOT_DNSREDIR >/dev/null 2>&1; then
+            "$family" -w -t nat -S _NDM_HOTSPOT_DNSREDIR | grep 'REDIRECT --to-ports 53' | grep -- '-m mark --mark' | while IFS= read -r rule; do
+                rule=${rule#-A _NDM_HOTSPOT_DNSREDIR }
+                "$family" -w -t nat -D _NDM_HOTSPOT_DNSREDIR $rule >/dev/null 2>&1
             done
-        done
+        fi
     done
 
     clean_run() {
@@ -1093,6 +1108,14 @@ clean_firewall() {
             fi
         done
     fi
+
+    # Очистка и удаление списков ipset
+    if command -v ipset >/dev/null 2>&1; then
+        for set in geo_exclude geo_exclude6 user_exclude user_exclude6; do
+            ipset flush "$set" >/dev/null 2>&1
+            ipset destroy "$set" >/dev/null 2>&1
+        done
+    fi
 }
 
 # Мониторинг файловых дескрипторов
@@ -1113,6 +1136,17 @@ monitor_fd() {
         fi
         sleep "$delay_fd"
     done
+}
+
+load_ipset() {
+    set="$1"
+    file="$2"
+    family="$3"
+    
+    ipset create "$set" hash:net family "$family" -exist
+    ipset flush "$set"
+    
+    [ -f "$file" ] && sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file" | awk '{print "add '"$set"' "$1}' | ipset restore -exist
 }
 
 missing_files_template='
@@ -1179,14 +1213,13 @@ proxy_start() {
             fi
             if [ "$mode_proxy" = "TProxy" ]; then
                 keenetic_ssl="$(get_keenetic_port)" || {
+                    proxy_stop
                     log_error_router "Порт 443 занят сервисами Keenetic"
                     log_error_terminal "
   Необходимый для режима ${yellow}TProxy${reset} ${red}443 порт занят${reset} сервисами Keenetic
 
   Освободите его на странице 'Пользователи и доступ' веб-интерфейса роутера
 "
-                    proxy_stop
-                    exit 1
                 }
             fi
         fi
@@ -1200,9 +1233,6 @@ proxy_start() {
             fi
         else
             log_info_router "Инициирован запуск прокси-клиента"
-            delay_increment=1
-            current_delay=0
-            [ "$start_manual" != "on" ] && current_delay=$start_delay
             attempt=1
             create_user
             . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
@@ -1215,7 +1245,6 @@ proxy_start() {
                         if [ ! -x "$install_dir/xray" ]; then
                             missing_files="$install_dir/xray"
                             log_error_terminal "$(printf "$missing_files_template" "$missing_files")"
-                            exit 1
                         fi
                         export XRAY_LOCATION_CONFDIR="$directory_xray_config"
                         export XRAY_LOCATION_ASSET="$directory_xray_asset"
@@ -1240,7 +1269,6 @@ proxy_start() {
                             [ ! -x "$install_dir/yq" ] && missing_files="$install_dir/yq"
                             [ ! -x "$install_dir/mihomo" ] && missing_files="$install_dir/mihomo\n  $missing_files"
                             log_error_terminal "$(printf "$missing_files_template" "$missing_files")"
-                            exit 1
                         fi
                         export CLASH_HOME_DIR="$directory_configs_app"
                         fd_limit="$other_fd"
@@ -1259,9 +1287,12 @@ proxy_start() {
                         ;;
                     *) "$name_client" run -C "$directory_xray_config" & ;;
                 esac
-                sleep 2 && sleep "$current_delay"
+                sleep 2
                 if proxy_status; then
                     [ "$mode_proxy" != "Other" ] && configure_firewall
+                    [ "$iptables_supported" = "true" ] && [ -f "$ru_exclude_ipv4" ] && load_ipset geo_exclude "$ru_exclude_ipv4" inet
+                    [ "$ip6tables_supported" = "true" ] && [ -f "$ru_exclude_ipv6" ] && load_ipset geo_exclude6 "$ru_exclude_ipv6" inet6
+                    load_user_ipset
                     echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${yellow}${mode_proxy}${reset}"
                     if [ -n "$api_policy_json" ]; then
                         if echo "$api_policy_json" | jq --arg policy "$name_policy" -e 'any(.[]; .description | ascii_downcase == $policy)' > /dev/null; then
@@ -1285,7 +1316,6 @@ proxy_start() {
                     fi
                     return 0
                 fi
-                current_delay=$((current_delay + delay_increment))
                 attempt=$((attempt + 1))
             done
             echo -e "  ${red}Не удалось запустить${reset} прокси-клиент"
@@ -1310,19 +1340,16 @@ proxy_stop() {
             kill "$(cat "$file_pid_fd")" 2>/dev/null
             rm -f "$file_pid_fd"
         fi
-        delay_increment=1
-        current_delay=0
         attempt=1
         while [ "$attempt" -le "$start_attempts" ]; do
             clean_firewall
             killall -q -9 "$name_client"
-            sleep 1 && sleep "$current_delay"
+            sleep 1
             if ! proxy_status; then
                 echo -e "  Прокси-клиент ${red}остановлен${reset}"
                 log_info_router "Прокси-клиент успешно остановлен"
                 return 0
             fi
-            current_delay=$((current_delay + delay_increment))
             attempt=$((attempt + 1))
         done
         echo -e "  Прокси-клиент ${red}не удалось остановить${reset}"
@@ -1332,7 +1359,18 @@ proxy_stop() {
 
 # Менеджер команд
 case "$1" in
-    start) proxy_start "$2" ;;
+    start)
+        ipset create ext_exclude hash:ip family inet -exist
+        ipset create ext_exclude6 hash:ip family inet6 -exist
+        if [ -z "$2" ]; then
+            nohup su -c '
+                sleep '"$start_delay"'
+                 '"$0"' start on
+            ' >/dev/null 2>&1 &
+            exit 0
+        fi
+        proxy_start "$2"
+    ;;
     stop) proxy_stop ;;
     status)
         if proxy_status; then

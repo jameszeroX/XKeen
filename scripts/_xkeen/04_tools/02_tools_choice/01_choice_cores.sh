@@ -70,7 +70,7 @@ choice_xray_core() {
             echo -e " Произошла ${red}ошибка${reset} при смене ядра проксирования"
         fi
     else
-        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S99xkeen${reset}"
+        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S05xkeen${reset}"
         return 1
     fi
 }
@@ -95,7 +95,7 @@ choice_mihomo_core() {
             echo -e " Произошла ${red}ошибка${reset} при смене ядра проксирования"
         fi
     else
-        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S99xkeen${reset}"
+        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S05xkeen${reset}"
         return 1
     fi
 }

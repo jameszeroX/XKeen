@@ -96,6 +96,12 @@ while [ $# -gt 0 ]; do
 
             choice_add_proxy_cores
 
+           if [ "$xray_installed" != "installed" ] && [ "$mihomo_installed" != "installed" ] &&
+              [ "$add_xray" = "false" ] && [ "$add_mihomo" = "false" ]; then
+               echo -e "  ${red}Невозможно установить${reset} XKeen без ядра проксирования"
+               exit 1
+           fi
+
             if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
                 $initd_file stop >/dev/null 2>&1
             fi
@@ -115,19 +121,21 @@ while [ $# -gt 0 ]; do
                 clear
                 # Устанавливаем GeoSite
                 choice_geosite
-
                 delete_geosite
-
                 install_geosite
                 sleep 2
 
                 clear
                 # Устанавливаем GeoIP
                 choice_geoip
-
                 delete_geoip
-
                 install_geoip
+                sleep 2
+            fi
+
+                clear
+                # Устанавливаем GeoIPSET
+                install_geoipset init
                 sleep 2
 
                 clear
@@ -139,6 +147,7 @@ while [ $# -gt 0 ]; do
                 choice_cron_time
 
                 install_cron
+                sleep 2
 
                 clear
                 echo
@@ -150,6 +159,7 @@ while [ $# -gt 0 ]; do
                 register_cron_initd
                 $initd_dir/S05crond start >/dev/null 2>&1
 
+            if [ -z $bypass_xray ]; then
                 info_version_xray
                 delete_register_xray
 
@@ -240,14 +250,7 @@ while [ $# -gt 0 ]; do
 
             clear
             echo
-
-            if [ "$xray_installed" != "installed" ] && [ "$mihomo_installed" != "installed" ]; then
-                echo -e "  ${red}Невозможно установить${reset} XKeen без ядра проксирования"
-                exit 1
-            else
-                echo -e "  ${green}Установка XKeen выполнена!${reset}"
-            fi
-            echo
+            echo -e "  ${green}Установка XKeen завершена!${reset}"
 
             if [ "$xray_installed" = "installed" ] || [ "$mihomo_installed" = "installed" ]; then
                 if grep -q 'name_client="xray"' $initd_file; then
@@ -401,7 +404,7 @@ while [ $# -gt 0 ]; do
 
             clear
             echo
-            echo -e "  ${green}Установка XKeen выполнена!${reset}"
+            echo -e "  ${green}Установка XKeen завершена!${reset}"
             echo
             echo -e "  Для использования ядра '${yellow}$Xray${reset}'"
             echo -e "  1. Поместите необходимые геофайлы в директорию '${yellow}$geo_dir/${reset}'"
@@ -439,8 +442,9 @@ while [ $# -gt 0 ]; do
                 [ "$update_zkeenip_geoip" = "true" ]; then
 
                 echo
-                install_geoip
                 install_geosite
+                install_geoip
+                install_geoipset update
 
                 if pidof xray >/dev/null; then
                     $initd_file restart on >/dev/null 2>&1
@@ -484,45 +488,15 @@ while [ $# -gt 0 ]; do
             install_xkeen
 
             # Перезапуск скрипта
-            if grep -E "^\s*-uk_post_update\s*\)" "$0" > /dev/null; then
-                exec sh "$0" -uk_post_update
-            else
-                . "$script_dir/.xkeen/import.sh"
-
-                echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
-                delete_register_xkeen
-                logs_delete_register_xkeen_info_console
-
-                echo -e "  Выполняется регистрация новой версии ${yellow}XKeen${reset}"
-                register_xkeen_list
-                logs_register_xkeen_list_info_console
-
-                register_xkeen_control
-                logs_register_xkeen_control_info_console
-
-                register_xkeen_status
-                logs_register_xkeen_status_info_console
-
-                register_cron_initd
-                migrate_ports_from_initd
-                register_xkeen_initd
-                create_xkeen_cfg
-                choice_canel_cron_select=true
-                update_cron_geofile_task
-                fixed_register_packages
-
-                [ -e "/tmp/xkrun" ] && $initd_file start on >/dev/null 2>&1
-
-                delete_tmp
-
-                echo -e "  Обновление XKeen ${green}выполнено${reset}"
-            fi
+            grep -E "^\s*-uk_post_update\s*\)" "$0" > /dev/null && exec sh "$0" -uk_post_update
         ;;
 
 
         -uk_post_update)
             . "/opt/sbin/.xkeen/import.sh"
             xkeen_info
+            info_packages
+            install_packages
 
             echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
             delete_register_xkeen
@@ -935,6 +909,17 @@ while [ $# -gt 0 ]; do
             echo -e "  Удаление задачи автообновления баз GeoFile ${green}выполнено${reset}"
             sleep 2
 
+            # Удаление GeoSite's
+            clear
+            echo
+            echo -e "  Удаление всех баз ${yellow}GeoSite${reset}"
+
+            delete_geosite_key
+            logs_delete_geosite_info_console
+
+            echo -e "  Удаление всех баз GeoSite ${green}выполнено${reset}"
+            sleep 2
+
             # Удаление GeoIP's
             clear
             echo
@@ -946,15 +931,15 @@ while [ $# -gt 0 ]; do
             echo -e "  Удаление всех баз GeoIP ${green}выполнено${reset}"
             sleep 2
 
-            # Удаление GeoSite's
+            # Удаление GeoIPSET
             clear
             echo
-            echo -e "  Удаление всех баз ${yellow}GeoSite${reset}"
+            echo -e "  Удаление ${yellow}GeoIPSET${reset}"
 
-            delete_geosite_key
-            logs_delete_geosite_info_console
+            delete_geoipset_key
+            logs_delete_geoipset_info_console
 
-            echo -e "  Удаление всех баз GeoSite ${green}выполнено${reset}"
+            echo -e "  Удаление GeoIPSET ${green}выполнено${reset}"
             sleep 2
 
             # Удаление файлов конфигурации Xray
@@ -1127,6 +1112,10 @@ while [ $# -gt 0 ]; do
                 test_github
                 sleep 2
                 "$download_func"
+            else
+                opkg update >/dev/null 2>&1
+                info_packages
+                install_packages
             fi
 
             if pidof xray >/dev/null || pidof mihomo >/dev/null; then
@@ -1136,46 +1125,16 @@ while [ $# -gt 0 ]; do
             echo
             install_xkeen
 
-            # Перезапуск скриптa
-            if grep -E "^\s*-k_post_install\s*\)" "$0" > /dev/null; then
-                exec sh "$0" -k_post_install
-            else
-                . "$script_dir/.xkeen/import.sh"
-                echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
-                delete_register_xkeen
-                logs_delete_register_xkeen_info_console
-
-                echo -e "  Выполняется регистрация новой версии ${yellow}XKeen${reset}"
-                register_xkeen_list
-                logs_register_xkeen_list_info_console
-
-                register_xkeen_control
-                logs_register_xkeen_control_info_console
-
-                register_xkeen_status
-                logs_register_xkeen_status_info_console
-
-                register_cron_initd
-                migrate_ports_from_initd
-                register_xkeen_initd
-                create_xkeen_cfg
-                choice_canel_cron_select=true
-                update_cron_geofile_task
-                fixed_register_packages
-
-                [ -e "/tmp/xkrun" ] && $initd_file start on >/dev/null 2>&1
-
-                delete_tmp
-
-                echo
-                echo -e "  Переустановка XKeen ${green}выполнена${reset}"
-            fi
+            # Перезапуск скрипта
+            grep -E "^\s*-k_post_install\s*\)" "$0" > /dev/null && exec sh "$0" -k_post_install
         ;;
 
 
         -k_post_install)
             . "/opt/sbin/.xkeen/import.sh"
             xkeen_info
+            info_packages
+            install_packages
 
             echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
             delete_register_xkeen
@@ -1232,6 +1191,21 @@ while [ $# -gt 0 ]; do
             clear
             echo
             echo -e "  Переустановка баз GeoFile ${green}выполнена${reset}"
+        ;;
+
+
+        -gips)    # Установка GeoIPSET
+            test_connection
+            test_github
+
+            clear
+            install_geoipset init
+        ;;
+
+
+        -dgips)    # Удаление GeoIPSET
+            clear
+            delete_geoipset
         ;;
 
 

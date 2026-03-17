@@ -3,7 +3,7 @@ info_packages() {
     package_name="$1"
     
     # Проверяем, установлен ли пакет
-    if opkg list-installed | grep -q "$package_name"; then
+    if opkg list-installed | grep -q "^$package_name "; then
         package_status="installed"
     else
         package_status="not_installed"
@@ -49,3 +49,7 @@ info_packages_cabundle=$package_status
 # Проверка наличия пакета "iptables"
 info_packages "iptables"
 info_packages_iptables=$package_status
+
+# Проверка наличия пакета "ipset"
+info_packages "ipset"
+info_packages_ipset=$package_status

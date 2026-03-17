@@ -124,7 +124,7 @@ change_ipv6_support() {
             echo -e "  ${red}Ошибка${reset} при смене статуса IPv6"
         fi
     else
-        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S99xkeen${reset}"
+        echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S05xkeen${reset}"
         return 1
     fi
 }
@@ -148,6 +148,7 @@ choice_autostart_xkeen() {
     else
         bypass_autostart_msg="yes"
         change_autostart_xkeen
+        unset bypass_autostart_msg
         return 0
     fi
 }

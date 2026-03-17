@@ -139,6 +139,7 @@ help_xkeen() {
         echo -e "	-i	${italic}	Основной режим установки XKeen + Xray + GeoFile + Mihomo${reset}"
         echo -e "	-io	${italic}	OffLine установка XKeen${reset}"
         echo -e "	-toff	${italic}	Отключение таймаута при меделенной загрузке с GitHub (xkeen -i -toff)${reset}"
+        echo -e "	-gips	${italic}	Добавить в исключения проксирования IP-подсети России${reset}"
         echo
         echo -e "${yellow}Обновление${reset}"
         echo -e "	-uk	${italic}	XKeen${reset}"
@@ -159,6 +160,7 @@ help_xkeen() {
         echo -e "	-remove	${italic}	Полная деинсталляция XKeen${reset}"
         echo -e "	-dgs	${italic}	GeoSite${reset}"
         echo -e "	-dgi	${italic}	GeoIP${reset}"
+        echo -e "	-dgips	${italic}	GeoIPSET${reset}"
         echo -e "	-dx	${italic}	Xray${reset}"
         echo -e "	-dm	${italic}	Mihomo${reset}"
         echo -e "	-dk	${italic}	XKeen${reset}"
