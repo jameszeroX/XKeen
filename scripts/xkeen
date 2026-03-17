@@ -422,15 +422,14 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -ug)    # Запуск обновления баз GeoFile
-            command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
+        -ug)    # Запуск обновления баз GeoFile/GeoIPSET
             test_connection
             test_github
             sleep 2
 
             clear
             echo
-            echo "  Обновление установленных баз GeoFile"
+            echo "  Обновление установленных баз GeoFile/GeoIPSET"
             info_geosite
             info_geoip
             if 
@@ -450,9 +449,9 @@ while [ $# -gt 0 ]; do
                     $initd_file restart on >/dev/null 2>&1
                 fi
 
-                echo -e "  Обновление установленных баз GeoFile ${green}завершено${reset}"
+                echo -e "  Обновление установленных баз GeoFile/GeoIPSET ${green}завершено${reset}"
             else
-                echo -e "  ${red}Не обнаружены${reset} базы GeoFile для обновления"
+                echo -e "  ${red}Не обнаружены${reset} базы GeoFile/GeoIPSET для обновления"
             fi
         ;;
 
@@ -678,17 +677,16 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -ugc)    # Создать или изменить существующюю задачу автообновления баз GeoFile
-            command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
+        -ugc)    # Создать или изменить существующюю задачу автообновления баз GeoFile/GeoIPSET
             info_cron
             clear
-            echo -e "  Создание или изменение задачи автообновления баз ${yellow}GeoFile${reset}"
+            echo -e "  Создание или изменение задачи автообновления баз ${yellow}GeoFile/GeoIPSET${reset}"
             choice_update_cron
             update_cron_geofile_task
             choice_cron_time
             install_cron
             delete_tmp
-            echo -e "  Создание или изменение задачи автообновления баз GeoFile ${green}выполнено${reset}"
+            echo -e "  Создание или изменение задачи автообновления баз GeoFile/GeoIPSET ${green}выполнено${reset}"
         ;;
 
 
@@ -710,23 +708,23 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -dgc)    # Удалить задачу автообновления баз GeoFile
+        -dgc)    # Удалить задачу автообновления баз GeoFile/GeoIPSET
             clear
             echo
-            choice_for_remove="задачу автообновления баз GeoFile"
+            choice_for_remove="задачу автообновления баз GeoFile/GeoIPSET"
             choice_remove
 
             info_cron
 
             clear
             echo
-            echo -e "  Удаление задачи автообновления баз ${yellow}GeoFile${reset}"
+            echo -e "  Удаление задачи автообновления баз ${yellow}GeoFile/GeoIPSET${reset}"
 
             delete_cron_geofile
             logs_delete_cron_geofile_info_console
             delete_tmp
 
-            echo -e "  Удаление задачи автообновления баз GeoFile ${green}выполнено${reset}"
+            echo -e "  Удаление задачи автообновления баз GeoFile/GeoIPSET ${green}выполнено${reset}"
         ;;
 
 

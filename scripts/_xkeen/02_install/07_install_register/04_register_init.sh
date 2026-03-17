@@ -311,10 +311,11 @@ process_user_ports() {
     fi
 
     if [ -n "$port_donor" ] && [ -n "$port_exclude" ]; then
-        log_error_terminal "
+        log_warning_terminal "
   Заданы и порты проксирования, и порты исключения
-  Используйте, что-то одно
+  Порты исключения будут проигнорированы. Прокси будет запущен на портах проксирования
 "
+        port_exclude=""
     fi
 }
 
