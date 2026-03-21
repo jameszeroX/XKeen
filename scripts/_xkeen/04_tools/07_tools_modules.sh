@@ -7,7 +7,7 @@ show_deprecation_warning() {
 
 migration_modules() {
     show_deprecation_warning
-    modules="xt_TPROXY.ko xt_socket.ko xt_multiport.ko"
+    modules="xt_TPROXY.ko xt_socket.ko xt_multiport.ko xt_dscp.ko"
 
     echo "  Выберите дальнейшее действие"
     echo
@@ -70,7 +70,6 @@ migration_modules() {
         echo "  Начинаю копирование модулей..."
     fi
 
-    # Копируем модули
     copied_count=0
     total_count=0
     for module in $modules; do
@@ -92,7 +91,7 @@ migration_modules() {
 }
 
 remove_modules() {
-    modules="xt_TPROXY.ko xt_socket.ko xt_multiport.ko"
+    modules="xt_TPROXY.ko xt_socket.ko xt_multiport.ko xt_dscp.ko"
     found_modules=""
 
     for module in $modules; do

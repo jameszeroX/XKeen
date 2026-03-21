@@ -55,6 +55,8 @@ table_mark="0x111"
 table_redirect="nat"
 table_tproxy="mangle"
 custom_mark=""
+dscp_exclude="62"
+dscp_proxy="63"
 
 ipv4_proxy="127.0.0.1"
 ipv4_exclude="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 255.255.255.255"
@@ -355,13 +357,6 @@ file_dns="false"
 [ "$name_client" = "xray" ] && file_dns=$(file_dns_xray)
 [ "$name_client" = "mihomo" ] && file_dns=$(file_dns_mihomo)
 
-create_user() {
-    if ! id "xkeen" >/dev/null 2>&1; then
-        adduser -D -H -u 11111 -g 11111 xkeen
-        sed -i '/^xkeen:/c\xkeen:x:0:11111:::' /opt/etc/passwd
-    fi
-}
-
 # Загрузка модулей
 load_modules() {
     module="$1"
@@ -377,6 +372,7 @@ get_modules() {
     load_modules xt_TPROXY.ko
     load_modules xt_socket.ko
     load_modules xt_multiport.ko
+    load_modules xt_dscp.ko
 
     if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Mixed" ]; then
         for module in xt_TPROXY.ko xt_socket.ko; do
@@ -384,7 +380,7 @@ get_modules() {
                 proxy_stop
                 log_error_router "Модуль ${module} не загружен"
                 log_error_terminal "
-  Модуль ${module} не загружен
+  Модуль ${light_blue}${module}${reset} не загружен
   Невозможно запустить прокси в режиме ${mode_proxy} без него
   Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
 "
@@ -394,16 +390,29 @@ get_modules() {
 
     if [ -n "$port_donor" ] || [ -n "$port_exclude" ]; then
         if ! lsmod | grep -q xt_multiport; then
-            log_warning_router "Модуль multiport не загружен"
+            log_warning_router "Модуль xt_multiport не загружен"
             log_warning_terminal "
-  Модуль multiport не найден
+  Модуль ${light_blue}xt_multiport${reset} не найден
   Невозможно использовать указанные порты без него
   Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
-  
-  Без модуля multiport прокси будет работать на всех портах
+
+  Прокси будет запущен на всех портах
 "
             port_donor=""
             port_exclude=""
+        fi
+    fi
+
+    if [ -n "$dscp_exclude" ] || [ -n "$dscp_proxy" ]; then
+        if ! lsmod | grep -q xt_dscp; then
+            log_warning_router "Модуль xt_dscp не загружен"
+            log_warning_terminal "
+  Модуль ${light_blue}xt_dscp${reset} не найден
+  Работа с метками DSCP невозможна
+  Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
+"
+            dscp_exclude=""
+            dscp_proxy=""
         fi
     fi
 }
@@ -693,6 +702,8 @@ port_donor="$port_donor"
 port_exclude="$port_exclude"
 policy_mark="$policy_mark"
 custom_mark="$custom_mark"
+dscp_exclude="$dscp_exclude"
+dscp_proxy="$dscp_proxy"
 user_policies="$user_policies"
 table_redirect="$table_redirect"
 table_tproxy="$table_tproxy"
@@ -783,7 +794,11 @@ if pidof "\$name_client" >/dev/null; then
             add_exclude_rules \$chain
 
             if [ "\$table" = "\$table_tproxy" ]; then
-                rule="-p udp -m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark"
+                if [ "\$mode_proxy" = "Mixed" ]; then
+                    rule="-p udp -m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark"
+                else
+                    rule="-m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark"
+                fi
                 ipt -C \$chain \$rule >/dev/null 2>&1 || ipt -I \$chain 1 \$rule >/dev/null 2>&1
             fi
 
@@ -813,9 +828,7 @@ if pidof "\$name_client" >/dev/null; then
                         add_ipset_exclude geo_exclude hash:net
                         add_ipset_exclude user_exclude hash:net
                         ipt -A \$chain -p "\$net" -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
-                        if [ "\$net" = "udp" ]; then
-                            ipt -A \$chain -p "\$net" -m mark ! --mark 0 -j CONNMARK --save-mark >/dev/null 2>&1
-                        fi
+                        ipt -A \$chain -p "\$net" -m mark ! --mark 0 -j CONNMARK --save-mark >/dev/null 2>&1
                         ipt -A \$chain -p "\$net" -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
                     done
                     ;;
@@ -831,6 +844,12 @@ if pidof "\$name_client" >/dev/null; then
                     ;;
                 *) exit 0 ;;
             esac
+
+            if [ -n "\$dscp_exclude" ]; then
+                for dscp in \$dscp_exclude; do
+                    ipt -I \$chain -m dscp --dscp "\$dscp" -j RETURN >/dev/null 2>&1
+                done
+            fi
         fi
     }
 
@@ -848,7 +867,7 @@ if pidof "\$name_client" >/dev/null; then
 
         # Проверяем есть ли default маршрут
         check_default() {
-            if [ \$ip_version = 6 ] && ! ip -6 route show default 2>/dev/null | grep -q .; then
+            if [ "\$ip_version" = "6" ] && ! ip -6 route show default 2>/dev/null | grep -q .; then
                 return 0
             fi
             if [ "\$source_table" = "main" ]; then
@@ -863,12 +882,12 @@ if pidof "\$name_client" >/dev/null; then
         until check_default; do
             attempts=\$((attempts + 1))
             if [ "\$attempts" -ge "\$max_attempts" ]; then
-                [ "\$ip_version" = 4 ] && touch "/tmp/noinet"
+                [ "\$ip_version" = "4" ] && touch "/tmp/noinet"
                 return 1
             fi
             sleep 1
         done
-        [ "\$ip_version" = 4 ] && rm -f "/tmp/noinet"
+        [ "\$ip_version" = "4" ] && rm -f "/tmp/noinet"
 
         ip -\$ip_version rule del fwmark \$table_mark lookup \$table_id >/dev/null 2>&1 || true
         ip -\$ip_version route flush table \$table_id >/dev/null 2>&1 || true
@@ -921,6 +940,17 @@ if pidof "\$name_client" >/dev/null; then
                 [ "\$table" = "nat"    ] && [ "\$net" != "tcp" ] && continue
                 [ "\$table" = "mangle" ] && [ "\$net" != "udp" ] && continue
             fi
+
+            if [ "\$mode_proxy" = "TProxy" ]; then
+                proto_match=""
+            else
+                proto_match=" -p \$net"
+            fi
+
+            for dscp in \$dscp_proxy; do
+                rule_dscp="-m conntrack ! --ctstate INVALID\$proto_match -m dscp --dscp \$dscp -j \$name_chain"
+                ipt -C PREROUTING \$rule_dscp >/dev/null 2>&1 || ipt -A PREROUTING \$rule_dscp >/dev/null 2>&1
+            done
 
             # Пользовательские политики из xkeen.json
             echo "\$user_policies" | while IFS='|' read -r pmark pmode pports; do
@@ -995,7 +1025,6 @@ if pidof "\$name_client" >/dev/null; then
         done
     }
 
-    [ -n "\$policy_mark" ]
     if [ -n "\$port_donor" ] || [ -n "\$port_exclude" ]; then
         [ "\$file_dns" = "true" ] && [ "\$proxy_dns" = "on" ] && [ -n "\$port_donor" ] && port_donor="53,\$port_donor"
     fi
@@ -1027,6 +1056,8 @@ if pidof "\$name_client" >/dev/null; then
         dns_redir "\$family"
     done
 else
+    [ -f "/tmp/xkeen_starting.lock" ] && exit 0
+    touch "/tmp/xkeen_starting.lock"
     . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
     status_file="/opt/lib/opkg/status"
     info_cpu
@@ -1039,14 +1070,15 @@ else
         xray)
             export XRAY_LOCATION_CONFDIR="\$directory_xray_config"
             export XRAY_LOCATION_ASSET="\$directory_xray_asset"
-            su -c "\$name_client run" "\$name_profile" >/dev/null 2>&1 &
+            "\$name_client" run >/dev/null 2>&1 &
         ;;
         mihomo)
             export CLASH_HOME_DIR="\$directory_configs_app"
-            su -c "\$name_client" "\$name_profile" >/dev/null 2>&1 &
+            "\$name_client" >/dev/null 2>&1 &
         ;;
     esac
     sleep 5
+    rm -f "/tmp/xkeen_starting.lock"
     restart_script "\$@"
 fi
 EOL
@@ -1103,10 +1135,8 @@ clean_firewall() {
 
     if command -v ip >/dev/null 2>&1; then
         for family in 4 6; do
-            if ip -"$family" rule show | grep -q "fwmark $table_mark lookup $table_id"; then
-                ip -"$family" rule del fwmark "$table_mark" lookup "$table_id" >/dev/null 2>&1
-                ip -"$family" route flush table "$table_id" >/dev/null 2>&1
-            fi
+            while ip -"$family" rule del fwmark "$table_mark" lookup "$table_id" >/dev/null 2>&1; do :; done
+            ip -"$family" route flush table "$table_id" >/dev/null 2>&1 || true
         done
     fi
 
@@ -1205,7 +1235,9 @@ proxy_start() {
                 user_policies=""
             fi
 
-            networks=$(echo "$network_redirect $network_tproxy" | tr ',' ' ' | tr -s ' ' | sort -u | tr '\n' ' ' | sed 's/^ //; s/ $//')
+            networks=$(printf '%s\n' $network_redirect $network_tproxy | tr ',' ' ' | tr -s ' ' '\n' | sort -u | tr '\n' ' ')
+            networks=${networks% }
+
             if [ -n "$policy_mark" ] && [ -z "$port_donor" ]; then
                 port_exclude=$(get_port_exclude)
             fi
@@ -1235,7 +1267,6 @@ proxy_start() {
         else
             log_info_router "Инициирован запуск прокси-клиента"
             attempt=1
-            create_user
             . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
             status_file="/opt/lib/opkg/status"
             info_cpu
@@ -1253,15 +1284,11 @@ proxy_start() {
                         fd_limit="$other_fd"
                         [ "$architecture" = "arm64-v8a" ] && fd_limit="$arm64_fd"
                         ulimit -SHn "$fd_limit"
-                        
-                        cmd_args="$name_profile"
-                        [ "$name_client" = "xray" ] && cmd_args="run $name_profile"
-                        
                         if [ -n "$fd_out" ]; then
-                            nohup su -c "$name_client $cmd_args" >/dev/null 2>&1 &
+                            nohup "$name_client" run >/dev/null 2>&1 &
                             unset fd_out
                         else
-                            su -c "$name_client $cmd_args" &
+                            "$name_client" run &
                         fi
                     ;;
                     mihomo)
@@ -1275,18 +1302,14 @@ proxy_start() {
                         fd_limit="$other_fd"
                         [ "$architecture" = "arm64-v8a" ] && fd_limit="$arm64_fd"
                         ulimit -SHn "$fd_limit"
-                        
-                        cmd_args="$name_profile"
-                        [ "$name_client" = "mihomo" ] && cmd_args="$name_profile"
-                        
                         if [ -n "$fd_out" ]; then
-                            nohup su -c "$name_client $cmd_args" >/dev/null 2>&1 &
+                            nohup "$name_client" >/dev/null 2>&1 &
                             unset fd_out
                         else
-                            su -c "$name_client $cmd_args" &
+                            "$name_client" &
                         fi
                         ;;
-                    *) "$name_client" run -C "$directory_xray_config" & ;;
+                    *) log_error_terminal "Неизвестный прокси-клиент: $name_client" ;;
                 esac
                 sleep 2
                 if proxy_status; then
@@ -1364,6 +1387,7 @@ case "$1" in
         ipset create ext_exclude hash:ip family inet -exist
         ipset create ext_exclude6 hash:ip family inet6 -exist
         if [ -z "$2" ]; then
+            log_info_router "Подготовка к запуску прокси-клиента"
             nohup su -c '
                 sleep '"$start_delay"'
                  '"$0"' start on
