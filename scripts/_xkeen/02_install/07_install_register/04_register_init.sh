@@ -268,6 +268,7 @@ validate_and_clean_ports() {
         }
         {
             gsub(/[[:space:]]/, "", $0)
+            gsub(/-/, ":", $0)
             if ($0 == "") next
 
             n = split($0, a, ":")
@@ -1387,11 +1388,9 @@ case "$1" in
         ipset create ext_exclude hash:ip family inet -exist
         ipset create ext_exclude6 hash:ip family inet6 -exist
         if [ -z "$2" ]; then
+            [ "$start_auto" != "on" ] && exit 0
             log_info_router "Подготовка к запуску прокси-клиента"
-            nohup su -c '
-                sleep '"$start_delay"'
-                 '"$0"' start on
-            ' >/dev/null 2>&1 &
+            nohup su -c "sleep $start_delay && $0 restart" >/dev/null 2>&1 &
             exit 0
         fi
         proxy_start "$2"
