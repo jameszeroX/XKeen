@@ -118,7 +118,8 @@ xkeen -i
 - XKeen UI — https://github.com/umarcheh001/Xkeen-UI
 - XKeen UI — https://github.com/fan92rus/xkeen-ui
 - Генератор Outbound — https://zxc-rv.github.io/XKeen-UI/Outbound_Generator/
-- SubKeen — https://github.com/V2as/SubKeen
+- Парсер подписок - https://github.com/tkukushkin/xkeen-subscription-watcher
+- Парсер подписок — https://github.com/V2as/SubKeen
 - Mihomo Studio — https://github.com/l-ptrol/mihomo_studio
 - Конвертер JSON-подписок — https://sngvy.github.io/json-sub-to-outbounds
 - Mihomo HWID Subscription Installer — https://github.com/dorian6996/Mihomo-HWID-Subscription
