@@ -2,9 +2,9 @@
 
 url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"
 urlfix="https://raw.githubusercontent.com/jameszeroX/xkeen/main/01_info_variable.sh"
-if ! curl -OL --connect-timeout 10 -m 60 "$url"; then
-    if ! curl -OL --connect-timeout 10 -m 60 "https://gh-proxy.com/$url"; then
-        if ! curl -OL --connect-timeout 10 -m 60 "https://ghfast.top/$url"; then
+if ! curl -OL --connect-timeout 10 -m 180 "$url"; then
+    if ! curl -OL --connect-timeout 10 -m 180 "https://gh-proxy.com/$url"; then
+        if ! curl -OL --connect-timeout 10 -m 180 "https://ghfast.top/$url"; then
             echo "Ошибка: не удалось загрузить xkeen.tar.gz"
             exit 1
         fi
