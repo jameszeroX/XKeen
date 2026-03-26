@@ -80,9 +80,7 @@ xkeen -h
 
 ```bash
 opkg update && opkg upgrade && opkg install curl tar && cd /tmp
-url="https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh"
-curl -OL "$url" && chmod +x install.sh
-./install.sh
+sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)"
 ```
 
 Вариант 2:
