@@ -1304,7 +1304,7 @@ if pidof "\$name_client" >/dev/null; then
         family="\$1"
         table="nat"
 
-        [ "\$proxy_dns" = "on" ] && return
+        [ "\$file_dns" = "true" ] && [ "\$proxy_dns" = "on" ] && return
 
         all_marks=""
         [ -n "\$policy_mark" ] && all_marks="\$policy_mark"
