@@ -214,6 +214,7 @@ help_xkeen() {
         echo -e "	-mihomo	${italic}	Переключить XKeen на ядро Mihomo${reset}"
         echo -e "	-ipv6	${italic}	Включить | Отключить протокол IPv6 в KeeneticOS${reset}"
         echo -e "	-dns	${italic}	Включить | Отключить перенаправление DNS в прокси${reset}"
+        echo -e "	-pr	${italic}	Включить | Отключить проксирование трафика Entware${reset}"
         echo
         echo -e "${light_blue}Управление модулями${reset}"
         echo -e "	-modules${italic}	Перенос модулей для XKeen в пользовательскую директорию${reset}"

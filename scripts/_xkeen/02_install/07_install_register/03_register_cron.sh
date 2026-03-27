@@ -1,36 +1,22 @@
 # Функция для регистрации инициализационного скрипта cron
 register_cron_initd() {
     # Проверка наличия пакета cron
-    if opkg list-installed | grep -q cron; then
-        return
-    fi
+    opkg list-installed 2>/dev/null | grep -q "^cron " && return
 
     # Определение переменных
     s05crond_filename="${current_datetime}_S05crond"
-    required_script_version="0.5"
+    required_script_version="0.6"
 
-    # Проверка наличия файла S05crond
+    # Получение текущей версии скрипта
     if [ -e "${initd_cron}" ]; then
-        # Получение текущей версии скрипта
         script_version=$(grep 'version=' "${initd_cron}" | grep -o '[0-9.]\+')
-
-        # Проверка версии скрипта
-        if [ "${script_version}" != "${required_script_version}" ]; then
-            # Определение пути для резервной копии
-            backup_path="${backups_dir}/${s05crond_filename}"
-
-            # Перемещение файла в каталог резервных копий с новым именем
-            mv "${initd_cron}" "${backup_path}"
-            echo -e "  Ваш файл '${green}S05crond${reset}' перемещен в каталог резервных копий '${yellow}${backup_path}${reset}'"
-        fi
     fi
 
     # Содержимое скрипта
     script_content='#!/bin/sh
-### Начало информации о службе
-# Краткое описание: Запуск / Остановка Cron
-# version="0.5"  # Версия скрипта
-### Конец информации о службе
+
+# Информация о службе: Запуск / Остановка Cron
+# version="0.6"
 
 green="\\033[32m"
 red="\\033[31m"
@@ -41,7 +27,7 @@ cron_initd="/opt/sbin/crond"
 
 # Функция для проверки статуса cron
 cron_status() {
-    if ps | grep -v grep | grep -q "$cron_initd"; then
+    if pidof crond > /dev/null; then
         return 0 # Процесс существует и работает
     else
         return 1 # Процесс не существует
@@ -51,46 +37,52 @@ cron_status() {
 # Функция для запуска cron
 start() {
     if cron_status; then
-        echo -e "  Cron ${yellow}уже запущен${reset}"
+        printf "  Cron ${yellow}уже запущен${reset}\\n"
     else
         $cron_initd -L /dev/null
-        echo -e "  Cron ${green}запущен${reset}"
+        printf "  Cron ${green}запущен${reset}\\n"
     fi
 }
 
 # Функция для остановки cron
 stop() {
     if cron_status; then
-        killall -9 "crond"
-        echo -e "  Cron ${yellow}остановлен${reset}"
+        killall crond
+        printf "  Cron ${yellow}остановлен${reset}\\n"
     else
-        echo -e "  Cron ${red}не запущен${reset}"
+        printf "  Cron ${red}не запущен${reset}\\n"
     fi
 }
 
 # Функция для перезапуска cron
 restart() {
     stop > /dev/null 2>&1
+    sleep 1
     start > /dev/null 2>&1
-    echo -e "  Cron ${green}перезапущен${reset}"
+    printf "  Cron ${green}перезапущен${reset}\\n"
 }
 
 # Обработка аргументов командной строки
 case "$1" in
     start)
-        start;;
+        start
+        ;;
     stop)
-        stop;;
+        stop
+        ;;
     restart)
-        restart;;
+        restart
+        ;;
     status)
         if cron_status; then
-            echo -e "  Cron ${green}запущен${reset}"
+            printf "  Cron ${green}запущен${reset}\\n"
         else
-            echo -e "  Cron ${red}не запущен${reset}"
-        fi;;
+            printf "  Cron ${red}не запущен${reset}\\n"
+        fi
+        ;;
     *)
-        echo -e "  Команды: ${green}start${reset} | ${red}stop${reset} | ${yellow}restart${reset} | status";;
+        printf "  Команды: ${green}start${reset} | ${red}stop${reset} | ${yellow}restart${reset} | status\\n"
+        ;;
 esac
 
 exit 0'
@@ -108,7 +100,7 @@ update_cron_geofile_task() {
         tmp_file="$cron_dir/${cron_file}.tmp"
         cp "$cron_dir/$cron_file" "$tmp_file"
         
-        if [ -z "$choice_canel_cron_select" ]; then
+        if [ -z "$choice_cancel_cron_select" ]; then
             grep -v -e "ug" -e "ux" -e "uk" -e '^\s*$' "$tmp_file" > "$cron_dir/$cron_file"
         else
             grep -v -e "ugi" -e "ugs" -e "ux" -e "uk" -e '^\s*$' "$tmp_file" > "$cron_dir/$cron_file"

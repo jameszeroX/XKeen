@@ -56,18 +56,38 @@ if [ $iptables_supported = "true" ]; then
     echo >> "$diagnostic"
     echo >> "$diagnostic"
 
-    write_header "Результат таблицы NAT цепи xkeen IPv4"
-    { iptables -w -t nat -nvL xkeen 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
     write_header "Результат таблицы MANGLE цепи PREROUTING IPv4"
     { iptables -w -t mangle -nvL PREROUTING 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
 
+    write_header "Результат таблицы NAT цепи xkeen IPv4"
+    { iptables -w -t nat -nvL xkeen 2>&1; } >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+
     write_header "Результат таблицы MANGLE цепи xkeen IPv4"
     { iptables -w -t mangle -nvL xkeen 2>&1; } >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+
+    write_header "Результат таблицы NAT цепи xkeen_out IPv4"
+    { iptables -w -t nat -nvL xkeen_out 2>&1; } >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+
+    write_header "Результат таблицы MANGLE цепи xkeen_out IPv4"
+    { iptables -w -t mangle -nvL xkeen_out 2>&1; } >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+
+    write_header "Результат таблицы NAT цепи OUTPUT IPv4"
+    { iptables -w -t nat -nvL OUTPUT 2>&1; } >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+
+    write_header "Результат таблицы MANGLE цепи OUTPUT IPv4"
+    { iptables -w -t mangle -nvL OUTPUT 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
 
@@ -84,18 +104,38 @@ if [ $ip6tables_supported = "true" ]; then
     echo >> "$diagnostic"
     echo >> "$diagnostic"
 
-    write_header "Результат таблицы NAT цепи xkeen IPv6"
-    { ip6tables -w -t nat -nvL xkeen 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
     write_header "Результат таблицы MANGLE цепи PREROUTING IPv6"
     { ip6tables -w -t mangle -nvL PREROUTING 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
 
+    write_header "Результат таблицы NAT цепи xkeen IPv6"
+    { ip6tables -w -t nat -nvL xkeen 2>&1; } >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+
     write_header "Результат таблицы MANGLE цепи xkeen IPv6"
     { ip6tables -w -t mangle -nvL xkeen 2>&1; } >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+
+    write_header "Результат таблицы NAT цепи xkeen_out IPv6"
+    { ip6tables -w -t nat -nvL xkeen_out 2>&1; } >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+
+    write_header "Результат таблицы MANGLE цепи xkeen_out IPv6"
+    { ip6tables -w -t mangle -nvL xkeen_out 2>&1; } >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+
+    write_header "Результат таблицы NAT цепи OUTPUT IPv6"
+    { ip6tables -w -t nat -nvL OUTPUT 2>&1; } >> "$diagnostic"
+    echo >> "$diagnostic"
+    echo >> "$diagnostic"
+
+    write_header "Результат таблицы MANGLE цепи OUTPUT IPv6"
+    { ip6tables -w -t mangle -nvL OUTPUT 2>&1; } >> "$diagnostic"
     echo >> "$diagnostic"
     echo >> "$diagnostic"
 

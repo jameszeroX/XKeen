@@ -11,4 +11,3 @@
 . "$xinfo_dir/07_info_cron.sh"
 
 . "$xinfo_dir/08_info_version/00_version_import.sh"
-. "$xinfo_dir/09_info_compare/01_compare_xkeen.sh"

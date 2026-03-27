@@ -32,6 +32,14 @@ done
 . "$script_dir/.xkeen/import.sh"
 	
 xkeen_info() {
+    # Проверяем версию XKeen
+    info_version_xkeen
+
+    # Проверяем актуальность XKeen
+    info_compare_xkeen
+}
+
+xkeen_set_info() {
     # Определяем архитектуру процессора
     info_cpu
 
@@ -49,12 +57,6 @@ xkeen_info() {
 
     # Проверяем статус автообновления
     info_cron
-
-    # Проверяем версию XKeen
-    info_version_xkeen
-
-    # Проверяем актуальность XKeen
-    info_compare_xkeen
 
     # Проверяем версию Xray
     info_version_xray
@@ -84,6 +86,7 @@ while [ $# -gt 0 ]; do
             echo -e "  Запуск полного цикла установки ${yellow}XKeen${reset}"
 
             xkeen_info
+            xkeen_set_info
             logs_cpu_info_console
 
             case "$architecture" in
@@ -101,10 +104,6 @@ while [ $# -gt 0 ]; do
                echo -e "  ${red}Невозможно установить${reset} XKeen без ядра проксирования"
                exit 1
            fi
-
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                $initd_file stop >/dev/null 2>&1
-            fi
 
             if [ "$add_xray" = "true" ]; then
                 clear
@@ -244,6 +243,10 @@ while [ $# -gt 0 ]; do
 
             add_chmod_init
 
+            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+                $initd_file restart on >/dev/null 2>&1
+            fi
+
             # Удаляем временные файлы
             delete_tmp
             sleep 2
@@ -299,7 +302,7 @@ while [ $# -gt 0 ]; do
             fi
             echo "  Установка XKeen OffLine"
 
-            xkeen_info
+            xkeen_set_info
             logs_cpu_info_console
 
             case "$architecture" in
@@ -330,10 +333,6 @@ while [ $# -gt 0 ]; do
                 echo -e "  Страница загрузок yq: ${yellow}https://github.com/mikefarah/yq/releases/latest${reset}"
                 echo
                 exit 1
-            fi
-
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                $initd_file stop >/dev/null 2>&1
             fi
 
             if [ -f "$install_dir/xray" ]; then
@@ -397,6 +396,10 @@ while [ $# -gt 0 ]; do
             clear
             choice_autostart_xkeen
             add_chmod_init
+
+            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+                $initd_file restart on >/dev/null 2>&1
+            fi
 
             # Удаляем временные файлы
             delete_tmp
@@ -478,10 +481,6 @@ while [ $# -gt 0 ]; do
                 fi
             fi
 
-            if pidof xray >/dev/null || pidof mihomo >/dev/null; then
-                $initd_file stop >/dev/null 2>&1 && touch "/tmp/xkrun"
-            fi
-
             backup_xkeen
             $download_func
             install_xkeen
@@ -515,11 +514,13 @@ while [ $# -gt 0 ]; do
             migrate_ports_from_initd
             register_xkeen_initd
             create_xkeen_cfg
-            choice_canel_cron_select=true
+            choice_cancel_cron_select=true
             update_cron_geofile_task
             fixed_register_packages
 
-            [ -e "/tmp/xkrun" ] && $initd_file start on >/dev/null 2>&1
+            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+                $initd_file restart on >/dev/null 2>&1
+            fi
 
             delete_tmp
 
@@ -1116,10 +1117,6 @@ while [ $# -gt 0 ]; do
                 install_packages
             fi
 
-            if pidof xray >/dev/null || pidof mihomo >/dev/null; then
-                $initd_file stop >/dev/null 2>&1 && touch "/tmp/xkrun"
-            fi
-
             echo
             install_xkeen
 
@@ -1152,11 +1149,13 @@ while [ $# -gt 0 ]; do
             migrate_ports_from_initd
             register_xkeen_initd
             create_xkeen_cfg
-            choice_canel_cron_select=true
+            choice_cancel_cron_select=true
             update_cron_geofile_task
             fixed_register_packages
 
-            [ -e "/tmp/xkrun" ] && $initd_file start on >/dev/null 2>&1
+            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+                $initd_file restart on >/dev/null 2>&1
+            fi
 
             delete_tmp
 
@@ -1287,7 +1286,6 @@ while [ $# -gt 0 ]; do
         -start)    # Запуск XKeen
             add_chmod_init
             $initd_file start on
-            ip route flush cache
         ;;
 
 
@@ -1428,6 +1426,12 @@ while [ $# -gt 0 ]; do
         -dns)    # Включение/отключение перенаправления DNS в прокси
             clear
             change_proxy_dns
+        ;;
+
+
+        -pr)    # Включение/отключение проксирования трафика Entware
+            clear
+            change_proxy_router
         ;;
 
 

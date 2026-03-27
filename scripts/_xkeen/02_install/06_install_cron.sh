@@ -8,7 +8,7 @@ install_cron() {
     fi
 
     # Если есть записи для задач Cron, то сохраняем их
-    if [ -n "$cron_entry" ] || [ -n "$choice_canel_cron_select" ]; then
+    if [ -n "$cron_entry" ] || [ -n "$choice_cancel_cron_select" ]; then
         cron_file_path="$cron_dir/$cron_file"
 
         touch "$cron_file_path"

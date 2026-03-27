@@ -40,7 +40,7 @@ choice_update_cron() {
     fi
 
     while true; do
-        choice_canel_cron_select=false
+        choice_cancel_cron_select=false
         choice_geofile_cron_select=false
         choice_delete_all_cron_select=false
         invalid_choice=false
@@ -78,7 +78,7 @@ choice_update_cron() {
                     fi
                     ;;
                 0)
-                    choice_canel_cron_select=true
+                    choice_cancel_cron_select=true
                     echo "  Выполнен пропуск настройки автообновления"
                     return
                     ;;
