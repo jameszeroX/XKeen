@@ -188,3 +188,11 @@ change_file_descriptors() {
 change_proxy_router() {
     toggle_param "proxy_router" "проксирования трафика Entware" "restart"
 }
+
+change_extended_msg() {
+    toggle_param "extended_msg" "расширенных сообщений при запуcке XKeen" "none"
+}
+
+change_backup_xkeen() {
+    toggle_param "backup" "резервного копирования XKeen при обновлении" "none"
+}

@@ -215,6 +215,8 @@ help_xkeen() {
         echo -e "	-ipv6	${italic}	Включить | Отключить протокол IPv6 в KeeneticOS${reset}"
         echo -e "	-dns	${italic}	Включить | Отключить перенаправление DNS в прокси${reset}"
         echo -e "	-pr	${italic}	Включить | Отключить проксирование трафика Entware${reset}"
+        echo -e "	-extmsg	${italic}	Включить | Отключить расширенные сообщения при запуске XKeen${reset}"
+        echo -e "	-bk	${italic}	Включить | Отключить резервное копирование XKeen при обновлении${reset}"
         echo
         echo -e "${light_blue}Управление модулями${reset}"
         echo -e "	-modules${italic}	Перенос модулей для XKeen в пользовательскую директорию${reset}"
