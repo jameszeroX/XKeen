@@ -177,14 +177,17 @@ while [ $# -gt 0 ]; do
             if [ "$add_mihomo" = "true" ]; then
                 clear
                 echo
-                download_mihomo
+                if ! download_mihomo; then
+                    bypass_mihomo="true"
+                fi
             else
                 command -v mihomo >/dev/null 2>&1 || bypass_mihomo="true"
             fi
 
-            if [ -z $bypass_mihomo ]; then
+            if [ -z "$bypass_mihomo" ]; then
                 install_mihomo
-                mihomo_installed="installed"
+                info_mihomo
+                if [ "$mihomo_installed" = "installed" ]; then
                 info_version_mihomo
                 info_version_yq
                 add_mihomo_config
@@ -204,6 +207,14 @@ while [ $# -gt 0 ]; do
                 register_yq_status
                 logs_register_yq_status_info_console
                 sleep 2
+                else
+                    echo -e "  ${red}Ошибка${reset}: Mihomo не установлен, так как отсутствует обязательный Yq"
+                fi
+            fi
+
+            if [ "$add_mihomo" = "true" ] && [ "$mihomo_installed" != "installed" ] && [ "$xray_installed" != "installed" ]; then
+                echo -e "  ${red}Ошибка${reset}: Mihomo не установлен, так как отсутствует обязательный Yq"
+                exit 1
             fi
 
             if [ "$xray_installed" = "installed" ] || [ "$mihomo_installed" = "installed" ]; then
@@ -612,19 +623,28 @@ while [ $# -gt 0 ]; do
             info_cpu
             info_mihomo
             info_version_mihomo
+            mihomo_was_installed="$mihomo_installed"
 
             clear
             echo
 
             [ "$mihomo_installed" = "installed" ] && echo -e "  В роутере установлен Mihomo версии ${yellow}$mihomo_current_version${reset}" && echo
-            download_mihomo
+            if ! download_mihomo; then
+                delete_tmp
+                exit 1
+            fi
             info_version_mihomo
             info_version_yq
 
-            if [ -z $bypass_mihomo ]; then
+            if [ -z "$bypass_mihomo" ]; then
                 install_mihomo
+                info_mihomo
 
-                if [ "$mihomo_installed" = "installed" ]; then
+                if [ "$mihomo_installed" != "installed" ]; then
+                    delete_tmp
+                    echo -e "  ${red}Ошибка${reset}: Mihomo не установлен, так как отсутствует обязательный Yq"
+                    exit 1
+                elif [ "$mihomo_was_installed" = "installed" ]; then
                     echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}Mihomo${reset}"
                     delete_register_mihomo
                     logs_delete_register_mihomo_info_console
@@ -650,7 +670,6 @@ while [ $# -gt 0 ]; do
                     echo
                     echo -e "  Обновление ядра ${yellow}Mihomo${reset} ${green}выполнено${reset}"
                 else
-                    mihomo_installed="installed"
                     info_version_mihomo
                     info_version_yq
                     add_mihomo_config

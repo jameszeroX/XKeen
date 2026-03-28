@@ -1,6 +1,7 @@
 # Загрузка Xray
 download_xray() {
     while true; do
+        USE_JSDELIVR=""
         printf "  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
         
         # Получаем список релизов через GitHub API
