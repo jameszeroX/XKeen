@@ -468,6 +468,7 @@ while [ $# -gt 0 ]; do
             echo
             echo "  Проверка обновлений XKeen"
             xkeen_info
+            xkeen_set_info
 
             if [ "$xkeen_build" != "Stable" ]; then
                 download_func="download_xkeen_dev"
@@ -493,6 +494,7 @@ while [ $# -gt 0 ]; do
         -uk_post_update)
             . "/opt/sbin/.xkeen/import.sh"
             xkeen_info
+            xkeen_set_info
             info_packages
             install_packages
 
@@ -1094,6 +1096,7 @@ while [ $# -gt 0 ]; do
             . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
             status_file="/opt/lib/opkg/status"
             xkeen_info
+            xkeen_set_info
 
             clear
             echo
@@ -1128,6 +1131,7 @@ while [ $# -gt 0 ]; do
         -k_post_install)
             . "/opt/sbin/.xkeen/import.sh"
             xkeen_info
+            xkeen_set_info
             info_packages
             install_packages
 
