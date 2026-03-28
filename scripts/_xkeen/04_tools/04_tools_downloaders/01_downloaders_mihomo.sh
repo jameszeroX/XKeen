@@ -1,6 +1,7 @@
 # Загрузка Mihomo
 download_mihomo() {
     while true; do
+        USE_JSDELIVR=""
         printf "  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"
         
         # Получаем список релизов через GitHub API
@@ -115,6 +116,7 @@ download_mihomo() {
         extension="${filename##*.}"
         yq_dist=$(mktemp)
         mihomo_dist=$(mktemp)
+        yq_available="false"
         mkdir -p "$mtmp_dir"
 
         if [ "$use_direct" != "true" ]; then
@@ -199,11 +201,14 @@ download_mihomo() {
                 if [ -s "$yq_dist" ]; then
                     mv "$yq_dist" "$install_dir/yq"
                     chmod +x "$install_dir/yq"
+                    yq_available="true"
                     printf "  Yq ${green}успешно загружен и установлен${reset}\n"
                 else
+                    rm -f "$yq_dist"
                     printf "  ${red}Ошибка${reset}: Загруженный файл Yq поврежден\n"
                 fi
             else
+                rm -f "$yq_dist"
                 printf "  ${red}Ошибка${reset}: Не удалось загрузить Yq\n"
             fi
         else
@@ -213,6 +218,18 @@ download_mihomo() {
         printf "  ${yellow}Выполняется загрузка${reset} выбранной версии Mihomo\n"
 
         # Загрузка Mihomo
+        if [ "$yq_available" != "true" ] && [ -x "$install_dir/yq" ]; then
+            rm -f "$yq_dist"
+            yq_available="true"
+            printf "  ${yellow}Используется${reset} уже установленный Yq\n"
+        fi
+
+        if [ "$yq_available" != "true" ]; then
+            rm -f "$yq_dist" "$mihomo_dist"
+            printf "  ${red}Ошибка${reset}: Для работы Mihomo требуется Yq. Установка прервана\n"
+            return 1
+        fi
+
         if curl --connect-timeout 10 $curl_timeout \
                -fL \
                -o "$mihomo_dist" \
