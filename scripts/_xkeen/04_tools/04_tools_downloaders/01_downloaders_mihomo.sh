@@ -88,18 +88,20 @@ download_mihomo() {
 
         URL_BASE="${mihomo_gz_url}/$VERSION_ARG"
 
+        yq_download_base_url="$(get_yq_dist_url)"
+
         case $architecture in
             "arm64-v8a")
                 download_url="$URL_BASE/mihomo-linux-arm64-$VERSION_ARG.gz"
-                download_yq="$yq_dist_url/yq_linux_arm64"
+                download_yq="$yq_download_base_url/yq_linux_arm64"
             ;;
             "mips32le")
                 download_url="$URL_BASE/mihomo-linux-mipsle-hardfloat-$VERSION_ARG.gz"
-                download_yq="$yq_dist_url/yq_linux_mipsle"
+                download_yq="$yq_download_base_url/yq_linux_mipsle"
             ;;
             "mips32")
                 download_url="$URL_BASE/mihomo-linux-mips-hardfloat-$VERSION_ARG.gz"
-                download_yq="$yq_dist_url/yq_linux_mips"
+                download_yq="$yq_download_base_url/yq_linux_mips"
             ;;
             *)
                 download_url=

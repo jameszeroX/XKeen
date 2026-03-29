@@ -9,39 +9,21 @@ register_mihomo_list() {
 }
 
 register_mihomo_control() {
-
-    cat << EOF > "$register_dir/mihomo_s.control"
-Package: mihomo_s
-Version: $mihomo_current_version
-Depends: yq_s
-Source: MetaCubeX
-SourceName: mihomo_s
-Section: net
-SourceDateEpoch: $source_date_epoch
-Maintainer: jameszero
-Architecture: $status_architecture
-Installed-Size: $installed_size
-Description: A unified platform for anti-censorship.
-EOF
+    write_opkg_control \
+        "mihomo_s" \
+        "$mihomo_current_version" \
+        "yq_s" \
+        "MetaCubeX" \
+        "mihomo_s" \
+        "jameszero" \
+        "A unified platform for anti-censorship."
 }
 
 register_mihomo_status() {
-    # Генерация новой записи
-    echo "Package: mihomo_s" > new_entry.txt
-    echo "Version: $mihomo_current_version" >> new_entry.txt
-    echo "Depends: yq_s" >> new_entry.txt
-    echo "Status: install user installed" >> new_entry.txt
-    echo "Architecture: $status_architecture" >> new_entry.txt
-    echo "Installed-Time: $(date +%s)" >> new_entry.txt
-
-    # Чтение существующего содержимого файла "status"
-    existing_content=$(cat "$status_file")
-
-    # Объединение существующего содержимого и новой записи
-    echo "" >> "$status_file"
-    cat new_entry.txt >> "$status_file"
-    echo "" >> "$status_file"
-    sed -i '/^$/{N;/^\n$/D}' "$status_file"
+    write_opkg_status \
+        "mihomo_s" \
+        "$mihomo_current_version" \
+        "yq_s"
 }
 
 register_yq_list() {
@@ -51,37 +33,21 @@ register_yq_list() {
 }
 
 register_yq_control() {
-
-    cat << EOF > "$register_dir/yq_s.control"
-Package: yq_s
-Version: $yq_current_version
-Source: mikefarah
-SourceName: yq_s
-Section: net
-SourceDateEpoch: $source_date_epoch
-Maintainer: jameszero
-Architecture: $status_architecture
-Installed-Size: $installed_size
-Description: A lightweight and portable command-line YAML, JSON, INI and XML processor.
-EOF
+    write_opkg_control \
+        "yq_s" \
+        "$yq_current_version" \
+        "" \
+        "mikefarah" \
+        "yq_s" \
+        "jameszero" \
+        "A lightweight and portable command-line YAML, JSON, INI and XML processor."
 }
 
 register_yq_status() {
-    # Генерация новой записи
-    echo "Package: yq_s" > new_entry.txt
-    echo "Version: $yq_current_version" >> new_entry.txt
-    echo "Status: install user installed" >> new_entry.txt
-    echo "Architecture: $status_architecture" >> new_entry.txt
-    echo "Installed-Time: $(date +%s)" >> new_entry.txt
-
-    # Чтение существующего содержимого файла "status"
-    existing_content=$(cat "$status_file")
-
-    # Объединение существующего содержимого и новой записи
-    echo "" >> "$status_file"
-    cat new_entry.txt >> "$status_file"
-    echo "" >> "$status_file"
-    sed -i '/^$/{N;/^\n$/D}' "$status_file"
+    write_opkg_status \
+        "yq_s" \
+        "$yq_current_version" \
+        ""
 }
 
 add_mihomo_config() {

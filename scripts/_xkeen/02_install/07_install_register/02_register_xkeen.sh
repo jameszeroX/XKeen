@@ -2,20 +2,14 @@
 
 # Функция для создания файла xkeen.control
 register_xkeen_control() {
-    # Создание файла xkeen.control
-    cat << EOF > "$register_dir/xkeen.control"
-Package: xkeen
-Version: $xkeen_current_version
-Depends: jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset
-Source: Skrill
-SourceName: xkeen
-Section: net
-SourceDateEpoch: $source_date_epoch
-Maintainer: Skrill / jameszero
-Architecture: $status_architecture
-Installed-Size: $installed_size
-Description: The platform that makes Xray work.
-EOF
+    write_opkg_control \
+        "xkeen" \
+        "$xkeen_current_version" \
+        "jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset" \
+        "Skrill" \
+        "xkeen" \
+        "Skrill / jameszero" \
+        "The platform that makes Xray work."
 }
 
 register_xkeen_list() {
@@ -36,22 +30,10 @@ register_xkeen_list() {
 }
 
 register_xkeen_status() {
-    # Генерация новой записи
-    echo "Package: xkeen" > new_entry.txt
-    echo "Version: $xkeen_current_version" >> new_entry.txt
-    echo "Depends: jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset" >> new_entry.txt
-    echo "Status: install user installed" >> new_entry.txt
-    echo "Architecture: $status_architecture" >> new_entry.txt
-    echo "Installed-Time: $(date +%s)" >> new_entry.txt
-
-    # Чтение существующего содержимого файла "status"
-    existing_content=$(cat "$status_file")
-
-    # Объединение существующего содержимого и новой записи
-    echo "" >> "$status_file"
-    cat new_entry.txt >> "$status_file"
-    echo "" >> "$status_file"
-    sed -i '/^$/{N;/^\n$/D}' "$status_file"
+    write_opkg_status \
+        "xkeen" \
+        "$xkeen_current_version" \
+        "jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset"
 }
 
 register_xkeen_initd() {
