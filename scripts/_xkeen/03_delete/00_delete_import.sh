@@ -1,8 +1,7 @@
 # Импорт модулей удаления
 
 # Модули удаления
-. "$xdelete_dir/01_delete_geosite.sh"
-. "$xdelete_dir/02_delete_geoip.sh"
+. "$xdelete_dir/01_delete_geofile.sh"
 . "$xdelete_dir/02_delete_geoipset.sh"
 . "$xdelete_dir/03_delete_cron.sh"
 . "$xdelete_dir/04_delete_configs.sh"
