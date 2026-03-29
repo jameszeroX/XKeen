@@ -137,16 +137,17 @@ while [ $# -gt 0 ]; do
                 install_geoipset init
                 sleep 2
 
-                clear
-                # Настраиваем автоматические обновления
-                info_cron
-                choice_update_cron
-                update_cron_geofile_task
-                clear
-                choice_cron_time
-
-                install_cron
-                sleep 2
+                if [ "$bypass_cron_geosite" = "false" ] || [ "$bypass_cron_geoip" = "false" ] || [ "$bypass_cron_geoipset" = "false" ]; then
+                    clear
+                    # Настраиваем автоматические обновления
+                    info_cron
+                    choice_update_cron
+                    update_cron_geofile_task
+                    clear
+                    choice_cron_time
+                    install_cron
+                    sleep 2
+                fi
 
                 clear
                 echo

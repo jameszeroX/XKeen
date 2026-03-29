@@ -68,15 +68,18 @@ install_geoipset() {
             printf "     0. Пропустить\n\n"
             printf "  Ваш выбор: "
             read -r choice
-            
+
             case "$choice" in
                 0)
-                    echo
-                    printf "  Пропуск установки списков GeoIPSET.\n\n"
+                    printf "  Пропуск установки списков GeoIPSET\n\n"
+
+                    if [ ! -f "$ru_exclude_ipv4" ] && [ ! -f "$ru_exclude_ipv6" ]; then
+                        bypass_cron_geoipset=true
+                    fi
                     return 0
                     ;;
                 1)
-                    echo
+                    bypass_cron_geoipset=false
                     break
                     ;;
                 *)
