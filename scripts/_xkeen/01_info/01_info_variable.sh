@@ -78,9 +78,20 @@ xray_zip_url="https://github.com/XTLS/Xray-core/releases/download"				# url дл
 mihomo_api_url="https://api.github.com/repos/MetaCubeX/mihomo/releases"				# url api для Mihomo
 mihomo_jsd_url="https://data.jsdelivr.com/v1/package/gh/MetaCubeX/mihomo"			# резервный url api для Mihomo
 mihomo_gz_url="https://github.com/MetaCubeX/mihomo/releases/download"				# url для загрузки Mihomo
-yq_dist_url="https://github.com/jameszeroX/yq/releases/latest/download"				# url для загрузки Yq
+yq_upstream_dist_url="https://github.com/mikefarah/yq/releases/latest/download"		# основной url для загрузки Yq
+yq_workaround_dist_url="https://github.com/jameszeroX/yq/releases/latest/download"	# временный url для загрузки Yq
+yq_workaround_issue_url="https://github.com/mikefarah/yq/issues/2609"			# issue с поломанным upstream-релизом Yq
+yq_use_workaround="true"									# отключить после исправления issue 2609
 gh_proxy1="https://ghfast.top"								        # 1 прокси для загрузок с GitHub
 gh_proxy2="https://gh-proxy.com"								# 2 прокси для загрузок с GitHub
+
+get_yq_dist_url() {
+    if [ "$yq_use_workaround" = "true" ]; then
+        printf '%s\n' "$yq_workaround_dist_url"
+    else
+        printf '%s\n' "$yq_upstream_dist_url"
+    fi
+}
 
 # url для загрузки геофайлов
 refilter_url="https://github.com/1andrevich/Re-filter-lists/releases/latest/download/geosite.dat"
