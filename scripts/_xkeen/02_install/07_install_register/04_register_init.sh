@@ -347,6 +347,28 @@ validate_xkeen_json() {
     return 0
 }
 
+# Функция поиска резервных копий конфигурационных файлов Xray
+check_xray_backups() {
+    [ "$name_client" != "xray" ] && return 0
+
+    # Ищем json-файлы с типичными признаками копий
+    bad_files=$(find "$directory_xray_config" -maxdepth 1 -type f \( -iname "*bak*.json" -o -iname "*old*.json" -o -iname "*copy*.json" -o -iname "*копия*.json" -o -iname "*orig*.json" -o -iname "*save*.json" -o -iname "*temp*.json" -o -iname "*tmp*.json" -o -name "*(*).json" \))
+
+    if [ -n "$bad_files" ]; then
+        bad_list=$(echo "$bad_files" | awk -F/ '{print "  - " $NF}')
+        
+        log_error_terminal "
+  В директории конфигурации Xray найдены резервные копии:
+${light_blue}${bad_list}${reset}
+
+  Измените расширение резервных копий, например, на ${yellow}.bak${reset}
+  Либо переместите их в поддиректорию
+  Запуск ${yellow}$name_client${reset} ${red}отменен${reset}
+"
+    fi
+    return 0
+}
+
 # Функция проверки наличия метки 255
 validate_routing_mark() {
     [ "$proxy_router" != "on" ] && return 0
@@ -1515,6 +1537,7 @@ proxy_start() {
         get_ipver_support
         validate_xkeen_json
         check_policy_name_conflict
+        check_xray_backups
         validate_routing_mark
         log_clean
         api_cache_init

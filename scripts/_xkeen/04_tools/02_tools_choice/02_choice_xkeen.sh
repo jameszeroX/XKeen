@@ -130,7 +130,7 @@ change_ipv6_support() {
 }
 
 choice_backup_xkeen() {
-    backup_value=$(awk -F= '/^[[:space:]]*backup[[:space:]]*=/ && $0 !~ /^[[:space:]]*#/ { gsub(/"| /,"",$2); print tolower($2) }' "$initd_file")
+    backup_value=$(awk -F= '/^[[:space:]]*backup[[:space:]]*=/ { gsub(/"| /,"",$2); print tolower($2); exit }' "$initd_file")
     [ "$backup_value" = "off" ]
 }
 
