@@ -29,6 +29,7 @@ directory_xray_asset="$directory_configs_app/dat"
 directory_logs="/opt/var/log"
 xkeen_cfg="/opt/etc/xkeen"
 ipset_cfg="$xkeen_cfg/ipset"
+install_dir="/opt/sbin"
 
 # Файлы
 file_netfilter_hook="/opt/etc/ndm/netfilter.d/proxy.sh"
@@ -332,7 +333,6 @@ validate_xkeen_json() {
   Валидация JSON: файл '${yellow}xkeen.json${reset}' содержит синтаксические ошибки
   Запуск прокси невозможен
 "
-        exit 1
     fi
 
     if ! jq -e '.xkeen.policy[]? | .name' "$xkeen_config" >/dev/null 2>&1; then
@@ -396,7 +396,7 @@ validate_routing_mark() {
                 ')
 
                 if [ -n "$current_bad" ]; then
-                    bad_items="$bad_items $current_bad"
+                     bad_items="${bad_items}${bad_items:+\n}$current_bad"
                     all_marks_ok="false"
                 fi
             fi
@@ -425,7 +425,7 @@ validate_routing_mark() {
                     ' "$mihomo_config")
 
                     if [ -n "$current_bad" ]; then
-                        bad_items="$bad_items $current_bad"
+                        bad_items="${bad_items}${bad_items:+\n}$current_bad"
                         all_marks_ok="false"
                     fi
                 fi
@@ -443,15 +443,17 @@ validate_routing_mark() {
         error_details=""
 
         if [ -n "$bad_items" ]; then
-            bad_list=$(echo "$bad_items" | xargs | tr ' ' ', ')
+            bad_list=$(printf "%b\n" "$bad_items" | awk '!seen[$0]++ {print "  - " $0}')
             
             if [ "$name_client" = "xray" ]; then
                 error_details="
-  Подключения без метки: ${light_blue}${bad_list}${reset}"
+  Подключения без метки:
+${light_blue}${bad_list}${reset}"
                 proxy_hint="  Добавьте маркировку во ВСЕ исходящие подключения (кроме blackhole и dns)"
             else
                 error_details="
-  Прокси без метки: ${light_blue}${bad_list}${reset}"
+  Прокси без метки:
+${light_blue}${bad_list}${reset}"
                 proxy_hint="  Добавьте в config.yaml маркировку трафика глобально либо в каждое исходящее подключение"
             fi
         fi
@@ -531,7 +533,7 @@ validate_and_clean_ports() {
                         end = tmp
                     }
 
-                    if (start < end) {
+                    if (start <= end) {
                         print start ":" end
                     }
                 }
@@ -579,7 +581,7 @@ process_custom_mark() {
 }
 
 # Проверка статуса прокси-клиента
-proxy_status() { pidof $name_client >/dev/null; }
+proxy_status() { pidof "$name_client" >/dev/null; }
 
 # Поиск конфигурации inbounds
 [ "$name_client" = "xray" ] && file_inbounds=$(find "$directory_xray_config" -maxdepth 1 -name '*.json' -exec grep -lF '"inbounds":' {} \; -quit 2>/dev/null || true)
@@ -637,7 +639,7 @@ get_modules() {
 
     if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Hybrid" ]; then
         for module in xt_TPROXY.ko xt_socket.ko; do
-            if ! lsmod | grep -q "${module%.ko}"; then
+            if ! lsmod | awk '{print $1}' | grep -qx "${module%.ko}"; then
                 proxy_stop
                 log_error_router "Модуль ${module} не загружен"
                 log_error_terminal "
@@ -650,7 +652,7 @@ get_modules() {
     fi
 
     if [ -n "$port_donor" ] || [ -n "$port_exclude" ]; then
-        if ! lsmod | grep -q xt_multiport; then
+        if ! lsmod | awk '{print $1}' | grep -qx xt_multiport; then
             log_warning_router "Модуль xt_multiport не загружен"
             log_warning_terminal "
   Модуль '${light_blue}xt_multiport${reset}' не загружен
@@ -665,7 +667,7 @@ get_modules() {
     fi
 
     if [ -n "$dscp_exclude" ] || [ -n "$dscp_proxy" ]; then
-        if ! lsmod | grep -q xt_dscp; then
+        if ! lsmod | awk '{print $1}' | grep -qx xt_dscp; then
             log_warning_router "Модуль xt_dscp не загружен"
             log_warning_terminal "
   Модуль '${light_blue}xt_dscp${reset}' не загружен
@@ -1403,8 +1405,13 @@ else
         ;;
     esac
     sleep 5
-    rm -f "/tmp/xkeen_starting.lock"
-    restart_script "\$@"
+    if pidof "\$name_client" >/dev/null; then
+        rm -f "/tmp/xkeen_starting.lock"
+        restart_script "\$@"
+    else
+        rm -f "/tmp/xkeen_starting.lock"
+        exit 1
+    fi
 fi
 EOL
 
@@ -1535,6 +1542,23 @@ proxy_start() {
     if [ "$start_manual" = "on" ] || [ "$start_auto" = "on" ]; then
         apply_ipv6_state
         get_ipver_support
+
+        case "$name_client" in
+            xray)
+                if [ ! -x "$install_dir/xray" ]; then
+                    log_error_terminal "$(printf "$missing_files_template" "$install_dir/xray")"
+                fi
+                ;;
+            mihomo)
+                if [ ! -x "$install_dir/mihomo" ] || [ ! -x "$install_dir/yq" ]; then
+                    missing_files=""
+                    [ ! -x "$install_dir/yq" ] && missing_files="$install_dir/yq"
+                    [ ! -x "$install_dir/mihomo" ] && missing_files="$install_dir/mihomo\n  $missing_files"
+                    log_error_terminal "$(printf "$missing_files_template" "$missing_files")"
+                fi
+                ;;
+        esac
+
         validate_xkeen_json
         check_policy_name_conflict
         check_xray_backups
@@ -1550,8 +1574,7 @@ proxy_start() {
         mode_proxy=$(get_mode_proxy)
         if [ "$mode_proxy" != "Other" ]; then
             policy_mark=$(get_policy_mark)
-            
-            # Проверка наличия политики xkeen и пользовательских политик
+
             if [ -n "$policy_mark" ]; then
                 user_policies=$(resolve_user_policies)
 
@@ -1608,14 +1631,9 @@ proxy_start() {
             . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
             status_file="/opt/lib/opkg/status"
             info_cpu
-            install_dir="/opt/sbin"
             while [ "$attempt" -le "$start_attempts" ]; do
                 case "$name_client" in
                     xray)
-                        if [ ! -x "$install_dir/xray" ]; then
-                            missing_files="$install_dir/xray"
-                            log_error_terminal "$(printf "$missing_files_template" "$missing_files")"
-                        fi
                         export XRAY_LOCATION_CONFDIR="$directory_xray_config"
                         export XRAY_LOCATION_ASSET="$directory_xray_asset"
                         find "$directory_xray_config" -maxdepth 1 -name '._*.json' -type f -delete
@@ -1630,12 +1648,6 @@ proxy_start() {
                         fi
                     ;;
                     mihomo)
-                        if [ ! -x "$install_dir/mihomo" ] || [ ! -x "$install_dir/yq" ]; then
-                            missing_files=""
-                            [ ! -x "$install_dir/yq" ] && missing_files="$install_dir/yq"
-                            [ ! -x "$install_dir/mihomo" ] && missing_files="$install_dir/mihomo\n  $missing_files"
-                            log_error_terminal "$(printf "$missing_files_template" "$missing_files")"
-                        fi
                         export CLASH_HOME_DIR="$directory_configs_app"
                         fd_limit="$other_fd"
                         [ "$architecture" = "arm64-v8a" ] && fd_limit="$arm64_fd"
@@ -1728,7 +1740,7 @@ case "$1" in
         if [ -z "$2" ]; then
             [ "$start_auto" != "on" ] && exit 0
             log_info_router "Подготовка к запуску прокси-клиента"
-            nohup su -c "sleep $start_delay && $0 restart" >/dev/null 2>&1 &
+            nohup sh -c "sleep $start_delay && $0 restart" >/dev/null 2>&1 &
             touch "/tmp/xkeen_coldstart.lock"
             exit 0
         fi
