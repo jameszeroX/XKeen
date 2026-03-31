@@ -587,34 +587,28 @@ proxy_status() { pidof "$name_client" >/dev/null; }
 [ "$name_client" = "xray" ] && file_inbounds=$(find "$directory_xray_config" -maxdepth 1 -name '*.json' -exec grep -lF '"inbounds":' {} \; -quit 2>/dev/null || true)
 
 # Поиск конфигураций DNS
-file_dns_xray() {
-    if [ "$proxy_dns" = "on" ]; then
+check_dns_config() {
+    [ "$proxy_dns" != "on" ] && echo "false" && return 1
+
+    if [ "$name_client" = "xray" ]; then
         for file in "$directory_xray_config"/*.json; do
             [ -f "$file" ] || continue
-            if grep -q '"dns":' "$file" && grep -q '"servers":' "$file"; then
+            if strip_json_comments "$file" | jq -e '.dns.servers? != null' >/dev/null 2>&1; then
                 echo "true"
                 return 0
             fi
         done
-    fi
-    echo "false"
-    return 1
-}
-
-file_dns_mihomo() {
-    if [ "$proxy_dns" = "on" ]; then
+    elif [ "$name_client" = "mihomo" ]; then
         if [ -f "$mihomo_config" ] && yq -e '.dns.enable == true' "$mihomo_config" >/dev/null 2>&1; then
             echo "true"
             return 0
         fi
     fi
+
     echo "false"
     return 1
 }
-
-file_dns="false"
-[ "$name_client" = "xray" ] && file_dns=$(file_dns_xray)
-[ "$name_client" = "mihomo" ] && file_dns=$(file_dns_mihomo)
+file_dns=$(check_dns_config)
 
 # Загрузка модулей
 load_modules() {
