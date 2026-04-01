@@ -304,6 +304,11 @@ apply_ipv6_state() {
     sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
     if [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 1 ] &&
        [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 1 ]; then
+        for dir in /proc/sys/net/ipv6/conf/t2s*; do
+            if [ -f "$dir/disable_ipv6" ]; then
+                echo "0" > "$dir/disable_ipv6"
+            fi
+        done
         log_info_router "Отключение IPv6 выполнено"
         return 0
     fi
@@ -582,9 +587,6 @@ process_custom_mark() {
 
 # Проверка статуса прокси-клиента
 proxy_status() { pidof "$name_client" >/dev/null; }
-
-# Поиск конфигурации inbounds
-[ "$name_client" = "xray" ] && file_inbounds=$(find "$directory_xray_config" -maxdepth 1 -name '*.json' -exec grep -lF '"inbounds":' {} \; -quit 2>/dev/null || true)
 
 # Поиск конфигураций DNS
 check_dns_config() {
@@ -1399,11 +1401,10 @@ else
         ;;
     esac
     sleep 5
+    rm -f "/tmp/xkeen_starting.lock"
     if pidof "\$name_client" >/dev/null; then
-        rm -f "/tmp/xkeen_starting.lock"
         restart_script "\$@"
     else
-        rm -f "/tmp/xkeen_starting.lock"
         exit 1
     fi
 fi
@@ -1615,7 +1616,7 @@ proxy_start() {
             echo -e "  Прокси-клиент уже ${green}запущен${reset}"
             [ "$mode_proxy" != "Other" ] && configure_firewall
             if [ "$start_manual" = "on" ]; then
-                log_error_terminal "  Не удалось запустить ${yellow}$name_client${reset}, так как он уже запущен"
+                log_error_terminal "Не удалось запустить ${yellow}$name_client${reset}, так как он уже запущен"
             else
                 log_info_router "Прокси-клиент успешно запущен в режиме $mode_proxy"
             fi
@@ -1653,7 +1654,7 @@ proxy_start() {
                             "$name_client" &
                         fi
                         ;;
-                    *) log_error_terminal "  Неизвестный прокси-клиент: ${yellow}$name_client${reset}" ;;
+                    *) log_error_terminal "Неизвестный прокси-клиент: ${yellow}$name_client${reset}" ;;
                 esac
                 sleep 2
                 if proxy_status; then
