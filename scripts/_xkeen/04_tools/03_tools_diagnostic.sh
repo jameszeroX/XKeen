@@ -1,275 +1,133 @@
 diagnostic() {
-# Установка пути к файлу diagnostic
-diagnostic="/opt/diagnostic.txt"
+    # Установка пути к файлу diagnostic
+    diagnostic="/opt/diagnostic.txt"
 
-if pidof "xray" >/dev/null; then
-    name_client=xray
-elif pidof "mihomo" >/dev/null; then
-    name_client=mihomo
-else
+    if pidof "xray" >/dev/null; then
+        name_client=xray
+    elif pidof "mihomo" >/dev/null; then
+        name_client=mihomo
+    else
+        echo
+        echo -e "  Диагностика возможна только при работающем ${yellow}XKeen${reset}"
+        echo -e "  Запустите ${yellow}XKeen${reset} командой '${green}xkeen -start${reset}'"
+        exit 1
+    fi
+
+    ip4_supported=$(ip -4 addr show | grep -q "inet " && echo true || echo false)
+    ip6_supported=$(ip -6 addr show | grep -q "inet6 " && echo true || echo false)
+
+    iptables_supported=$([ "$ip4_supported" = "true" ] && command -v iptables >/dev/null 2>&1 && echo true || echo false)
+    ip6tables_supported=$([ "$ip6_supported" = "true" ] && command -v ip6tables >/dev/null 2>&1 && echo true || echo false)
+
     echo
-    echo -e "  Диагностика возможна только при работающем ${yellow}XKeen${reset}"
-    echo -e "  Запустите ${yellow}XKeen${reset} командой '${green}xkeen -start${reset}'"
-    exit 1
-fi
+    echo "  Выполняется диагностика. Пожалуйста, подождите..."
 
-ip4_supported=$(ip -4 addr show | grep -q "inet " && echo true || echo false)
-ip6_supported=$(ip -6 addr show | grep -q "inet6 " && echo true || echo false)
+    # Очищаем файл diagnostic перед записью новых данных
+    > "$diagnostic"
 
-iptables_supported=$([ "$ip4_supported" = "true" ] && command -v iptables >/dev/null 2>&1 && echo true || echo false)
-ip6tables_supported=$([ "$ip6_supported" = "true" ] && command -v ip6tables >/dev/null 2>&1 && echo true || echo false)
-
-echo
-echo "  Выполняется диагностика. Пожалуйста, подождите..."
-
-# Создаем файл diagnostic
-touch "$diagnostic"
-
-# Очищаем файл diagnostic перед записью новых данных
-> "$diagnostic"
-
-# Функция для записи заголовка в файл
-write_header() {
-    echo "-------------------------" >> "$diagnostic"
-    echo -e "$1" >> "$diagnostic"
-    echo "-------------------------" >> "$diagnostic"
-    echo >> "$diagnostic"
-}
-
-# Ядро
-write_header "XKeen работает на ядре ${name_client}\nи установлен ${entware_storage}"
-
-# Определение доступности IPv4 и IPv6
-write_header "Доступность IPv4 и IPv6"
-echo "Поддержка IPv4 - $ip4_supported" >> "$diagnostic"
-echo "Поддержка IPv6 - $ip6_supported" >> "$diagnostic"
-echo >> "$diagnostic"
-echo "Поддержка iptables - $iptables_supported" >> "$diagnostic"
-echo "Поддержка i6ptables - $ip6tables_supported" >> "$diagnostic"
-echo >> "$diagnostic"
-echo >> "$diagnostic"
-
-if [ $iptables_supported = "true" ]; then
-    # Запись заголовка и выполнение команд iptables
-    write_header "Результат таблицы NAT цепи PREROUTING IPv4"
-    { iptables -w -t nat -nvL PREROUTING 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы MANGLE цепи PREROUTING IPv4"
-    { iptables -w -t mangle -nvL PREROUTING 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы NAT цепи xkeen IPv4"
-    { iptables -w -t nat -nvL xkeen 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы MANGLE цепи xkeen IPv4"
-    { iptables -w -t mangle -nvL xkeen 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы NAT цепи xkeen_out IPv4"
-    { iptables -w -t nat -nvL xkeen_out 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы MANGLE цепи xkeen_out IPv4"
-    { iptables -w -t mangle -nvL xkeen_out 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы NAT цепи OUTPUT IPv4"
-    { iptables -w -t nat -nvL OUTPUT 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы MANGLE цепи OUTPUT IPv4"
-    { iptables -w -t mangle -nvL OUTPUT 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы NAT цепи _NDM_HOTSPOT_DNSREDIR IPv4"
-    { iptables -w -t nat -nvL _NDM_HOTSPOT_DNSREDIR 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-fi
-
-if [ $ip6tables_supported = "true" ]; then
-    # Запись заголовка и выполнение команд ip6tables
-    write_header "Результат таблицы NAT цепи PREROUTING IPv6"
-    { ip6tables -w -t nat -nvL PREROUTING 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы MANGLE цепи PREROUTING IPv6"
-    { ip6tables -w -t mangle -nvL PREROUTING 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы NAT цепи xkeen IPv6"
-    { ip6tables -w -t nat -nvL xkeen 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы MANGLE цепи xkeen IPv6"
-    { ip6tables -w -t mangle -nvL xkeen 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы NAT цепи xkeen_out IPv6"
-    { ip6tables -w -t nat -nvL xkeen_out 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы MANGLE цепи xkeen_out IPv6"
-    { ip6tables -w -t mangle -nvL xkeen_out 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы NAT цепи OUTPUT IPv6"
-    { ip6tables -w -t nat -nvL OUTPUT 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы MANGLE цепи OUTPUT IPv6"
-    { ip6tables -w -t mangle -nvL OUTPUT 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-
-    write_header "Результат таблицы NAT цепи _NDM_HOTSPOT_DNSREDIR IPv6"
-    { ip6tables -w -t nat -nvL _NDM_HOTSPOT_DNSREDIR 2>&1; } >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-fi
-
-# Информация об ipset
-if command -v ipset >/dev/null 2>&1; then
-    sets=$(ipset list -n 2>/dev/null | grep -v '^_NDM_' | grep -v '^_UPNP')
-    if [ -n "$sets" ]; then
-        write_header "Списки ipset и количество записей в каждом"
-        total=0
-        echo "$sets" | while read -r set; do
-            count=$(ipset save "$set" 2>/dev/null | grep -c '^add')
-            printf "%-30s %s\n" "$set" "$count" >> "$diagnostic"
-            total=$((total + count))
-            echo "$total" > /tmp/.ipset_total
-        done
+    # Функция записи заголовка
+    write_header() {
+        echo "-------------------------" >> "$diagnostic"
+        echo -e "$1" >> "$diagnostic"
+        echo "-------------------------" >> "$diagnostic"
         echo >> "$diagnostic"
-        echo "Всего записей во всех списках: $(cat /tmp/.ipset_total 2>/dev/null)" >> "$diagnostic"
-        rm -f /tmp/.ipset_total
+    }
+
+    # Функция логирования блоков
+    log_block() {
+        write_header "$1"
+        cat >> "$diagnostic"
         echo >> "$diagnostic"; echo >> "$diagnostic"
+    }
+
+    # Функция логирования файлов
+    log_file() {
+        local file="$1"
+        local title="$2"
+        if [ -f "$file" ]; then
+            cat "$file" | log_block "$title"
+        else
+            echo "Файл $file не найден" | log_block "$title"
+        fi
+    }
+
+    # Функция дампа iptables/ip6tables
+    dump_tables() {
+        local cmd="$1"
+        local ver="$2"
+        for chain in PREROUTING xkeen xkeen_out OUTPUT; do
+            $cmd -w -t nat -nvL "$chain" 2>&1 | log_block "Результат таблицы NAT цепи $chain $ver"
+            $cmd -w -t mangle -nvL "$chain" 2>&1 | log_block "Результат таблицы MANGLE цепи $chain $ver"
+        done
+        $cmd -w -t nat -nvL "_NDM_HOTSPOT_DNSREDIR" 2>&1 | log_block "Результат таблицы NAT цепи _NDM_HOTSPOT_DNSREDIR $ver"
+    }
+
+    # Сбор данных
+    write_header "XKeen работает на ядре ${name_client}\nи установлен ${entware_storage}"
+
+    {
+        echo "Поддержка IPv4 - $ip4_supported"
+        echo "Поддержка IPv6 - $ip6_supported"
+        echo
+        echo "Поддержка iptables - $iptables_supported"
+        echo "Поддержка ip6tables - $ip6tables_supported"
+    } | log_block "Доступность IPv4 и IPv6"
+
+    [ "$iptables_supported" = "true" ] && dump_tables "iptables" "IPv4"
+    [ "$ip6tables_supported" = "true" ] && dump_tables "ip6tables" "IPv6"
+
+    if command -v ipset >/dev/null 2>&1; then
+        sets=$(ipset list -n 2>/dev/null | grep -v '^_NDM_' | grep -v '^_UPNP')
+        if [ -n "$sets" ]; then
+            echo "$sets" | {
+                total=0
+                while read -r set; do
+                    count=$(ipset save "$set" 2>/dev/null | grep -c '^add')
+                    printf "%-30s %s\n" "$set" "$count"
+                    total=$((total + count))
+                done
+                echo
+                echo "Всего записей во всех списках: $total"
+            } | log_block "Списки ipset и количество записей в каждом"
+        fi
     fi
-fi
 
-# Копирование содержимого файла /opt/etc/ndm/netfilter.d/proxy.sh
-write_header "Содержимое файла /opt/etc/ndm/netfilter.d/proxy.sh"
-if [ -f "/opt/etc/ndm/netfilter.d/proxy.sh" ]; then
-    cat /opt/etc/ndm/netfilter.d/proxy.sh >> "$diagnostic"
-else
-    echo "Файл /opt/etc/ndm/netfilter.d/proxy.sh не найден" >> "$diagnostic"
-fi
-echo >> "$diagnostic"
-echo >> "$diagnostic"
+    log_file "/opt/etc/ndm/netfilter.d/proxy.sh" "Содержимое файла /opt/etc/ndm/netfilter.d/proxy.sh"
 
-# Проверка использования SSL порта
-write_header "Проверка использования SSL порта"
-curl -kfsS "localhost:79/rci/ip/http/ssl" | jq -r '.port' >> "$diagnostic"
-echo >> "$diagnostic"
-echo >> "$diagnostic"
+    curl -kfsS "localhost:79/rci/ip/http/ssl" | jq -r '.port' | log_block "Проверка использования SSL порта"
+    curl -kfsS "localhost:79/rci/show/ip/policy" | jq -r '.[] | select(.description | ascii_downcase == "xkeen")' | log_block "Данные о политике доступа"
+    
+    ip rule show | log_block "Результат команды ip rule show"
+    ip route show table main | log_block "Результат команды ip route show table main"
+    
+    curl -kfsS "localhost:79/rci/show/version" | jq -r '.title, .model, .region' | log_block "Данные из localhost:79/rci/show/version"
 
-# Сбор данных о политике доступа
-write_header "Данные о политике доступа"
-curl -kfsS "localhost:79/rci/show/ip/policy" | jq -r ' .[] | select(.description | ascii_downcase == "xkeen")' >> "$diagnostic"
-echo >> "$diagnostic"
-echo >> "$diagnostic"
+    {
+        if [ "${name_client}" = "xray" ]; then xray -version; else mihomo -v; fi
+        echo
+        echo "Разрешено файловых дескрипторов:"
+        grep 'Max open files' "/proc/$(pidof ${name_client})/limits" | awk '{print $4}'
+        echo "Использовано файловых дескрипторов:"
+        ls -l "/proc/$(pidof ${name_client})/fd" | wc -l
+    } | log_block "Версия $name_client и файловые дескрипторы"
 
-# Сбор результатов команды ip rule show
-write_header "Результат команды ip rule show"
-ip rule show >> "$diagnostic"
-echo >> "$diagnostic"
-echo >> "$diagnostic"
+    xkeen -v | log_block "Версия XKeen"
 
-# Сбор результатов команды ip route show table main
-write_header "Результат команды ip route show table main"
-ip route show table main >> "$diagnostic"
-echo >> "$diagnostic"
-echo >> "$diagnostic"
+    [ -f "$xkeen_config" ] && log_file "$xkeen_config" "Файл xkeen.json"
 
-# Запрос к curl для получения title, model, region
-write_header "Данные из localhost:79/rci/show/version"
-curl -kfsS "localhost:79/rci/show/version" | jq -r '.title, .model, .region' >> "$diagnostic"
-echo >> "$diagnostic"
-echo >> "$diagnostic"
-
-# Запрос версии ядра
-if [ "${name_client}" = "xray" ]; then
-    write_header "Версия Xray"
-    xray -version >> "$diagnostic"
-elif [ "${name_client}" = "mihomo" ]; then
-    write_header "Версия Mihomo"
-    mihomo -v >> "$diagnostic"
-fi
-echo >> "$diagnostic"
-echo "Разрешено файловых дескрипторов:" >> "$diagnostic"
-grep 'Max open files' "/proc/$(pidof ${name_client})/limits" | awk '{print $4}' >> "$diagnostic"
-echo "Использовано файловых дескрипторов:" >> "$diagnostic"
-ls -l /proc/$(pidof ${name_client})/fd | wc -l >> "$diagnostic"
-echo >> "$diagnostic"
-echo >> "$diagnostic"
-
-# Запрос версии XKeen
-write_header "Версия XKeen"
-xkeen -v >> "$diagnostic"
-echo >> "$diagnostic"
-echo >> "$diagnostic"
-
-# Запрос конфигурационного файла XKeen
-if ls "$xkeen_config" >/dev/null 2>&1; then
-    write_header "Файл xkeen.json"
-    cat "$xkeen_config" >> "$diagnostic"
-    echo >> "$diagnostic"
-    echo >> "$diagnostic"
-fi
-
-# Запрос конфигурационных файлов Xray
-if [ "${name_client}" = "xray" ]; then
-    if [ -d "$install_conf_dir" ]; then
-        write_header "Содержимое директории configs"
-        ls -p "$install_conf_dir" >> "$diagnostic"
-        echo >> "$diagnostic"
-        echo >> "$diagnostic"
+    if [ "${name_client}" = "xray" ] && [ -d "$install_conf_dir" ]; then
+        ls -p "$install_conf_dir" | log_block "Содержимое директории configs"
+        for conf in dns inbounds routing; do
+            file=$(ls "$install_conf_dir"/*${conf}*.json 2>/dev/null | head -n 1)
+            [ -n "$file" ] && log_file "$file" "Содержимое файла ${conf}.json"
+        done
     fi
-    # dns.json
-    if ls "$install_conf_dir"/*dns*.json >/dev/null 2>&1; then
-        write_header "Содержимое файла dns.json"
-        cat "$install_conf_dir"/*dns*.json >> "$diagnostic"
-        echo >> "$diagnostic"
-        echo >> "$diagnostic"
-    fi
-    # inbounds.json
-    if ls "$install_conf_dir"/*inbounds*.json >/dev/null 2>&1; then
-        write_header "Содержимое файла inbounds.json"
-        cat "$install_conf_dir"/*inbounds*.json >> "$diagnostic"
-        echo >> "$diagnostic"
-        echo >> "$diagnostic"
-    fi
-    # routing.json
-    if ls "$install_conf_dir"/*routing*.json >/dev/null 2>&1; then
-        write_header "Содержимое файла routing.json"
-        cat "$install_conf_dir"/*routing*.json >> "$diagnostic"
-        echo >> "$diagnostic"
-        echo >> "$diagnostic"
-    fi
-fi
 
-echo
-echo
-echo -e "  Диагностика ${green}выполнена${reset}"
-echo -e "  Отправьте файл '${yellow}$diagnostic${reset}' в телеграм-чат ${yellow}XKeen${reset}, подробно описав возникшую проблему"
-echo
-echo -e "  ${red}Примечание${reset}: Диагностика не проверяет доступ к прокси-серверу, правильность заполнения конфигов
-  и настройки роутера/сервера. Она проверяет ${green}только${reset} корректность инициализации ${yellow}XKeen${reset} в роутере"
+    echo
+    echo
+    echo -e "  Диагностика ${green}выполнена${reset}"
+    echo -e "  Отправьте файл '${yellow}$diagnostic${reset}' в телеграм-чат ${yellow}XKeen${reset}, подробно описав возникшую проблему"
+    echo
+    echo -e "  ${red}Примечание${reset}: Диагностика не проверяет доступ к прокси-серверу, правильность заполнения конфигов"
+    echo -e "  и настройки роутера/сервера. Она проверяет ${green}только${reset} корректность инициализации ${yellow}XKeen${reset} в роутере"
 }

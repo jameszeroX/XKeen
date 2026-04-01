@@ -218,10 +218,6 @@ help_xkeen() {
         echo -e "	-extmsg	${italic}	Включить | Отключить расширенные сообщения при запуске XKeen${reset}"
         echo -e "	-bk	${italic}	Включить | Отключить резервное копирование XKeen при обновлении${reset}"
         echo
-        echo -e "${light_blue}Управление модулями${reset}"
-        echo -e "	-modules${italic}	Перенос модулей для XKeen в пользовательскую директорию${reset}"
-        echo -e "	-delmodules${italic}	Удаление модулей из пользовательской директории${reset}"
-        echo
         echo -e "${light_blue}Информация${reset}"
         echo -e "	-about	${italic}	О программе${reset}"
         echo -e "	-ad	${italic}	Поддержать разработчиков${reset}"

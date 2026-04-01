@@ -1397,13 +1397,13 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -modules)    # Перенос необходимых модулей из прошивки в пользовательскую директорию
+        -modules)    # Obsolete
             clear
             echo
             migration_modules
         ;;
 
-        -delmodules)    # Удаление модулей из пользовательской директории
+        -delmodules)    # Obsolete
             clear
             echo
             remove_modules
