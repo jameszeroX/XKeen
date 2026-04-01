@@ -117,56 +117,15 @@ ensure_web_ports() {
     normalize_ports "$ports"
 }
 
-# Функция обработки пользовательских портов
-process_user_ports() {
-    user_proxy_ports=""
-    user_exclude_ports=""
-
-    if [ -f "$file_port_proxying" ]; then
-        user_proxy_ports=$(
-            sed 's/\r$//' "$file_port_proxying" | \
-            sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | \
-            grep -v '^#' | \
-            grep -v '^$' | \
-            sed 's/-/:/g' | \
-            grep -E '^[0-9]+(:[0-9]+)?$' | \
-            tr '\n' ',' | \
-            sed 's/,$//'
-        )
-    fi
-
-    if [ -f "$file_port_exclude" ]; then
-        user_exclude_ports=$(
-            sed 's/\r$//' "$file_port_exclude" | \
-            sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | \
-            grep -v '^#' | \
-            grep -v '^$' | \
-            sed 's/-/:/g' | \
-            grep -E '^[0-9]+(:[0-9]+)?$' | \
-            tr '\n' ',' | \
-            sed 's/,$//'
-        )
-    fi
-
-    if [ -n "$user_proxy_ports" ]; then
-        port_donor="${port_donor},${user_proxy_ports}"
-    elif [ -n "$user_exclude_ports" ]; then
-        port_exclude="${port_exclude},${user_exclude_ports}"
-    else
-        :
-    fi
-}
-
 add_ports_donor() {
     [ -z "$1" ] && {
         echo -e "  ${red}Ошибка${reset}: список портов не может быть пустым"
         return 1
     }
 
-    # конфликт
     if ports_conflict_check "$file_port_proxying" "$file_port_exclude"; then
-        echo -e "  ${red}Ошибка${reset}: уже заданы исключённые порты"
-        return 1
+        echo -e "  ${yellow}Внимание${reset}: вы добавляете порты проксирования, но уже заданы порты исключения
+  Приоритет у портов проксирования, порты исключения будут проигнорированы"
     fi
 
     new_ports=$(normalize_ports "$1")
@@ -219,8 +178,8 @@ add_ports_exclude() {
     }
 
     if ports_conflict_check "$file_port_proxying" "$file_port_exclude"; then
-        echo -e "  ${red}Ошибка${reset}: уже заданы порты проксирования"
-        return 1
+        echo -e "  ${yellow}Внимание${reset}: вы добавляете порты исключения, но уже заданы порты проксирования
+  Приоритет у портов проксирования, порты исключения будут проигнорированы"
     fi
 
     new_ports=$(normalize_ports "$1")
@@ -235,7 +194,7 @@ add_ports_exclude() {
 
     write_ports_file "$file_port_exclude" "$all_ports"
 
-    echo -e "  ${green}Порты исключений обновлены${reset}"
+    echo -e "  ${green}Порты исключения обновлены${reset}"
 }
 
 dell_ports_exclude() {
@@ -261,7 +220,7 @@ dell_ports_exclude() {
 
     write_ports_file "$file_port_exclude" "$new_ports"
 
-    echo -e "  ${green}Порты исключений удалены${reset}"
+    echo -e "  ${green}Порты исключения удалены${reset}"
 }
 
 # Получить список портов проксирования
@@ -303,7 +262,7 @@ migrate_ports_from_initd() {
 
     migrated=0
 
-    # --- Миграция port_donor ---
+    # Миграция port_donor
     if [ -n "$port_donor_val" ]; then
 
         current_proxy=$(normalize_ports "$(read_ports_file "$file_port_proxying")")
@@ -318,7 +277,7 @@ migrate_ports_from_initd() {
         fi
     fi
 
-    # --- Миграция port_exclude ---
+    # Миграция port_exclude
     if [ -n "$port_exclude_val" ]; then
 
         current_exclude=$(normalize_ports "$(read_ports_file "$file_port_exclude")")
