@@ -182,7 +182,7 @@ change_proxy_dns() {
 }
 
 change_file_descriptors() {
-    toggle_param "check_fd" "контроля файловых дескрипторов" "reboot"
+    toggle_param "check_fd" "контроля файловых дескрипторов" "restart"
 }
 
 change_proxy_router() {

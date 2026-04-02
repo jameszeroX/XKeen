@@ -330,9 +330,7 @@ strip_json_comments() {
 
 # Функция валидации xkeen.json
 validate_xkeen_json() {
-    if [ ! -f "$xkeen_config" ]; then
-        return 0
-    fi
+    [ ! -f "$xkeen_config" ] && return 0
     if ! jq -e . "$xkeen_config" >/dev/null 2>&1; then
             log_error_terminal "
   Валидация JSON: файл '${yellow}xkeen.json${reset}' содержит синтаксические ошибки
@@ -479,7 +477,7 @@ $proxy_hint
 
 # Функция загрузки пользовательских исключений в ipset
 load_user_ipset() {
-    [ -f "$file_ip_exclude" ] || return
+    [ ! -f "$file_ip_exclude" ] && return
 
     if [ "$iptables_supported" = "true" ]; then
         ipset create user_exclude hash:net family inet -exist
@@ -590,25 +588,25 @@ proxy_status() { pidof "$name_client" >/dev/null; }
 
 # Поиск конфигураций DNS
 check_dns_config() {
-    [ "$proxy_dns" != "on" ] && echo "false" && return 1
+    [ "$proxy_dns" != "on" ] && echo "false" && return
 
     if [ "$name_client" = "xray" ]; then
         for file in "$directory_xray_config"/*.json; do
             [ -f "$file" ] || continue
             if strip_json_comments "$file" | jq -e '.dns.servers? != null' >/dev/null 2>&1; then
                 echo "true"
-                return 0
+                return
             fi
         done
     elif [ "$name_client" = "mihomo" ]; then
         if [ -f "$mihomo_config" ] && yq -e '.dns.enable == true' "$mihomo_config" >/dev/null 2>&1; then
             echo "true"
-            return 0
+            return
         fi
     fi
 
     echo "false"
-    return 1
+    return
 }
 file_dns=$(check_dns_config)
 
@@ -1493,7 +1491,9 @@ monitor_fd() {
         client_pid=$(pidof "$name_client" | awk '{print $1}')
         if [ -n "$client_pid" ] && [ -d "/proc/$client_pid/fd" ]; then
             limit=$(awk '/Max open files/ {print $4}' "/proc/$client_pid/limits")
-            current=$(ls -1 /proc/$client_pid/fd 2>/dev/null | wc -l)
+            set -- /proc/$client_pid/fd/*
+            [ -e "$1" ] || set --
+            current=$#
             if [ "$limit" -gt 0 ] && [ "$current" -gt $((limit * 90 / 100)) ]; then
                 log_warning_router "$name_client открыл $current из $limit файловых дескрипторов, инициирован перезапуск"
                 rm -f "$file_pid_fd"
