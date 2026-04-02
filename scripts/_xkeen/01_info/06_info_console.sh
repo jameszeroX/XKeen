@@ -1,3 +1,15 @@
+print_log_status() {
+    local status_code=$1
+    local success_msg=$2
+    local error_msg=$3
+
+    if [ "$status_code" -eq 0 ]; then
+        echo -e "  ${green}Успешно${reset}: $success_msg"
+    else
+        echo -e "  ${red}Ошибка${reset}: $error_msg"
+    fi
+}
+
 # Обратная связь в консоль
 logs_cpu_info_console() {
     echo
@@ -14,9 +26,8 @@ logs_cpu_info_console() {
 }
 
 logs_delete_configs_info_console() {
-    info_content=
-    error_content=
-
+    local deleted_files=""
+    
     if [ -d "$install_conf_dir" ]; then
         deleted_files=$(find "$install_conf_dir" -maxdepth 1 -name '*.json' -type f)
     fi
@@ -32,493 +43,153 @@ logs_delete_configs_info_console() {
 }
 
 logs_delete_geosite_info_console() {
-    info_content=
-    error_content=
-
-    if [ -f "$geo_dir/geosite_antifilter.dat" ]; then
-        error_content="  ${red}Ошибка${reset}: Файл geosite_antifilter.dat не удален\n"
-    else
-        info_content="  ${green}Успешно${reset}: Файл geosite_antifilter.dat отсутствует в директории '$geo_dir'\n"
-    fi
-
-    if [ -f "$geo_dir/geosite_v2fly.dat" ]; then
-        error_content="${error_content}  ${red}Ошибка${reset}: Файл geosite_v2fly.dat не удален\n"
-    else
-        info_content="${info_content}  ${green}Успешно${reset}: Файл geosite_v2fly.dat отсутствует в директории '$geo_dir'\n"
-    fi
-
-    if [ -f "$geo_dir/geosite_zkeen.dat" ]; then
-        error_content="${error_content}  ${red}Ошибка${reset}: Файл geosite_zkeen.dat не удален\n"
-    else
-        info_content="${info_content}  ${green}Успешно${reset}: Файл geosite_zkeen.dat отсутствует в директории '$geo_dir'\n"
-    fi
-
-    if [ -n "$error_content" ]; then
-        echo -e "  ${yellow}Проверка${reset} выполнения операции"
-        echo -e "$error_content"
-    else
-        echo -e "  ${yellow}Проверка${reset} выполнения операции"
-        echo -e "$info_content"
-    fi
+    echo -e "  ${yellow}Проверка${reset} выполнения операции"
+    for file in "geosite_antifilter.dat" "geosite_v2fly.dat" "geosite_zkeen.dat"; do
+        [ ! -f "$geo_dir/$file" ]
+        print_log_status $? "Файл $file отсутствует в директории '$geo_dir'" "Файл $file не удален"
+    done
 }
 
 logs_delete_geoip_info_console() {
-    info_content=
-    error_content=
-
-    if [ -f "$geo_dir/geoip_antifilter.dat" ]; then
-        error_content="  ${red}Ошибка${reset}: Файл geoip_antifilter.dat не удален\n"
-    else
-        info_content="  ${green}Успешно${reset}: Файл geoip_antifilter.dat отсутствует в директории '$geo_dir'\n"
-    fi
-
-    if [ -f "$geo_dir/geoip_v2fly.dat" ]; then
-        error_content="${error_content}  ${red}Ошибка${reset}: Файл geoip_v2fly.dat не удален\n"
-    else
-        info_content="${info_content}  ${green}Успешно${reset}: Файл geoip_v2fly.dat отсутствует в директории '$geo_dir'\n"
-    fi
-
-    if [ -f "$geo_dir/geoip_zkeenip.dat" ]; then
-        error_content="${error_content}  ${red}Ошибка${reset}: Файл geoip_zkeenip.dat не удален\n"
-    else
-        info_content="${info_content}  ${green}Успешно${reset}: Файл geoip_zkeenip.dat отсутствует в директории '$geo_dir'\n"
-    fi
-
-    if [ -n "$error_content" ]; then
-        echo -e "  ${yellow}Проверка${reset} выполнения операции"
-        echo -e "$error_content"
-    else
-        echo -e "  ${yellow}Проверка${reset} выполнения операции"
-        echo -e "$info_content"
-    fi
+    echo -e "  ${yellow}Проверка${reset} выполнения операции"
+    for file in "geoip_antifilter.dat" "geoip_v2fly.dat" "geoip_zkeenip.dat"; do
+        [ ! -f "$geo_dir/$file" ]
+        print_log_status $? "Файл $file отсутствует в директории '$geo_dir'" "Файл $file не удален"
+    done
 }
 
 logs_delete_geoipset_info_console() {
-    info_content=
-    error_content=
-
-    if [ -f "$ru_exclude_ipv4" ]; then
-        error_content="  ${red}Ошибка${reset}: Файл ru_exclude_ipv4.lst не удален"
-    else
-        info_content="  ${green}Успешно${reset}: Файл ru_exclude_ipv4.lst отсутствует в директории '$ipset_cfg'"
-    fi
-
-    if [ -f "$ru_exclude_ipv6" ]; then
-        error_content6="  ${red}Ошибка${reset}: Файл ru_exclude_ipv6.lst не удален\n"
-    else
-        info_content6="  ${green}Успешно${reset}: Файл ru_exclude_ipv6.lst отсутствует в директории '$ipset_cfg'\n"
-    fi
-
-    if [ -n "$error_content" ]; then
-        echo -e "  ${yellow}Проверка${reset} выполнения операции"
-        echo -e "$error_content"
-        echo -e "$error_content6"
-    else
-        echo -e "  ${yellow}Проверка${reset} выполнения операции"
-        echo -e "$info_content"
-        echo -e "$info_content6"
-    fi
+    echo -e "  ${yellow}Проверка${reset} выполнения операции"
+    
+    [ ! -f "$ru_exclude_ipv4" ]
+    print_log_status $? "Файл ru_exclude_ipv4.lst отсутствует в директории '$ipset_cfg'" "Файл ru_exclude_ipv4.lst не удален"
+    
+    [ ! -f "$ru_exclude_ipv6" ]
+    print_log_status $? "Файл ru_exclude_ipv6.lst отсутствует в директории '$ipset_cfg'" "Файл ru_exclude_ipv6.lst не удален"
 }
 
-logs_register_xkeen_status_info_console() {
-    info_content=
-    error_content=
+# Проверки регистрации XKeen
 
-    if grep -q "Package: xkeen" "$status_file"; then
-        info_content="  ${green}Успешно${reset}: Запись XKeen найдена в '$status_file'"
-    else
-        error_content="  ${red}Ошибка${reset}: Запись XKeen не найдена в '$status_file'"
-    fi
-    
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
-    
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
+logs_register_xkeen_status_info_console() {
+    grep -q "Package: xkeen" "$status_file"
+    print_log_status $? "Запись XKeen найдена в '$status_file'" "Запись XKeen не найдена в '$status_file'"
 }
 
 logs_register_xkeen_control_info_console() {
-    info_content=
-    error_content=
-
-    if [ -f "$register_dir/xkeen.control" ]; then
-        info_content="  ${green}Успешно${reset}: Файл xkeen.control найден в директории '$register_dir/'"
-    else
-        error_content="  ${red}Ошибка${reset}: Файл xkeen.control не найден в директории '$register_dir/'"
-    fi
-    
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
-    
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
+    [ -f "$register_dir/xkeen.control" ]
+    print_log_status $? "Файл xkeen.control найден в директории '$register_dir/'" "Файл xkeen.control не найден в директории '$register_dir/'"
 }
 
 logs_register_xkeen_list_info_console() {
-    info_content=
-    error_content=
-	
-    cd "$register_dir/" || exit
-
-    if [ ! -f "xkeen.list" ]; then
-        error_content="  ${red}Ошибка${reset}: Файл xkeen.list не найден в директории '$register_dir/'"
-    else
-        info_content="  ${green}Успешно${reset}: Файл xkeen.list найден в директории '$register_dir/'"
-    fi
-
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
-
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
-}
-
-logs_delete_register_xkeen_info_console() {
-    info_content=
-    error_content=
-
-    if [ ! -f "$register_dir/xkeen.list" ]; then
-        info_content="  ${green}Успешно${reset}: Файл xkeen.list не найден в директории '$register_dir/'"
-    else
-        error_content="  ${red}Ошибка${reset}: Файл xkeen.list найден в директории '$register_dir/'"
-    fi
-
-    if [ ! -f "$register_dir/xkeen.control" ]; then
-        info_content="${info_content}\n  ${green}Успешно${reset}: Файл xkeen.control не найден в директории '$register_dir/'"
-    else
-        error_content="${error_content}\n  ${red}Ошибка${reset}: Файл xkeen.control найден в директории '$register_dir/'"
-    fi
-
-    if ! grep -q 'Package: xkeen' "$status_file"; then
-        info_content="${info_content}\n  ${green}Успешно${reset}: Регистрация пакета xkeen не обнаружена в '$status_file'"
-    else
-        error_content="${error_content}\n  ${red}Ошибка${reset}: Регистрация пакета xkeen обнаружена в '$status_file'"
-    fi
-
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
-
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
+    [ -f "$register_dir/xkeen.list" ]
+    print_log_status $? "Файл xkeen.list найден в директории '$register_dir/'" "Файл xkeen.list не найден в директории '$register_dir/'"
 }
 
 logs_register_xkeen_initd_info_console() {
-    info_content=
-    error_content=
-
-    if [ -f "$initd_file" ]; then
-        info_content="  ${green}Успешно${reset}: init скрипт XKeen найден в директории '$initd_dir/'"
-    else
-        error_content="  ${red}Ошибка${reset}: init скрипт XKeen не найден в директории '$initd_dir/'"
-    fi
-
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
-
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
+    [ -f "$initd_file" ]
+    print_log_status $? "init скрипт XKeen найден в директории '$initd_dir/'" "init скрипт XKeen не найден в директории '$initd_dir/'"
 }
 
-logs_register_xray_list_info_console() {
-    info_content=
-    error_content=
-	
-    cd "$register_dir/" || exit
+logs_delete_register_xkeen_info_console() {
+    [ ! -f "$register_dir/xkeen.list" ]
+    print_log_status $? "Файл xkeen.list не найден в директории '$register_dir/'" "Файл xkeen.list найден в директории '$register_dir/'"
 
-    if [ ! -f "xray_s.list" ]; then
-        error_content="  ${red}Ошибка${reset}: Файл xray_s.list не найден в директории '$register_dir/'"
-    else
-        info_content="  ${green}Успешно${reset}: Файл xray_s.list найден в директории '$register_dir/'"
-    fi
+    [ ! -f "$register_dir/xkeen.control" ]
+    print_log_status $? "Файл xkeen.control не найден в директории '$register_dir/'" "Файл xkeen.control найден в директории '$register_dir/'"
 
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
-
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
+    ! grep -q 'Package: xkeen' "$status_file"
+    print_log_status $? "Регистрация пакета xkeen не обнаружена в '$status_file'" "Регистрация пакета xkeen обнаружена в '$status_file'"
 }
+
+# Проверки регистрации Xray
 
 logs_register_xray_status_info_console() {
-    info_content=
-    error_content=
-
-    if grep -q "Package: xray_s" "$status_file"; then
-        info_content="  ${green}Успешно${reset}: Запись Xray найдена в '$status_file'"
-    else
-        error_content="  ${red}Ошибка${reset}: Запись Xray не найдена в '$status_file'"
-    fi
-    
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
-    
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
+    grep -q "Package: xray_s" "$status_file"
+    print_log_status $? "Запись Xray найдена в '$status_file'" "Запись Xray не найдена в '$status_file'"
 }
 
 logs_register_xray_control_info_console() {
-    info_content=
-    error_content=
-    
-    control_file_path="$register_dir/xray_s.control"
-    
-    if [ -f "$control_file_path" ]; then
-        info_content="  ${green}Успешно${reset}: Файл xray_s.control найден в директории '$register_dir/'"
-    else
-        error_content="  ${red}Ошибка${reset}: Файл xray_s.control не найден в директории '$register_dir/'"
-    fi
-    
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
-
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
+    [ -f "$register_dir/xray_s.control" ]
+    print_log_status $? "Файл xray_s.control найден в директории '$register_dir/'" "Файл xray_s.control не найден в директории '$register_dir/'"
 }
 
-logs_register_mihomo_list_info_console() {
-    info_content=
-    error_content=
-	
-    cd "$register_dir/" || exit
-
-    if [ ! -f "mihomo_s.list" ]; then
-        error_content="  ${red}Ошибка${reset}: Файл mihomo_s.list не найден в директории '$register_dir/'"
-    else
-        info_content="  ${green}Успешно${reset}: Файл mihomo_s.list найден в директории '$register_dir/'"
-    fi
-
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
-
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
-}
-
-logs_register_mihomo_status_info_console() {
-    info_content=
-    error_content=
-
-    if grep -q "Package: mihomo" "$status_file"; then
-        info_content="  ${green}Успешно${reset}: Запись mihomo найдена в '$status_file'"
-    else
-        error_content="  ${red}Ошибка${reset}: Запись mihomo не найдена в '$status_file'"
-    fi
-    
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
-    
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
-}
-
-logs_register_mihomo_control_info_console() {
-    info_content=
-    error_content=
-    
-    control_file_path="$register_dir/mihomo_s.control"
-    
-    if [ -f "$control_file_path" ]; then
-        info_content="  ${green}Успешно${reset}: Файл mihomo_s.control найден в директории '$register_dir/'"
-    else
-        error_content="  ${red}Ошибка${reset}: Файл mihomo_s.control не найден в директории '$register_dir/'"
-    fi
-    
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
-
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
-}
-
-logs_register_yq_list_info_console() {
-    info_content=
-    error_content=
-	
-    cd "$register_dir/" || exit
-
-    if [ ! -f "yq_s.list" ]; then
-        error_content="  ${red}Ошибка${reset}: Файл yq_s.list не найден в директории '$register_dir/'"
-    else
-        info_content="  ${green}Успешно${reset}: Файл yq_s.list найден в директории '$register_dir/'"
-    fi
-
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
-
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
-}
-
-logs_register_yq_status_info_console() {
-    info_content=
-    error_content=
-
-    if grep -q "Package: yq" "$status_file"; then
-        info_content="  ${green}Успешно${reset}: Запись yq найдена в '$status_file'"
-    else
-        error_content="  ${red}Ошибка${reset}: Запись yq не найдена в '$status_file'"
-    fi
-    
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
-    
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
-}
-
-logs_register_yq_control_info_console() {
-    info_content=
-    error_content=
-    
-    control_file_path="$register_dir/yq_s.control"
-    
-    if [ -f "$control_file_path" ]; then
-        info_content="  ${green}Успешно${reset}: Файл yq_s.control найден в директории '$register_dir/'"
-    else
-        error_content="  ${red}Ошибка${reset}: Файл yq_s.control не найден в директории '$register_dir/'"
-    fi
-    
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
-
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
+logs_register_xray_list_info_console() {
+    [ -f "$register_dir/xray_s.list" ]
+    print_log_status $? "Файл xray_s.list найден в директории '$register_dir/'" "Файл xray_s.list не найден в директории '$register_dir/'"
 }
 
 logs_delete_register_xray_info_console() {
-    info_content=
-    error_content=
+    [ ! -f "$register_dir/xray_s.list" ]
+    print_log_status $? "Файл xray_s.list не найден в директории '$register_dir/'" "Файл xray_s.list найден в директории '$register_dir/'"
 
-    if [ ! -f "$register_dir/xray_s.list" ]; then
-        info_content="  ${green}Успешно${reset}: Файл xray_s.list не найден в директории '$register_dir/'"
-    else
-        error_content="  ${red}Ошибка${reset}: Файл xray_s.list найден в директории '$register_dir/'"
-    fi
+    [ ! -f "$register_dir/xray_s.control" ]
+    print_log_status $? "Файл xray_s.control не найден в директории '$register_dir/'" "Файл xray_s.control найден в директории '$register_dir/'"
 
-    if [ ! -f "$register_dir/xray_s.control" ]; then
-        info_content="${info_content}\n  ${green}Успешно${reset}: Файл xray_s.control не найден в директории '$register_dir/'"
-    else
-        error_content="${error_content}\n  ${red}Ошибка${reset}: Файл xray_s.control найден в директории '$register_dir/'"
-    fi
+    ! grep -q 'Package: xray_s' "$status_file"
+    print_log_status $? "Регистрация пакета xray не обнаружена в '$status_file'" "Регистрация пакета xray обнаружена в '$status_file'"
+}
 
-    if ! grep -q 'Package: xray_s' "$status_file"; then
-        info_content="${info_content}\n  ${green}Успешно${reset}: Регистрация пакета xray не обнаружена в '$status_file'"
-    else
-        error_content="${error_content}\n  ${red}Ошибка${reset}: Регистрация пакета xray обнаружена в '$status_file'"
-    fi
+# Проверки регистрации Mihomo
 
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
+logs_register_mihomo_status_info_console() {
+    grep -q "Package: mihomo" "$status_file"
+    print_log_status $? "Запись mihomo найдена в '$status_file'" "Запись mihomo не найдена в '$status_file'"
+}
 
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
+logs_register_mihomo_control_info_console() {
+    [ -f "$register_dir/mihomo_s.control" ]
+    print_log_status $? "Файл mihomo_s.control найден в директории '$register_dir/'" "Файл mihomo_s.control не найден в директории '$register_dir/'"
+}
+
+logs_register_mihomo_list_info_console() {
+    [ -f "$register_dir/mihomo_s.list" ]
+    print_log_status $? "Файл mihomo_s.list найден в директории '$register_dir/'" "Файл mihomo_s.list не найден в директории '$register_dir/'"
 }
 
 logs_delete_register_mihomo_info_console() {
-    info_content=
-    error_content=
+    [ ! -f "$register_dir/mihomo_s.list" ]
+    print_log_status $? "Файл mihomo_s.list не найден в директории '$register_dir/'" "Файл mihomo_s.list найден в директории '$register_dir/'"
 
-    if [ ! -f "$register_dir/mihomo_s.list" ]; then
-        info_content="  ${green}Успешно${reset}: Файл mihomo_s.list не найден в директории '$register_dir/'"
-    else
-        error_content="  ${red}Ошибка${reset}: Файл mihomo_s.list найден в директории '$register_dir/'"
-    fi
+    [ ! -f "$register_dir/mihomo_s.control" ]
+    print_log_status $? "Файл mihomo_s.control не найден в директории '$register_dir/'" "Файл mihomo_s.control найден в директории '$register_dir/'"
 
-    if [ ! -f "$register_dir/mihomo_s.control" ]; then
-        info_content="${info_content}\n  ${green}Успешно${reset}: Файл mihomo_s.control не найден в директории '$register_dir/'"
-    else
-        error_content="${error_content}\n  ${red}Ошибка${reset}: Файл mihomo_s.control найден в директории '$register_dir/'"
-    fi
+    ! grep -q 'Package: mihomo_s' "$status_file"
+    print_log_status $? "Регистрация пакета mihomo не обнаружена в '$status_file'" "Регистрация пакета mihomo обнаружена в '$status_file'"
+}
 
-    if ! grep -q 'Package: mihomo_s' "$status_file"; then
-        info_content="${info_content}\n  ${green}Успешно${reset}: Регистрация пакета mihomo не обнаружена в '$status_file'"
-    else
-        error_content="${error_content}\n  ${red}Ошибка${reset}: Регистрация пакета mihomo обнаружена в '$status_file'"
-    fi
+# Проверки регистрации YQ
 
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
+logs_register_yq_status_info_console() {
+    grep -q "Package: yq" "$status_file"
+    print_log_status $? "Запись yq найдена в '$status_file'" "Запись yq не найдена в '$status_file'"
+}
 
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
+logs_register_yq_control_info_console() {
+    [ -f "$register_dir/yq_s.control" ]
+    print_log_status $? "Файл yq_s.control найден в директории '$register_dir/'" "Файл yq_s.control не найден в директории '$register_dir/'"
+}
+
+logs_register_yq_list_info_console() {
+    [ -f "$register_dir/yq_s.list" ]
+    print_log_status $? "Файл yq_s.list найден в директории '$register_dir/'" "Файл yq_s.list не найден в директории '$register_dir/'"
 }
 
 logs_delete_register_yq_info_console() {
-    info_content=
-    error_content=
+    [ ! -f "$register_dir/yq_s.list" ]
+    print_log_status $? "Файл yq_s.list не найден в директории '$register_dir/'" "Файл yq_s.list найден в директории '$register_dir/'"
 
-    if [ ! -f "$register_dir/yq_s.list" ]; then
-        info_content="  ${green}Успешно${reset}: Файл yq_s.list не найден в директории '$register_dir/'"
-    else
-        error_content="  ${red}Ошибка${reset}: Файл yq_s.list найден в директории '$register_dir/'"
-    fi
+    [ ! -f "$register_dir/yq_s.control" ]
+    print_log_status $? "Файл yq_s.control не найден в директории '$register_dir/'" "Файл yq_s.control найден в директории '$register_dir/'"
 
-    if [ ! -f "$register_dir/yq_s.control" ]; then
-        info_content="${info_content}\n  ${green}Успешно${reset}: Файл yq_s.control не найден в директории '$register_dir/'"
-    else
-        error_content="${error_content}\n  ${red}Ошибка${reset}: Файл yq_s.control найден в директории '$register_dir/'"
-    fi
-
-    if ! grep -q 'Package: yq_s' "$status_file"; then
-        info_content="${info_content}\n  ${green}Успешно${reset}: Регистрация пакета yq не обнаружена в '$status_file'"
-    else
-        error_content="${error_content}\n  ${red}Ошибка${reset}: Регистрация пакета yq обнаружена в '$status_file'"
-    fi
-
-    if [ -n "$info_content" ]; then
-        echo -e "$info_content"
-    fi
-
-    if [ -n "$error_content" ]; then
-        echo -e "$error_content"
-    fi
+    ! grep -q 'Package: yq_s' "$status_file"
+    print_log_status $? "Регистрация пакета yq не обнаружена в '$status_file'" "Регистрация пакета yq обнаружена в '$status_file'"
 }
 
+# Остальные проверки
+
 logs_delete_cron_geofile_info_console() {
-    info_content=
-    
     if [ -f "$cron_dir/$cron_file" ]; then
-        if grep -q "ug" "$cron_dir/$cron_file"; then
-            error_content="  ${red}Ошибка${reset}: Задача автоматического обновления GeoFile не удалена из cron"
-        else
-            info_content="  ${green}Успешно${reset}: Задача автоматического обновления GeoFile удалена из cron"
-        fi
-        
-        if [ -n "$info_content" ]; then
-            echo -e "$info_content"
-        elif [ -n "$error_content" ]; then
-            echo -e "$error_content"
-        fi
+        ! grep -q "ug" "$cron_dir/$cron_file"
+        print_log_status $? "Задача автоматического обновления GeoFile удалена из cron" "Задача автоматического обновления GeoFile не удалена из cron"
     fi
 }
