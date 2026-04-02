@@ -437,7 +437,7 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -ug)    # Запуск обновления баз GeoFile/GeoIPSET
+        -ug)    # Обновление баз GeoFile/GeoIPSET
             test_connection
             test_github
             sleep 2
@@ -471,7 +471,7 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -uk)    # Обновление XKeen (автовыбор Stable/Dev версии)
+        -uk)    # Обновление XKeen
             test_connection
             test_github
             sleep 2
@@ -713,7 +713,7 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -ri)    # Создать файл автозапуска XKeen
+        -ri)    # Пересоздать файл автозапуска XKeen
             clear
             $initd_file stop >/dev/null 2>&1
             [ -e "$initd_file" ] && rm -f "$initd_file"
@@ -825,10 +825,10 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -dgi)    # Удалить GeoIP's
+        -dgi)    # Удалить GeoIP
             clear
             echo
-            choice_for_remove="GeoIP's"
+            choice_for_remove="GeoIP"
             choice_remove
 
             clear
@@ -843,10 +843,10 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -dgs)    # Удалить GeoSite's
+        -dgs)    # Удалить GeoSite
             clear
             echo
-            choice_for_remove="GeoSite's"
+            choice_for_remove="GeoSite"
             choice_remove
 
             clear
@@ -861,59 +861,7 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -drx)    # Удалить регистрацию Xray
-            clear
-            echo
-            choice_for_remove="регистрацию Xray"
-            choice_remove
-
-            clear
-            echo
-            echo -e "  Удаление ${yellow}регистрации Xray${reset}"
-
-            delete_register_xray
-            logs_delete_register_xray_info_console
-
-            echo -e "  Удаление регистрации Xray ${green}выполнено${reset}"
-        ;;
-
-
-        -drm)    # Удалить регистрацию Mihomo
-            clear
-            echo
-            choice_for_remove="регистрацию Mihomo"
-            choice_remove
-
-            clear
-            echo
-            echo -e "  Удаление ${yellow}регистрации Mihomo${reset}"
-
-            delete_register_mihomo
-            logs_delete_register_mihomo_info_console
-            logs_delete_register_yq_info_console
-
-            echo -e "  Удаление регистрации Mihomo ${green}выполнено${reset}"
-        ;;
-
-
-        -drk)    # Удалить регистрацию XKeen
-            clear
-            echo
-            choice_for_remove="регистрацию XKeen"
-            choice_remove
-
-            clear
-            echo
-            echo -e "  Удаление ${yellow}регистрации XKeen${reset}"
-
-            delete_register_xkeen
-            logs_delete_register_xkeen_info_console
-
-            echo -e "  Удаление регистрации XKeen ${green}выполнено${reset}"
-        ;;
-
-
-        -remove)    # Полная деинсталляция XKeen и всех зависимостей
+        -remove)    # Полная деинсталляция XKeen
             clear
             echo
             choice_for_remove="XKeen полностью со всеми зависимостями"
@@ -1025,93 +973,6 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -rrk)    # Обновить регистрацию XKeen
-            clear
-            echo -e "  Обновление регистрации ${yellow}XKeen${reset}"
-
-            info_cpu
-            info_version_xkeen
-
-            delete_register_xkeen
-            logs_delete_register_xkeen_info_console
-
-            register_xkeen_list
-            logs_register_xkeen_list_info_console
-
-            register_xkeen_control
-            logs_register_xkeen_control_info_console
-
-            register_xkeen_status
-            logs_register_xkeen_status_info_console
-
-            echo
-            echo -e "  Обновление регистрации XKeen в системе ${green}выполнено${reset}"
-        ;;
-
-
-        -rrx)    # Обновить регистрацию Xray
-            command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
-            clear
-            echo -e "  Обновление регистрации ${yellow}Xray${reset}"
-
-            info_xray
-            info_cpu
-            info_version_xray
-
-            delete_register_xray
-            logs_delete_register_xray_info_console
-
-            register_xray_list
-            logs_register_xray_list_info_console
-
-            register_xray_control
-            logs_register_xray_control_info_console
-
-            register_xray_status
-            logs_register_xray_status_info_console
-
-            echo
-            echo -e "  Обновление регистрации Xray в системе ${green}выполнено${reset}"
-        ;;
-
-
-        -rrm)    # Обновить регистрацию Mihomo
-            command -v mihomo >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Mihomo"; exit 1; }
-            clear
-            echo -e "  Обновление регистрации ${yellow}Mihomo${reset}"
-
-            info_mihomo
-            info_cpu
-            info_version_mihomo
-            info_version_yq
-
-            delete_register_mihomo
-            logs_delete_register_mihomo_info_console
-            logs_delete_register_yq_info_console
-
-            register_mihomo_list
-            logs_register_mihomo_list_info_console
-
-            register_mihomo_control
-            logs_register_mihomo_control_info_console
-
-            register_mihomo_status
-            logs_register_mihomo_status_info_console
-
-            register_yq_list
-            logs_register_yq_list_info_console
-
-            register_yq_control
-            logs_register_yq_control_info_console
-
-            register_yq_status
-            logs_register_yq_status_info_console
-
-            echo
-            echo -e "  Обновление регистрации Mihomo в системе ${green}выполнено${reset}"
-        ;;
-
-
         -k)    # Переустановка XKeen
             . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
             status_file="/opt/lib/opkg/status"
@@ -1188,7 +1049,7 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -g)    # Переустановка баз GeoFile
+        -g)    # Установка баз GeoFile
             command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
             test_connection
             test_github
@@ -1211,7 +1072,7 @@ while [ $# -gt 0 ]; do
 
             clear
             echo
-            echo -e "  Переустановка баз GeoFile ${green}выполнена${reset}"
+            echo -e "  Установка баз GeoFile ${green}выполнена${reset}"
         ;;
 
 
@@ -1244,14 +1105,14 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -cb)    # Резервное копирование конфигурации Xray
+        -xb)    # Резервное копирование конфигурации Xray
             command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
             echo -e "  Создание резервной копии ${yellow}конфигурации Xray${reset}"
             backup_configs_xray
         ;;
 
 
-        -cbr)    # Восстановление конфигурации Xray из резервной копии
+        -xbr)    # Восстановление конфигурации Xray из резервной копии
             command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
             echo -e "  Восстановление ${yellow}конфигурации Xray${reset} из резервной копии"
             restore_backup_configs_xray
@@ -1272,13 +1133,13 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -tpx)    # Показать прослушиваемые порты
+        -tp)    # Показать прослушиваемые порты
             echo "  Определение прослушиваемых портов"
             tests_ports_client
         ;;
 
 
-        -v)    # Показать версию XKeen
+        -v|-version)    # Показать версию XKeen
             echo "  Версия XKeen $xkeen_current_version $xkeen_build (время сборки: $build_timestamp)"
         ;;
 
@@ -1289,19 +1150,19 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -ad)    # Поддержать разработчиков
+        -ad|-donate)    # Поддержать разработчиков
             clear
             author_donate
         ;;
 
 
-        -af)    # Обратная связь
+        -af|-feedback)    # Обратная связь
             clear
             author_feedback
         ;;
 
 
-        -h)    # Помощь
+        -h|-help)    # Помощь
             clear
             help_xkeen
         ;;
@@ -1465,7 +1326,7 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -bk)    # Включение/отключение резервного копирования XKeen при обновлении
+        -cbk)    # Включение/отключение резервного копирования XKeen при обновлении
             clear
             change_backup_xkeen
         ;;

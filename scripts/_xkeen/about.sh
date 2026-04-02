@@ -139,7 +139,11 @@ help_xkeen() {
         echo -e "	-i	${italic}	Основной режим установки XKeen + Xray + GeoFile/GeoIPSET + Mihomo${reset}"
         echo -e "	-io	${italic}	OffLine установка XKeen${reset}"
         echo -e "	-toff	${italic}	Отключение таймаута при меделенной загрузке с GitHub (xkeen -i -toff)${reset}"
-        echo -e "	-gips	${italic}	Добавить в исключения проксирования IP-подсети России (GeoIPSET)${reset}"
+        echo
+        echo -e "${green}Переустановка${reset}"
+        echo -e "	-k	${italic}	XKeen${reset}"
+        echo -e "	-g	${italic}	GeoFile${reset}"
+        echo -e "	-gips	${italic}	GeoIPSET${reset}"
         echo
         echo -e "${yellow}Обновление${reset}"
         echo -e "	-uk	${italic}	XKeen${reset}"
@@ -147,16 +151,23 @@ help_xkeen() {
         echo -e "	-ux	${italic}	Xray (повышение/понижение версии)${reset}"
         echo -e "	-um	${italic}	Mihomo (повышение/понижение версии)${reset}"
         echo
-        echo -e "${yellow}Включение или изменение задачи автообновления${reset}"
-        echo -e "	-ugc	${italic}	GeoFile/GeoIPSET${reset}"
+        echo -e "${yellow}Запланированная здача автообновления GeoFile/GeoIPSET${reset}"
+        echo -e "	-ugc	${italic}	Создание${reset}"
+        echo -e "	-dgc	${italic}	Удаление${reset}"
         echo
-        echo -e "${yellow}Регистрация в системе${reset}"
-        echo -e "	-rrk	${italic}	XKeen${reset}"
-        echo -e "	-rrx	${italic}	Xray${reset}"
-        echo -e "	-rrm	${italic}	Mihomo${reset}"
-        echo -e "	-ri	${italic}	Автозапуск XKeen средствами init.d${reset}"
+        echo -e "${green}Резервная копия XKeen${reset}"
+        echo -e "	-kb	${italic}	Создание${reset}"
+        echo -e "	-kbr	${italic}	Восстановление${reset}"
         echo
-        echo -e "${red}Удаление${reset} | Утилиты и компоненты"
+        echo -e "${green}Резервная копия конфигурации Xray${reset}"
+        echo -e "	-xb	${italic}	Создание${reset}"
+        echo -e "	-xbr	${italic}	Восстановление${reset}"
+        echo
+        echo -e "${green}Резервная копия конфигурации Mihomo${reset}"
+        echo -e "	-mb	${italic}	Создание${reset}"
+        echo -e "	-mbr	${italic}	Восстановление${reset}"
+        echo
+        echo -e "${red}Удаление${reset}"
         echo -e "	-remove	${italic}	Полная деинсталляция XKeen${reset}"
         echo -e "	-dgs	${italic}	GeoSite${reset}"
         echo -e "	-dgi	${italic}	GeoIP${reset}"
@@ -165,46 +176,22 @@ help_xkeen() {
         echo -e "	-dm	${italic}	Mihomo${reset}"
         echo -e "	-dk	${italic}	XKeen${reset}"
         echo
-        echo -e "${red}Удаление${reset} | Задачи автообновления"
-        echo -e "	-dgc	${italic}	GeoFile/GeoIPSET${reset}"
-        echo
-        echo -e "${red}Удаление${reset} | Регистрации в системе"
-        echo -e "	-drk	${italic}	XKeen${reset}"
-        echo -e "	-drx	${italic}	Xray${reset}"
-        echo -e "	-drm	${italic}	Mihomo${reset}"
-        echo
-        echo -e "${green}Порты${reset} | Через которые работает прокси-клиент"
+        echo -e "${green}Порты проксирования${reset}"
         echo -e "	-ap	${italic}	Добавить${reset}"
         echo -e "	-dp	${italic}	Удалить${reset}"
         echo -e "	-cp	${italic}	Посмотреть${reset}"
         echo
-        echo -e "${green}Порты${reset} | Исключенные из работы прокси-клиента"
+        echo -e "${green}Порты, исключённые из проксирования${reset}"
         echo -e "	-ape	${italic}	Добавить${reset}"
         echo -e "	-dpe	${italic}	Удалить${reset}"
         echo -e "	-cpe	${italic}	Посмотреть${reset}"
-        echo
-        echo -e "${green}Переустановка${reset}"
-        echo -e "	-k	${italic}	XKeen${reset}"
-        echo -e "	-g	${italic}	GeoFile${reset}"
-        echo
-        echo -e "${green}Резервная копия XKeen${reset}"
-        echo -e "	-kb	${italic}	Создание${reset}"
-        echo -e "	-kbr	${italic}	Восстановление${reset}"
-        echo
-        echo -e "${green}Резервная копия конфигурации Xray${reset}"
-        echo -e "	-cb	${italic}	Создание${reset}"
-        echo -e "	-cbr	${italic}	Восстановление${reset}"
-        echo
-        echo -e "${green}Резервная копия конфигурации Mihomo${reset}"
-        echo -e "	-mb	${italic}	Создание${reset}"
-        echo -e "	-mbr	${italic}	Восстановление${reset}"
         echo
         echo -e "${light_blue}Управление прокси-клиентом${reset}"
         echo -e "	-start	${italic}	Запуск${reset}"
         echo -e "	-stop	${italic}	Остановка${reset}"
         echo -e "	-restart${italic}	Перезапуск${reset}"
         echo -e "	-status	${italic}	Статус работы${reset}"
-        echo -e "	-tpx	${italic}	Порты, шлюз и протокол прокси-клиента${reset}"
+        echo -e "	-tp	${italic}	Порты, шлюз и протокол прокси-клиента${reset}"
         echo -e "	-auto	${italic}	Включить | Отключить автозапуск прокси-клиента${reset}"
         echo -e "	-d	${italic}	Установить задержку автозапуска прокси-клиента${reset}"
         echo -e "	-fd	${italic}	Включить | Отключить контроль файловых дескрипторов прокси-клиента${reset}"
@@ -216,7 +203,7 @@ help_xkeen() {
         echo -e "	-dns	${italic}	Включить | Отключить перенаправление DNS в прокси${reset}"
         echo -e "	-pr	${italic}	Включить | Отключить проксирование трафика Entware${reset}"
         echo -e "	-extmsg	${italic}	Включить | Отключить расширенные сообщения при запуске XKeen${reset}"
-        echo -e "	-bk	${italic}	Включить | Отключить резервное копирование XKeen при обновлении${reset}"
+        echo -e "	-cbk	${italic}	Включить | Отключить резервное копирование XKeen при обновлении${reset}"
         echo
         echo -e "${light_blue}Информация${reset}"
         echo -e "	-about	${italic}	О программе${reset}"
