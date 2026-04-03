@@ -14,3 +14,30 @@ info_cpu() {
     # Получение информации о архитектуре из файла состояния (status_file)
     status_architecture=$(grep -m 1 '^Architecture:' "${status_file}" | awk '{print $2}')
 }
+
+info_4g() {
+    version="$(curl -kfsS "localhost:79/rci/show/version" 2>/dev/null)"
+
+    case "$version" in
+        *KN-1212*)
+            clear
+            echo
+            echo -e "  ${red}Внимание${reset}: Для вашей модели роутера ${light_blue}Keenetic 4G KN-1212${reset}"
+            ;;
+        *KN-2910*)
+            clear
+            echo
+            echo -e "  ${red}Внимание${reset}: Для вашей модели роутера ${light_blue}Keenetic Skipper 4G KN-2910${reset}"
+            ;;
+        *)
+            return
+            ;;
+    esac
+
+    echo "  после установки требуется подменять бинарный файл прокси-клиента"
+    echo "  Подробности в телеграм-чате https://t.me/+8Cvh7oVf6cE0MWRi"
+    echo
+    echo "  Нажмите любую клавишу для продолжения..."
+    read -r -n 1 _
+echo
+}

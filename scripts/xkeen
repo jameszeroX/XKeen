@@ -83,6 +83,7 @@ while [ $# -gt 0 ]; do
             echo -e "  ${red}Ошибка${reset}: Установка XKeen возможна только на Keenetic в режиме ${green}роутера${reset}"
                 exit 1
             fi
+            info_4g
             echo -e "  Запуск полного цикла установки ${yellow}XKeen${reset}"
 
             xkeen_info
@@ -548,6 +549,7 @@ while [ $# -gt 0 ]; do
             sleep 2
 
             . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
+            info_4g
             status_file="/opt/lib/opkg/status"
             info_cpu
             info_xray
@@ -620,6 +622,7 @@ while [ $# -gt 0 ]; do
             sleep 2
 
             . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
+            info_4g
             status_file="/opt/lib/opkg/status"
             info_cpu
             info_mihomo
