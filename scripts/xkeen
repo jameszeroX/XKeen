@@ -1332,6 +1332,12 @@ while [ $# -gt 0 ]; do
         ;;
 
 
+        -aghfix)    # Включение/отключение исправления для AdGuard Home
+            clear
+            change_aghfix_xkeen
+        ;;
+
+
         -toff)    # Отключение таймаута при меделенной загрузке с GitHub
             :
         ;;

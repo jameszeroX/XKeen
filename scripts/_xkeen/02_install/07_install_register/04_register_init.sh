@@ -92,6 +92,9 @@ extended_msg="off"
 ## Резервное копирование XKeen при обновлении
 backup="on"
 
+## Клиенты XKeen под своими IP в журнале AdGuard Home
+aghfix="off"
+
 # Функции журналирования
 log_info_router() {
     logger -p notice -t "$name_app" "$1"
@@ -968,10 +971,11 @@ directory_user_modules="$directory_user_modules"
 directory_configs_app="$directory_configs_app"
 directory_xray_config="$directory_xray_config"
 directory_xray_asset="$directory_xray_asset"
-iptables_supported=$iptables_supported
-ip6tables_supported=$ip6tables_supported
-arm64_fd=$arm64_fd
-other_fd=$other_fd
+iptables_supported="$iptables_supported"
+ip6tables_supported="$ip6tables_supported"
+arm64_fd="$arm64_fd"
+other_fd="$other_fd"
+aghfix="$aghfix"
 
 # Перезапуск скрипта
 restart_script() {
@@ -1320,6 +1324,7 @@ if pidof "\$name_client" >/dev/null; then
         family="\$1"
         table="nat"
 
+        [ "\$aghfix" != "on" ] && return
         [ "\$file_dns" = "true" ] && [ "\$proxy_dns" = "on" ] && return
 
         all_marks=""

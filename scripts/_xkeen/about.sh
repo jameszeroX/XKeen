@@ -204,6 +204,7 @@ help_xkeen() {
         echo -e "	-pr	${italic}	Включить | Отключить проксирование трафика Entware${reset}"
         echo -e "	-extmsg	${italic}	Включить | Отключить расширенные сообщения при запуске XKeen${reset}"
         echo -e "	-cbk	${italic}	Включить | Отключить резервное копирование XKeen при обновлении${reset}"
+        echo -e "	-aghfix	${italic}	Включить | Отключить отображение клиентов XKeen под своими IP в журнале AdGuard Home${reset}"
         echo
         echo -e "${light_blue}Информация${reset}"
         echo -e "	-about	${italic}	О программе${reset}"

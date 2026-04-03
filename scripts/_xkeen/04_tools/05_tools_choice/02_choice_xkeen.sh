@@ -196,3 +196,7 @@ change_extended_msg() {
 change_backup_xkeen() {
     toggle_param "backup" "резервного копирования XKeen при обновлении" "none"
 }
+
+change_aghfix_xkeen() {
+    toggle_param "aghfix" "отображения клиентов XKeen под своими IP в журнале AaGuard Home" "restart"
+}
