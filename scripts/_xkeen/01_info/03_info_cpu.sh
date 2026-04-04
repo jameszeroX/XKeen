@@ -16,20 +16,20 @@ info_cpu() {
 }
 
 info_4g() {
+    [ "$architecture" != "mips32le" ] && echo && return
     version="$(curl -kfsS "localhost:79/rci/show/version" 2>/dev/null)"
 
     case "$version" in
         *KN-1212*)
-            clear
             echo
             echo -e "  ${red}Внимание${reset}: Для вашей модели роутера ${light_blue}Keenetic 4G KN-1212${reset}"
             ;;
         *KN-2910*)
-            clear
             echo
             echo -e "  ${red}Внимание${reset}: Для вашей модели роутера ${light_blue}Keenetic Skipper 4G KN-2910${reset}"
             ;;
         *)
+            echo
             return
             ;;
     esac
@@ -39,5 +39,4 @@ info_4g() {
     echo
     echo "  Нажмите любую клавишу для продолжения..."
     read -r -n 1 _
-echo
 }

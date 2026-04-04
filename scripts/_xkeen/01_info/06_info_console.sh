@@ -12,7 +12,6 @@ print_log_status() {
 
 # Обратная связь в консоль
 logs_cpu_info_console() {
-    echo
     echo -e "  Набор инструкций процессора: ${yellow}$architecture${reset}"
     
     case "$architecture" in

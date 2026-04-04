@@ -83,11 +83,12 @@ while [ $# -gt 0 ]; do
             echo -e "  ${red}Ошибка${reset}: Установка XKeen возможна только на Keenetic в режиме ${green}роутера${reset}"
                 exit 1
             fi
-            info_4g
+
             echo -e "  Запуск полного цикла установки ${yellow}XKeen${reset}"
 
             xkeen_info
             xkeen_set_info
+            info_4g
             logs_cpu_info_console
 
             case "$architecture" in
@@ -549,14 +550,12 @@ while [ $# -gt 0 ]; do
             sleep 2
 
             . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
-            info_4g
             status_file="/opt/lib/opkg/status"
             info_cpu
+            clear
+            info_4g
             info_xray
             info_version_xray
-
-            clear
-            echo
 
             [ "$xray_installed" = "installed" ] && echo -e "  В роутере установлен Xray версии ${yellow}$xray_current_version${reset}" && echo
             download_xray
@@ -622,15 +621,13 @@ while [ $# -gt 0 ]; do
             sleep 2
 
             . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
-            info_4g
             status_file="/opt/lib/opkg/status"
             info_cpu
+            clear
+            info_4g
             info_mihomo
             info_version_mihomo
             mihomo_was_installed="$mihomo_installed"
-
-            clear
-            echo
 
             [ "$mihomo_installed" = "installed" ] && echo -e "  В роутере установлен Mihomo версии ${yellow}$mihomo_current_version${reset}" && echo
             if ! download_mihomo; then
