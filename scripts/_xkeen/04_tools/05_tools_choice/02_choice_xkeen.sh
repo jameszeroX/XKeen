@@ -173,12 +173,17 @@ choice_remove() {
     fi
 }
 
-change_autostart_xkeen() {
-    toggle_param "start_auto" "автозапуска XKeen" "none"
+warn_proxy_dns() {
+    echo
+    echo -e "  ${red}Внимание!${reset} Значение данного параметра без соответствующих настроек прокси-клиента ${green}игнорируется${reset}"
 }
 
 change_proxy_dns() {
     toggle_param "proxy_dns" "перехвата DNS" "restart"
+}
+
+change_autostart_xkeen() {
+    toggle_param "start_auto" "автозапуска XKeen" "none"
 }
 
 change_file_descriptors() {

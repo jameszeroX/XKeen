@@ -1310,6 +1310,7 @@ while [ $# -gt 0 ]; do
 
         -dns)    # Включение/отключение перенаправления DNS в прокси
             clear
+            warn_proxy_dns
             change_proxy_dns
         ;;
 
