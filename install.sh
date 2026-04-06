@@ -1,8 +1,37 @@
 #!/bin/sh
 
-url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"
+green="\033[92m"
+red="\033[91m"
+yellow="\033[93m"
+light_blue="\033[96m"
+reset="\033[0m"
+
+url_stable="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"
+url_beta="https://raw.githubusercontent.com/jameszeroX/XKeen/main/test/xkeen.tar.gz"
 archive_name="xkeen.tar.gz"
 release_fix_url="https://raw.githubusercontent.com/jameszeroX/XKeen/main/01_info_variable.sh"
+
+clear
+echo
+printf "  Какую версию ${yellow}XKeen${reset} вы хотите установить?\n\n"
+printf "  1) Стабильную версию (${light_blue}Stable${reset})\n"
+printf "  2) Новую Бета-версию (${light_blue}Beta${reset})\n\n"
+printf "  Выберите 1 или 2 [по умолчанию 1]: "
+read -r version_choice
+
+case "$version_choice" in
+    2)
+        url="$url_beta"
+        echo
+        printf "  Выбрана ${light_blue}Бета-версия${reset}\n"
+        ;;
+    *)
+        url="$url_stable"
+        echo
+        printf "  Выбрана ${light_blue}Стабильная версия${reset}\n"
+        ;;
+esac
+echo
 
 get_release_var_file() {
     if [ -f /opt/sbin/_xkeen/01_info/01_info_variable.sh ]; then
@@ -31,7 +60,7 @@ download_xkeen_release() {
         return 0
     fi
 
-    echo "Ошибка: не удалось загрузить xkeen.tar.gz"
+    printf "  ${red}Ошибка${reset}: не удалось загрузить ${yellow}xkeen.tar.gz${reset}\n"
     return 1
 }
 
@@ -50,13 +79,13 @@ download_release_fix() {
         return 0
     fi
 
-    echo "Ошибка: не удалось применить исправление 01_info_variable.sh для релиза 1.1.3.9"
+    printf "  ${red}Ошибка${reset}: не удалось применить исправление ${yellow}01_info_variable.sh${reset} для релиза ${green}1.1.3.9${reset}\n"
     return 1
 }
 
 apply_release_1139_yq_fix() {
     release_var_file="$(get_release_var_file)" || {
-        echo "Ошибка: после распаковки не найден файл 01_info_variable.sh"
+        printf "  ${red}Ошибка${reset}: после распаковки не найден файл ${yellow}01_info_variable.sh${reset}\n"
         return 1
     }
 
@@ -76,14 +105,14 @@ fi
 
 if ! tar -xzf "$archive_name" -C /opt/sbin; then
     rm -f "$archive_name"
-    echo "Ошибка: не удалось распаковать xkeen.tar.gz"
+    printf "  ${red}Ошибка${reset}: не удалось распаковать ${yellow}xkeen.tar.gz${reset}\n"
     exit 1
 fi
 
 rm -f "$archive_name"
 
 if [ ! -x /opt/sbin/xkeen ]; then
-    echo "Ошибка: после распаковки не найден исполняемый файл /opt/sbin/xkeen"
+    printf "  ${red}Ошибка${reset}: после распаковки не найден исполняемый файл ${yellow}/opt/sbin/xkeen${reset}\n"
     exit 1
 fi
 
