@@ -80,9 +80,7 @@ routing-mark: 255
 ### Рекомендуемый порядок установки/обновления
 ```
 opkg update && opkg upgrade && opkg install curl tar && cd /tmp
-curl -OL https://raw.githubusercontent.com/jameszeroX/xkeen/main/test/xkeen.tar.gz
-tar -xvzf xkeen.tar.gz -C /opt/sbin > /dev/null && rm xkeen.tar.gz
-xkeen -i
+sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)"
 ```
 
 Штатный механизм обновления тоже работает, но он рекомендуется только для опытных пользователей

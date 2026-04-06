@@ -246,6 +246,12 @@ get_ports_exclude() {
 }
 
 migrate_ports_from_initd() {
+    for f in "$initd_file" "/opt/etc/init.d/S99xkeen" "/opt/etc/init.d/S24xray"; do
+        [ -f "$f" ] || continue
+        initd_file="$f"
+        break
+    done
+
     [ -f "$initd_file" ] || return
 
     # Читаем старые значения
