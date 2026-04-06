@@ -76,22 +76,9 @@ xkeen -h
 
 Требуется роутер **Keenetic**/**Netcraze** с предварительно установленной средой Entware и компонентом `Модули ядра подсистемы Netfilter`
 
-Вариант 1:
-
 ```bash
 opkg update && opkg upgrade && opkg install curl tar && cd /tmp
 sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)"
-```
-
-Вариант 2:
-
-```bash
-opkg update && opkg upgrade && opkg install curl tar && cd /tmp
-url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"
-urlfix="https://raw.githubusercontent.com/jameszeroX/xkeen/main/01_info_variable.sh"
-curl -OL "$url" && tar -xvzf xkeen.tar.gz -C /opt/sbin > /dev/null && rm xkeen.tar.gz
-curl -Lo /opt/sbin/_xkeen/01_info/01_info_variable.sh "$urlfix"
-xkeen -i
 ```
 
 ---
