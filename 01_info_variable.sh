@@ -36,7 +36,7 @@ os_modules="/lib/modules/$(uname -r)"
 user_modules="/opt/lib/modules"
 xkeen_current_version="1.1.3.9"
 xkeen_build="Stable"
-build_timestamp="2026-02-07 08:58:11 MSK"
+build_timestamp="2026-02-07 08:58:11 MSK (fix yq)"
 
 # -------------------------------------
 # Время
