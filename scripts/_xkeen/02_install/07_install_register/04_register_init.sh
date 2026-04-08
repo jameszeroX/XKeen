@@ -81,7 +81,7 @@ start_delay=20
 check_fd="off"
 arm64_fd=40000
 other_fd=10000
-delay_fd=20
+delay_fd=60
 
 # Поддержка IPv6
 ipv6_support="on"
