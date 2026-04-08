@@ -105,6 +105,10 @@ change_ipv6_support() {
             if [ "$desired_state" = "off" ]; then
                 sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
                 sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
+                for dir in /proc/sys/net/ipv6/conf/t2s*; do
+                    [ -d "$dir" ] || continue
+                    [ -f "$dir/disable_ipv6" ] && echo "0" > "$dir/disable_ipv6"
+                done
             else
                 sysctl -w net.ipv6.conf.all.disable_ipv6=0 >/dev/null 2>&1
                 sysctl -w net.ipv6.conf.default.disable_ipv6=0 >/dev/null 2>&1

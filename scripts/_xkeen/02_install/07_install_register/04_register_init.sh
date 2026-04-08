@@ -308,9 +308,8 @@ apply_ipv6_state() {
     if [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 1 ] &&
        [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 1 ]; then
         for dir in /proc/sys/net/ipv6/conf/t2s*; do
-            if [ -f "$dir/disable_ipv6" ]; then
-                echo "0" > "$dir/disable_ipv6"
-            fi
+            [ -d "$dir" ] || continue
+            [ -f "$dir/disable_ipv6" ] && echo "0" > "$dir/disable_ipv6"
         done
         log_info_router "Отключение IPv6 выполнено"
         return 0
