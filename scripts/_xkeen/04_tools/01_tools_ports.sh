@@ -246,21 +246,21 @@ get_ports_exclude() {
 }
 
 migrate_ports_from_initd() {
-    for f in "$initd_file" "/opt/etc/init.d/S99xkeen" "/opt/etc/init.d/S24xray"; do
-        [ -f "$f" ] || continue
-        initd_file="$f"
-        break
+    legacy_initd=""
+
+    for f in "/opt/etc/init.d/S99xkeen" "/opt/etc/init.d/S24xray"; do
+        [ -f "$f" ] && { legacy_initd="$f"; break; }
     done
 
-    [ -f "$initd_file" ] || return
+    [ -n "$legacy_initd" ] || return
 
     # Читаем старые значения
     port_donor_val=$(
-        awk -F= '/^port_donor=/{print $2; exit}' "$initd_file" | tr -d '"'
+        awk -F= '/^port_donor=/{print $2; exit}' "$legacy_initd" | tr -d '"'
     )
 
     port_exclude_val=$(
-        awk -F= '/^port_exclude=/{print $2; exit}' "$initd_file" | tr -d '"'
+        awk -F= '/^port_exclude=/{print $2; exit}' "$legacy_initd" | tr -d '"'
     )
 
     port_donor_val=$(normalize_ports "$port_donor_val")
