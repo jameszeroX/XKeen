@@ -360,7 +360,7 @@ check_xray_backups() {
     bad_files=$(find "$directory_xray_config" -maxdepth 1 -type f \( -iname "*bak*.json" -o -iname "*old*.json" -o -iname "*copy*.json" -o -iname "*копия*.json" -o -iname "*orig*.json" -o -iname "*save*.json" -o -iname "*temp*.json" -o -iname "*tmp*.json" -o -name "*(*).json" \))
 
     if [ -n "$bad_files" ]; then
-        bad_list=$(echo "$bad_files" | awk -F/ '{print "  - " $NF}')
+        bad_list=$(printf '%s\n' "$bad_files" | awk -F/ '{print "  - " $NF}')
         
         log_error_terminal "
   В директории конфигурации Xray найдены резервные копии:
@@ -509,8 +509,10 @@ read_ports_from_file() {
 # Функция обработки, валидации и нормализации списка портов
 validate_and_clean_ports() {
     input_ports="$1"
+    mandatory_ports="$2"
+    [ -z "$input_ports" ] && [ -z "$mandatory_ports" ] && return 1
 
-    echo "$input_ports" | tr ',' '\n' | awk '
+    echo "${mandatory_ports}${mandatory_ports:+,}${input_ports}" | tr ',' '\n' | awk '
         function is_valid(p) {
             return p ~ /^[0-9]+$/ && p > 0 && p <= 65535
         }
@@ -549,17 +551,15 @@ validate_and_clean_ports() {
 
 # Функция обработки пользовательских портов
 process_user_ports() {
-    port_donor=$(validate_and_clean_ports "$(read_ports_from_file "$file_port_proxying")")
-    port_exclude=$(validate_and_clean_ports "$(read_ports_from_file "$file_port_exclude")")
+    raw_donor=$(read_ports_from_file "$file_port_proxying")
 
-    if [ -n "$port_donor" ]; then
-        if echo "$port_donor" | grep -qv "\(^\|,\)80\(,\|$\)"; then
-            port_donor="80,${port_donor}"
-        fi
-        if echo "$port_donor" | grep -qv "\(^\|,\)443\(,\|$\)"; then
-            port_donor="443,${port_donor}"
-        fi
+    if [ -n "$raw_donor" ]; then
+        port_donor=$(validate_and_clean_ports "$raw_donor" "80,443")
+    else
+        port_donor=""
     fi
+
+    port_exclude=$(validate_and_clean_ports "$(read_ports_from_file "$file_port_exclude")")
 
     if [ -n "$port_donor" ] && [ -n "$port_exclude" ]; then
         log_warning_terminal "
@@ -822,7 +822,7 @@ get_port_exclude() {
     else
         port_exclude="$port_exclude_redirect"
     fi
-    port_exclude=$(echo "$port_exclude" | tr -dc '0-9,:' | sed 's/,,*/,/g; s/^,//; s/,$//')
+    port_exclude=$(printf '%s\n' "$port_exclude" | tr -dc '0-9,:' | tr -s ',' | sed 's/^,//; s/,$//')
     echo "$port_exclude"
 }
 
@@ -1043,10 +1043,10 @@ if pidof "\$name_client" >/dev/null; then
         [ "\$family" = "iptables" ] && [ "\$iptables_supported" = "false" ] && return
         [ "\$family" = "ip6tables" ] && [ "\$ip6tables_supported" = "false" ] && return
 
-        if ! "\$family" -w -t "\$table" -nL \$chain >/dev/null 2>&1; then
-            "\$family" -w -t "\$table" -N \$chain || exit 0
+        if ! "\$family" -w -t "\$table" -nL "\$chain" >/dev/null 2>&1; then
+            "\$family" -w -t "\$table" -N "\$chain" || exit 0
 
-            add_exclude_rules \$chain
+            add_exclude_rules "\$chain"
 
             if [ "\$table" = "\$table_tproxy" ]; then
                 if [ "\$mode_proxy" = "Hybrid" ]; then
@@ -1054,55 +1054,55 @@ if pidof "\$name_client" >/dev/null; then
                 else
                     set -- -m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark
                 fi
-                ipt -C \$chain "\$@" >/dev/null 2>&1 || ipt -I \$chain 1 "\$@" >/dev/null 2>&1
+                ipt -C "\$chain" "\$@" >/dev/null 2>&1 || ipt -I "\$chain" 1 "\$@" >/dev/null 2>&1
             fi
 
             case "\$mode_proxy" in
                 Hybrid)
                     if [ "\$table" = "\$table_redirect" ]; then
-                        ipt -I \$chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
+                        ipt -I "\$chain" 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
                         add_ipset_exclude ext_exclude hash:ip
                         add_ipset_exclude geo_exclude hash:net
                         add_ipset_exclude user_exclude hash:net
-                        ipt -A \$chain -p tcp -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
+                        ipt -A "\$chain" -p tcp -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
                     else
-                        ipt -I \$chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
+                        ipt -I "\$chain" 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
                         add_ipset_exclude ext_exclude hash:ip
                         add_ipset_exclude geo_exclude hash:net
                         add_ipset_exclude user_exclude hash:net
-                        ipt -A \$chain -p udp -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
-                        ipt -A \$chain -p udp -m mark ! --mark 0 -j CONNMARK --save-mark >/dev/null 2>&1
-                        ipt -A \$chain -p udp -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
+                        ipt -A "\$chain" -p udp -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
+                        ipt -A "\$chain" -p udp -m mark ! --mark 0 -j CONNMARK --save-mark >/dev/null 2>&1
+                        ipt -A "\$chain" -p udp -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
                     fi
                     ;;
                 TProxy)
-                    ipt -C \$chain -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
-                    ipt -I \$chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
+                    ipt -C "\$chain" -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
+                    ipt -I "\$chain" 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
                     for net in \$network_tproxy; do
                         add_ipset_exclude ext_exclude hash:ip
                         add_ipset_exclude geo_exclude hash:net
                         add_ipset_exclude user_exclude hash:net
-                        ipt -A \$chain -p "\$net" -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
-                        ipt -A \$chain -p "\$net" -m mark ! --mark 0 -j CONNMARK --save-mark >/dev/null 2>&1
-                        ipt -A \$chain -p "\$net" -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
+                        ipt -A "\$chain" -p "\$net" -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
+                        ipt -A "\$chain" -p "\$net" -m mark ! --mark 0 -j CONNMARK --save-mark >/dev/null 2>&1
+                        ipt -A "\$chain" -p "\$net" -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
                     done
                     ;;
                 Redirect)
-                    ipt -C \$chain -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
-                    ipt -I \$chain 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
+                    ipt -C "\$chain" -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
+                    ipt -I "\$chain" 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
                     add_ipset_exclude ext_exclude hash:ip
                     add_ipset_exclude geo_exclude hash:net
                     add_ipset_exclude user_exclude hash:net
                     for net in \$network_redirect; do
-                        ipt -A \$chain -p "\$net" -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
+                        ipt -A "\$chain" -p "\$net" -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
                     done
                     ;;
                 *) exit 0 ;;
             esac
 
             if [ -n "\$dscp_exclude" ]; then
-                for dscp in \$dscp_exclude; do
-                    ipt -I \$chain -m dscp --dscp "\$dscp" -j RETURN >/dev/null 2>&1
+                for dscp in "\$dscp_exclude"; do
+                    ipt -I "\$chain" -m dscp --dscp "\$dscp" -j RETURN >/dev/null 2>&1
                 done
             fi
         fi
@@ -1126,9 +1126,9 @@ if pidof "\$name_client" >/dev/null; then
                 return 0
             fi
             if [ "\$source_table" = "main" ]; then
-                ip -\$ip_version route show default 2>/dev/null | grep -q '^default'
+                ip -"\$ip_version" route show default 2>/dev/null | grep -q '^default'
             else
-                ip -\$ip_version route show table all 2>/dev/null | grep -E "^[[:space:]]*default .* table \$policy_table([[:space:]]|$)" | grep -vq 'unreachable' >/dev/null
+                ip -"\$ip_version" route show table all 2>/dev/null | grep -E "^[[:space:]]*default .* table \$policy_table([[:space:]]|$)" | grep -vq 'unreachable' >/dev/null
             fi
         }
 
@@ -1144,16 +1144,16 @@ if pidof "\$name_client" >/dev/null; then
         done
         [ "\$ip_version" = "4" ] && rm -f "/tmp/noinet"
 
-        ip -\$ip_version rule del fwmark \$table_mark lookup \$table_id >/dev/null 2>&1 || true
-        ip -\$ip_version route flush table \$table_id >/dev/null 2>&1 || true
-        ip -\$ip_version route add local default dev lo table \$table_id >/dev/null 2>&1 || true
-        ip -\$ip_version rule add fwmark \$table_mark lookup \$table_id >/dev/null 2>&1 || true
+        ip -"\$ip_version" rule del fwmark "\$table_mark" lookup "\$table_id" >/dev/null 2>&1 || true
+        ip -"\$ip_version" route flush table "\$table_id" >/dev/null 2>&1 || true
+        ip -"\$ip_version" route add local default dev lo table "\$table_id" >/dev/null 2>&1 || true
+        ip -"\$ip_version" rule add fwmark "\$table_mark" lookup "\$table_id" >/dev/null 2>&1 || true
 
         # Копируем маршруты
-        ip -\$ip_version route show table \$source_table 2>/dev/null | while read -r route_line; do
+        ip -"\$ip_version" route show table "\$source_table" 2>/dev/null | while read -r route_line; do
             case "\$route_line" in
                 default*|unreachable*|blackhole*) continue ;;
-                *) ip -\$ip_version route add table \$table_id \$route_line >/dev/null 2>&1 || true ;;
+                *) ip -"\$ip_version" route add table "\$table_id" "\$route_line" >/dev/null 2>&1 || true ;;
             esac
         done
         return 0
@@ -1468,7 +1468,7 @@ clean_firewall() {
             "$family" -t "$chain" -S PREROUTING | grep "multiport" | grep "RETURN" | \
             while read -r rule; do
                 rule=${rule#-A PREROUTING }
-                "$family" -t $chain -D PREROUTING $rule >/dev/null 2>&1
+                "$family" -t "$chain" -D PREROUTING $rule >/dev/null 2>&1
             done
         done
     done
@@ -1748,7 +1748,7 @@ case "$1" in
     stop) proxy_stop ;;
     status)
         if proxy_status; then
-            mode_proxy=$(grep '^mode_proxy=' $file_netfilter_hook | awk -F'"' '{print $2}')
+            mode_proxy=$(grep '^mode_proxy=' "$file_netfilter_hook" | awk -F'"' '{print $2}')
             echo -e "  Прокси-клиент ${yellow}$name_client${reset} ${green}запущен${reset} в режиме ${light_blue}$mode_proxy${reset}"
         else
             echo -e "  Прокси-клиент ${red}не запущен${reset}"

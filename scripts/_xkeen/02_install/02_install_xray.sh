@@ -31,10 +31,10 @@ install_xray() {
 
         # Фикс для новых ядер xray
         if [ -d "$install_conf_dir" ]; then
-            for file in "$install_conf_dir"/*; do
+            for file in "$install_conf_dir"/*.json; do
                 [ -f "$file" ] || continue
-                if grep "transport" "$file" >/dev/null 2>&1; then
-                    rm -f "$file"
+                if grep -qE '"transport"\s*:' "$file"; then
+                    mv "$file" "${file}.bad"
                 fi
             done
         fi
