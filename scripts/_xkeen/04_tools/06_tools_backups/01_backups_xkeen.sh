@@ -1,6 +1,6 @@
 # Создание резервной копии XKeen
 backup_xkeen() {
-    if choice_backup_xkeen && [ -z $manual_backup ]; then
+    if choice_backup_xkeen && [ -z "$manual_backup" ]; then
         return 0
     fi
 

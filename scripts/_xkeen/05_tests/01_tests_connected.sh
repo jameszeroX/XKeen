@@ -24,12 +24,12 @@ download_with_check() {
 
     i=1
     while [ $i -le 10 ]; do
-        kill -0 $pid 2>/dev/null 2>/dev/null || break
+        kill -0 $pid 2>/dev/null || break
         sleep 1
         i=$((i + 1))
     done
 
-    if kill -0 $pid 2>/dev/null 2>/dev/null; then
+    if kill -0 $pid 2>/dev/null; then
         kill $pid 2>/dev/null
         wait $pid 2>/dev/null
     fi
