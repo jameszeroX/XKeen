@@ -36,6 +36,11 @@ register_xkeen_status() {
         "jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset"
 }
 
+
+fixed_register_packages() {
+	awk 'BEGIN {RS=""; ORS="\n\n"} {gsub(/\n\n+/,"\n\n")}1' "$status_file" > tmp_status_file && mv tmp_status_file "$status_file"
+}
+
 register_xkeen_initd() {
     old_initd_file="${initd_dir}/S24xray"
     pre_initd_file="${initd_dir}/S99xkeen"

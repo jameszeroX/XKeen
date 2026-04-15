@@ -358,6 +358,8 @@ while [ $# -gt 0 ]; do
 
                 clear
                 delete_register_xray
+                info_xray
+                info_version_xray
                 echo
                 echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
                 register_xray_list
@@ -371,6 +373,9 @@ while [ $# -gt 0 ]; do
             if [ -f "$install_dir/mihomo" ]; then
                 add_mihomo_config
                 delete_register_mihomo
+                info_mihomo
+                info_version_mihomo
+                info_version_yq
                 echo
                 echo -e "  Выполняется регистрация ${yellow}Mihomo${reset}"
                 register_mihomo_list
@@ -568,6 +573,7 @@ while [ $# -gt 0 ]; do
                     delete_register_xray
                     logs_delete_register_xray_info_console
 
+                    info_version_xray
                     echo -e "  Выполняется регистрация новой версии ${yellow}Xray${reset}"
                     register_xray_list
                     logs_register_xray_list_info_console
@@ -611,6 +617,7 @@ while [ $# -gt 0 ]; do
                 fi
             fi
 
+            fixed_register_packages
             delete_tmp
         ;;
 
@@ -634,8 +641,6 @@ while [ $# -gt 0 ]; do
                 delete_tmp
                 exit 1
             fi
-            info_version_mihomo
-            info_version_yq
 
             if [ -z "$bypass_mihomo" ]; then
                 install_mihomo
@@ -651,6 +656,8 @@ while [ $# -gt 0 ]; do
                     logs_delete_register_mihomo_info_console
                     logs_delete_register_yq_info_console
 
+                    info_version_mihomo
+                    info_version_yq
                     echo -e "  Выполняется регистрация новой версии ${yellow}Mihomo${reset}"
                     register_mihomo_list
                     logs_register_mihomo_list_info_console
@@ -696,6 +703,7 @@ while [ $# -gt 0 ]; do
                 fi
             fi
 
+            fixed_register_packages
             delete_tmp
         ;;
 
