@@ -111,7 +111,7 @@ diagnostic() {
         ls -l "/proc/$(pidof ${name_client})/fd" | wc -l
     } | log_block "Версия $name_client и файловые дескрипторы"
 
-    xkeen -v | log_block "Версия XKeen"
+    echo "Версия XKeen $xkeen_current_version $xkeen_build (время сборки: $build_timestamp)" | log_block "Версия XKeen"
 
     [ -f "$xkeen_config" ] && log_file "$xkeen_config" "Файл xkeen.json"
 

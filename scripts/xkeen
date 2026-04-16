@@ -117,8 +117,10 @@ while [ $# -gt 0 ]; do
 
             if [ -z $bypass_xray ]; then
                 install_xray
-                xray_installed="installed"
+                info_xray
+            fi
 
+            if [ "$xray_installed" = "installed" ]; then
                 clear
                 # Устанавливаем GeoSite
                 choice_geosite
@@ -190,29 +192,32 @@ while [ $# -gt 0 ]; do
             if [ -z "$bypass_mihomo" ]; then
                 install_mihomo
                 info_mihomo
-                if [ "$mihomo_installed" = "installed" ]; then
-                    info_version_mihomo
-                    info_version_yq
-                    add_mihomo_config
-                    delete_register_mihomo
-                    echo
-                    echo -e "  Выполняется регистрация ${yellow}Mihomo${reset}"
-                    register_mihomo_list
-                    logs_register_mihomo_list_info_console
-                    register_mihomo_control
-                    logs_register_mihomo_control_info_console
-                    register_mihomo_status
-                    logs_register_mihomo_status_info_console
-                    register_yq_list
-                    logs_register_yq_list_info_console
-                    register_yq_control
-                    logs_register_yq_control_info_console
-                    register_yq_status
-                    logs_register_yq_status_info_console
-                    sleep 2
-                else
-                    echo -e "  ${red}Ошибка${reset}: Mihomo не установлен, так как отсутствует обязательный Yq"
-                fi
+            fi
+
+            if [ "$mihomo_installed" = "installed" ]; then
+                add_mihomo_config
+            fi
+
+            if [ -z "$bypass_mihomo" ]; then
+                info_version_mihomo
+                info_version_yq
+
+                delete_register_mihomo
+                echo
+                echo -e "  Выполняется регистрация ${yellow}Mihomo${reset}"
+                register_mihomo_list
+                logs_register_mihomo_list_info_console
+                register_mihomo_control
+                logs_register_mihomo_control_info_console
+                register_mihomo_status
+                logs_register_mihomo_status_info_console
+                register_yq_list
+                logs_register_yq_list_info_console
+                register_yq_control
+                logs_register_yq_control_info_console
+                register_yq_status
+                logs_register_yq_status_info_console
+                sleep 2
             fi
 
             if [ "$add_mihomo" = "true" ] && [ "$mihomo_installed" != "installed" ] && [ "$xray_installed" != "installed" ]; then
