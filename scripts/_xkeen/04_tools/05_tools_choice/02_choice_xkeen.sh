@@ -184,29 +184,29 @@ warn_proxy_dns() {
 }
 
 change_proxy_dns() {
-    toggle_param "proxy_dns" "перехвата DNS" "restart"
+    toggle_param "proxy_dns" "перехвата DNS" "restart" "$1"
 }
 
 change_autostart_xkeen() {
-    toggle_param "start_auto" "автозапуска XKeen" "none"
+    toggle_param "start_auto" "автозапуска XKeen" "none" "$1"
 }
 
 change_file_descriptors() {
-    toggle_param "check_fd" "контроля файловых дескрипторов" "restart"
+    toggle_param "check_fd" "контроля файловых дескрипторов" "restart" "$1"
 }
 
 change_proxy_router() {
-    toggle_param "proxy_router" "проксирования трафика Entware" "restart"
+    toggle_param "proxy_router" "проксирования трафика Entware" "restart" "$1"
 }
 
 change_extended_msg() {
-    toggle_param "extended_msg" "расширенных сообщений при запуcке XKeen" "none"
+    toggle_param "extended_msg" "расширенных сообщений при запуcке XKeen" "none" "$1"
 }
 
 change_backup_xkeen() {
-    toggle_param "backup" "резервного копирования XKeen при обновлении" "none"
+    toggle_param "backup" "резервного копирования XKeen при обновлении" "none" "$1"
 }
 
 change_aghfix_xkeen() {
-    toggle_param "aghfix" "отображения клиентов XKeen под своими IP в журнале AaGuard Home" "restart"
+    toggle_param "aghfix" "отображения клиентов XKeen под своими IP в журнале AaGuard Home" "restart" "$1"
 }

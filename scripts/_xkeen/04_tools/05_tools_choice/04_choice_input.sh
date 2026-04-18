@@ -28,7 +28,9 @@ toggle_param() {
     param="$1"
     description="$2"
     restart_needed="$3"
+    force_state="$4"
 
+    echo
     if [ ! -f "$initd_file" ]; then
         echo -e "  ${red}Ошибка${reset}: Не найден файл ${yellow}S05xkeen${reset}"
         return 1
@@ -36,14 +38,24 @@ toggle_param() {
 
     current_state=$(grep -m 1 -E "^[[:space:]]*$param=" "$initd_file" | cut -d'=' -f2 | tr -d '"[:space:]')
 
-    if [ "$bypass_autostart_msg" = "yes" ]; then
+    if [ "$force_state" = "on" ] || [ "$force_state" = "off" ]; then
+        if [ "$current_state" = "$force_state" ]; then
+            if [ "$current_state" = "on" ]; then
+                echo -e "  Состояние ${description} уже ${green}включено${reset}"
+            else
+                echo -e "  Состояние ${description} уже ${red}отключено${reset}"
+            fi
+            [ "$apply" = "restart" ] && echo
+            return 0
+        fi
+        desired_state="$force_state"
+    elif [ "$bypass_autostart_msg" = "yes" ]; then
         if [ "$current_state" = "on" ]; then
             desired_state="off"
         else
             desired_state="on"
         fi
     else
-        echo
         echo -e "  Текущее состояние ${description}:"
 
         if [ "$current_state" = "on" ]; then
@@ -90,13 +102,14 @@ toggle_param() {
         if [ "$restart_needed" = "reboot" ]; then
             echo
             echo -e "  ${yellow}Перезагрузите роутер для применения изменений${reset}"
-        elif [ "$restart_needed" = "restart" ]; then
+        elif [ "$restart_needed" = "restart" ] && [ "$apply" != "restart" ]; then
             echo
             echo -e "  ${yellow}Перезапустите XKeen для применения изменений${reset}"
         fi
 
         add_chmod_init
     else
+        echo
         echo -e "  ${red}Ошибка${reset} при изменении параметра $param"
         return 1
     fi

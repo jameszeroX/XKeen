@@ -76,6 +76,9 @@ test_entware() {
 
 # Функция проверки доступности GitHub
 test_github() {
+    if [ "$use_direct" = "true" ] || [ -n "$gh_proxy" ]; then
+        return 0
+    fi
     use_direct="false"
     gh_proxy=""
     tmp_file="/tmp/gh_check_$$"

@@ -1,11 +1,12 @@
 # Загрузка Xray
 download_xray() {
+    test_github
     while true; do
         USE_JSDELIVR=""
         printf "  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
         
         # Получаем список релизов через GitHub API
-        RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "${xray_api_url}?per_page=20" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
+        RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "${xray_api_url}?per_page=24" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
         
         if [ -z "$RELEASE_TAGS" ]; then
             echo

@@ -1,5 +1,6 @@
 # Загрузка XKeen
 download_xkeen() {
+    test_github
     xkeen_dist=$(mktemp)
     mkdir -p "$tmp_dir"
     printf "  ${yellow}Выполняется загрузка${reset} XKeen\n"

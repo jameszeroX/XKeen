@@ -16,7 +16,7 @@ install_xkeen_rename() {
         fi
         mv "$source_path" "$target_path"
     fi
-    rm /opt/root/install.sh 2>/dev/null
+    rm "/opt/root/install.sh" 2>/dev/null
 }
 install_xkeen_rename
 
@@ -26,7 +26,14 @@ add_chmod_init() {
 
 for arg in "$@"; do
     [ "$arg" = "-toff" ] && touch "/tmp/toff"
+    [ "$arg" = "-restart" ] && apply="restart"
 done
+
+get_state_arg() {
+    if [ "$1" = "on" ] || [ "$1" = "off" ]; then
+        echo "$1"
+    fi
+}
 
 # Импортируем модули
 . "$script_dir/.xkeen/import.sh"
@@ -115,7 +122,7 @@ while [ $# -gt 0 ]; do
                 command -v xray >/dev/null 2>&1 || bypass_xray="true"
             fi
 
-            if [ -z $bypass_xray ]; then
+            if [ -z "$bypass_xray" ]; then
                 install_xray
                 info_xray
             fi
@@ -153,17 +160,19 @@ while [ $# -gt 0 ]; do
                     sleep 2
                 fi
 
-                clear
-                echo
-                install_configs
+                if [ "$xray_installed" = "installed" ]; then
+                    clear
+                    echo
+                    install_configs
+                fi
 
                 # Создаем init для cron
-                $initd_dir/S05crond stop >/dev/null 2>&1
+                "$initd_dir/S05crond" stop >/dev/null 2>&1
                 [ -e "$initd_dir/S05crond" ] && rm -f "$initd_dir/S05crond"
                 register_cron_initd
-                $initd_dir/S05crond start >/dev/null 2>&1
+                "$initd_dir/S05crond" start >/dev/null 2>&1
 
-            if [ -z $bypass_xray ]; then
+            if [ -z "$bypass_xray" ]; then
                 info_version_xray
                 delete_register_xray
 
@@ -220,8 +229,9 @@ while [ $# -gt 0 ]; do
                 sleep 2
             fi
 
-            if [ "$add_mihomo" = "true" ] && [ "$mihomo_installed" != "installed" ] && [ "$xray_installed" != "installed" ]; then
-                echo -e "  ${red}Ошибка${reset}: Mihomo не установлен, так как отсутствует обязательный Yq"
+            if [ "$mihomo_installed" != "installed" ] && [ "$xray_installed" != "installed" ]; then
+                echo
+                echo -e "  ${red}Ошибка${reset}: Установка прервана. Не установлено ни одного ядра проксирования (Xray или Mihomo)"
                 exit 1
             fi
 
@@ -251,19 +261,19 @@ while [ $# -gt 0 ]; do
             fi
 
             if [ "$xray_installed" != "installed" ] && [ "$mihomo_installed" = "installed" ]; then
-                if [ -f "$install_dir/mihomo" ] && [ -f "$install_dir/yq" ] && grep -q 'name_client="xray"' $initd_file; then
-                    sed -i 's/name_client="xray"/name_client="mihomo"/' $initd_file
+                if [ -f "$install_dir/mihomo" ] && [ -f "$install_dir/yq" ] && grep -q 'name_client="xray"' "$initd_file"; then
+                    sed -i 's/name_client="xray"/name_client="mihomo"/' "$initd_file"
                 fi
             elif  [ "$xray_installed" = "installed" ] && [ "$mihomo_installed" != "installed" ]; then
-                if [ -f "$install_dir/xray" ] && grep -q 'name_client="mihomo"' $initd_file; then
-                    sed -i 's/name_client="mihomo"/name_client="xray"/' $initd_file
+                if [ -f "$install_dir/xray" ] && grep -q 'name_client="mihomo"' "$initd_file"; then
+                    sed -i 's/name_client="mihomo"/name_client="xray"/' "$initd_file"
                 fi
             fi
 
             add_chmod_init
 
             if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                $initd_file restart on >/dev/null 2>&1
+                "$initd_file" restart on >/dev/null 2>&1
             fi
 
             # Удаляем временные файлы
@@ -275,12 +285,12 @@ while [ $# -gt 0 ]; do
             echo -e "  ${green}Установка XKeen завершена!${reset}"
 
             if [ "$xray_installed" = "installed" ] || [ "$mihomo_installed" = "installed" ]; then
-                if grep -q 'name_client="xray"' $initd_file; then
+                if grep -q 'name_client="xray"' "$initd_file"; then
                     echo -e "  1. Настройте конфигурацию Xray по пути '${yellow}$install_conf_dir/${reset}'"
                     echo -e "  2. Запустите XKeen командой ${yellow}xkeen -start${reset}"
                     echo -e "  3. ${green}Enjoy!${reset}"
                     echo
-                elif grep -q 'name_client="mihomo"' $initd_file; then
+                elif grep -q 'name_client="mihomo"' "$initd_file"; then
                     echo -e "  1. Настройте конфигурацию Mihomo в файле '${yellow}$mihomo_conf_dir/config.yaml${reset}'"
                     echo -e "  2. Запустите XKeen командой ${yellow}xkeen -start${reset}"
                     echo -e "  3. ${green}Enjoy!${reset}"
@@ -289,14 +299,14 @@ while [ $# -gt 0 ]; do
             fi
 
             if [ "$xray_installed" = "installed" ] && [ "$mihomo_installed" = "installed" ]; then
-                if grep -q 'name_client="xray"' $initd_file; then
+                if grep -q 'name_client="xray"' "$initd_file"; then
                     echo -e "  Если хотите переключить XKeen на ядро ${yellow}Mihomo${reset}"
                     echo
                     echo -e "  1. Настройте конфигурацию Mihomo в файле '${yellow}$mihomo_conf_dir/config.yaml${reset}'"
                     echo -e "  2. Переключите ядро проксирования командой ${yellow}xkeen -mihomo${reset}"
                     echo -e "  3. Запустите XKeen командой ${yellow}xkeen -start${reset}"
                     echo -e "  4. ${green}Enjoy!${reset}"
-                elif grep -q 'name_client="mihomo"' $initd_file; then
+                elif grep -q 'name_client="mihomo"' "$initd_file"; then
                     echo -e "  Если хотите переключить XKeen на ядро ${yellow}Xray${reset}"
                     echo
                     echo -e "  1. Настройте конфигурацию Xray по пути '${yellow}$install_conf_dir/${reset}'"
@@ -330,11 +340,11 @@ while [ $# -gt 0 ]; do
             esac
 
             if [ -f "$install_dir/xray" ]; then
-                chmod +x $install_dir/xray
+                chmod +x "$install_dir/xray"
             elif [ -f "$install_dir/mihomo" ]; then
-                chmod +x $install_dir/mihomo
+                chmod +x "$install_dir/mihomo"
                 if [ -f "$install_dir/yq" ]; then
-                    chmod +x $install_dir/yq
+                    chmod +x "$install_dir/yq"
                 else
                     echo -e "  ${red}Не найден${reset} парсер конфигурационных файлов Mihomo - Yq"
                     exit 1
@@ -422,7 +432,7 @@ while [ $# -gt 0 ]; do
             add_chmod_init
 
             if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                $initd_file restart on >/dev/null 2>&1
+                "$initd_file" restart on >/dev/null 2>&1
             fi
 
             # Удаляем временные файлы
@@ -473,7 +483,7 @@ while [ $# -gt 0 ]; do
                 install_geoipset update
 
                 if pidof xray >/dev/null; then
-                    $initd_file restart on >/dev/null 2>&1
+                    "$initd_file" restart on >/dev/null 2>&1
                 fi
 
                 echo -e "  Обновление установленных баз GeoFile/GeoIPSET ${green}завершено${reset}"
@@ -507,7 +517,7 @@ while [ $# -gt 0 ]; do
             fi
 
             backup_xkeen
-            $download_func
+            "$download_func"
             install_xkeen
 
             # Перезапуск скрипта
@@ -545,7 +555,7 @@ while [ $# -gt 0 ]; do
             fixed_register_packages
 
             if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                $initd_file restart on >/dev/null 2>&1
+                "$initd_file" restart on >/dev/null 2>&1
             fi
 
             delete_tmp
@@ -570,7 +580,7 @@ while [ $# -gt 0 ]; do
             [ "$xray_installed" = "installed" ] && echo -e "  В роутере установлен Xray версии ${yellow}$xray_current_version${reset}" && echo
             download_xray
 
-            if [ -z $bypass_xray ]; then
+            if [ -z "$bypass_xray" ]; then
                 install_xray
 
                 if [ "$xray_installed" = "installed" ]; then
@@ -589,7 +599,7 @@ while [ $# -gt 0 ]; do
 
                     sleep 2
                     if pidof xray >/dev/null; then
-                        $initd_file restart on >/dev/null 2>&1
+                        "$initd_file" restart on >/dev/null 2>&1
                     fi
 
                     echo
@@ -678,7 +688,7 @@ while [ $# -gt 0 ]; do
                     logs_register_yq_status_info_console
 
                     if pidof mihomo >/dev/null; then
-                        $initd_file restart on >/dev/null 2>&1
+                        "$initd_file" restart on >/dev/null 2>&1
                     fi
                     echo
                     echo -e "  Обновление ядра ${yellow}Mihomo${reset} ${green}выполнено${reset}"
@@ -728,7 +738,7 @@ while [ $# -gt 0 ]; do
 
         -ri)    # Пересоздать файл автозапуска XKeen
             clear
-            $initd_file stop >/dev/null 2>&1
+            "$initd_file" stop >/dev/null 2>&1
             [ -e "$initd_file" ] && rm -f "$initd_file"
 
             echo -e "  Создание файла автозапуска ${yellow}XKeen${reset}"
@@ -774,7 +784,7 @@ while [ $# -gt 0 ]; do
             command -v xray >/dev/null 2>&1 || { echo -e "  Xray ${red}не установлен${reset}"; exit 1; }
             echo -e "  Удаление ${yellow}Xray${reset}"
 
-            $initd_file stop >/dev/null 2>&1
+            "$initd_file" stop >/dev/null 2>&1
             opkg remove xray_s
             rm -f "$install_dir/xray"
 
@@ -799,7 +809,7 @@ while [ $# -gt 0 ]; do
             command -v mihomo >/dev/null 2>&1 || { echo -e "  Mihomo ${red}не установлен${reset}"; exit 1; }
             echo -e "  Удаление ${yellow}Mihomo${reset}"
 
-            $initd_file stop >/dev/null 2>&1
+            "$initd_file" stop >/dev/null 2>&1
             opkg remove mihomo_s
             opkg remove yq_s
             rm -f "$install_dir/mihomo" "$install_dir/yq"
@@ -876,7 +886,6 @@ while [ $# -gt 0 ]; do
 
         -remove)    # Полная деинсталляция XKeen
             clear
-            echo
             choice_for_remove="XKeen полностью со всеми зависимостями"
             choice_remove
 
@@ -941,7 +950,7 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  ${yellow}Удаление${reset} Xray"
 
-            $initd_file stop >/dev/null 2>&1
+            "$initd_file" stop >/dev/null 2>&1
             opkg remove xray_s
             rm -f "$install_dir/xray"
             rm -rf "/opt/etc/xray"
@@ -971,7 +980,6 @@ while [ $# -gt 0 ]; do
             delete_tmp
 
             clear
-            echo
             delete_all
 
             clear
@@ -1052,7 +1060,7 @@ while [ $# -gt 0 ]; do
             fixed_register_packages
 
             if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
-                $initd_file restart on >/dev/null 2>&1
+                "$initd_file" restart on >/dev/null 2>&1
             fi
 
             delete_tmp
@@ -1161,9 +1169,9 @@ while [ $# -gt 0 ]; do
             info_version_mihomo
             info_version_yq
 
-            if [ -f "$install_dir/xray" ] && grep -q 'name_client="xray"' $initd_file; then
+            if [ -f "$install_dir/xray" ] && grep -q 'name_client="xray"' "$initd_file"; then
                 echo -e "  Ядро проксирования Xray версии ${yellow}$xray_current_version${reset}"
-            elif [ -f "$install_dir/mihomo" ] && grep -q 'name_client="mihomo"' $initd_file; then
+            elif [ -f "$install_dir/mihomo" ] && grep -q 'name_client="mihomo"' "$initd_file"; then
                 echo -e "  Ядро проксирования Mihomo версии ${yellow}$mihomo_current_version${reset}"
                 echo -e "  Парсер конфигурационных файлов Yq версии ${yellow}$yq_current_version${reset}"
             else
@@ -1198,37 +1206,41 @@ while [ $# -gt 0 ]; do
 
         -start)    # Запуск XKeen
             add_chmod_init
-            $initd_file start on
+            "$initd_file" start on
         ;;
 
 
         -stop)    # Остановка XKeen
             add_chmod_init
-            $initd_file stop
+            "$initd_file" stop
         ;;
 
 
         -restart)    # Перезапуск XKeen
             add_chmod_init
-            $initd_file restart on
+            "$initd_file" restart on
         ;;
 
 
         -status)    # Состояние XKeen
-            $initd_file status
+            "$initd_file" status
         ;;
 
 
         -auto)    # Смена режима запуска XKeen
+            action=$(get_state_arg "$2")
+            [ -n "$action" ] && shift
             clear
-            change_autostart_xkeen
+            change_autostart_xkeen "$action"
             add_chmod_init
         ;;
 
 
         -fd)    # Смена режима контроля файловых дескрипторов
+            action=$(get_state_arg "$2")
+            [ -n "$action" ] && shift
             clear
-            change_file_descriptors
+            change_file_descriptors "$action"
         ;;
 
 
@@ -1238,7 +1250,7 @@ while [ $# -gt 0 ]; do
             sleep 2
             add_chmod_init
             if pidof xray >/dev/null || pidof mihomo >/dev/null; then
-                $initd_file restart on >/dev/null 2>&1
+                "$initd_file" restart on >/dev/null 2>&1
             fi
         ;;
 
@@ -1249,7 +1261,7 @@ while [ $# -gt 0 ]; do
             sleep 2
             add_chmod_init
             if pidof xray >/dev/null || pidof mihomo >/dev/null; then
-                $initd_file restart on >/dev/null 2>&1
+                "$initd_file" restart on >/dev/null 2>&1
             fi
         ;;
 
@@ -1265,7 +1277,7 @@ while [ $# -gt 0 ]; do
             sleep 2
             add_chmod_init
             if pidof xray >/dev/null || pidof mihomo >/dev/null; then
-                $initd_file restart on >/dev/null 2>&1
+                "$initd_file" restart on >/dev/null 2>&1
             fi
         ;;
 
@@ -1276,7 +1288,7 @@ while [ $# -gt 0 ]; do
             sleep 2
             add_chmod_init
             if pidof xray >/dev/null || pidof mihomo >/dev/null; then
-                $initd_file restart on >/dev/null 2>&1
+                "$initd_file" restart on >/dev/null 2>&1
             fi
         ;;
 
@@ -1337,33 +1349,43 @@ while [ $# -gt 0 ]; do
 
 
         -dns)    # Включение/отключение перенаправления DNS в прокси
+            action=$(get_state_arg "$2")
+            [ -n "$action" ] && shift
             clear
-            warn_proxy_dns
-            change_proxy_dns
+            [ -n "$action" ] || warn_proxy_dns
+            change_proxy_dns "$action"
         ;;
 
 
         -pr)    # Включение/отключение проксирования трафика Entware
+            action=$(get_state_arg "$2")
+            [ -n "$action" ] && shift
             clear
-            change_proxy_router
+            change_proxy_router "$action"
         ;;
 
 
         -extmsg)    # Включение/отключение расширенных сообщений запуска XKeen
+            action=$(get_state_arg "$2")
+            [ -n "$action" ] && shift
             clear
-            change_extended_msg
+            change_extended_msg "$action"
         ;;
 
 
         -cbk)    # Включение/отключение резервного копирования XKeen при обновлении
+            action=$(get_state_arg "$2")
+            [ -n "$action" ] && shift
             clear
-            change_backup_xkeen
+            change_backup_xkeen "$action"
         ;;
 
 
         -aghfix)    # Включение/отключение исправления для AdGuard Home
+            action=$(get_state_arg "$2")
+            [ -n "$action" ] && shift
             clear
-            change_aghfix_xkeen
+            change_aghfix_xkeen "$action"
         ;;
 
 

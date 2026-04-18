@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Информация о службе: Запуск / Остановка XKeen
-# Версия: 2.29
+# Версия: 2.30
 
 # Окружение
 PATH="/opt/bin:/opt/sbin:/sbin:/bin:/usr/sbin:/usr/bin"
@@ -55,6 +55,8 @@ table_id="111"
 table_mark="0x111"
 table_redirect="nat"
 table_tproxy="mangle"
+comment_tag="xkeen_rule"
+comment="-m comment --comment $comment_tag"
 custom_mark=""
 
 # DSCP-метки
@@ -449,7 +451,7 @@ validate_routing_mark() {
 
         if [ -n "$bad_items" ]; then
             bad_list=$(printf "%b\n" "$bad_items" | awk '!seen[$0]++ {print "  - " $0}')
-            
+
             if [ "$name_client" = "xray" ]; then
                 error_details="
   Подключения без метки:
@@ -477,25 +479,23 @@ $proxy_hint
     return 0
 }
 
+load_user_ipset_family() {
+    set_name="$1"
+    family="$2"
+    addr_regex="$3"
+
+    ipset create "$set_name" hash:net family "$family" -exist
+    ipset flush "$set_name"
+    sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file_ip_exclude" |
+    grep -Eo "$addr_regex" |
+    awk -v s="$set_name" '{print "add "s" "$1}' | ipset restore -exist
+}
+
 # Функция загрузки пользовательских исключений в ipset
 load_user_ipset() {
     [ ! -f "$file_ip_exclude" ] && return
-
-    if [ "$iptables_supported" = "true" ]; then
-        ipset create user_exclude hash:net family inet -exist
-        ipset flush user_exclude
-        sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file_ip_exclude" |
-        grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' |
-        awk '{print "add user_exclude "$1}' | ipset restore -exist
-    fi
-
-    if [ "$ip6tables_supported" = "true" ]; then
-        ipset create user_exclude6 hash:net family inet6 -exist
-        ipset flush user_exclude6
-        sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file_ip_exclude" |
-        grep -Eo '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' |
-        awk '{print "add user_exclude6 "$1}' | ipset restore -exist
-    fi
+    [ "$iptables_supported" = "true" ] && load_user_ipset_family user_exclude inet '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?'
+    [ "$ip6tables_supported" = "true" ] && load_user_ipset_family user_exclude6 inet6 '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?'
 }
 
 # Функция чтения пользовательских портов из файлов
@@ -564,7 +564,7 @@ process_user_ports() {
     if [ -n "$port_donor" ] && [ -n "$port_exclude" ]; then
         log_warning_terminal "
   Заданы и порты проксирования, и порты исключения
-  Прокси будет запущен на портах проксирования, порты исключения игнорируются 
+  Прокси будет запущен на портах проксирования, порты исключения игнорируются
 "
         port_exclude=""
     fi
@@ -612,12 +612,16 @@ check_dns_config() {
 }
 file_dns=$(check_dns_config)
 
+is_module_loaded() {
+    lsmod | awk '{print $1}' | grep -qx "$1"
+}
+
 # Загрузка модулей
 load_modules() {
     module="$1"
     name="${module%.ko}"
 
-    if ! lsmod | awk '{print $1}' | grep -qx "$name"; then
+    if ! is_module_loaded "$name"; then
         for dir in "$directory_os_modules" "$directory_user_modules"; do
             if [ -f "$dir/$module" ]; then
                 insmod "$dir/$module" >/dev/null 2>&1 && return
@@ -628,19 +632,29 @@ load_modules() {
 
 # Обработка модулей и портов
 get_modules() {
+    load_modules xt_comment.ko
     load_modules xt_TPROXY.ko
     load_modules xt_socket.ko
     load_modules xt_multiport.ko
     load_modules xt_dscp.ko
 
+    if ! is_module_loaded xt_comment; then
+        log_error_router "Модуль xt_comment не загружен"
+        log_error_terminal "
+  Модуль '${light_blue}xt_comment${reset}' не загружен
+  Невозможно запустить XKeen без него
+  Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
+"
+    fi
+
     if [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Hybrid" ]; then
         for module in xt_TPROXY.ko xt_socket.ko; do
-            if ! lsmod | awk '{print $1}' | grep -qx "${module%.ko}"; then
+            if ! is_module_loaded "${module%.ko}"; then
                 proxy_stop
                 log_error_router "Модуль ${module} не загружен"
                 log_error_terminal "
   Модуль '${light_blue}${module}${reset}' не загружен
-  Невозможно запустить прокси в режиме ${mode_proxy} без него
+  Невозможно запустить XKeen в режиме ${mode_proxy} без него
   Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
 "
             fi
@@ -648,7 +662,7 @@ get_modules() {
     fi
 
     if [ -n "$port_donor" ] || [ -n "$port_exclude" ]; then
-        if ! lsmod | awk '{print $1}' | grep -qx xt_multiport; then
+        if ! is_module_loaded xt_multiport; then
             log_warning_router "Модуль xt_multiport не загружен"
             log_warning_terminal "
   Модуль '${light_blue}xt_multiport${reset}' не загружен
@@ -663,7 +677,7 @@ get_modules() {
     fi
 
     if [ -n "$dscp_exclude" ] || [ -n "$dscp_proxy" ]; then
-        if ! lsmod | awk '{print $1}' | grep -qx xt_dscp; then
+        if ! is_module_loaded xt_dscp; then
             log_warning_router "Модуль xt_dscp не загружен"
             log_warning_terminal "
   Модуль '${light_blue}xt_dscp${reset}' не загружен
@@ -811,19 +825,49 @@ get_network_tproxy() {
     fi
 }
 
+# Получение портов исключения из статических пробросов
+get_api_exclude_ports() {
+    api_redir_result=""
+
+    if [ -n "$api_static_json" ]; then
+        api_redir_result=$(echo "$api_static_json" | jq -r '
+          [
+            .[] | 
+            select(.disable != true) | 
+            if has("end-port") then 
+              "\(.port):\(.["end-port"])" 
+            else 
+              .port 
+            end |
+            select(. != "80" and . != "443")
+          ] | 
+          sort | 
+          join(",")')
+    fi
+
+    echo "$api_redir_result"
+}
+
+
 # Получение исключенных портов
 get_port_exclude() {
-    if [ -n "$api_static_json" ]; then
-        port_exclude_redirect=$(echo "$api_static_json" | jq -r '.[] | if has("to-port") then .["to-port"] else .port end' 2>/dev/null |
-            grep -E -v '(^|,)80($|,)|(^|,)443($|,)' | tr '\n' ',' | sed 's/,$//')
-    fi
+    port_exclude_redirect=""
+    port_exclude_result=""
+
+    port_exclude_redirect=$(get_api_exclude_ports)
+
     if [ -n "$port_exclude" ]; then
-        port_exclude="$port_exclude,$port_exclude_redirect"
+        if [ -n "$port_exclude_redirect" ]; then
+            port_exclude_result="$port_exclude,$port_exclude_redirect"
+        else
+            port_exclude_result="$port_exclude"
+        fi
     else
-        port_exclude="$port_exclude_redirect"
+        port_exclude_result="$port_exclude_redirect"
     fi
-    port_exclude=$(printf '%s\n' "$port_exclude" | tr -dc '0-9,:' | tr -s ',' | sed 's/^,//; s/,$//')
-    echo "$port_exclude"
+
+    port_exclude_result=$(printf '%s\n' "$port_exclude_result" | tr -dc '0-9,:' | tr -s ',' | sed 's/^,//; s/,$//')
+    echo "$port_exclude_result"
 }
 
 # Получение исключений IPv4
@@ -877,7 +921,7 @@ check_policy_name_conflict() {
             log_error_terminal "
   В файле '${yellow}xkeen.json${reset}' найдена политика с именем '${red}${conflict}${reset}'
   Это имя зарезервировано основной службой XKeen
-  
+
   Переименуйте пользовательскую политику в json-файле
   Запуск ${yellow}$name_client${reset} ${red}отменен${reset}
 "
@@ -887,6 +931,9 @@ check_policy_name_conflict() {
 
 # Получаем порты пользовательских политик
 resolve_user_policies() {
+    api_exclude_ports=""
+    api_exclude_ports=$(get_api_exclude_ports)
+
     get_user_policies | while IFS='|' read -r pname pports; do
         if [ -n "$api_policy_json" ]; then
             mark=$(echo "$api_policy_json" | jq -r --arg pname "$pname" '.[] | select(.description | ascii_downcase == ($pname | ascii_downcase)) | .mark' 2>/dev/null | head -n 1)
@@ -896,13 +943,26 @@ resolve_user_policies() {
 
         if [ -z "$pports" ]; then
             # Порты не указаны -> режим "all" (все порты)
-            mode="all"
-            clean_ports=""
+            if [ -n "$api_exclude_ports" ]; then
+                mode="exclude"
+                clean_ports="$api_exclude_ports"
+            else
+                mode="all"
+                clean_ports=""
+            fi
         else
             case "$pports" in
                 !*)
                     mode="exclude"
                     ports="${pports#!}"
+
+                    if [ -n "$api_exclude_ports" ]; then
+                        if [ -n "$ports" ]; then
+                            ports="$ports,$api_exclude_ports"
+                        else
+                            ports="$api_exclude_ports"
+                        fi
+                    fi
                     ;;
                 *)
                     mode="include"
@@ -954,6 +1014,8 @@ port_tproxy="$port_tproxy"
 port_donor="$port_donor"
 port_exclude="$port_exclude"
 policy_mark="$policy_mark"
+comment_tag="$comment_tag"
+comment="$comment"
 custom_mark="$custom_mark"
 dscp_exclude="$dscp_exclude"
 dscp_proxy="$dscp_proxy"
@@ -999,19 +1061,19 @@ if pidof "\$name_client" >/dev/null; then
                 case "\$exclude" in
                     10.0.0.0/8|172.16.0.0/12|192.168.0.0/16|fd00::/8|fe80::/10)
                     if [ "\$table" = "mangle" ] && [ "\$mode_proxy" = "Hybrid" ]; then
-                        ipt -A "\$chain" -d "\$exclude" -p tcp --dport 53 -j RETURN >/dev/null 2>&1
-                        ipt -A "\$chain" -d "\$exclude" -p udp ! --dport 53 -j RETURN >/dev/null 2>&1
+                        ipt -A "\$chain" -d "\$exclude" -p tcp --dport 53 \$comment -j RETURN >/dev/null 2>&1
+                        ipt -A "\$chain" -d "\$exclude" -p udp ! --dport 53 \$comment -j RETURN >/dev/null 2>&1
                     elif [ "\$table" = "nat" ] && [ "\$mode_proxy" = "Hybrid" ]; then
-                        ipt -A "\$chain" -d "\$exclude" -p tcp ! --dport 53 -j RETURN >/dev/null 2>&1
-                        ipt -A "\$chain" -d "\$exclude" -p udp --dport 53 -j RETURN >/dev/null 2>&1
+                        ipt -A "\$chain" -d "\$exclude" -p tcp ! --dport 53 \$comment -j RETURN >/dev/null 2>&1
+                        ipt -A "\$chain" -d "\$exclude" -p udp --dport 53 \$comment -j RETURN >/dev/null 2>&1
                     elif [ "\$table" = "mangle" ] && [ "\$mode_proxy" = "TProxy" ]; then
-                        ipt -A "\$chain" -d "\$exclude" -p tcp ! --dport 53 -j RETURN >/dev/null 2>&1
-                        ipt -A "\$chain" -d "\$exclude" -p udp ! --dport 53 -j RETURN >/dev/null 2>&1
+                        ipt -A "\$chain" -d "\$exclude" -p tcp ! --dport 53 \$comment -j RETURN >/dev/null 2>&1
+                        ipt -A "\$chain" -d "\$exclude" -p udp ! --dport 53 \$comment -j RETURN >/dev/null 2>&1
                     fi
                     ;;
                 esac
             else
-                ipt -A "\$chain" -d "\$exclude" -j RETURN >/dev/null 2>&1
+                ipt -A "\$chain" -d "\$exclude" \$comment -j RETURN >/dev/null 2>&1
             fi
         done
     }
@@ -1030,8 +1092,8 @@ if pidof "\$name_client" >/dev/null; then
 
         ipset create "\$set_name" "\$set_type" family "\$ipset_family" -exist || return
 
-        ipt -C "\$chain" -m set --match-set "\$set_name" dst -j RETURN >/dev/null 2>&1 ||
-        ipt -I "\$chain" 1 -m set --match-set "\$set_name" dst -j RETURN >/dev/null 2>&1
+        ipt -C "\$chain" -m set --match-set "\$set_name" dst \$comment -j RETURN >/dev/null 2>&1 ||
+        ipt -I "\$chain" 1 -m set --match-set "\$set_name" dst \$comment -j RETURN >/dev/null 2>&1
     }
 
     # Добавление правил iptables
@@ -1050,9 +1112,9 @@ if pidof "\$name_client" >/dev/null; then
 
             if [ "\$table" = "\$table_tproxy" ]; then
                 if [ "\$mode_proxy" = "Hybrid" ]; then
-                    set -- -p udp -m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark
+                    set -- -p udp -m conntrack --ctstate ESTABLISHED,RELATED \$comment -j CONNMARK --restore-mark
                 else
-                    set -- -m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark
+                    set -- -m conntrack --ctstate ESTABLISHED,RELATED \$comment -j CONNMARK --restore-mark
                 fi
                 ipt -C "\$chain" "\$@" >/dev/null 2>&1 || ipt -I "\$chain" 1 "\$@" >/dev/null 2>&1
             fi
@@ -1060,41 +1122,41 @@ if pidof "\$name_client" >/dev/null; then
             case "\$mode_proxy" in
                 Hybrid)
                     if [ "\$table" = "\$table_redirect" ]; then
-                        ipt -I "\$chain" 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
+                        ipt -I "\$chain" 1 -m conntrack --ctstate DNAT \$comment -j RETURN >/dev/null 2>&1
                         add_ipset_exclude ext_exclude hash:ip
                         add_ipset_exclude geo_exclude hash:net
                         add_ipset_exclude user_exclude hash:net
-                        ipt -A "\$chain" -p tcp -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
+                        ipt -A "\$chain" -p tcp \$comment -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
                     else
-                        ipt -I "\$chain" 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
+                        ipt -I "\$chain" 1 -m conntrack --ctstate DNAT \$comment -j RETURN >/dev/null 2>&1
                         add_ipset_exclude ext_exclude hash:ip
                         add_ipset_exclude geo_exclude hash:net
                         add_ipset_exclude user_exclude hash:net
-                        ipt -A "\$chain" -p udp -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
-                        ipt -A "\$chain" -p udp -m mark ! --mark 0 -j CONNMARK --save-mark >/dev/null 2>&1
-                        ipt -A "\$chain" -p udp -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
+                        ipt -A "\$chain" -p udp -m socket --transparent \$comment -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
+                        ipt -A "\$chain" -p udp -m mark ! --mark 0 \$comment -j CONNMARK --save-mark >/dev/null 2>&1
+                        ipt -A "\$chain" -p udp \$comment -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
                     fi
                     ;;
                 TProxy)
-                    ipt -C "\$chain" -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
-                    ipt -I "\$chain" 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
+                    ipt -C "\$chain" -m conntrack --ctstate DNAT \$comment -j RETURN >/dev/null 2>&1 ||
+                    ipt -I "\$chain" 1 -m conntrack --ctstate DNAT \$comment -j RETURN >/dev/null 2>&1
                     for net in \$network_tproxy; do
                         add_ipset_exclude ext_exclude hash:ip
                         add_ipset_exclude geo_exclude hash:net
                         add_ipset_exclude user_exclude hash:net
-                        ipt -A "\$chain" -p "\$net" -m socket --transparent -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
-                        ipt -A "\$chain" -p "\$net" -m mark ! --mark 0 -j CONNMARK --save-mark >/dev/null 2>&1
-                        ipt -A "\$chain" -p "\$net" -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
+                        ipt -A "\$chain" -p "\$net" -m socket --transparent \$comment -j MARK --set-mark "\$table_mark" >/dev/null 2>&1
+                        ipt -A "\$chain" -p "\$net" -m mark ! --mark 0 \$comment -j CONNMARK --save-mark >/dev/null 2>&1
+                        ipt -A "\$chain" -p "\$net" \$comment -j TPROXY --on-ip "\$proxy_ip" --on-port "\$port_tproxy" --tproxy-mark "\$table_mark" >/dev/null 2>&1
                     done
                     ;;
                 Redirect)
-                    ipt -C "\$chain" -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1 ||
-                    ipt -I "\$chain" 1 -m conntrack --ctstate DNAT -j RETURN >/dev/null 2>&1
+                    ipt -C "\$chain" -m conntrack --ctstate DNAT \$comment -j RETURN >/dev/null 2>&1 ||
+                    ipt -I "\$chain" 1 -m conntrack --ctstate DNAT \$comment -j RETURN >/dev/null 2>&1
                     add_ipset_exclude ext_exclude hash:ip
                     add_ipset_exclude geo_exclude hash:net
                     add_ipset_exclude user_exclude hash:net
                     for net in \$network_redirect; do
-                        ipt -A "\$chain" -p "\$net" -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
+                        ipt -A "\$chain" -p "\$net" \$comment -j REDIRECT --to-port "\$port_redirect" >/dev/null 2>&1
                     done
                     ;;
                 *) exit 0 ;;
@@ -1102,7 +1164,7 @@ if pidof "\$name_client" >/dev/null; then
 
             if [ -n "\$dscp_exclude" ]; then
                 for dscp in "\$dscp_exclude"; do
-                    ipt -I "\$chain" -m dscp --dscp "\$dscp" -j RETURN >/dev/null 2>&1
+                    ipt -I "\$chain" -m dscp --dscp "\$dscp" \$comment -j RETURN >/dev/null 2>&1
                 done
             fi
         fi
@@ -1159,6 +1221,12 @@ if pidof "\$name_client" >/dev/null; then
         return 0
     }
 
+    flush_xkeen_rules() {
+        ipt -S PREROUTING 2>/dev/null | grep -E -- "\$comment_tag" | sed 's/^-A /-D /' | while IFS= read -r _r; do
+            [ -n "$_r" ] && ipt $_r >/dev/null 2>&1
+        done
+    }
+
     # Создание множественных правил multiport
     add_multiport_rules() {
         family="\$1"
@@ -1177,9 +1245,9 @@ if pidof "\$name_client" >/dev/null; then
             chunk=\$(echo "\$ports" | tr ',' '\n' | sed -n "\${i},\${end}p" | tr '\n' ',' | sed 's/,$//')
             [ -z "\$chunk" ] && break
             if [ -n "\$mark" ]; then
-                set -- -m connmark --mark "\$mark" -m conntrack ! --ctstate INVALID -p "\$net" -m multiport --dports "\$chunk" -j "\$target"
+                set -- -m connmark --mark "\$mark" -m conntrack ! --ctstate INVALID -p "\$net" -m multiport --dports "\$chunk" \$comment -j "\$target"
             else
-                set -- -m conntrack ! --ctstate INVALID -p "\$net" -m multiport --dports "\$chunk" -j "\$target"
+                set -- -m conntrack ! --ctstate INVALID -p "\$net" -m multiport --dports "\$chunk" \$comment -j "\$target"
             fi
             ipt -C PREROUTING "\$@" >/dev/null 2>&1 || ipt -A PREROUTING "\$@" >/dev/null 2>&1
             i=\$((i + 7))
@@ -1190,6 +1258,8 @@ if pidof "\$name_client" >/dev/null; then
     add_prerouting() {
         family="\$1"
         table="\$2"
+
+        flush_xkeen_rules
 
         for net in \$networks; do
             if [ "\$mode_proxy" = "Hybrid" ]; then
@@ -1204,12 +1274,12 @@ if pidof "\$name_client" >/dev/null; then
             fi
 
             for dscp in \$dscp_proxy; do
-                set -- -m conntrack ! --ctstate INVALID \$proto_match -m dscp --dscp "\$dscp" -j "\$name_chain"
+                set -- -m conntrack ! --ctstate INVALID \$proto_match -m dscp --dscp "\$dscp" \$comment -j "\$name_chain"
                 ipt -C PREROUTING "\$@" >/dev/null 2>&1 || ipt -A PREROUTING "\$@" >/dev/null 2>&1
             done
 
             if [ "\$proxy_router" = "on" ]; then
-                set -- -i lo -m mark --mark "\$table_mark" \$proto_match -j "\$name_chain"
+                set -- -i lo -m mark --mark "\$table_mark" \$proto_match \$comment -j "\$name_chain"
                 ipt -C PREROUTING "\$@" >/dev/null 2>&1 || ipt -A PREROUTING "\$@" >/dev/null 2>&1
             fi
 
@@ -1222,13 +1292,13 @@ if pidof "\$name_client" >/dev/null; then
                 pports=\$(echo "\$pports" | tr -d ' \r\n')
 
                 if [ "\$pmode" = "all" ]; then
-                    set -- -m connmark --mark 0x"\$pmark" -m conntrack ! --ctstate INVALID -j "\$name_chain"
+                    set -- -m connmark --mark 0x"\$pmark" -m conntrack ! --ctstate INVALID \$comment -j "\$name_chain"
                     ipt -C PREROUTING "\$@" >/dev/null 2>&1 || ipt -A PREROUTING "\$@" >/dev/null 2>&1
                 elif [ "\$pmode" = "include" ]; then
                     add_multiport_rules "\$family" "\$table" "\$net" "0x\$pmark" "\$pports" "\$name_chain"
                 elif [ "\$pmode" = "exclude" ]; then
                     add_multiport_rules "\$family" "\$table" "\$net" "0x\$pmark" "\$pports" "RETURN"
-                    set -- -m connmark --mark 0x"\$pmark" -m conntrack ! --ctstate INVALID -p "\$net" -j "\$name_chain"
+                    set -- -m connmark --mark 0x"\$pmark" -m conntrack ! --ctstate INVALID -p "\$net" \$comment -j "\$name_chain"
                     ipt -C PREROUTING "\$@" >/dev/null 2>&1 || ipt -A PREROUTING "\$@" >/dev/null 2>&1
                 fi
             done
@@ -1241,11 +1311,11 @@ if pidof "\$name_client" >/dev/null; then
                 # заданы порты исключения
                 elif [ -n "\$port_exclude" ]; then
                     add_multiport_rules "\$family" "\$table" "\$net" "\$policy_mark" "\$port_exclude" "RETURN"
-                    set -- -m connmark --mark "\$policy_mark" -m conntrack ! --ctstate INVALID -p "\$net" -j "\$name_chain"
+                    set -- -m connmark --mark "\$policy_mark" -m conntrack ! --ctstate INVALID -p "\$net" \$comment -j "\$name_chain"
                     ipt -C PREROUTING "\$@" >/dev/null 2>&1 || ipt -A PREROUTING "\$@" >/dev/null 2>&1
                 else
                     # Политика xkeen, когда порты не указаны (проксирование на всех портах)
-                    set -- -m connmark --mark "\$policy_mark" -m conntrack ! --ctstate INVALID -j "\$name_chain"
+                    set -- -m connmark --mark "\$policy_mark" -m conntrack ! --ctstate INVALID \$comment -j "\$name_chain"
                     ipt -C PREROUTING "\$@" >/dev/null 2>&1 || ipt -A PREROUTING "\$@" >/dev/null 2>&1
                 fi
             # НЕТ политики xkeen
@@ -1256,11 +1326,11 @@ if pidof "\$name_client" >/dev/null; then
                 # заданы порты исключения
                 elif [ -n "\$port_exclude" ]; then
                     add_multiport_rules "\$family" "\$table" "\$net" "" "\$port_exclude" "RETURN"
-                    set -- -m conntrack ! --ctstate INVALID -p "\$net" -j "\$name_chain"
-                    ipt -A PREROUTING "\$@" >/dev/null 2>&1
+                    set -- -m conntrack ! --ctstate INVALID -p "\$net" \$comment -j "\$name_chain"
+                    ipt -C PREROUTING "\$@" >/dev/null 2>&1 || ipt -A PREROUTING "\$@" >/dev/null 2>&1
                 # Если нет ни xkeen, ни пользовательских политик -> перехватываем всё
                 else
-                    set -- -m conntrack ! --ctstate INVALID -j "\$name_chain"
+                    set -- -m conntrack ! --ctstate INVALID \$comment -j "\$name_chain"
                     ipt -C PREROUTING "\$@" >/dev/null 2>&1 || ipt -A PREROUTING "\$@" >/dev/null 2>&1
                 fi
             fi
@@ -1282,8 +1352,8 @@ if pidof "\$name_client" >/dev/null; then
             orig_chain="\$chain"
             chain="\$out_chain"
 
-            ipt -A "\$out_chain" -o lo -j RETURN >/dev/null 2>&1
-            ipt -A "\$out_chain" -m mark --mark 255 -j RETURN >/dev/null 2>&1
+            ipt -A "\$out_chain" -o lo \$comment -j RETURN >/dev/null 2>&1
+            ipt -A "\$out_chain" -m mark --mark 255 \$comment -j RETURN >/dev/null 2>&1
 
             add_exclude_rules "\$out_chain"
 
@@ -1306,14 +1376,14 @@ if pidof "\$name_client" >/dev/null; then
                 proto_match="-p \$net"
             fi
 
-            set -- -m conntrack ! --ctstate INVALID \$proto_match -j "\$out_chain"
+            set -- -m conntrack ! --ctstate INVALID \$proto_match \$comment -j "\$out_chain"
             ipt -C OUTPUT "\$@" >/dev/null 2>&1 || ipt -A OUTPUT "\$@" >/dev/null 2>&1
 
             if [ "\$table" = "\$table_redirect" ]; then
-                set -- -p "\$net" -j REDIRECT --to-port "\$port_redirect"
+                set -- -p "\$net" \$comment -j REDIRECT --to-port "\$port_redirect"
                 ipt -C "\$out_chain" "\$@" >/dev/null 2>&1 || ipt -A "\$out_chain" "\$@" >/dev/null 2>&1
             elif [ "\$table" = "\$table_tproxy" ]; then
-                set -- -p "\$net" -j MARK --set-mark "\$table_mark"
+                set -- -p "\$net" \$comment -j MARK --set-mark "\$table_mark"
                 ipt -C "\$out_chain" "\$@" >/dev/null 2>&1 || ipt -A "\$out_chain" "\$@" >/dev/null 2>&1
             fi
         done
@@ -1341,7 +1411,7 @@ if pidof "\$name_client" >/dev/null; then
             [ -z "\$mark" ] && continue
 
             for proto in udp tcp; do
-                set -- -p "\$proto" -m mark --mark "\$mark" -m pkttype --pkt-type unicast -m "\$proto" --dport 53 -j REDIRECT --to-ports 53
+                set -- -p "\$proto" -m mark --mark "\$mark" -m pkttype --pkt-type unicast -m "\$proto" --dport 53 \$comment -j REDIRECT --to-ports 53
                 ipt -C _NDM_HOTSPOT_DNSREDIR "\$@" >/dev/null 2>&1 || ipt -I _NDM_HOTSPOT_DNSREDIR "\$@" >/dev/null 2>&1
             done
         done
@@ -1427,9 +1497,8 @@ clean_firewall() {
         [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ] && continue
 
         if "$family" -w -t nat -nL _NDM_HOTSPOT_DNSREDIR >/dev/null 2>&1; then
-            "$family" -w -t nat -S _NDM_HOTSPOT_DNSREDIR | grep 'REDIRECT --to-ports 53' | grep -- '-m mark --mark' | while IFS= read -r rule; do
-                rule=${rule#-A _NDM_HOTSPOT_DNSREDIR }
-                "$family" -w -t nat -D _NDM_HOTSPOT_DNSREDIR $rule >/dev/null 2>&1
+            "$family" -w -t nat -S _NDM_HOTSPOT_DNSREDIR | grep -E -- "$comment_tag" | sed 's/^-A /-D /' | while IFS= read -r rule; do
+                [ -n "$rule" ] && "$family" -w -t nat $rule >/dev/null 2>&1
             done
         fi
     done
@@ -1439,37 +1508,27 @@ clean_firewall() {
         table="$2"
         name_chain="$3"
 
+        for sys_chain in PREROUTING OUTPUT; do
+            "$family" -w -t "$table" -S "$sys_chain" 2>/dev/null | grep -E -- "$comment_tag" | sed 's/^-A /-D /' | while IFS= read -r rule; do
+                [ -n "$rule" ] && "$family" -w -t "$table" $rule >/dev/null 2>&1
+            done
+        done
+
         if "$family" -w -t "$table" -nL "$name_chain" >/dev/null 2>&1; then
             "$family" -w -t "$table" -F "$name_chain" >/dev/null 2>&1
-
-            while "$family" -w -t "$table" -nL PREROUTING | grep -q "$name_chain"; do
-                rule_number=$("$family" -w -t "$table" -nL PREROUTING --line-numbers | grep -m 1 "$name_chain" | awk '{print $1}')
-                "$family" -w -t "$table" -D PREROUTING "$rule_number" >/dev/null 2>&1
-            done
-
             "$family" -w -t "$table" -X "$name_chain" >/dev/null 2>&1
         fi
 
         out_chain="${name_chain}_out"
         if "$family" -w -t "$table" -nL "$out_chain" >/dev/null 2>&1; then
             "$family" -w -t "$table" -F "$out_chain" >/dev/null 2>&1
-            while "$family" -w -t "$table" -nL OUTPUT | grep -q "$out_chain"; do
-                rule_number=$("$family" -w -t "$table" -nL OUTPUT --line-numbers | grep -m 1 "$out_chain" | awk '{print $1}')
-                "$family" -w -t "$table" -D OUTPUT "$rule_number" >/dev/null 2>&1
-            done
             "$family" -w -t "$table" -X "$out_chain" >/dev/null 2>&1
         fi
-
     }
 
     for family in iptables ip6tables; do
         for chain in nat mangle; do
             clean_run "$family" "$chain" "$name_chain"
-            "$family" -t "$chain" -S PREROUTING | grep "multiport" | grep "RETURN" | \
-            while read -r rule; do
-                rule=${rule#-A PREROUTING }
-                "$family" -t "$chain" -D PREROUTING $rule >/dev/null 2>&1
-            done
         done
     done
 
@@ -1515,16 +1574,28 @@ load_ipset() {
     set="$1"
     file="$2"
     family="$3"
-    
+
     ipset create "$set" hash:net family "$family" -exist
     ipset flush "$set"
-    
+
     [ -f "$file" ] && sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file" | awk '{print "add '"$set"' "$1}' | ipset restore -exist
+}
+
+apply_fd_limit() {
+    fd_limit="$other_fd"
+    [ "$architecture" = "arm64-v8a" ] && fd_limit="$arm64_fd"
+    ulimit -SHn "$fd_limit"
+}
+
+cleanup_fd_monitor() {
+    [ -f "$file_pid_fd" ] || return 0
+    kill "$(cat "$file_pid_fd")" 2>/dev/null
+    rm -f "$file_pid_fd"
 }
 
 missing_files_template='
   '"${light_blue}"'Отсутствуют исполняемые файлы:'"${reset}"'
-  '"${yellow}"'%s'"${reset}"'
+  '"${yellow}"'%b'"${reset}"'
 
   '"${green}"'Возможные причины:'"${reset}"'
   • XKeen установлен во внутреннюю память и на ней недостаточно места
@@ -1636,9 +1707,7 @@ proxy_start() {
                         export XRAY_LOCATION_CONFDIR="$directory_xray_config"
                         export XRAY_LOCATION_ASSET="$directory_xray_asset"
                         find "$directory_xray_config" -maxdepth 1 -name '._*.json' -type f -delete
-                        fd_limit="$other_fd"
-                        [ "$architecture" = "arm64-v8a" ] && fd_limit="$arm64_fd"
-                        ulimit -SHn "$fd_limit"
+                        apply_fd_limit
                         if [ -n "$fd_out" ]; then
                             nohup "$name_client" run >/dev/null 2>&1 &
                             unset fd_out
@@ -1648,9 +1717,7 @@ proxy_start() {
                     ;;
                     mihomo)
                         export CLASH_HOME_DIR="$directory_configs_app"
-                        fd_limit="$other_fd"
-                        [ "$architecture" = "arm64-v8a" ] && fd_limit="$arm64_fd"
-                        ulimit -SHn "$fd_limit"
+                        apply_fd_limit
                         if [ -n "$fd_out" ]; then
                             nohup "$name_client" >/dev/null 2>&1 &
                             unset fd_out
@@ -1678,11 +1745,8 @@ proxy_start() {
                     fi
                     [ "$mode_proxy" = "Other" ] && echo -e "  Функция прозрачного прокси ${red}не активна${reset}. Направляйте соединения на ${yellow}${name_client}${reset} вручную"
                     log_info_router "Прокси-клиент успешно запущен в режиме $mode_proxy"
-                        if [ "$check_fd" = "on" ]; then
-                        if [ -f "$file_pid_fd" ]; then
-                            kill "$(cat "$file_pid_fd")" 2>/dev/null
-                            rm -f "$file_pid_fd"
-                        fi
+                    if [ "$check_fd" = "on" ]; then
+                        cleanup_fd_monitor
                         monitor_fd &
                         echo $! > "$file_pid_fd"
                         log_info_router "Запущен контроль файловых дескрипторов $name_client"
@@ -1703,16 +1767,10 @@ proxy_start() {
 proxy_stop() {
     if ! proxy_status; then
         echo -e "  Прокси-клиент ${red}не запущен${reset}"
-        if [ -f "$file_pid_fd" ]; then
-            kill "$(cat "$file_pid_fd")" 2>/dev/null
-            rm -f "$file_pid_fd"
-        fi
+        cleanup_fd_monitor
     else
         [ -f "/tmp/xkeen_coldstart.lock" ] || log_info_router "Инициирована остановка прокси-клиента"
-        if [ -f "$file_pid_fd" ]; then
-            kill "$(cat "$file_pid_fd")" 2>/dev/null
-            rm -f "$file_pid_fd"
-        fi
+        cleanup_fd_monitor
         attempt=1
         while [ "$attempt" -le "$start_attempts" ]; do
             clean_firewall

@@ -1,5 +1,6 @@
 # Загрузка Mihomo
 download_mihomo() {
+    test_github
     while true; do
         USE_JSDELIVR=""
         printf "  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"

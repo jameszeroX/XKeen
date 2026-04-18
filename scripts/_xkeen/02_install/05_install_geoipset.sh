@@ -2,6 +2,8 @@
 install_geoipset_lst() {
     mkdir -p "$ipset_cfg" || { echo "Ошибка: Не удалось создать директорию $ipset_cfg"; exit 1; }
 
+    test_github
+
     url="$1"
     dest_file="$2"
     display_name="$3"
