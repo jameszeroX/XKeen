@@ -187,6 +187,11 @@ warn_proxy_dns() {
     echo -e "  на уровне ${light_blue}iptables PREROUTING${reset} до того, как роутер видит DNS-ответы"
     echo -e "  Из-за этого ${red}DNS-маршруты Keenetic работать не будут${reset}"
     echo -e "  Не используйте DNS-маршрутизацию Keenetic совместно с перехватом DNS XKeen"
+    echo
+    echo -e "  ${yellow}Внимание!${reset} При использовании модулей фильтрации DNS Keenetic (${light_blue}NextDNS${reset}, ${light_blue}SafeDNS${reset}, ${light_blue}AdGuard DNS${reset})"
+    echo -e "  перехват DNS XKeen уводит DNS-пакеты в прокси раньше, чем их обработает модуль"
+    echo -e "  Чтобы модуль продолжал фильтровать, в его настройках включите ${green}«Разрешить транзит запросов»${reset}"
+    echo -e "  Либо отключите перехват DNS (${yellow}xkeen -dns off${reset}) и используйте сервис как обычный DoH/DoT"
 }
 
 change_proxy_dns() {

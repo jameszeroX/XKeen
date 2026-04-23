@@ -17,6 +17,7 @@ reset="\033[0m"
 name_client="xray"
 name_app="XKeen"
 name_policy="xkeen"
+name_policy_full="XKeenFull"
 name_profile="xkeen"
 name_chain="xkeen"
 
@@ -126,6 +127,18 @@ log_error_terminal() {
     exit 1
 }
 
+# Предупреждение о CPU-нагрузке в режиме полного проксирования
+warn_full_proxy_cpu() {
+    [ "$full_proxy_active" = "yes" ] || return 0
+    log_warning_router "Активен режим полного проксирования (все порты) - повышенная нагрузка на CPU роутера"
+    log_warning_terminal "
+  ${red}Активен режим полного проксирования${reset} (все порты клиента идут через прокси)
+  Это значительно ${yellow}нагружает CPU${reset} роутера и может снижать скорость соединения
+  Для снижения нагрузки ограничьте порты через '${yellow}port_proxying.lst${reset}'
+  или используйте отдельную политику '${yellow}$name_policy${reset}' только для нужных устройств
+"
+}
+
 print_policy_info() {
     found="$1"
     has_custom="$2"
@@ -151,15 +164,21 @@ print_policy_info() {
 
         if [ "$has_custom" = "yes" ]; then
             custom_names=$(echo "$user_policies" | cut -d'|' -f1 | tr '\n' ',' | sed 's/,$//; s/,/, /g')
-            policies="${name_policy}, ${custom_names}"
+            if [ -n "$policy_mark" ]; then
+                policies="${name_policy}, ${custom_names}"
+            else
+                policies="${custom_names}"
+            fi
 
             detail_list=""
-            if [ -n "$port_donor" ]; then
-                detail_list="  - ${yellow}$name_policy${reset} на портах ${green}${port_donor}${reset}"
-            elif [ -n "$port_exclude" ]; then
-                detail_list="  - ${yellow}$name_policy${reset} на всех портах кроме ${green}${port_exclude}${reset}"
-            else
-                detail_list="  - ${yellow}$name_policy${reset} на всех портах"
+            if [ -n "$policy_mark" ]; then
+                if [ -n "$port_donor" ]; then
+                    detail_list="  - ${yellow}$name_policy${reset} на портах ${green}${port_donor}${reset}"
+                elif [ -n "$port_exclude" ]; then
+                    detail_list="  - ${yellow}$name_policy${reset} на всех портах кроме ${green}${port_exclude}${reset}"
+                else
+                    detail_list="  - ${yellow}$name_policy${reset} на всех портах"
+                fi
             fi
 
             custom_details=$(echo "$user_policies" | while IFS='|' read -r p_name p_mark p_mode p_ports; do
@@ -172,11 +191,17 @@ print_policy_info() {
                 fi
             done)
 
+            if [ -n "$detail_list" ]; then
+                body="${detail_list}
+${custom_details}"
+            else
+                body="${custom_details}"
+            fi
+
             log_info_terminal "
   Найдены политики '${yellow}${policies}${reset}'
   Прокси будет запущен для клиентов политик:
-${detail_list}
-${custom_details}
+${body}
 "
         else
             if [ -z "$port_donor" ] && [ -z "$port_exclude" ]; then
@@ -908,6 +933,14 @@ get_policy_mark() {
     fi
 }
 
+# Получение метки зарезервированной политики XKeenFull (полное проксирование)
+get_policy_mark_full() {
+    [ -z "$api_policy_json" ] && return
+    [ -z "$name_policy_full" ] && return
+    _m=$(echo "$api_policy_json" | jq -r --arg pname "$name_policy_full" '.[] | select(.description | ascii_downcase == ($pname | ascii_downcase)) | .mark' 2>/dev/null)
+    [ -n "$_m" ] && echo "0x${_m}"
+}
+
 # Получение меток политик "Без доступа в интернет"
 get_no_internet_marks() {
     [ -z "$api_policy_json" ] && return
@@ -934,10 +967,10 @@ get_user_policies() {
 # Проверка на конфликт имен политик
 check_policy_name_conflict() {
     if [ -f "$xkeen_config" ]; then
-        conflict=$(jq -r --arg main "$name_policy" '.xkeen.policy[] | select((.name | ascii_downcase) == ($main | ascii_downcase)) | .name' "$xkeen_config" 2>/dev/null | head -n 1)
+        conflict=$(jq -r --arg m1 "$name_policy" --arg m2 "$name_policy_full" '.xkeen.policy[] | select((.name | ascii_downcase) == ($m1 | ascii_downcase) or ((.name | ascii_downcase) == ($m2 | ascii_downcase) and $m2 != "")) | .name' "$xkeen_config" 2>/dev/null | head -n 1)
 
         if [ -n "$conflict" ]; then
-            log_error_router "Ошибка конфигурации: Имя политики в xkeen.json совпадает с системным"
+            log_error_router "Ошибка конфигурации: Имя политики в xkeen.json совпадает с зарезервированным"
             log_error_terminal "
   В файле '${yellow}xkeen.json${reset}' найдена политика с именем '${red}${conflict}${reset}'
   Это имя зарезервировано основной службой XKeen
@@ -1675,10 +1708,16 @@ proxy_start() {
         mode_proxy=$(get_mode_proxy)
         if [ "$mode_proxy" != "Other" ]; then
             policy_mark=$(get_policy_mark)
+            policy_mark_full=$(get_policy_mark_full)
             no_internet_marks=$(get_no_internet_marks)
 
-            if [ -n "$policy_mark" ]; then
+            if [ -n "$policy_mark" ] || [ -n "$policy_mark_full" ]; then
                 user_policies=$(resolve_user_policies)
+
+                if [ -n "$policy_mark_full" ]; then
+                    user_policies="${user_policies}${user_policies:+
+}${name_policy_full}|${policy_mark_full#0x}|all|"
+                fi
 
                 if [ -n "$user_policies" ]; then
                     print_policy_info "yes" "yes"
@@ -1697,6 +1736,16 @@ proxy_start() {
 
                 user_policies=""
             fi
+
+            full_proxy_active="no"
+            [ -n "$policy_mark_full" ] && full_proxy_active="yes"
+            if [ -n "$policy_mark" ] && [ -z "$port_donor" ] && [ -z "$port_exclude" ]; then
+                full_proxy_active="yes"
+            fi
+            if [ "$full_proxy_active" != "yes" ] && [ -n "$user_policies" ]; then
+                echo "$user_policies" | awk -F'|' '$3=="all"{found=1} END{exit found?0:1}' && full_proxy_active="yes"
+            fi
+            warn_full_proxy_cpu
 
             networks=$(printf '%s\n' $network_redirect $network_tproxy | tr ',' ' ' | tr -s ' ' '\n' | sort -u | tr '\n' ' ')
             networks=${networks% }
