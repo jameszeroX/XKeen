@@ -181,6 +181,12 @@ choice_remove() {
 warn_proxy_dns() {
     echo
     echo -e "  ${red}Внимание!${reset} Значение данного параметра без соответствующих настроек прокси-клиента ${green}игнорируется${reset}"
+    echo
+    echo -e "  ${yellow}Внимание!${reset} В KeeneticOS 5+ доступна функция ${light_blue}DNS-маршрутизации${reset} (Routing > DNS-Based Routes)"
+    echo -e "  При включённом перехвате DNS в XKeen, DNS-пакеты перенаправляются в прокси"
+    echo -e "  на уровне ${light_blue}iptables PREROUTING${reset} до того, как роутер видит DNS-ответы"
+    echo -e "  Из-за этого ${red}DNS-маршруты Keenetic работать не будут${reset}"
+    echo -e "  Не используйте DNS-маршрутизацию Keenetic совместно с перехватом DNS XKeen"
 }
 
 change_proxy_dns() {

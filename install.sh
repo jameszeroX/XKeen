@@ -6,10 +6,10 @@ yellow="\033[93m"
 light_blue="\033[96m"
 reset="\033[0m"
 
-url_stable="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"
-url_beta="https://raw.githubusercontent.com/jameszeroX/XKeen/main/test/xkeen.tar.gz"
+url_stable="https://github.com/levmnkv/XKeen/releases/latest/download/xkeen.tar.gz"
+url_beta="https://raw.githubusercontent.com/levmnkv/XKeen/main/test/xkeen.tar.gz"
 archive_name="xkeen.tar.gz"
-release_fix_url="https://raw.githubusercontent.com/jameszeroX/XKeen/main/01_info_variable.sh"
+release_fix_url="https://raw.githubusercontent.com/levmnkv/XKeen/main/01_info_variable.sh"
 
 clear
 echo

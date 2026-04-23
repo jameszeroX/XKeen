@@ -54,9 +54,6 @@ initd_cron="$initd_dir/S05crond"
 # -------------------------------------
 # Время
 # -------------------------------------
-existing_content=$(cat "$status_file")
-installed_size=$(du -s "$install_dir" | cut -f1)
-source_date_epoch=$(date +%s)
 current_datetime=$(date "+%d-%b-%y_%H-%M")
 
 # -------------------------------------
@@ -68,10 +65,10 @@ conn_IP2="77.88.44.55"
 # -------------------------------------
 # URL
 # -------------------------------------
-xkeen_api_url="https://api.github.com/repos/jameszeroX/xkeen/releases/latest"			# url api для XKeen
-xkeen_jsd_url="https://data.jsdelivr.com/v1/package/gh/jameszeroX/xkeen"			# резервный url api для XKeen
-xkeen_tar_url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"	# url для загрузки XKeen
-xkeen_dev_url="https://raw.githubusercontent.com/jameszeroX/xkeen/main/test/xkeen.tar.gz"	# url для загрузки XKeen dev
+xkeen_api_url="https://api.github.com/repos/levmnkv/XKeen/releases/latest"			# url api для XKeen
+xkeen_jsd_url="https://data.jsdelivr.com/v1/package/gh/levmnkv/XKeen"				# резервный url api для XKeen
+xkeen_tar_url="https://github.com/levmnkv/XKeen/releases/latest/download/xkeen.tar.gz"		# url для загрузки XKeen
+xkeen_dev_url="https://raw.githubusercontent.com/levmnkv/XKeen/main/test/xkeen.tar.gz"	# url для загрузки XKeen dev
 xray_api_url="https://api.github.com/repos/XTLS/Xray-core/releases"				# url api для Xray
 xray_jsd_url="https://data.jsdelivr.com/v1/package/gh/XTLS/Xray-core"				# резервный url api для Xray
 xray_zip_url="https://github.com/XTLS/Xray-core/releases/download"				# url для загрузки Xray
@@ -104,23 +101,24 @@ geoipv4_url="https://github.com/jameszeroX/zkeen-ip/releases/latest/download/ru"
 geoipv6_url="https://github.com/jameszeroX/zkeen-ip/releases/latest/download/ru6"
 
 # -------------------------------------
-# Создание директорий и файлов
-# -------------------------------------
-mkdir -p "$xray_log_dir" || { echo "Ошибка: Не удалось создать директорию $xray_log_dir"; exit 1; }
-mkdir -p "$initd_dir" || { echo "Ошибка: Не удалось создать директорию $initd_dir"; exit 1; }
-mkdir -p "$pid_dir" || { echo "Ошибка: Не удалось создать директорию $pid_dir"; exit 1; }
-mkdir -p "$backups_dir" || { echo "Ошибка: Не удалось создать директорию $backups_dir"; exit 1; }
-mkdir -p "$install_dir" || { echo "Ошибка: Не удалось создать директорию $install_dir"; exit 1; }
-mkdir -p "$cron_dir" || { echo "Ошибка: Не удалось создать директорию $cron_dir"; exit 1; }
-
-# -------------------------------------
 # Журналы
 # -------------------------------------
 xray_access_log="$xray_log_dir/access.log"
 xray_error_log="$xray_log_dir/error.log"
 
-touch "$xray_access_log" || { echo "Ошибка: Не удалось создать файл $xray_access_log"; exit 1; }
-touch "$xray_error_log" || { echo "Ошибка: Не удалось создать файл $xray_error_log"; exit 1; }
+# -------------------------------------
+# Инициализация директорий (вызывать только при установке/обновлении)
+# -------------------------------------
+init_directories() {
+    mkdir -p "$xray_log_dir" || { echo "Ошибка: Не удалось создать директорию $xray_log_dir"; exit 1; }
+    mkdir -p "$initd_dir" || { echo "Ошибка: Не удалось создать директорию $initd_dir"; exit 1; }
+    mkdir -p "$pid_dir" || { echo "Ошибка: Не удалось создать директорию $pid_dir"; exit 1; }
+    mkdir -p "$backups_dir" || { echo "Ошибка: Не удалось создать директорию $backups_dir"; exit 1; }
+    mkdir -p "$install_dir" || { echo "Ошибка: Не удалось создать директорию $install_dir"; exit 1; }
+    mkdir -p "$cron_dir" || { echo "Ошибка: Не удалось создать директорию $cron_dir"; exit 1; }
+    touch "$xray_access_log" || { echo "Ошибка: Не удалось создать файл $xray_access_log"; exit 1; }
+    touch "$xray_error_log" || { echo "Ошибка: Не удалось создать файл $xray_error_log"; exit 1; }
+}
 
 # Таймаут curl
 [ -e "/tmp/toff" ] && curl_timeout="" || curl_timeout="-m 180"

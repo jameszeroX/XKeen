@@ -15,7 +15,7 @@ register_mihomo_control() {
         "yq_s" \
         "MetaCubeX" \
         "mihomo_s" \
-        "jameszero" \
+        "jameszero / levmnkv" \
         "A unified platform for anti-censorship."
 }
 
@@ -39,7 +39,7 @@ register_yq_control() {
         "" \
         "mikefarah" \
         "yq_s" \
-        "jameszero" \
+        "jameszero / levmnkv" \
         "A lightweight and portable command-line YAML, JSON, INI and XML processor."
 }
 

@@ -117,17 +117,15 @@ author_feedback() {
     echo -e "  ${yellow}telegram помощника${reset}:"
     echo "     @skride"
     echo
-    echo -e "  ${light_blue}Разработчик форка XKeen${reset}:"
+    echo -e "  ${light_blue}Разработчик форка XKeen ${reset}:"
     echo -e "  ${yellow}Профиль на форуме keenetic${reset}:"
     echo "     https://forum.keenetic.ru/profile/20945-jameszero"
-    echo -e "  ${yellow}e-mail${reset}:"
-    echo "     admin@jameszero.net"
-    echo -e "  ${yellow}telegram${reset}:"
-    echo "     @jameszero"
-    echo -e "  ${yellow}сайт${reset}:"
-    echo "     https://jameszero.net"
     echo -e "  ${yellow}GitHub${reset}:"
     echo "     https://github.com/jameszeroX"
+    echo
+    echo -e "  ${light_blue}Разработчик этого форка XKeen (levmnkv)${reset}:"
+    echo -e "  ${yellow}GitHub${reset}:"
+    echo "     https://github.com/levmnkv"
     echo
     echo -e "  Предоставленные выше контакты предназначены ${green}для личной переписки${reset}, а ${red}не для консультаций${reset}"
     echo "  Возникающие вопросы по XKeen, задавайте в телеграм-чате https://t.me/+8Cvh7oVf6cE0MWRi"

@@ -1,4 +1,4 @@
-# XKeen 1.1.3.9
+# XKeen 2.0 Beta
 
 > **XKeen** — утилита для выборочной маршрутизации сетевого трафика через прокси‑движки **Xray** и **Mihomo** на роутерах **Keenetic**/**Netcraze**.  
 > Позволяет прозрачно направлять TCP/UDP‑трафик только выбранных клиентов, не затрагивая остальную сеть.
@@ -10,11 +10,11 @@
 - Выборочная маршрутизация для клиентов в политике доступа в интернет
 - Сохранение прямого выхода в интернет для остальных клиентов
 - Маршрутизация без политики для всех клиентов роутера
-- Поддержка режимов **TProxy**, **Mixed**, **Redirect**, **Other** (socks5/http)
+- Поддержка режимов **TProxy**, **Hybrid**, **Redirect**, **Other** (socks5/http)
 - Прозрачное проксирование **TCP** и **UDP**
 - Поддержка ядер-проксирования **Xray** и **Mihomo**
 - Совместимость с **KeeneticOS 5+**
-- Управление через shell и [веб-панели](https://github.com/jameszeroX/XKeen?tab=readme-ov-file#дополнения) сторонних разработчиков
+- Управление через shell и [веб-панели](https://github.com/levmnkv/XKeen?tab=readme-ov-file#дополнения) сторонних разработчиков
 
 XKeen работает полностью на стороне роутера, не меняет настройки клиентов и не требует установки на них дополнительных программ.
 
@@ -30,6 +30,9 @@ XKeen работает полностью на стороне роутера, н
 
 > [!NOTE]
 > Установка XKeen гарантируется на внешние USB‑накопители. Установка во внутреннюю память роутера возможна, но требует опыта пользователя. Проблемы, связанные с установкой во внутреннюю память, не считаются ошибками XKeen.
+
+> [!WARNING]
+> В KeeneticOS 5+ доступна функция **DNS-маршрутизации** (Routing → DNS-Based Routes). При включённом перехвате DNS в XKeen (`xkeen -dns on`) DNS-пакеты перехватываются на уровне iptables PREROUTING раньше, чем их видит роутер. Из-за этого DNS-маршруты Keenetic **не будут работать**. Не используйте обе функции одновременно.
 
 ---
 
@@ -48,10 +51,10 @@ XKeen работает полностью на стороне роутера, н
 - управление IPv6
 - поддержка ядра **Mihomo**
 - быстрое переключение Xray / Mihomo
-- контроль [файловых дескрипторов](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#контроль-файловых-дескрипторов)
-- [внешние списки](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#внешние-списки-портов-и-ip) IP и портов
-- [OffLine](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#offline-установка)‑установка
-- [Self-Hosted](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#self-hosted-прокси-для-загрузки)-прокси для загрузки компонентов
+- контроль [файловых дескрипторов](https://github.com/levmnkv/XKeen/blob/main/configuration.md#контроль-файловых-дескрипторов)
+- [внешние списки](https://github.com/levmnkv/XKeen/blob/main/configuration.md#внешние-списки-портов-и-ip) IP и портов
+- [OffLine](https://github.com/levmnkv/XKeen/blob/main/configuration.md#offline-установка)‑установка
+- [Self-Hosted](https://github.com/levmnkv/XKeen/blob/main/configuration.md#self-hosted-прокси-для-загрузки)-прокси для загрузки компонентов
 
 ### Удалено
 
@@ -61,7 +64,7 @@ XKeen работает полностью на стороне роутера, н
 
 ---
 
-### Подробное [описание изменений](https://github.com/jameszeroX/XKeen/blob/main/forkinfo.md)
+### Подробное [описание изменений](https://github.com/levmnkv/XKeen/blob/main/forkinfo.md)
 
 ---
 
@@ -78,22 +81,14 @@ xkeen -h
 
 ```bash
 opkg update && opkg upgrade && opkg install curl tar && cd /tmp
-sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)"
+sh -c "$(curl -sSL https://raw.githubusercontent.com/levmnkv/XKeen/main/install.sh)"
 ```
 
 ---
 
 ## Поддержка проекта
 
-Форк XKeen, как и оригинал, совершено бесплатен и не имеет каких либо ограничений по использованию. Надеюсь, доработки XKeen, многие из которых я сделал по Вашим просьбам, оказались полезны, так же, как и мои сообщения в [телеграм-чате](https://t.me/+8Cvh7oVf6cE0MWRi). Для меня очень важно понимать, что труд и время потрачены не зря. Буду благодарен за любую Вашу поддержку на развитие проекта:
-
-- [CloudTips](https://pay.cloudtips.ru/p/7edb30ec)
-- [ЮMoney](https://yoomoney.ru/to/41001350776240)
-- Карта МИР: `2204 1201 2976 4110`
-- USDT, сеть TRC20: `TQhy1LbuGe3Bz7EVrDYn67ZFLDjDBa2VNX`
-- USDT, сеть ERC20: `0x6a5DF3b5c67E1f90dF27Ff3bd2a7691Fad234EE2`
-
-<sup>Уточните актуальность крипто-адресов перед переводом</sup>
+Форк XKeen, как и оригинал, совершено бесплатен и не имеет каких либо ограничений по использованию. Надеюсь, доработки XKeen, многие из которых я сделал по Вашим просьбам, оказались полезны, так же, как и мои сообщения в [телеграм-чате](https://t.me/+8Cvh7oVf6cE0MWRi). https://github.com/jameszeroX/XKeen#%D0%BF%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%BA%D0%B0-%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82%D0%B0 - поддежите форк от jameszeroX или оригинальный XKeen - https://github.com/Skrill0/XKeen . Без них не было бы и этого форка
 
 ---
 

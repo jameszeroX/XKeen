@@ -9,6 +9,9 @@ write_opkg_control() {
     package_maintainer="$6"
     package_description="$7"
 
+    _installed_size=$(du -s "$install_dir" | cut -f1)
+    _source_date_epoch=$(date +%s)
+
     {
         echo "Package: $package_name"
         echo "Version: $package_version"
@@ -16,10 +19,10 @@ write_opkg_control() {
         echo "Source: $package_source"
         echo "SourceName: $package_source_name"
         echo "Section: net"
-        echo "SourceDateEpoch: $source_date_epoch"
+        echo "SourceDateEpoch: $_source_date_epoch"
         echo "Maintainer: $package_maintainer"
         echo "Architecture: $status_architecture"
-        echo "Installed-Size: $installed_size"
+        echo "Installed-Size: $_installed_size"
         echo "Description: $package_description"
     } > "$register_dir/$package_name.control"
 }

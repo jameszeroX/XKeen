@@ -93,6 +93,7 @@ while [ $# -gt 0 ]; do
 
             echo -e "  Запуск полного цикла установки ${yellow}XKeen${reset}"
 
+            init_directories
             xkeen_info
             xkeen_set_info
             info_4g
@@ -331,6 +332,7 @@ while [ $# -gt 0 ]; do
             fi
             echo "  Установка XKeen OffLine"
 
+            init_directories
             xkeen_set_info
             logs_cpu_info_console
 
@@ -527,6 +529,7 @@ while [ $# -gt 0 ]; do
 
         -uk_post_update)
             . "/opt/sbin/.xkeen/import.sh"
+            init_directories
             xkeen_info
             xkeen_set_info
             info_packages
@@ -1032,6 +1035,7 @@ while [ $# -gt 0 ]; do
 
         -k_post_install)
             . "/opt/sbin/.xkeen/import.sh"
+            init_directories
             xkeen_info
             xkeen_set_info
             info_packages
@@ -1175,7 +1179,7 @@ while [ $# -gt 0 ]; do
                 echo -e "  Ядро проксирования Mihomo версии ${yellow}$mihomo_current_version${reset}"
                 echo -e "  Парсер конфигурационных файлов Yq версии ${yellow}$yq_current_version${reset}"
             else
-                echo -e "  Ядро проксирования ${red}не установлено{reset}"
+                echo -e "  Ядро проксирования ${red}не установлено${reset}"
             fi
         ;;
 
