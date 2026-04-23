@@ -1198,7 +1198,12 @@ if pidof "\$name_client" >/dev/null; then
         # Определяем таблицу маршрутизации
         if [ -n "\$policy_mark" ]; then
             policy_table=\$(ip rule show | awk -v policy="\$policy_mark" '\$0 ~ policy && /lookup/ && !/blackhole/ {print \$(NF)}' | sed -n '1p')
-            source_table="\$policy_table"
+            # "Политика по умолчанию" и подобные не имеют собственной таблицы — используют main
+            if [ -z "\$policy_table" ]; then
+                source_table="main"
+            else
+                source_table="\$policy_table"
+            fi
         else
             source_table="main"
         fi
