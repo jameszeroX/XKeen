@@ -24,6 +24,7 @@ diagnostic() {
 
     # Очищаем файл diagnostic перед записью новых данных
     > "$diagnostic"
+    chmod 600 "$diagnostic"
 
     # Функция записи заголовка
     write_header() {
@@ -38,6 +39,18 @@ diagnostic() {
         write_header "$1"
         cat >> "$diagnostic"
         echo >> "$diagnostic"; echo >> "$diagnostic"
+    }
+
+    # Функция маскирования чувствительных данных в JSON-конфигах
+    mask_sensitive_data() {
+        sed -E \
+            -e 's/("id"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("password"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("privateKey"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("shortId"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("secretKey"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("key"[[:space:]]*:[[:space:]]*")[^"]{16,}/\1***MASKED***/g' \
+            -e 's/("address"[[:space:]]*:[[:space:]]*")[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/\1***IP_MASKED***/g'
     }
 
     # Функция логирования файлов
@@ -119,7 +132,11 @@ diagnostic() {
         ls -p "$install_conf_dir" | log_block "Содержимое директории configs"
         for conf in dns inbounds routing; do
             file=$(ls "$install_conf_dir"/*${conf}*.json 2>/dev/null | head -n 1)
-            [ -n "$file" ] && log_file "$file" "Содержимое файла ${conf}.json"
+            if [ -n "$file" ]; then
+                write_header "Содержимое файла ${conf}.json (чувствительные данные замаскированы)"
+                mask_sensitive_data < "$file" >> "$diagnostic"
+                echo >> "$diagnostic"; echo >> "$diagnostic"
+            fi
         done
     fi
 
@@ -127,6 +144,10 @@ diagnostic() {
     echo
     echo -e "  Диагностика ${green}выполнена${reset}"
     echo -e "  Отправьте файл '${yellow}$diagnostic${reset}' в телеграм-чат ${yellow}XKeen${reset}, подробно описав возникшую проблему"
+    echo
+    echo -e "  ${red}Внимание${reset}: Файл содержит конфигурацию вашего прокси."
+    echo -e "  Чувствительные данные (UUID, пароли, ключи, IP-адреса серверов) ${green}замаскированы${reset}"
+    echo -e "  Файл доступен только для чтения владельцу (chmod 600)"
     echo
     echo -e "  ${red}Примечание${reset}: Диагностика не проверяет доступ к прокси-серверу, правильность заполнения конфигов"
     echo -e "  и настройки роутера/сервера. Она проверяет ${green}только${reset} корректность инициализации ${yellow}XKeen${reset} в роутере"

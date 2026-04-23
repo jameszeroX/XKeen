@@ -237,6 +237,14 @@ download_mihomo() {
             return 1
         fi
 
+        # Получаем SHA256 дайджест из GitHub API (напрямую, без прокси)
+        mihomo_expected_sha256=""
+        mihomo_api_digest=$(curl --connect-timeout 10 $curl_timeout -s "https://api.github.com/repos/MetaCubeX/mihomo/releases/tags/$VERSION_ARG" 2>/dev/null \
+            | jq -r --arg fname "$(basename "$download_url" | sed "s|.*/||")" '.assets[] | select(.name == $fname) | .digest // empty' 2>/dev/null)
+        if [ -n "$mihomo_api_digest" ]; then
+            mihomo_expected_sha256=$(printf '%s' "$mihomo_api_digest" | sed 's/^sha256://')
+        fi
+
         if curl --connect-timeout 10 $curl_timeout \
                -fL \
                -o "$mihomo_dist" \
@@ -246,6 +254,13 @@ download_mihomo() {
                 if head -c 100 "$mihomo_dist" 2>/dev/null | grep -iq "<!DOCTYPE html\|<html\|Error\|404\|Not Found"; then
                     rm -f "$mihomo_dist"
                     printf "  ${red}Ошибка${reset}: Получена HTML страница ошибки вместо файла Mihomo\n"
+                    continue
+                fi
+
+                # Проверка целостности
+                if ! verify_download_integrity "$mihomo_dist" "$mihomo_expected_sha256"; then
+                    rm -f "$mihomo_dist"
+                    printf "  ${red}Файл удалён${reset}. Попробуйте загрузить другую версию\n"
                     continue
                 fi
                 

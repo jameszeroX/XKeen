@@ -11,5 +11,8 @@
 # Модуль резервного копирования
 . "$xtools_dir/06_tools_backups/00_backups_import.sh"
 
+# Модуль проверки целостности
+. "$xtools_dir/08_tools_integrity.sh"
+
 # Модуль загрузок
 . "$xtools_dir/07_tools_downloaders/00_downloaders_import.sh"

@@ -1546,7 +1546,7 @@ else
 fi
 EOL
 
-    chmod +x "$file_netfilter_hook"
+    chmod 700 "$file_netfilter_hook"
     sh "$file_netfilter_hook"
 }
 
@@ -1855,7 +1855,13 @@ proxy_stop() {
         attempt=1
         while [ "$attempt" -le "$start_attempts" ]; do
             clean_firewall
-            killall -q -9 "$name_client"
+            # Сначала SIGTERM для корректного завершения
+            killall -q "$name_client" 2>/dev/null
+            sleep 3
+            # Если процесс всё ещё жив — SIGKILL
+            if pidof "$name_client" >/dev/null 2>&1; then
+                killall -q -9 "$name_client" 2>/dev/null
+            fi
             sleep 1
             if ! proxy_status; then
                 echo -e "  Прокси-клиент ${red}остановлен${reset}"
