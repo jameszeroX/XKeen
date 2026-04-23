@@ -65,16 +65,17 @@ conn_IP2="77.88.44.55"
 # -------------------------------------
 # URL
 # -------------------------------------
-xkeen_api_url="https://api.github.com/repos/jameszeroX/XKeen/releases/latest"			# url api для XKeen
-xkeen_jsd_url="https://data.jsdelivr.com/v1/package/gh/jameszeroX/XKeen"				# резервный url api для XKeen
-xkeen_tar_url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"		# url для загрузки XKeen
-xkeen_dev_url="https://raw.githubusercontent.com/jameszeroX/XKeen/main/test/xkeen.tar.gz"	# url для загрузки XKeen dev
+xkeen_api_url="https://api.github.com/repos/jameszeroX/xkeen/releases/latest"			# url api для XKeen
+xkeen_jsd_url="https://data.jsdelivr.com/v1/package/gh/jameszeroX/xkeen"				# резервный url api для XKeen
+xkeen_tar_url="https://github.com/jameszeroX/xkeen/releases/latest/download/xkeen.tar.gz"		# url для загрузки XKeen
+xkeen_dev_url="https://raw.githubusercontent.com/jameszeroX/xkeen/main/test/xkeen.tar.gz"	# url для загрузки XKeen dev
 xray_api_url="https://api.github.com/repos/XTLS/Xray-core/releases"				# url api для Xray
 xray_jsd_url="https://data.jsdelivr.com/v1/package/gh/XTLS/Xray-core"				# резервный url api для Xray
 xray_zip_url="https://github.com/XTLS/Xray-core/releases/download"				# url для загрузки Xray
 mihomo_api_url="https://api.github.com/repos/MetaCubeX/mihomo/releases"				# url api для Mihomo
 mihomo_jsd_url="https://data.jsdelivr.com/v1/package/gh/MetaCubeX/mihomo"			# резервный url api для Mihomo
 mihomo_gz_url="https://github.com/MetaCubeX/mihomo/releases/download"				# url для загрузки Mihomo
+yq_dist_url="https://github.com/jameszeroX/yq/releases/latest/download"				# url для загрузки Yq
 yq_upstream_dist_url="https://github.com/mikefarah/yq/releases/latest/download"			# url для загрузки оригинального Yq
 yq_workaround_tag="260312"									# закреплённый тег рабочего Yq в форке jameszeroX/yq (защищает от дрейфа latest)
 yq_workaround_dist_url="https://github.com/jameszeroX/yq/releases/download/$yq_workaround_tag"	# url для загрузки рабочего Yq
