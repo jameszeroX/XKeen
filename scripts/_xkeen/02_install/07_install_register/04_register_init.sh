@@ -905,6 +905,23 @@ get_policy_mark() {
     fi
 }
 
+# Получение меток политик "Без доступа в интернет"
+get_no_internet_marks() {
+    [ -z "$api_policy_json" ] && return
+    _result=""
+    _marks=$(echo "$api_policy_json" | jq -r '.[].mark // empty' 2>/dev/null)
+    for _mark in $_marks; do
+        [ -z "$_mark" ] && continue
+        _table=$(ip rule show 2>/dev/null | awk -v m="0x$_mark" '$0 ~ m && /lookup/ && !/blackhole/ {print $NF}' | head -n1)
+        [ -z "$_table" ] && continue
+        _default=$(ip -4 route show table "$_table" 2>/dev/null | grep '^default')
+        if [ -z "$_default" ] || printf '%s\n' "$_default" | grep -qE 'unreachable|blackhole|prohibit'; then
+            _result="$_result 0x$_mark"
+        fi
+    done
+    printf '%s\n' "${_result# }"
+}
+
 # Получаем пользовательские политики
 get_user_policies() {
     [ ! -f "$xkeen_config" ] && return
@@ -1037,6 +1054,7 @@ ip6tables_supported="$ip6tables_supported"
 arm64_fd="$arm64_fd"
 other_fd="$other_fd"
 aghfix="$aghfix"
+no_internet_marks="$no_internet_marks"
 
 # Перезапуск скрипта
 restart_script() {
@@ -1260,6 +1278,11 @@ if pidof "\$name_client" >/dev/null; then
         table="\$2"
 
         flush_xkeen_rules
+
+        for _nim in \$no_internet_marks; do
+            set -- -m connmark --mark "\$_nim" -m conntrack ! --ctstate INVALID \$comment -j RETURN
+            ipt -C PREROUTING "\$@" >/dev/null 2>&1 || ipt -A PREROUTING "\$@" >/dev/null 2>&1
+        done
 
         for net in \$networks; do
             if [ "\$mode_proxy" = "Hybrid" ]; then
@@ -1644,6 +1667,7 @@ proxy_start() {
         mode_proxy=$(get_mode_proxy)
         if [ "$mode_proxy" != "Other" ]; then
             policy_mark=$(get_policy_mark)
+            no_internet_marks=$(get_no_internet_marks)
 
             if [ -n "$policy_mark" ]; then
                 user_policies=$(resolve_user_policies)
