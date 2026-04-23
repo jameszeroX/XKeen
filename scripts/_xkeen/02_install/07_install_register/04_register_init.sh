@@ -770,6 +770,9 @@ get_xray_network_by_mode() {
 get_port_redirect() {
     if [ "$name_client" = "mihomo" ]; then
         port=$(yq eval '.redir-port // ""' "$mihomo_config" 2>/dev/null)
+        if [ -z "$port" ]; then
+            port=$(yq eval '.listeners[] | select(.type == "redir") | .port // ""' "$mihomo_config" 2>/dev/null)
+        fi
         [ -n "$port" ] && echo "$port" && return 0
     else
         port=$(get_xray_port_by_mode "redirect")
@@ -784,7 +787,7 @@ get_port_tproxy() {
     if [ "$name_client" = "mihomo" ]; then
         port=$(yq eval '.tproxy-port // ""' "$mihomo_config" 2>/dev/null)
         if [ -z "$port" ]; then
-            port=$(yq eval '.listeners[] | select(.name == "tproxy" ) | .port // ""' "$mihomo_config" 2>/dev/null)
+            port=$(yq eval '.listeners[] | select(.type == "tproxy") | .port // ""' "$mihomo_config" 2>/dev/null)
         fi
         [ -n "$port" ] && echo "$port" && return 0
     else

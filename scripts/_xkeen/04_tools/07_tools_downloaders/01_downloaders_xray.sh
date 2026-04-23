@@ -1,36 +1,93 @@
 # Загрузка Xray
 download_xray() {
     test_github
-    while true; do
-        USE_JSDELIVR=""
-        printf "  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
-        
-        # Получаем список релизов через GitHub API
-        RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "${xray_api_url}?per_page=24" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
-        
-        if [ -z "$RELEASE_TAGS" ]; then
-            echo
-            printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
-            
-            # Получаем список релизов через jsDelivr
-            RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "$xray_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
-            
-            if [ -z "$RELEASE_TAGS" ]; then
-                echo
-                printf "  ${red}Нет доступа${reset} к ${yellow}jsDelivr${reset}\n"
-                echo
-                printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n  Проверьте соединение с интернетом или повторите позже\n  Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n  https://github.com/levmnkv/XKeen/blob/main/OffLine_install.md\n"
-                echo
-                exit 1
-            fi
-            echo
-            printf "  Список релизов получен с использованием ${yellow}jsDelivr${reset}:\n"
-            USE_JSDELIVR="true"
-        else
-            echo
-            printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
+
+    check_url_availability() {
+        url=$1
+        timeout=$2
+
+        http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
+                          -I \
+                          -s \
+                          -L \
+                          -w "%{http_code}" \
+                          -o /dev/null \
+                          "$url" 2>/dev/null)
+        curl_exit_code=$?
+
+        if [ "$curl_exit_code" -eq 0 ] && [ "$http_status" = "405" ]; then
+            http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
+                              -s \
+                              -L \
+                              -r 0-0 \
+                              -w "%{http_code}" \
+                              -o /dev/null \
+                              "$url" 2>/dev/null)
+            curl_exit_code=$?
         fi
 
+        if [ "$curl_exit_code" -eq 28 ]; then
+            printf "  ${red}Таймаут${reset} при проверке\n"
+            return 1
+        elif [ "$curl_exit_code" -ne 0 ]; then
+            printf "  ${red}Ошибка curl ($curl_exit_code)${reset} при проверке\n"
+            return 1
+        fi
+
+        case "$http_status" in
+            2[0-9][0-9])
+                printf "  Файл ${green}доступен${reset}\n"
+                return 0
+                ;;
+            404)
+                printf "  Файл ${red}не найден${reset} (404)\n"
+                return 2
+                ;;
+            403)
+                printf "  ${red}Доступ запрещен${reset} (403)\n"
+                return 2
+                ;;
+            000)
+                printf "  ${red}Нет соединения${reset}\n"
+                return 1
+                ;;
+            *)
+                printf "  ${yellow}Проблема с доступом${reset} (HTTP: $http_status)\n"
+                return 1
+                ;;
+        esac
+    }
+
+    USE_JSDELIVR=""
+    printf "  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
+
+    # Получаем список релизов через GitHub API
+    RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "${xray_api_url}?per_page=24" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
+
+    if [ -z "$RELEASE_TAGS" ]; then
+        echo
+        printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
+
+        # Получаем список релизов через jsDelivr
+        RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "$xray_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
+
+        if [ -z "$RELEASE_TAGS" ]; then
+            echo
+            printf "  ${red}Нет доступа${reset} к ${yellow}jsDelivr${reset}\n"
+            echo
+            printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n  Проверьте соединение с интернетом или повторите позже\n  Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n  https://github.com/levmnkv/XKeen/blob/main/OffLine_install.md\n"
+            echo
+            exit 1
+        fi
+        echo
+        printf "  Список релизов получен с использованием ${yellow}jsDelivr${reset}:\n"
+        USE_JSDELIVR="true"
+    else
+        echo
+        printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
+    fi
+
+    while true; do
         echo
         echo "$RELEASE_TAGS" | awk '{printf "    %2d. %s\n", NR, $0}'
         echo
@@ -80,12 +137,7 @@ download_xray() {
             fi
         fi
 
-        if [ -z "$USE_JSDELIVR" ]; then
-            VERSION_ARG="$version_selected"
-        else
-            VERSION_ARG="$version_selected"
-            unset USE_JSDELIVR
-        fi
+        VERSION_ARG="$version_selected"
 
         URL_BASE="${xray_zip_url}/$VERSION_ARG"
 
@@ -111,62 +163,6 @@ download_xray() {
         fi
 
         printf "  ${yellow}Проверка${reset} доступности версии $version_selected...\n"
-
-        check_url_availability() {
-            url=$1
-            timeout=$2
-
-            http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
-                              -I \
-                              -s \
-                              -L \
-                              -w "%{http_code}" \
-                              -o /dev/null \
-                              "$url" 2>/dev/null)
-            curl_exit_code=$?
-
-            if [ "$curl_exit_code" -eq 0 ] && [ "$http_status" = "405" ]; then
-                http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
-                                  -s \
-                                  -L \
-                                  -r 0-0 \
-                                  -w "%{http_code}" \
-                                  -o /dev/null \
-                                  "$url" 2>/dev/null)
-                curl_exit_code=$?
-            fi
-
-            if [ "$curl_exit_code" -eq 28 ]; then
-                printf "  ${red}Таймаут${reset} при проверке\n"
-                return 1
-            elif [ "$curl_exit_code" -ne 0 ]; then
-                printf "  ${red}Ошибка curl ($curl_exit_code)${reset} при проверке\n"
-                return 1
-            fi
-
-            case "$http_status" in
-                2[0-9][0-9])
-                    printf "  Файл ${green}доступен${reset}\n"
-                    return 0
-                    ;;
-                404)
-                    printf "  Файл ${red}не найден${reset} (404)\n"
-                    return 2
-                    ;;
-                403)
-                    printf "  ${red}Доступ запрещен${reset} (403)\n"
-                    return 2
-                    ;;
-                000)
-                    printf "  ${red}Нет соединения${reset}\n"
-                    return 1
-                    ;;
-                *)
-                    printf "  ${yellow}Проблема с доступом${reset} (HTTP: $http_status)\n"
-                    return 1
-                    ;;
-            esac
-        }
 
         # Проверка доступности версии
         if ! check_url_availability "$download_url" 10; then

@@ -69,6 +69,7 @@ XKeen работает полностью на стороне роутера, н
 ---
 
 Список параметров запуска XKeen доступен в справке:
+
 ```bash
 xkeen -h
 ```
@@ -88,29 +89,30 @@ sh -c "$(curl -sSL https://raw.githubusercontent.com/levmnkv/XKeen/main/install.
 
 ## Поддержка проекта
 
-Форк XKeen, как и оригинал, совершено бесплатен и не имеет каких либо ограничений по использованию. Надеюсь, доработки XKeen, многие из которых я сделал по Вашим просьбам, оказались полезны, так же, как и мои сообщения в [телеграм-чате](https://t.me/+8Cvh7oVf6cE0MWRi). https://github.com/jameszeroX/XKeen#%D0%BF%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%BA%D0%B0-%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82%D0%B0 - поддежите форк от jameszeroX или оригинальный XKeen - https://github.com/Skrill0/XKeen . Без них не было бы и этого форка
+Форк XKeen, как и оригинал, совершено бесплатен и не имеет каких либо ограничений по использованию. Надеюсь, доработки XKeen, многие из которых я сделал по Вашим просьбам, оказались полезны, так же, как и мои сообщения в [телеграм-чате](https://t.me/+8Cvh7oVf6cE0MWRi). <https://github.com/jameszeroX/XKeen#%D0%BF%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%BA%D0%B0-%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82%D0%B0> - поддежите форк от jameszeroX или оригинальный XKeen - <https://github.com/Skrill0/XKeen> . Без них не было бы и этого форка
 
 ---
 
 ## Дополнения
 
-- XKeen UI — https://github.com/zxc-rv/XKeen-UI
-- XKeen UI — https://github.com/umarcheh001/Xkeen-UI
-- XKeen UI — https://github.com/fan92rus/xkeen-ui
-- Генератор Outbound — https://zxc-rv.github.io/XKeen-UI/Outbound_Generator/
-- Парсер подписок - https://github.com/tkukushkin/xkeen-subscription-watcher
-- Парсер подписок — https://github.com/V2as/SubKeen
-- Mihomo Studio — https://github.com/l-ptrol/mihomo_studio
-- Конвертер JSON-подписок — https://sngvy.github.io/json-sub-to-outbounds
-- Mihomo HWID Subscription Installer — https://github.com/dorian6996/Mihomo-HWID-Subscription
+- XKeen UI — <https://github.com/zxc-rv/XKeen-UI>
+- XKeen UI — <https://github.com/umarcheh001/Xkeen-UI>
+- XKeen UI — <https://github.com/fan92rus/xkeen-ui>
+- Генератор Outbound — <https://zxc-rv.github.io/XKeen-UI/Outbound_Generator/>
+- Парсер подписок - <https://github.com/tkukushkin/xkeen-subscription-watcher>
+- Парсер подписок — <https://github.com/V2as/SubKeen>
+- Mihomo Studio — <https://github.com/l-ptrol/mihomo_studio>
+- Конвертер JSON-подписок — <https://sngvy.github.io/json-sub-to-outbounds>
+- Mihomo HWID Subscription Installer — <https://github.com/dorian6996/Mihomo-HWID-Subscription>
 
 ---
 
 ## Источники и ссылки
 
-- Origin XKeen — https://github.com/Skrill0/XKeen
-- Xray-core — https://github.com/XTLS/Xray-core
-- Mihomo — https://github.com/MetaCubeX/mihomo
-- Yq — https://github.com/mikefarah/yq
-- FAQ — https://jameszero.net/faq-xkeen.htm
-- Telegram‑чат — https://t.me/+8Cvh7oVf6cE0MWRi
+- Origin XKeen — <https://github.com/Skrill0/XKeen>
+- Fork XKeen - <https://github.com/jameszeroX/XKeen>
+- Xray-core — <https://github.com/XTLS/Xray-core>
+- Mihomo — <https://github.com/MetaCubeX/mihomo>
+- Yq — <https://github.com/mikefarah/yq>
+- FAQ — <https://jameszero.net/faq-xkeen.htm>
+- Telegram‑чат — <https://t.me/+8Cvh7oVf6cE0MWRi>

@@ -82,7 +82,6 @@ while [ $# -gt 0 ]; do
             test_github
             sleep 2
 
-            . "$script_dir/.xkeen/import.sh"
             clear
             echo
             check_keen_mode
