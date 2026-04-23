@@ -5,9 +5,16 @@ process_geo_file() {
     local display_name="$3"
     local update_flag="$4"
 
+    # Защита от path traversal
+    if case "$filename" in */*|*\\*|..|.) true;; *) false;; esac; then
+        printf "  ${red}Ошибка${reset}: Недопустимое имя файла %s (path traversal)\n" "$filename"
+        return 1
+    fi
+
     test_github
 
-    local temp_file=$(mktemp)
+    mkdir -p "$tmp_dir"
+    local temp_file=$(mktemp "$tmp_dir/geo.XXXXXX")
     local min_size=24576  # 24 KB
 
     download() {

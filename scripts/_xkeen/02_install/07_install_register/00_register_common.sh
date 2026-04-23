@@ -31,7 +31,8 @@ write_opkg_status() {
     package_name="$1"
     package_version="$2"
     package_depends="$3"
-    status_entry="$(mktemp)"
+    mkdir -p "$tmp_dir"
+    status_entry="$(mktemp "$tmp_dir/status.XXXXXX")"
 
     {
         echo "Package: $package_name"

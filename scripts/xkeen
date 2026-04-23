@@ -46,6 +46,27 @@ xkeen_info() {
     info_compare_xkeen
 }
 
+acquire_lock() {
+    lockfile="/tmp/xkeen_action.lock"
+    if [ -f "$lockfile" ]; then
+        lock_pid=$(cat "$lockfile" 2>/dev/null)
+        if [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null; then
+            if [ "$lock_pid" != "$$" ]; then
+                echo -e "  ${red}Ошибка${reset}: Другая операция установки/обновления уже выполняется (PID: $lock_pid)"
+                exit 1
+            fi
+        else
+            rm -f "$lockfile"
+        fi
+    fi
+    echo $$ > "$lockfile"
+    trap 'rm -f "$lockfile"' EXIT INT TERM
+}
+
+release_lock() {
+    rm -f "/tmp/xkeen_action.lock"
+}
+
 xkeen_set_info() {
     # Определяем архитектуру процессора
     info_cpu
@@ -77,6 +98,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
 
         -i|-install)    # Запуск полного цикла установки
+            acquire_lock
             test_connection
             test_entware
             test_github
@@ -322,6 +344,7 @@ while [ $# -gt 0 ]; do
 
 
         -io)    # Установка XKeen OffLine
+            acquire_lock
             clear
             echo
             check_keen_mode
@@ -461,6 +484,7 @@ while [ $# -gt 0 ]; do
 
 
         -ug)    # Обновление баз GeoFile/GeoIPSET
+            acquire_lock
             test_connection
             test_github
             sleep 2
@@ -495,6 +519,7 @@ while [ $# -gt 0 ]; do
 
 
         -uk)    # Обновление XKeen
+            acquire_lock
             test_connection
             test_github
             sleep 2
@@ -527,6 +552,7 @@ while [ $# -gt 0 ]; do
 
 
         -uk_post_update)
+            acquire_lock
             . "/opt/sbin/.xkeen/import.sh"
             init_directories
             xkeen_info
@@ -567,6 +593,7 @@ while [ $# -gt 0 ]; do
 
 
         -ux)    # Обновление или установка ядра Xray
+            acquire_lock
             test_connection
             test_github
             sleep 2
@@ -640,6 +667,7 @@ while [ $# -gt 0 ]; do
 
 
         -um)    # Обновление или установка ядра Mihomo
+            acquire_lock
             test_connection
             test_github
             sleep 2
@@ -726,6 +754,7 @@ while [ $# -gt 0 ]; do
 
 
         -ugc)    # Создать или изменить существующюю задачу автообновления баз GeoFile/GeoIPSET
+            acquire_lock
             info_cron
             clear
             echo -e "  Создание или изменение задачи автообновления баз ${yellow}GeoFile/GeoIPSET${reset}"
@@ -739,6 +768,7 @@ while [ $# -gt 0 ]; do
 
 
         -ri)    # Пересоздать файл автозапуска XKeen
+            acquire_lock
             clear
             "$initd_file" stop >/dev/null 2>&1
             [ -e "$initd_file" ] && rm -f "$initd_file"
@@ -757,6 +787,7 @@ while [ $# -gt 0 ]; do
 
 
         -dgc)    # Удалить задачу автообновления баз GeoFile/GeoIPSET
+            acquire_lock
             clear
             echo
             choice_for_remove="задачу автообновления баз GeoFile/GeoIPSET"
@@ -777,6 +808,7 @@ while [ $# -gt 0 ]; do
 
 
         -dx)    # Удалить Xray
+            acquire_lock
             clear
             echo
             choice_for_remove="Xray"
@@ -802,6 +834,7 @@ while [ $# -gt 0 ]; do
 
 
         -dm)    # Удалить Mihomo
+            acquire_lock
             clear
             echo
             choice_for_remove="Mihomo"
@@ -823,6 +856,7 @@ while [ $# -gt 0 ]; do
 
 
         -dk)    # Удалить XKeen
+            acquire_lock
             clear
             echo
             choice_for_remove="XKeen"

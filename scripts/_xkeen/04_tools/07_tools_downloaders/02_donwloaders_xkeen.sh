@@ -1,8 +1,8 @@
 # Загрузка XKeen
 download_xkeen() {
     test_github
-    xkeen_dist=$(mktemp)
     mkdir -p "$tmp_dir"
+    xkeen_dist=$(mktemp "$tmp_dir/xkeen.XXXXXX")
     printf "  ${yellow}Выполняется загрузка${reset} XKeen\n"
 
     sha256_url="${xkeen_tar_url}.sha256"

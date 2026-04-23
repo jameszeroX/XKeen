@@ -155,8 +155,8 @@ download_xray() {
 
         filename=$(basename "$download_url")
         extension="${filename##*.}"
-        xray_dist=$(mktemp)
         mkdir -p "$xtmp_dir"
+        xray_dist=$(mktemp "$xtmp_dir/xray.XXXXXX")
 
         if [ "$use_direct" != "true" ]; then
             download_url="$gh_proxy/$download_url"

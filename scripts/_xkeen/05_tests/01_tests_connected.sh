@@ -49,7 +49,6 @@ test_entware() {
         printf "  Репозиторий Entware ${green}доступен${reset}. Продолжаем...\n"
 
         opkg update >/dev/null 2>&1
-        opkg upgrade >/dev/null 2>&1
         info_packages
         install_packages
         rm -f "$tmp_file" 2>/dev/null
