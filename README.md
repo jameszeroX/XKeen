@@ -14,7 +14,7 @@
 - Прозрачное проксирование **TCP** и **UDP**
 - Поддержка ядер-проксирования **Xray** и **Mihomo**
 - Совместимость с **KeeneticOS 5+**
-- Управление через shell и [веб-панели](https://github.com/levmnkv/XKeen?tab=readme-ov-file#дополнения) сторонних разработчиков
+- Управление через shell и [веб-панели](https://github.com/jameszeroX/XKeen?tab=readme-ov-file#дополнения) сторонних разработчиков
 
 XKeen работает полностью на стороне роутера, не меняет настройки клиентов и не требует установки на них дополнительных программ.
 
@@ -51,10 +51,10 @@ XKeen работает полностью на стороне роутера, н
 - управление IPv6
 - поддержка ядра **Mihomo**
 - быстрое переключение Xray / Mihomo
-- контроль [файловых дескрипторов](https://github.com/levmnkv/XKeen/blob/main/configuration.md#контроль-файловых-дескрипторов)
-- [внешние списки](https://github.com/levmnkv/XKeen/blob/main/configuration.md#внешние-списки-портов-и-ip) IP и портов
-- [OffLine](https://github.com/levmnkv/XKeen/blob/main/configuration.md#offline-установка)‑установка
-- [Self-Hosted](https://github.com/levmnkv/XKeen/blob/main/configuration.md#self-hosted-прокси-для-загрузки)-прокси для загрузки компонентов
+- контроль [файловых дескрипторов](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#контроль-файловых-дескрипторов)
+- [внешние списки](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#внешние-списки-портов-и-ip) IP и портов
+- [OffLine](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#offline-установка)‑установка
+- [Self-Hosted](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#self-hosted-прокси-для-загрузки)-прокси для загрузки компонентов
 
 ### Удалено
 
@@ -64,7 +64,7 @@ XKeen работает полностью на стороне роутера, н
 
 ---
 
-### Подробное [описание изменений](https://github.com/levmnkv/XKeen/blob/main/forkinfo.md)
+### Подробное [описание изменений](https://github.com/jameszeroX/XKeen/blob/main/forkinfo.md)
 
 ---
 
@@ -82,7 +82,7 @@ xkeen -h
 
 ```bash
 opkg update && opkg upgrade && opkg install curl tar && cd /tmp
-sh -c "$(curl -sSL https://raw.githubusercontent.com/levmnkv/XKeen/main/install.sh)"
+sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)"
 ```
 
 ---

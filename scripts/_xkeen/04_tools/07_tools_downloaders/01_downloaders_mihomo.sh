@@ -75,7 +75,7 @@ download_mihomo() {
             echo
             printf "  ${red}Нет доступа${reset} к ${yellow}jsDelivr${reset}\n"
             echo
-            printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n  Проверьте соединение с интернетом или повторите позже\n  Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n  https://github.com/levmnkv/XKeen/blob/main/OffLine_install.md\n"
+            printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n  Проверьте соединение с интернетом или повторите позже\n  Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n  https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md\n"
             echo
             exit 1
         fi
@@ -199,8 +199,13 @@ download_mihomo() {
                 if [ -s "$yq_dist" ]; then
                     mv "$yq_dist" "$install_dir/yq"
                     chmod +x "$install_dir/yq"
-                    yq_available="true"
-                    printf "  Yq ${green}успешно загружен и установлен${reset}\n"
+                    if "$install_dir/yq" -V >/dev/null 2>&1; then
+                        yq_available="true"
+                        printf "  Yq ${green}успешно загружен и установлен${reset}\n"
+                    else
+                        rm -f "$install_dir/yq"
+                        printf "  ${red}Ошибка${reset}: Загруженный Yq не запускается на этой архитектуре (возможно, регрессия upstream — см. ${yellow}$yq_workaround_issue_url${reset})\n"
+                    fi
                 else
                     rm -f "$yq_dist"
                     printf "  ${red}Ошибка${reset}: Загруженный файл Yq поврежден\n"
@@ -218,8 +223,12 @@ download_mihomo() {
         # Загрузка Mihomo
         if [ "$yq_available" != "true" ] && [ -x "$install_dir/yq" ]; then
             rm -f "$yq_dist"
-            yq_available="true"
-            printf "  ${yellow}Используется${reset} уже установленный Yq\n"
+            if "$install_dir/yq" -V >/dev/null 2>&1; then
+                yq_available="true"
+                printf "  ${yellow}Используется${reset} уже установленный Yq\n"
+            else
+                printf "  ${red}Ошибка${reset}: Уже установленный Yq не запускается (возможно, несовместим с архитектурой — см. ${yellow}$yq_workaround_issue_url${reset})\n"
+            fi
         fi
 
         if [ "$yq_available" != "true" ]; then
