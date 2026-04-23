@@ -192,19 +192,38 @@ download_mihomo() {
 
         # Загрузка Yq
         if check_url_availability "$download_yq" 10; then
+            yq_api_url=""
+            if [ "$yq_use_workaround" = "true" ]; then
+                yq_api_url="https://api.github.com/repos/jameszeroX/yq/releases/tags/$yq_workaround_tag"
+            else
+                yq_api_url="https://api.github.com/repos/mikefarah/yq/releases/latest"
+            fi
+
+            yq_expected_sha256=""
+            yq_api_digest=$(curl --connect-timeout 10 $curl_timeout -s "$yq_api_url" 2>/dev/null \
+                | jq -r --arg fname "$(basename "$download_yq" | sed "s|.*/||")" '.assets[] | select(.name == $fname) | .digest // empty' 2>/dev/null)
+            if [ -n "$yq_api_digest" ]; then
+                yq_expected_sha256=$(printf '%s' "$yq_api_digest" | sed 's/^sha256://')
+            fi
+
             if curl --connect-timeout 10 $curl_timeout \
                    -fL \
                    -o "$yq_dist" \
                    "$download_yq" 2>/dev/null; then
                 if [ -s "$yq_dist" ]; then
-                    mv "$yq_dist" "$install_dir/yq"
-                    chmod +x "$install_dir/yq"
-                    if "$install_dir/yq" -V >/dev/null 2>&1; then
-                        yq_available="true"
-                        printf "  Yq ${green}успешно загружен и установлен${reset}\n"
+                    if ! verify_download_integrity "$yq_dist" "$yq_expected_sha256"; then
+                        rm -f "$yq_dist"
+                        printf "  ${red}Ошибка${reset}: Контрольная сумма Yq не совпадает\n"
                     else
-                        rm -f "$install_dir/yq"
-                        printf "  ${red}Ошибка${reset}: Загруженный Yq не запускается на этой архитектуре (возможно, регрессия upstream — см. ${yellow}$yq_workaround_issue_url${reset})\n"
+                        mv "$yq_dist" "$install_dir/yq"
+                        chmod +x "$install_dir/yq"
+                        if "$install_dir/yq" -V >/dev/null 2>&1; then
+                            yq_available="true"
+                            printf "  Yq ${green}успешно загружен и установлен${reset}\n"
+                        else
+                            rm -f "$install_dir/yq"
+                            printf "  ${red}Ошибка${reset}: Загруженный Yq не запускается на этой архитектуре (возможно, регрессия upstream — см. ${yellow}$yq_workaround_issue_url${reset})\n"
+                        fi
                     fi
                 else
                     rm -f "$yq_dist"

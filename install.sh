@@ -49,10 +49,51 @@ download_with_fallback() {
     return 1
 }
 
+verify_sha256() {
+    local_file="$1"
+    expected_hash="$2"
+
+    if [ -z "$expected_hash" ]; then
+        return 0
+    fi
+
+    if command -v sha256sum >/dev/null 2>&1; then
+        actual_hash=$(sha256sum "$local_file" | awk '{print $1}')
+    elif command -v openssl >/dev/null 2>&1; then
+        actual_hash=$(openssl dgst -sha256 "$local_file" | awk '{print $NF}')
+    else
+        printf "  ${yellow}Предупреждение${reset}: sha256sum/openssl не найдены, проверка целостности пропущена\n"
+        return 0
+    fi
+
+    actual_hash=$(printf '%s' "$actual_hash" | tr 'A-F' 'a-f')
+    expected_hash=$(printf '%s' "$expected_hash" | tr 'A-F' 'a-f')
+
+    if [ "$actual_hash" = "$expected_hash" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 download_xkeen_release() {
     if ! download_with_fallback "$archive_name" "$url"; then
         printf "  ${red}Ошибка${reset}: не удалось загрузить ${yellow}xkeen.tar.gz${reset}\n"
         return 1
+    fi
+    
+    if download_with_fallback "${archive_name}.sha256" "${url}.sha256" >/dev/null 2>&1; then
+        expected_hash=$(awk '{print $1}' "${archive_name}.sha256")
+        if verify_sha256 "$archive_name" "$expected_hash"; then
+            printf "  ${green}Контрольная сумма SHA256 совпадает${reset}\n"
+        else
+            printf "  ${red}Ошибка${reset}: Контрольная сумма SHA256 НЕ совпадает!\n"
+            rm -f "$archive_name" "${archive_name}.sha256"
+            return 1
+        fi
+        rm -f "${archive_name}.sha256"
+    else
+        printf "  ${yellow}Предупреждение${reset}: Файл контрольной суммы недоступен, проверка пропущена\n"
     fi
 }
 
