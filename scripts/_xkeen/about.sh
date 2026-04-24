@@ -135,6 +135,7 @@ help_xkeen() {
         echo
         echo -e "${yellow}Установка${reset}"
         echo -e "	-i	${italic}	Основной режим установки XKeen + Xray + GeoFile/GeoIPSET + Mihomo${reset}"
+        echo -e "	-autoinstall	${italic}	Автоматическая установка XKeen (Xray последняя версия + все геофайлы, автообновление по субботам в 03:00)${reset}"
         echo -e "	-io	${italic}	OffLine установка XKeen${reset}"
         echo -e "	-toff	${italic}	Отключение таймаута при меделенной загрузке с GitHub (xkeen -i -toff)${reset}"
         echo

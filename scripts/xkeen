@@ -343,6 +343,158 @@ while [ $# -gt 0 ]; do
         ;;
 
 
+        -autoinstall)    # Автоматическая установка без интерактивных запросов
+            acquire_lock
+            test_connection
+            test_entware
+            test_github
+            sleep 2
+
+            clear
+            echo
+            check_keen_mode
+            if [ -n "$keen_mode" ]; then
+                echo -e "  ${red}Ошибка${reset}: Установка XKeen возможна только на Keenetic в режиме ${green}роутера${reset}"
+                exit 1
+            fi
+
+            echo -e "  Запуск автоматической установки ${yellow}XKeen${reset}"
+            echo -e "  Xray (последняя версия) + все геофайлы + автообновление по субботам в 03:00"
+
+            init_directories
+            xkeen_info
+            xkeen_set_info
+            info_4g
+            logs_cpu_info_console
+
+            case "$architecture" in
+                arm64-v8a|mips32le|mips32) ;;
+                *) exit 1 ;;
+            esac
+
+            location_entware_storage
+            preinstall_warn
+
+            # Автовыбор: только Xray
+            add_xray=true
+            add_mihomo=false
+
+            autoinstall_mode=true
+            clear
+            echo
+            download_xray
+            unset autoinstall_mode
+
+            install_xray
+            info_xray
+
+            if [ "$xray_installed" = "installed" ]; then
+                clear
+                # GeoSite: установить все базы
+                install_refilter_geosite=true
+                install_v2fly_geosite=true
+                install_zkeen_geosite=true
+                bypass_cron_geosite=false
+                delete_geosite
+                install_geosite
+                sleep 2
+
+                clear
+                # GeoIP: установить все базы
+                install_refilter_geoip=true
+                install_v2fly_geoip=true
+                install_zkeenip_geoip=true
+                bypass_cron_geoip=false
+                delete_geoip
+                install_geoip
+                sleep 2
+            fi
+
+                clear
+                install_geoipset init
+                sleep 2
+
+                # Настройка автообновления: суббота 03:00
+                choice_geofile_cron_select=true
+                choice_geofile_cron_time="0 3 * * 6"
+                update_cron_geofile_task
+                install_cron
+                echo -e "  Автообновление геофайлов запланировано на ${green}субботу в 03:00${reset}"
+                sleep 2
+
+                if [ "$xray_installed" = "installed" ]; then
+                    clear
+                    echo
+                    install_configs
+                fi
+
+                "$initd_dir/S05crond" stop >/dev/null 2>&1
+                [ -e "$initd_dir/S05crond" ] && rm -f "$initd_dir/S05crond"
+                register_cron_initd
+                "$initd_dir/S05crond" start >/dev/null 2>&1
+
+            if [ -z "$bypass_xray" ]; then
+                info_version_xray
+                delete_register_xray
+
+                echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
+                register_xray_list
+                logs_register_xray_list_info_console
+
+                register_xray_control
+                logs_register_xray_control_info_console
+
+                register_xray_status
+                logs_register_xray_status_info_console
+                sleep 2
+            fi
+
+            if [ "$xray_installed" != "installed" ]; then
+                echo
+                echo -e "  ${red}Ошибка${reset}: Установка прервана. Не удалось установить Xray"
+                exit 1
+            fi
+
+            delete_register_xkeen
+            clear
+            echo
+            echo -e "  Выполняется регистрация ${yellow}XKeen${reset}"
+            register_xkeen_list
+            logs_register_xkeen_list_info_console
+
+            register_xkeen_control
+            logs_register_xkeen_control_info_console
+
+            register_xkeen_status
+            logs_register_xkeen_status_info_console
+
+            fixed_register_packages
+
+            migrate_ports_from_initd
+            register_xkeen_initd
+            create_xkeen_cfg
+            sleep 2
+
+            add_chmod_init
+
+            if pidof xray >/dev/null || pidof mihomo >/dev/null; then
+                "$initd_file" restart on >/dev/null 2>&1
+            fi
+
+            delete_tmp
+            sleep 2
+
+            clear
+            echo
+            echo -e "  ${green}Автоматическая установка XKeen завершена!${reset}"
+            echo -e "  1. Настройте конфигурацию Xray по пути '${yellow}$install_conf_dir/${reset}'"
+            echo -e "  2. Запустите XKeen командой ${yellow}xkeen -start${reset}"
+            echo -e "  3. ${green}Enjoy!${reset}"
+            echo
+            echo -e "  Для вывода Справки выполните ${yellow}xkeen -h${reset}"
+        ;;
+
+
         -io)    # Установка XKeen OffLine
             acquire_lock
             clear

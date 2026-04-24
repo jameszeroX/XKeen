@@ -87,6 +87,78 @@ download_xray() {
         printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
     fi
 
+    if [ "$autoinstall_mode" = "true" ]; then
+        version_selected=$(echo "$RELEASE_TAGS" | head -1)
+        [ "$USE_JSDELIVR" = "true" ] && version_selected="v$version_selected"
+        printf "  ${green}Авто-режим${reset}: выбрана последняя версия ${yellow}%s${reset}\n" "$version_selected"
+
+        VERSION_ARG="$version_selected"
+        URL_BASE="${xray_zip_url}/$VERSION_ARG"
+
+        case $architecture in
+            "arm64-v8a") download_url="$URL_BASE/Xray-linux-arm64-v8a.zip" ;;
+            "mips32le")  download_url="$URL_BASE/Xray-linux-mips32le.zip" ;;
+            "mips32")    download_url="$URL_BASE/Xray-linux-mips32.zip" ;;
+            *)           download_url= ;;
+        esac
+
+        if [ -z "$download_url" ]; then
+            printf "  ${red}Ошибка${reset}: Не удалось получить URL для загрузки Xray\n"
+            exit 1
+        fi
+
+        filename=$(basename "$download_url")
+        extension="${filename##*.}"
+        mkdir -p "$xtmp_dir"
+        xray_dist=$(mktemp "$xtmp_dir/xray.XXXXXX")
+
+        if [ "$use_direct" != "true" ]; then
+            download_url="$gh_proxy/$download_url"
+        fi
+
+        printf "  ${yellow}Проверка${reset} доступности версии %s...\n" "$version_selected"
+
+        if ! check_url_availability "$download_url" 10; then
+            rm -f "$xray_dist"
+            printf "  ${red}Ошибка${reset}: Версия %s недоступна\n" "$version_selected"
+            exit 1
+        fi
+
+        printf "  ${yellow}Выполняется загрузка${reset} последней версии Xray\n"
+
+        dgst_direct_url="${xray_zip_url}/${VERSION_ARG}/${filename}.dgst"
+
+        if curl --connect-timeout 10 $curl_timeout \
+               -fL \
+               -o "$xray_dist" \
+               "$download_url" 2>/dev/null; then
+            if [ -s "$xray_dist" ]; then
+                if head -c 100 "$xray_dist" 2>/dev/null | grep -iq "<!DOCTYPE html\|<html\|Error\|404\|Not Found"; then
+                    rm -f "$xray_dist"
+                    printf "  ${red}Ошибка${reset}: Получена HTML страница ошибки вместо файла\n"
+                    exit 1
+                fi
+                expected_sha256=$(fetch_xray_dgst_sha256 "$dgst_direct_url")
+                if ! verify_download_integrity "$xray_dist" "$expected_sha256"; then
+                    rm -f "$xray_dist"
+                    printf "  ${red}Ошибка${reset}: Проверка целостности не пройдена\n"
+                    exit 1
+                fi
+                mv "$xray_dist" "$xtmp_dir/xray.$extension"
+                printf "  Xray ${green}успешно загружен${reset}\n"
+                return 0
+            else
+                rm -f "$xray_dist"
+                printf "  ${red}Ошибка${reset}: Загруженный файл Xray поврежден\n"
+                exit 1
+            fi
+        else
+            rm -f "$xray_dist"
+            printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray %s\n" "$version_selected"
+            exit 1
+        fi
+    fi
+
     while true; do
         echo
         echo "$RELEASE_TAGS" | awk '{printf "    %2d. %s\n", NR, $0}'
