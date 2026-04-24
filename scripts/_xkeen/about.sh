@@ -123,10 +123,6 @@ author_feedback() {
     echo -e "  ${yellow}GitHub${reset}:"
     echo "     https://github.com/jameszeroX"
     echo
-    echo -e "  ${light_blue}Разработчик этого форка XKeen (jameszeroX)${reset}:"
-    echo -e "  ${yellow}GitHub${reset}:"
-    echo "     https://github.com/jameszeroX"
-    echo
     echo -e "  Предоставленные выше контакты предназначены ${green}для личной переписки${reset}, а ${red}не для консультаций${reset}"
     echo "  Возникающие вопросы по XKeen, задавайте в телеграм-чате https://t.me/+8Cvh7oVf6cE0MWRi"
 }

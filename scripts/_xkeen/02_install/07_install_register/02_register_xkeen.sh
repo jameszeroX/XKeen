@@ -8,7 +8,7 @@ register_xkeen_control() {
         "jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset" \
         "Skrill" \
         "xkeen" \
-        "Skrill / jameszero / jameszeroX" \
+        "Skrill / jameszero" \
         "The platform that makes Xray work."
 }
 

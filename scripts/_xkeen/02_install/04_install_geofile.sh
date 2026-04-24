@@ -13,8 +13,7 @@ process_geo_file() {
 
     test_github
 
-    mkdir -p "$tmp_dir"
-    local temp_file=$(mktemp "$tmp_dir/geo.XXXXXX")
+    local temp_file=$(mktemp)
     local min_size=24576  # 24 KB
 
     download() {

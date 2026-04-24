@@ -9,8 +9,7 @@ install_geoipset_lst() {
     display_name="$3"
     ip_type="$4"
 
-    mkdir -p "$tmp_dir"
-    temp_file=$(mktemp "$tmp_dir/geoipset.XXXXXX")
+    temp_file=$(mktemp)
     printf "  Загрузка %s...\n" "$display_name"
 
     if [ "$use_direct" = "true" ]; then

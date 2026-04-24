@@ -15,7 +15,7 @@ register_mihomo_control() {
         "yq_s" \
         "MetaCubeX" \
         "mihomo_s" \
-        "jameszero / jameszeroX" \
+        "jameszero" \
         "A unified platform for anti-censorship."
 }
 
@@ -39,7 +39,7 @@ register_yq_control() {
         "" \
         "mikefarah" \
         "yq_s" \
-        "jameszero / jameszeroX" \
+        "jameszero" \
         "A lightweight and portable command-line YAML, JSON, INI and XML processor."
 }
 
@@ -58,13 +58,8 @@ add_mihomo_config() {
             mkdir $mihomo_conf_dir
         fi
             cat << EOF > "$mihomo_conf_dir/config.yaml"
-listeners:
-  - name: tproxy-in
-    type: tproxy
-    port: 1181
-  - name: redir-in
-    type: redir
-    port: 1182
+tproxy-port: 1181
+redir-port: 1182
 # Руководство по конфигурации Mihomo - https://wiki.metacubex.one/ru/config/
 EOF
 

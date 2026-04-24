@@ -6,7 +6,7 @@ register_xray_control() {
         "libc, libssp, librt, libpthread, ca-bundle" \
         "XTLS Team" \
         "xray_s" \
-        "Skrill / jameszero / jameszeroX" \
+        "Skrill / jameszero" \
         "A unified platform for anti-censorship."
 }
 

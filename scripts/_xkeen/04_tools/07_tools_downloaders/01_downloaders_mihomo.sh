@@ -169,9 +169,9 @@ download_mihomo() {
 
         filename=$(basename "$download_url")
         extension="${filename##*.}"
+        yq_dist=$(mktemp)
+        mihomo_dist=$(mktemp)
         mkdir -p "$mtmp_dir"
-        yq_dist=$(mktemp "$mtmp_dir/yq.XXXXXX")
-        mihomo_dist=$(mktemp "$mtmp_dir/mihomo.XXXXXX")
         yq_available="false"
 
         if [ "$use_direct" != "true" ]; then

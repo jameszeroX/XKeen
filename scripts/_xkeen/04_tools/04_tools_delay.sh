@@ -30,8 +30,7 @@ delay_autostart() {
         return 0
     fi
 
-    mkdir -p "$tmp_dir"
-    tmpfile=$(mktemp "$tmp_dir/delay.XXXXXX") || return 1
+    tmpfile=$(mktemp) || return 1
 
     awk -v d="$new_delay" '
     /^[[:space:]]*start_delay=/ && !done {
