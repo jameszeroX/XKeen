@@ -343,7 +343,7 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -autoinstall)    # Автоматическая установка без интерактивных запросов
+        -ia)    # Автоматическая установка без интерактивных запросов
             acquire_lock
             test_connection
             test_entware
