@@ -48,6 +48,7 @@ ru_exclude_ipv6="$ipset_cfg/ru_exclude_ipv6.lst"
 # URL
 url_server="localhost:79"
 url_policy="rci/show/ip/policy"
+url_hotspot="rci/show/ip/hotspot"
 url_keenetic_port="rci/ip/http"
 url_redirect_port="rci/ip/static"
 
@@ -263,6 +264,7 @@ log_clean() {
 
 api_cache_init() {
     api_policy_json=$(curl -kfsS "${url_server}/${url_policy}" 2>/dev/null)
+    api_hotspot_json=$(curl -kfsS "${url_server}/${url_hotspot}" 2>/dev/null)
     api_port_json=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null)
     api_static_json=$(curl -kfsS "${url_server}/${url_redirect_port}" 2>/dev/null)
 }
@@ -941,7 +943,7 @@ get_policy_mark_full() {
     [ -n "$_m" ] && echo "0x${_m}"
 }
 
-# Получение меток политик "Без доступа в интернет"
+# Метки кастомных политик "без интернета" (своя таблица маршрутизации без рабочего default)
 get_no_internet_marks() {
     [ -z "$api_policy_json" ] && return
     _result=""
@@ -956,6 +958,18 @@ get_no_internet_marks() {
         fi
     done
     printf '%s\n' "${_result# }"
+}
+
+# MAC-адреса клиентов встроенной "Без доступа в интернет" (rci/show/ip/policy её не отдаёт;
+# Keenetic дропает их трафик в filter:FORWARD через _NDM_HOTSPOT_FWD по MAC, поэтому
+# DNAT/REDIRECT XKeen в PREROUTING уводит пакет на lo, FORWARD не вызывается, и блок не срабатывает)
+get_no_internet_macs() {
+    [ -z "$api_hotspot_json" ] && return
+    echo "$api_hotspot_json" | jq -r '
+        [ .. | objects | select(.mac? and (.access? == "deny")) | .mac ]
+        | unique
+        | .[]
+    ' 2>/dev/null | tr '[:lower:]' '[:upper:]' | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//'
 }
 
 # Получаем пользовательские политики
@@ -1106,6 +1120,7 @@ EOL
     inject_var other_fd "$other_fd"
     inject_var aghfix "$aghfix"
     inject_var no_internet_marks "$no_internet_marks"
+    inject_var no_internet_macs "$no_internet_macs"
     
     inject_var ipv6_proxy "$ipv6_proxy"
     inject_var ipv4_proxy "$ipv4_proxy"
@@ -1341,6 +1356,14 @@ if pidof "$name_client" >/dev/null; then
 
         flush_xkeen_rules
 
+        # Bypass встроенной "Без доступа в интернет": возвращаем пакеты заблокированных MAC-ов
+        # до xkeen-jump, чтобы они шли в FORWARD и были дропнуты Keenetic-ом штатно
+        for _nimac in $no_internet_macs; do
+            set -- -m mac --mac-source "$_nimac" $comment -j RETURN
+            ipt -C PREROUTING "$@" >/dev/null 2>&1 || ipt -A PREROUTING "$@" >/dev/null 2>&1
+        done
+
+        # Bypass кастомных политик "без интернета" по connmark из их таблицы маршрутизации
         for _nim in $no_internet_marks; do
             set -- -m connmark --mark "$_nim" -m conntrack ! --ctstate INVALID $comment -j RETURN
             ipt -C PREROUTING "$@" >/dev/null 2>&1 || ipt -A PREROUTING "$@" >/dev/null 2>&1
@@ -1731,6 +1754,7 @@ proxy_start() {
             policy_mark=$(get_policy_mark)
             policy_mark_full=$(get_policy_mark_full)
             no_internet_marks=$(get_no_internet_marks)
+            no_internet_macs=$(get_no_internet_macs)
 
             if [ -n "$policy_mark" ] || [ -n "$policy_mark_full" ]; then
                 user_policies=$(resolve_user_policies)
