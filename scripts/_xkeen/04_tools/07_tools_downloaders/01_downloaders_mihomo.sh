@@ -1,36 +1,93 @@
 # Загрузка Mihomo
 download_mihomo() {
     test_github
-    while true; do
-        USE_JSDELIVR=""
-        printf "  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"
-        
-        # Получаем список релизов через GitHub API
-        RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "${mihomo_api_url}?per_page=20" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
-        
-        if [ -z "$RELEASE_TAGS" ]; then
-            echo
-            printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
-            
-            # Получаем список релизов через jsDelivr
-            RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "$mihomo_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
-            
-            if [ -z "$RELEASE_TAGS" ]; then
-                echo
-                printf "  ${red}Нет доступа${reset} к ${yellow}jsDelivr${reset}\n"
-                echo
-                printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n  Проверьте соединение с интернетом или повторите позже\n  Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n  https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md\n"
-                echo
-                exit 1
-            fi
-            echo
-            printf "  Список релизов получен с использованием ${yellow}jsDelivr${reset}:\n"
-            USE_JSDELIVR="true"
-        else
-            echo
-            printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
+
+    check_url_availability() {
+        url=$1
+        timeout=$2
+
+        http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
+                          -I \
+                          -s \
+                          -L \
+                          -w "%{http_code}" \
+                          -o /dev/null \
+                          "$url" 2>/dev/null)
+        curl_exit_code=$?
+
+        if [ "$curl_exit_code" -eq 0 ] && [ "$http_status" = "405" ]; then
+            http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
+                              -s \
+                              -L \
+                              -r 0-0 \
+                              -w "%{http_code}" \
+                              -o /dev/null \
+                              "$url" 2>/dev/null)
+            curl_exit_code=$?
         fi
 
+        if [ "$curl_exit_code" -eq 28 ]; then
+            printf "  ${red}Таймаут${reset} при проверке\n"
+            return 1
+        elif [ "$curl_exit_code" -ne 0 ]; then
+            printf "  ${red}Ошибка curl ($curl_exit_code)${reset} при проверке\n"
+            return 1
+        fi
+
+        case "$http_status" in
+            2[0-9][0-9])
+                printf "  Файл ${green}доступен${reset}\n"
+                return 0
+                ;;
+            404)
+                printf "  Файл ${red}не найден${reset} (404)\n"
+                return 2
+                ;;
+            403)
+                printf "  ${red}Доступ запрещен${reset} (403)\n"
+                return 2
+                ;;
+            000)
+                printf "  ${red}Нет соединения${reset}\n"
+                return 1
+                ;;
+            *)
+                printf "  ${yellow}Проблема с доступом${reset} (HTTP: $http_status)\n"
+                return 1
+                ;;
+        esac
+    }
+
+    USE_JSDELIVR=""
+    printf "  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"
+
+    # Получаем список релизов через GitHub API
+    RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "${mihomo_api_url}?per_page=20" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
+
+    if [ -z "$RELEASE_TAGS" ]; then
+        echo
+        printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
+
+        # Получаем список релизов через jsDelivr
+        RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "$mihomo_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
+
+        if [ -z "$RELEASE_TAGS" ]; then
+            echo
+            printf "  ${red}Нет доступа${reset} к ${yellow}jsDelivr${reset}\n"
+            echo
+            printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n  Проверьте соединение с интернетом или повторите позже\n  Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n  https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md\n"
+            echo
+            exit 1
+        fi
+        echo
+        printf "  Список релизов получен с использованием ${yellow}jsDelivr${reset}:\n"
+        USE_JSDELIVR="true"
+    else
+        echo
+        printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
+    fi
+
+    while true; do
         echo
         echo "$RELEASE_TAGS" | awk '{printf "    %2d. %s\n", NR, $0}'
         echo
@@ -80,12 +137,7 @@ download_mihomo() {
             fi
         fi
 
-        if [ -z "$USE_JSDELIVR" ]; then
-            VERSION_ARG="$version_selected"
-        else
-            VERSION_ARG="$version_selected"
-            unset USE_JSDELIVR
-        fi
+        VERSION_ARG="$version_selected"
 
         URL_BASE="${mihomo_gz_url}/$VERSION_ARG"
 
@@ -119,8 +171,8 @@ download_mihomo() {
         extension="${filename##*.}"
         yq_dist=$(mktemp)
         mihomo_dist=$(mktemp)
-        yq_available="false"
         mkdir -p "$mtmp_dir"
+        yq_available="false"
 
         if [ "$use_direct" != "true" ]; then
             download_url="$gh_proxy/$download_url"
@@ -128,63 +180,6 @@ download_mihomo() {
         fi
 
         printf "  ${yellow}Проверка${reset} доступности версии $version_selected...\n"
-
-        check_url_availability() {
-            url=$1
-            timeout=$2
-
-            http_status=$(curl --connect-timeout "$timeout" \
-                              -I \
-                              -s \
-                              -L \
-                              -w "%{http_code}" \
-                              -o /dev/null \
-                              "$url" 2>/dev/null)
-            curl_exit_code=$?
-
-            if [ "$curl_exit_code" -eq 0 ] && [ "$http_status" = "405" ]; then
-                # Метод HEAD не разрешен, пробуем GET с Range
-                http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
-                                  -s \
-                                  -L \
-                                  -r 0-0 \
-                                  -w "%{http_code}" \
-                                  -o /dev/null \
-                                  "$url" 2>/dev/null)
-                curl_exit_code=$?
-            fi
-
-            if [ "$curl_exit_code" -eq 28 ]; then
-                printf "  ${red}Таймаут${reset} при проверке\n"
-                return 1
-            elif [ "$curl_exit_code" -ne 0 ]; then
-                printf "  ${red}Ошибка curl ($curl_exit_code)${reset} при проверке\n"
-                return 1
-            fi
-
-            case "$http_status" in
-                2[0-9][0-9])
-                    printf "  Файл ${green}доступен${reset}\n"
-                    return 0
-                    ;;
-                404)
-                    printf "  Файл ${red}не найден${reset} (404)\n"
-                    return 2
-                    ;;
-                403)
-                    printf "  ${red}Доступ запрещен${reset} (403)\n"
-                    return 2
-                    ;;
-                000)
-                    printf "  ${red}Нет соединения${reset}\n"
-                    return 1
-                    ;;
-                *)
-                    printf "  ${yellow}Проблема с доступом${reset} (HTTP: $http_status)\n"
-                    return 1
-                    ;;
-            esac
-        }
 
         # Проверка доступности версии Mihomo
         if ! check_url_availability "$download_url" 10; then
@@ -197,15 +192,39 @@ download_mihomo() {
 
         # Загрузка Yq
         if check_url_availability "$download_yq" 10; then
+            yq_api_url=""
+            if [ "$yq_use_workaround" = "true" ]; then
+                yq_api_url="https://api.github.com/repos/jameszeroX/yq/releases/tags/$yq_workaround_tag"
+            else
+                yq_api_url="https://api.github.com/repos/mikefarah/yq/releases/latest"
+            fi
+
+            yq_expected_sha256=""
+            yq_api_digest=$(curl --connect-timeout 10 $curl_timeout -s "$yq_api_url" 2>/dev/null \
+                | jq -r --arg fname "$(basename "$download_yq" | sed "s|.*/||")" '.assets[] | select(.name == $fname) | .digest // empty' 2>/dev/null)
+            if [ -n "$yq_api_digest" ]; then
+                yq_expected_sha256=$(printf '%s' "$yq_api_digest" | sed 's/^sha256://')
+            fi
+
             if curl --connect-timeout 10 $curl_timeout \
                    -fL \
                    -o "$yq_dist" \
                    "$download_yq" 2>/dev/null; then
                 if [ -s "$yq_dist" ]; then
-                    mv "$yq_dist" "$install_dir/yq"
-                    chmod +x "$install_dir/yq"
-                    yq_available="true"
-                    printf "  Yq ${green}успешно загружен и установлен${reset}\n"
+                    if ! verify_download_integrity "$yq_dist" "$yq_expected_sha256"; then
+                        rm -f "$yq_dist"
+                        printf "  ${red}Ошибка${reset}: Контрольная сумма Yq не совпадает\n"
+                    else
+                        mv "$yq_dist" "$install_dir/yq"
+                        chmod +x "$install_dir/yq"
+                        if "$install_dir/yq" -V >/dev/null 2>&1; then
+                            yq_available="true"
+                            printf "  Yq ${green}успешно загружен и установлен${reset}\n"
+                        else
+                            rm -f "$install_dir/yq"
+                            printf "  ${red}Ошибка${reset}: Загруженный Yq не запускается на этой архитектуре (возможно, регрессия upstream — см. ${yellow}$yq_workaround_issue_url${reset})\n"
+                        fi
+                    fi
                 else
                     rm -f "$yq_dist"
                     printf "  ${red}Ошибка${reset}: Загруженный файл Yq поврежден\n"
@@ -223,14 +242,26 @@ download_mihomo() {
         # Загрузка Mihomo
         if [ "$yq_available" != "true" ] && [ -x "$install_dir/yq" ]; then
             rm -f "$yq_dist"
-            yq_available="true"
-            printf "  ${yellow}Используется${reset} уже установленный Yq\n"
+            if "$install_dir/yq" -V >/dev/null 2>&1; then
+                yq_available="true"
+                printf "  ${yellow}Используется${reset} уже установленный Yq\n"
+            else
+                printf "  ${red}Ошибка${reset}: Уже установленный Yq не запускается (возможно, несовместим с архитектурой — см. ${yellow}$yq_workaround_issue_url${reset})\n"
+            fi
         fi
 
         if [ "$yq_available" != "true" ]; then
             rm -f "$yq_dist" "$mihomo_dist"
             printf "  ${red}Ошибка${reset}: Для работы Mihomo требуется Yq. Установка прервана\n"
             return 1
+        fi
+
+        # Получаем SHA256 дайджест из GitHub API (напрямую, без прокси)
+        mihomo_expected_sha256=""
+        mihomo_api_digest=$(curl --connect-timeout 10 $curl_timeout -s "https://api.github.com/repos/MetaCubeX/mihomo/releases/tags/$VERSION_ARG" 2>/dev/null \
+            | jq -r --arg fname "$(basename "$download_url" | sed "s|.*/||")" '.assets[] | select(.name == $fname) | .digest // empty' 2>/dev/null)
+        if [ -n "$mihomo_api_digest" ]; then
+            mihomo_expected_sha256=$(printf '%s' "$mihomo_api_digest" | sed 's/^sha256://')
         fi
 
         if curl --connect-timeout 10 $curl_timeout \
@@ -242,6 +273,13 @@ download_mihomo() {
                 if head -c 100 "$mihomo_dist" 2>/dev/null | grep -iq "<!DOCTYPE html\|<html\|Error\|404\|Not Found"; then
                     rm -f "$mihomo_dist"
                     printf "  ${red}Ошибка${reset}: Получена HTML страница ошибки вместо файла Mihomo\n"
+                    continue
+                fi
+
+                # Проверка целостности
+                if ! verify_download_integrity "$mihomo_dist" "$mihomo_expected_sha256"; then
+                    rm -f "$mihomo_dist"
+                    printf "  ${red}Файл удалён${reset}. Попробуйте загрузить другую версию\n"
                     continue
                 fi
                 

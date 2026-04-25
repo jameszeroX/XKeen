@@ -4,32 +4,21 @@ install_xkeen() {
 
     # Проверка наличия архива XKeen
     if [ -f "${xkeen_archive}" ]; then
-        
-        # Временный скрипт для установки
-        install_script=$(mktemp)
-        cat <<EOF > "${install_script}"
-#!/bin/sh
+        # Распаковка архива
+        tar -xzf "${xkeen_archive}" -C "${install_dir}" xkeen _xkeen
 
-# Распаковка архива
-tar -xzf "${xkeen_archive}" -C "${install_dir}" xkeen _xkeen
+        # Проверка наличия _xkeen в install_dir и его перемещение
+        if [ -d "${install_dir}/_xkeen" ]; then
+            rm -rf "${install_dir}/.xkeen"
+            mv "${install_dir}/_xkeen" "${install_dir}/.xkeen"
+        else
+            echo -e "  ${red}Ошибка${reset}: _xkeen не была правильно перенесена"
+        fi
 
-# Проверка наличия _xkeen в install_dir и его перемещение
-if [ -d "${install_dir}/_xkeen" ]; then
-    rm -rf "${install_dir}/.xkeen"
-    mv "${install_dir}/_xkeen" "${install_dir}/.xkeen"
-else
-    echo -e "  \${red}Ошибка\${reset}: _xkeen не была правильно перенесена"
-fi
-
-# Удаление архива
-rm "${xkeen_archive}"
-EOF
-
-        chmod +x "${install_script}"
-        "${install_script}"
+        # Удаление архива
+        rm "${xkeen_archive}"
     fi
     [ -d "$xkeen_log_dir" ] && rm -rf "$xkeen_log_dir"
-    [ -f "$install_script" ] && rm -f "$install_script"
 }
 
 check_keen_mode() {

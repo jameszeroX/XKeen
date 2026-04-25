@@ -1,36 +1,165 @@
 # Загрузка Xray
 download_xray() {
     test_github
-    while true; do
-        USE_JSDELIVR=""
-        printf "  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
-        
-        # Получаем список релизов через GitHub API
-        RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "${xray_api_url}?per_page=24" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
-        
-        if [ -z "$RELEASE_TAGS" ]; then
-            echo
-            printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
-            
-            # Получаем список релизов через jsDelivr
-            RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "$xray_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
-            
-            if [ -z "$RELEASE_TAGS" ]; then
-                echo
-                printf "  ${red}Нет доступа${reset} к ${yellow}jsDelivr${reset}\n"
-                echo
-                printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n  Проверьте соединение с интернетом или повторите позже\n  Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n  https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md\n"
-                echo
-                exit 1
-            fi
-            echo
-            printf "  Список релизов получен с использованием ${yellow}jsDelivr${reset}:\n"
-            USE_JSDELIVR="true"
-        else
-            echo
-            printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
+
+    check_url_availability() {
+        url=$1
+        timeout=$2
+
+        http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
+                          -I \
+                          -s \
+                          -L \
+                          -w "%{http_code}" \
+                          -o /dev/null \
+                          "$url" 2>/dev/null)
+        curl_exit_code=$?
+
+        if [ "$curl_exit_code" -eq 0 ] && [ "$http_status" = "405" ]; then
+            http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
+                              -s \
+                              -L \
+                              -r 0-0 \
+                              -w "%{http_code}" \
+                              -o /dev/null \
+                              "$url" 2>/dev/null)
+            curl_exit_code=$?
         fi
 
+        if [ "$curl_exit_code" -eq 28 ]; then
+            printf "  ${red}Таймаут${reset} при проверке\n"
+            return 1
+        elif [ "$curl_exit_code" -ne 0 ]; then
+            printf "  ${red}Ошибка curl ($curl_exit_code)${reset} при проверке\n"
+            return 1
+        fi
+
+        case "$http_status" in
+            2[0-9][0-9])
+                printf "  Файл ${green}доступен${reset}\n"
+                return 0
+                ;;
+            404)
+                printf "  Файл ${red}не найден${reset} (404)\n"
+                return 2
+                ;;
+            403)
+                printf "  ${red}Доступ запрещен${reset} (403)\n"
+                return 2
+                ;;
+            000)
+                printf "  ${red}Нет соединения${reset}\n"
+                return 1
+                ;;
+            *)
+                printf "  ${yellow}Проблема с доступом${reset} (HTTP: $http_status)\n"
+                return 1
+                ;;
+        esac
+    }
+
+    USE_JSDELIVR=""
+    printf "  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
+
+    # Получаем список релизов через GitHub API
+    RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "${xray_api_url}?per_page=24" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
+
+    if [ -z "$RELEASE_TAGS" ]; then
+        echo
+        printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
+
+        # Получаем список релизов через jsDelivr
+        RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "$xray_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
+
+        if [ -z "$RELEASE_TAGS" ]; then
+            echo
+            printf "  ${red}Нет доступа${reset} к ${yellow}jsDelivr${reset}\n"
+            echo
+            printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n  Проверьте соединение с интернетом или повторите позже\n  Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n  https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md\n"
+            echo
+            exit 1
+        fi
+        echo
+        printf "  Список релизов получен с использованием ${yellow}jsDelivr${reset}:\n"
+        USE_JSDELIVR="true"
+    else
+        echo
+        printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
+    fi
+
+    if [ "$autoinstall_mode" = "true" ]; then
+        version_selected=$(echo "$RELEASE_TAGS" | head -1)
+        [ "$USE_JSDELIVR" = "true" ] && version_selected="v$version_selected"
+        printf "  ${green}Авто-режим${reset}: выбрана последняя версия ${yellow}%s${reset}\n" "$version_selected"
+
+        VERSION_ARG="$version_selected"
+        URL_BASE="${xray_zip_url}/$VERSION_ARG"
+
+        case $architecture in
+            "arm64-v8a") download_url="$URL_BASE/Xray-linux-arm64-v8a.zip" ;;
+            "mips32le")  download_url="$URL_BASE/Xray-linux-mips32le.zip" ;;
+            "mips32")    download_url="$URL_BASE/Xray-linux-mips32.zip" ;;
+            *)           download_url= ;;
+        esac
+
+        if [ -z "$download_url" ]; then
+            printf "  ${red}Ошибка${reset}: Не удалось получить URL для загрузки Xray\n"
+            exit 1
+        fi
+
+        filename=$(basename "$download_url")
+        extension="${filename##*.}"
+        xray_dist=$(mktemp)
+        mkdir -p "$xtmp_dir"
+
+        if [ "$use_direct" != "true" ]; then
+            download_url="$gh_proxy/$download_url"
+        fi
+
+        printf "  ${yellow}Проверка${reset} доступности версии %s...\n" "$version_selected"
+
+        if ! check_url_availability "$download_url" 10; then
+            rm -f "$xray_dist"
+            printf "  ${red}Ошибка${reset}: Версия %s недоступна\n" "$version_selected"
+            exit 1
+        fi
+
+        printf "  ${yellow}Выполняется загрузка${reset} последней версии Xray\n"
+
+        dgst_direct_url="${xray_zip_url}/${VERSION_ARG}/${filename}.dgst"
+
+        if curl --connect-timeout 10 $curl_timeout \
+               -fL \
+               -o "$xray_dist" \
+               "$download_url" 2>/dev/null; then
+            if [ -s "$xray_dist" ]; then
+                if head -c 100 "$xray_dist" 2>/dev/null | grep -iq "<!DOCTYPE html\|<html\|Error\|404\|Not Found"; then
+                    rm -f "$xray_dist"
+                    printf "  ${red}Ошибка${reset}: Получена HTML страница ошибки вместо файла\n"
+                    exit 1
+                fi
+                expected_sha256=$(fetch_xray_dgst_sha256 "$dgst_direct_url")
+                if ! verify_download_integrity "$xray_dist" "$expected_sha256"; then
+                    rm -f "$xray_dist"
+                    printf "  ${red}Ошибка${reset}: Проверка целостности не пройдена\n"
+                    exit 1
+                fi
+                mv "$xray_dist" "$xtmp_dir/xray.$extension"
+                printf "  Xray ${green}успешно загружен${reset}\n"
+                return 0
+            else
+                rm -f "$xray_dist"
+                printf "  ${red}Ошибка${reset}: Загруженный файл Xray поврежден\n"
+                exit 1
+            fi
+        else
+            rm -f "$xray_dist"
+            printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray %s\n" "$version_selected"
+            exit 1
+        fi
+    fi
+
+    while true; do
         echo
         echo "$RELEASE_TAGS" | awk '{printf "    %2d. %s\n", NR, $0}'
         echo
@@ -80,12 +209,7 @@ download_xray() {
             fi
         fi
 
-        if [ -z "$USE_JSDELIVR" ]; then
-            VERSION_ARG="$version_selected"
-        else
-            VERSION_ARG="$version_selected"
-            unset USE_JSDELIVR
-        fi
+        VERSION_ARG="$version_selected"
 
         URL_BASE="${xray_zip_url}/$VERSION_ARG"
 
@@ -112,62 +236,6 @@ download_xray() {
 
         printf "  ${yellow}Проверка${reset} доступности версии $version_selected...\n"
 
-        check_url_availability() {
-            url=$1
-            timeout=$2
-
-            http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
-                              -I \
-                              -s \
-                              -L \
-                              -w "%{http_code}" \
-                              -o /dev/null \
-                              "$url" 2>/dev/null)
-            curl_exit_code=$?
-
-            if [ "$curl_exit_code" -eq 0 ] && [ "$http_status" = "405" ]; then
-                http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
-                                  -s \
-                                  -L \
-                                  -r 0-0 \
-                                  -w "%{http_code}" \
-                                  -o /dev/null \
-                                  "$url" 2>/dev/null)
-                curl_exit_code=$?
-            fi
-
-            if [ "$curl_exit_code" -eq 28 ]; then
-                printf "  ${red}Таймаут${reset} при проверке\n"
-                return 1
-            elif [ "$curl_exit_code" -ne 0 ]; then
-                printf "  ${red}Ошибка curl ($curl_exit_code)${reset} при проверке\n"
-                return 1
-            fi
-
-            case "$http_status" in
-                2[0-9][0-9])
-                    printf "  Файл ${green}доступен${reset}\n"
-                    return 0
-                    ;;
-                404)
-                    printf "  Файл ${red}не найден${reset} (404)\n"
-                    return 2
-                    ;;
-                403)
-                    printf "  ${red}Доступ запрещен${reset} (403)\n"
-                    return 2
-                    ;;
-                000)
-                    printf "  ${red}Нет соединения${reset}\n"
-                    return 1
-                    ;;
-                *)
-                    printf "  ${yellow}Проблема с доступом${reset} (HTTP: $http_status)\n"
-                    return 1
-                    ;;
-            esac
-        }
-
         # Проверка доступности версии
         if ! check_url_availability "$download_url" 10; then
             rm -f "$xray_dist"
@@ -176,6 +244,9 @@ download_xray() {
         fi
 
         printf "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray\n"
+
+        # URL для .dgst файла — всегда напрямую с GitHub (не через прокси)
+        dgst_direct_url="${xray_zip_url}/${VERSION_ARG}/${filename}.dgst"
 
         # Загрузка Xray
         if curl --connect-timeout 10 $curl_timeout \
@@ -187,6 +258,14 @@ download_xray() {
                 if head -c 100 "$xray_dist" 2>/dev/null | grep -iq "<!DOCTYPE html\|<html\|Error\|404\|Not Found"; then
                     rm -f "$xray_dist"
                     printf "  ${red}Ошибка${reset}: Получена HTML страница ошибки вместо файла\n"
+                    continue
+                fi
+
+                # Проверка целостности через .dgst файл
+                expected_sha256=$(fetch_xray_dgst_sha256 "$dgst_direct_url")
+                if ! verify_download_integrity "$xray_dist" "$expected_sha256"; then
+                    rm -f "$xray_dist"
+                    printf "  ${red}Файл удалён${reset}. Попробуйте загрузить другую версию\n"
                     continue
                 fi
 

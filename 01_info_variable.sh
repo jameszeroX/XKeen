@@ -56,8 +56,8 @@ conn_IP2="77.88.44.55"
 # URL
 # -------------------------------------
 xkeen_api_url="https://api.github.com/repos/jameszeroX/xkeen/releases/latest"			# url api для XKeen
-xkeen_jsd_url="https://data.jsdelivr.com/v1/package/gh/jameszeroX/xkeen"			# резервный url api для XKeen
-xkeen_tar_url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"	# url для загрузки XKeen
+xkeen_jsd_url="https://data.jsdelivr.com/v1/package/gh/jameszeroX/xkeen"				# резервный url api для XKeen
+xkeen_tar_url="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"		# url для загрузки XKeen
 xkeen_dev_url="https://raw.githubusercontent.com/jameszeroX/xkeen/main/test/xkeen.tar.gz"	# url для загрузки XKeen dev
 xray_api_url="https://api.github.com/repos/XTLS/Xray-core/releases"				# url api для Xray
 xray_jsd_url="https://data.jsdelivr.com/v1/package/gh/XTLS/Xray-core"				# резервный url api для Xray
@@ -65,9 +65,21 @@ xray_zip_url="https://github.com/XTLS/Xray-core/releases/download"				# url дл
 mihomo_api_url="https://api.github.com/repos/MetaCubeX/mihomo/releases"				# url api для Mihomo
 mihomo_jsd_url="https://data.jsdelivr.com/v1/package/gh/MetaCubeX/mihomo"			# резервный url api для Mihomo
 mihomo_gz_url="https://github.com/MetaCubeX/mihomo/releases/download"				# url для загрузки Mihomo
-yq_dist_url="https://github.com/jameszeroX/yq/releases/latest/download"				# url для загрузки Yq
+yq_upstream_dist_url="https://github.com/mikefarah/yq/releases/latest/download"			# url для загрузки оригинального Yq
+yq_workaround_tag="260312"									# закреплённый тег рабочего Yq в форке jameszeroX/yq (защищает от дрейфа latest)
+yq_workaround_dist_url="https://github.com/jameszeroX/yq/releases/download/$yq_workaround_tag"	# url для загрузки рабочего Yq
 gh_proxy1="https://ghfast.top"								        # 1 прокси для загрузок с GitHub
 gh_proxy2="https://gh-proxy.com"								# 2 прокси для загрузок с GitHub
+
+yq_use_workaround="true"									# отключить после исправления issue 2609 (по желанию)
+yq_workaround_issue_url="https://github.com/mikefarah/yq/issues/2609"				# issue с поломанным релизом Yq
+get_yq_dist_url() {
+    if [ "$yq_use_workaround" = "true" ]; then
+        printf '%s\n' "$yq_workaround_dist_url"
+    else
+        printf '%s\n' "$yq_upstream_dist_url"
+    fi
+}
 
 # url для загрузки геофайлов
 refilter_url="https://github.com/1andrevich/Re-filter-lists/releases/latest/download/geosite.dat"

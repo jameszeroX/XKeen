@@ -8,8 +8,8 @@ reset="\033[0m"
 
 url_stable="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"
 url_beta="https://raw.githubusercontent.com/jameszeroX/XKeen/main/test/xkeen.tar.gz"
+url_var_file="https://raw.githubusercontent.com/jameszeroX/XKeen/main/01_info_variable.sh"
 archive_name="xkeen.tar.gz"
-release_fix_url="https://raw.githubusercontent.com/jameszeroX/XKeen/main/01_info_variable.sh"
 
 clear
 echo
@@ -33,69 +33,88 @@ case "$version_choice" in
 esac
 echo
 
-get_release_var_file() {
-    if [ -f /opt/sbin/_xkeen/01_info/01_info_variable.sh ]; then
-        printf '%s\n' "/opt/sbin/_xkeen/01_info/01_info_variable.sh"
+download_with_fallback() {
+    _target="$1"
+    _url="$2"
+
+    if curl -fLo "$_target" --connect-timeout 10 -m 180 "$_url"; then
         return 0
     fi
-
-    if [ -f /opt/sbin/.xkeen/01_info/01_info_variable.sh ]; then
-        printf '%s\n' "/opt/sbin/.xkeen/01_info/01_info_variable.sh"
+    if curl -fLo "$_target" --connect-timeout 10 -m 180 "https://gh-proxy.com/$_url"; then
         return 0
     fi
-
+    if curl -fLo "$_target" --connect-timeout 10 -m 180 "https://ghfast.top/$_url"; then
+        return 0
+    fi
     return 1
+}
+
+verify_sha256() {
+    local_file="$1"
+    expected_hash="$2"
+
+    if [ -z "$expected_hash" ]; then
+        return 0
+    fi
+
+    if command -v sha256sum >/dev/null 2>&1; then
+        actual_hash=$(sha256sum "$local_file" | awk '{print $1}')
+    elif command -v openssl >/dev/null 2>&1; then
+        actual_hash=$(openssl dgst -sha256 "$local_file" | awk '{print $NF}')
+    else
+        printf "  ${yellow}Предупреждение${reset}: sha256sum/openssl не найдены, проверка целостности пропущена\n"
+        return 0
+    fi
+
+    actual_hash=$(printf '%s' "$actual_hash" | tr 'A-F' 'a-f')
+    expected_hash=$(printf '%s' "$expected_hash" | tr 'A-F' 'a-f')
+
+    if [ "$actual_hash" = "$expected_hash" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 download_xkeen_release() {
-    if curl -fLo "$archive_name" --connect-timeout 10 -m 180 "$url"; then
-        return 0
+    if ! download_with_fallback "$archive_name" "$url"; then
+        printf "  ${red}Ошибка${reset}: не удалось загрузить ${yellow}xkeen.tar.gz${reset}\n"
+        return 1
     fi
-
-    if curl -fLo "$archive_name" --connect-timeout 10 -m 180 "https://gh-proxy.com/$url"; then
-        return 0
+    
+    if download_with_fallback "${archive_name}.sha256" "${url}.sha256" >/dev/null 2>&1; then
+        expected_hash=$(awk '{print $1}' "${archive_name}.sha256")
+        if verify_sha256 "$archive_name" "$expected_hash"; then
+            printf "  ${green}Контрольная сумма SHA256 совпадает${reset}\n"
+        else
+            printf "  ${red}Ошибка${reset}: Контрольная сумма SHA256 НЕ совпадает!\n"
+            rm -f "$archive_name" "${archive_name}.sha256"
+            return 1
+        fi
+        rm -f "${archive_name}.sha256"
+    else
+        printf "  ${yellow}Предупреждение${reset}: Файл контрольной суммы недоступен, проверка пропущена\n"
     fi
+}
 
-    if curl -fLo "$archive_name" --connect-timeout 10 -m 180 "https://ghfast.top/$url"; then
-        return 0
-    fi
-
-    printf "  ${red}Ошибка${reset}: не удалось загрузить ${yellow}xkeen.tar.gz${reset}\n"
+get_release_var_file() {
+    for _path in \
+        /opt/sbin/_xkeen/01_info/01_info_variable.sh \
+        /opt/sbin/.xkeen/01_info/01_info_variable.sh
+    do
+        [ -f "$_path" ] && printf '%s\n' "$_path" && return 0
+    done
     return 1
 }
 
-download_release_fix() {
-    target_file="$1"
-
-    if curl -fLo "$target_file" --connect-timeout 10 -m 180 "$release_fix_url"; then
-        return 0
-    fi
-
-    if curl -fLo "$target_file" --connect-timeout 10 -m 180 "https://gh-proxy.com/$release_fix_url"; then
-        return 0
-    fi
-
-    if curl -fLo "$target_file" --connect-timeout 10 -m 180 "https://ghfast.top/$release_fix_url"; then
-        return 0
-    fi
-
-    printf "  ${red}Ошибка${reset}: не удалось применить исправление ${yellow}01_info_variable.sh${reset} для релиза ${green}1.1.3.9${reset}\n"
-    return 1
-}
-
-apply_release_1139_yq_fix() {
-    release_var_file="$(get_release_var_file)" || {
+patch_var_file() {
+    _var_file="$(get_release_var_file)" || {
         printf "  ${red}Ошибка${reset}: после распаковки не найден файл ${yellow}01_info_variable.sh${reset}\n"
         return 1
     }
-
-    release_version=$(sed -n 's/^xkeen_current_version="\([^"]*\)".*/\1/p' "$release_var_file" | head -n 1)
-    release_build=$(sed -n 's/^xkeen_build="\([^"]*\)".*/\1/p' "$release_var_file" | head -n 1)
-
-    if [ "$release_version" = "1.1.3.9" ] && [ "$release_build" = "Stable" ]; then
-        if ! download_release_fix "$release_var_file"; then
-            return 1
-        fi
+    if ! download_with_fallback "$_var_file" "$url_var_file"; then
+        printf "  ${red}Ошибка${reset}: не удалось обновить ${yellow}01_info_variable.sh${reset} из main\n"
+        return 1
     fi
 }
 
@@ -116,7 +135,7 @@ if [ ! -x /opt/sbin/xkeen ]; then
     exit 1
 fi
 
-if ! apply_release_1139_yq_fix; then
+if ! patch_var_file; then
     exit 1
 fi
 

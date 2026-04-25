@@ -33,17 +33,20 @@ jobs:
           sed -i "s/^build_timestamp=\".*\"/build_timestamp=\"$BUILD_TIMESTAMP\"/" \
             scripts_for_build/_xkeen/01_info/01_info_variable.sh
 
-      - name: Create tar.gz archive
+      - name: Create tar.gz archive and checksum
         run: |
           mkdir -p output
           cd scripts_for_build
           chmod +x xkeen
           find . -type f -o -type l | sed 's|^\./||' | tar -czf "../output/xkeen.tar.gz" -T -
+          cd ../output
+          sha256sum xkeen.tar.gz > xkeen.tar.gz.sha256
 
       - name: Move archive to test folder in main
         run: |
           mkdir -p test
           mv output/xkeen.tar.gz test/
+          mv output/xkeen.tar.gz.sha256 test/
 
       - name: Clean up temporary files
         run: |
@@ -51,6 +54,6 @@ jobs:
 
       - name: Commit and push archive to test folder
         run: |
-          git add test/xkeen.tar.gz
+          git add test/xkeen.tar.gz test/xkeen.tar.gz.sha256
           git commit -m "[github-actions] automated compiling build" || echo "No changes"
           git push origin main

@@ -117,15 +117,9 @@ author_feedback() {
     echo -e "  ${yellow}telegram помощника${reset}:"
     echo "     @skride"
     echo
-    echo -e "  ${light_blue}Разработчик форка XKeen${reset}:"
+    echo -e "  ${light_blue}Разработчик форка XKeen ${reset}:"
     echo -e "  ${yellow}Профиль на форуме keenetic${reset}:"
     echo "     https://forum.keenetic.ru/profile/20945-jameszero"
-    echo -e "  ${yellow}e-mail${reset}:"
-    echo "     admin@jameszero.net"
-    echo -e "  ${yellow}telegram${reset}:"
-    echo "     @jameszero"
-    echo -e "  ${yellow}сайт${reset}:"
-    echo "     https://jameszero.net"
     echo -e "  ${yellow}GitHub${reset}:"
     echo "     https://github.com/jameszeroX"
     echo
@@ -137,6 +131,7 @@ help_xkeen() {
         echo
         echo -e "${yellow}Установка${reset}"
         echo -e "	-i	${italic}	Основной режим установки XKeen + Xray + GeoFile/GeoIPSET + Mihomo${reset}"
+        echo -e "	-ia	${italic}	Автоматическая установка XKeen (Xray последняя версия + все геофайлы, автообновление по субботам в 03:00)${reset}"
         echo -e "	-io	${italic}	OffLine установка XKeen${reset}"
         echo -e "	-toff	${italic}	Отключение таймаута при меделенной загрузке с GitHub (xkeen -i -toff)${reset}"
         echo
