@@ -612,8 +612,18 @@ check_dns_config() {
 }
 file_dns=$(check_dns_config)
 
+# Кэш списка загруженных модулей; is_module_loaded читает его без форков
+_loaded_modules=""
+
+_refresh_modules_cache() {
+    _loaded_modules=" $(lsmod 2>/dev/null | awk '{print $1}' | tr '\n' ' ') "
+}
+
 is_module_loaded() {
-    lsmod | awk '{print $1}' | grep -qx "$1"
+    case "$_loaded_modules" in
+        *" $1 "*) return 0 ;;
+        *) return 1 ;;
+    esac
 }
 
 # Загрузка модулей
@@ -632,11 +642,13 @@ load_modules() {
 
 # Обработка модулей и портов
 get_modules() {
+    _refresh_modules_cache
     load_modules xt_comment.ko
     load_modules xt_TPROXY.ko
     load_modules xt_socket.ko
     load_modules xt_multiport.ko
     load_modules xt_dscp.ko
+    _refresh_modules_cache  # подхватить только что insmod-нутые модули
 
     if ! is_module_loaded xt_comment; then
         log_error_router "Модуль xt_comment не загружен"
