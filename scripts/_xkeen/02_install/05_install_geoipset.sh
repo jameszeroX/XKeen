@@ -53,11 +53,17 @@ load_geoipset() {
     set="$1"
     file="$2"
     family="$3"
+    tmp="${set}_tmp"
 
+    # Заполняем tmp; основной набор подменяется только после успешного restore
     ipset create "$set" hash:net family "$family" -exist
-    ipset flush "$set"
+    ipset create "$tmp" hash:net family "$family" -exist
+    ipset flush "$tmp"
 
-    [ -f "$file" ] && awk '/^[0-9a-fA-F]/ {print "add '"$set"' "$1}' "$file" | ipset restore -exist
+    if [ -f "$file" ] && awk '/^[0-9a-fA-F]/ {print "add '"$tmp"' "$1}' "$file" | ipset restore -exist; then
+        ipset swap "$set" "$tmp"
+    fi
+    ipset destroy "$tmp"
 }
 
 install_geoipset() {
