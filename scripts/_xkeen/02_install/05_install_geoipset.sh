@@ -70,31 +70,40 @@ install_geoipset() {
     action="$1"
 
     if [ "$action" = "init" ]; then
-        while true; do
-            printf "\n  Желаете исключить российские IP-адреса из проксирования?\n\n"
-            printf "     1. Загрузить и установить в исключения IP-подсети России (${yellow}GeoIPSET${reset})\n"
-            printf "     0. Пропустить\n\n"
-            printf "  Ваш выбор: "
-            read -r choice
+        # Без TTY (cron, ssh -T) read получает EOF, default-case крутит while true
+        # бесконечно: процесс висит в R-state с CPU-spin. Дефолтим выбор на "1"
+        # (установить), потому что xkeen -gips из cron это типичный
+        # non-interactive caller, где пользователь явно ожидает установку.
+        if [ ! -t 0 ]; then
+            printf "  Не интерактивный режим (нет TTY): автоматическая установка GeoIPSET\n"
+            bypass_cron_geoipset=false
+        else
+            while true; do
+                printf "\n  Желаете исключить российские IP-адреса из проксирования?\n\n"
+                printf "     1. Загрузить и установить в исключения IP-подсети России (${yellow}GeoIPSET${reset})\n"
+                printf "     0. Пропустить\n\n"
+                printf "  Ваш выбор: "
+                read -r choice
 
-            case "$choice" in
-                0)
-                    printf "  Пропуск установки списков GeoIPSET\n\n"
+                case "$choice" in
+                    0)
+                        printf "  Пропуск установки списков GeoIPSET\n\n"
 
-                    if [ ! -f "$ru_exclude_ipv4" ] && [ ! -f "$ru_exclude_ipv6" ]; then
-                        bypass_cron_geoipset=true
-                    fi
-                    return 0
-                    ;;
-                1)
-                    bypass_cron_geoipset=false
-                    break
-                    ;;
-                *)
-                    printf "  Неверный ввод. Пожалуйста, введите 1 или 0.\n"
-                    ;;
-            esac
-        done
+                        if [ ! -f "$ru_exclude_ipv4" ] && [ ! -f "$ru_exclude_ipv6" ]; then
+                            bypass_cron_geoipset=true
+                        fi
+                        return 0
+                        ;;
+                    1)
+                        bypass_cron_geoipset=false
+                        break
+                        ;;
+                    *)
+                        printf "  Неверный ввод. Пожалуйста, введите 1 или 0.\n"
+                        ;;
+                esac
+            done
+        fi
     fi
 
     if ip -4 addr show 2>/dev/null | grep -q "inet " && command -v iptables >/dev/null 2>&1; then
