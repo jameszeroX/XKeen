@@ -105,7 +105,8 @@ register_xkeen_initd() {
     if choice_backup_xkeen; then
         rm -f "$source_main_backup" "$source_start_backup"
     fi
-    rm -f "$old_initd_file" "old_start_file" "$pre_initd_file"
+    # Пропущенный $ ломал очистку легаси S99xkeenstart при апгрейде с 1.x
+    rm -f "$old_initd_file" "$old_start_file" "$pre_initd_file"
 }
 
 # Миграция скрипта
