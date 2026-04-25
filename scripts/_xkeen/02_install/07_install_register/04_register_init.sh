@@ -483,12 +483,19 @@ load_user_ipset_family() {
     set_name="$1"
     family="$2"
     addr_regex="$3"
+    tmp="${set_name}_tmp"
 
+    # Заполняем tmp; основной набор подменяется только после успешного pipeline
     ipset create "$set_name" hash:net family "$family" -exist
-    ipset flush "$set_name"
-    sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file_ip_exclude" |
-    grep -Eo "$addr_regex" |
-    awk -v s="$set_name" '{print "add "s" "$1}' | ipset restore -exist
+    ipset create "$tmp" hash:net family "$family" -exist
+    ipset flush "$tmp"
+
+    if sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file_ip_exclude" |
+       grep -Eo "$addr_regex" |
+       awk -v s="$tmp" '{print "add "s" "$1}' | ipset restore -exist; then
+        ipset swap "$set_name" "$tmp"
+    fi
+    ipset destroy "$tmp"
 }
 
 # Функция загрузки пользовательских исключений в ipset
@@ -1574,11 +1581,17 @@ load_ipset() {
     set="$1"
     file="$2"
     family="$3"
+    tmp="${set}_tmp"
 
+    # Заполняем tmp; основной набор подменяется только после успешного restore
     ipset create "$set" hash:net family "$family" -exist
-    ipset flush "$set"
+    ipset create "$tmp" hash:net family "$family" -exist
+    ipset flush "$tmp"
 
-    [ -f "$file" ] && sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file" | awk '{print "add '"$set"' "$1}' | ipset restore -exist
+    if [ -f "$file" ] && sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file" | awk '{print "add '"$tmp"' "$1}' | ipset restore -exist; then
+        ipset swap "$set" "$tmp"
+    fi
+    ipset destroy "$tmp"
 }
 
 apply_fd_limit() {
