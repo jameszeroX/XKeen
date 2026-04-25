@@ -43,7 +43,8 @@ logs_delete_configs_info_console() {
 
 logs_delete_geosite_info_console() {
     echo -e "  ${yellow}Проверка${reset} выполнения операции"
-    for file in "geosite_antifilter.dat" "geosite_v2fly.dat" "geosite_zkeen.dat"; do
+    # antifilter переименован в refilter в install/delete, имя verification отстало
+    for file in "geosite_refilter.dat" "geosite_v2fly.dat" "geosite_zkeen.dat"; do
         [ ! -f "$geo_dir/$file" ]
         print_log_status $? "Файл $file отсутствует в директории '$geo_dir'" "Файл $file не удален"
     done
@@ -51,7 +52,7 @@ logs_delete_geosite_info_console() {
 
 logs_delete_geoip_info_console() {
     echo -e "  ${yellow}Проверка${reset} выполнения операции"
-    for file in "geoip_antifilter.dat" "geoip_v2fly.dat" "geoip_zkeenip.dat"; do
+    for file in "geoip_refilter.dat" "geoip_v2fly.dat" "geoip_zkeenip.dat"; do
         [ ! -f "$geo_dir/$file" ]
         print_log_status $? "Файл $file отсутствует в директории '$geo_dir'" "Файл $file не удален"
     done
