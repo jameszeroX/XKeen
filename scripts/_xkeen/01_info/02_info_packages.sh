@@ -1,13 +1,17 @@
+# Кэшируем список установленных пакетов один раз вместо opkg-форка на каждую проверку
+_packages_cache=$(opkg list-installed 2>/dev/null)
+
 # Функция для проверки наличия необходимых пакетов
 info_packages() {
     package_name="$1"
-    
-    # Проверяем, установлен ли пакет
-    if opkg list-installed | grep -q "^$package_name "; then
-        package_status="installed"
-    else
-        package_status="not_installed"
-    fi
+
+    # Newline-prefix эмулирует якорь "^pkg ", чтобы libc не матчил libcurl
+    case "
+$_packages_cache" in
+        *"
+$package_name "*) package_status="installed" ;;
+        *) package_status="not_installed" ;;
+    esac
 }
 
 # Проверка наличия пакета "coreutils-uname"
