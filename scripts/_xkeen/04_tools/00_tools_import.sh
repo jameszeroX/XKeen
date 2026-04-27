@@ -13,3 +13,6 @@
 
 # Модуль загрузок
 . "$xtools_dir/07_tools_downloaders/00_downloaders_import.sh"
+
+# Модуль проверки целостности
+. "$xtools_dir/08_tools_integrity.sh"

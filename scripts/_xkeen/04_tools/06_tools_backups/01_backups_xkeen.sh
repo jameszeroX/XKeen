@@ -22,38 +22,25 @@ backup_xkeen() {
 
 # Восстановление XKeen из резервной копии
 restore_backup_xkeen() {
-    restore_script=$(mktemp)
-    cat <<eof > "$restore_script"
-#!/bin/sh
+    latest_backup_dir=$(ls -t -d "$backups_dir"/*xkeen* 2>/dev/null | head -n 1)
 
-latest_backup_dir=\$(ls -t -d "$backups_dir"/*xkeen* | head -n 1)
-
-if [ -n "\$latest_backup_dir" ]; then
-    cp -r "\$latest_backup_dir"/_xkeen "$install_dir/"
-    if [ \$? -eq 0 ]; then
-        cp -f "\$latest_backup_dir"/xkeen "$install_dir/"
-        if [ \$? -eq 0 ]; then
-            if [ -d "$install_dir/_xkeen" ]; then
-                if [ -d "$install_dir/.xkeen" ]; then
-                    rm -rf "$install_dir/.xkeen"
+    if [ -n "$latest_backup_dir" ]; then
+        if cp -r "$latest_backup_dir"/_xkeen "$install_dir/"; then
+            if cp -f "$latest_backup_dir"/xkeen "$install_dir/"; then
+                if [ -d "$install_dir/_xkeen" ]; then
+                    if [ -d "$install_dir/.xkeen" ]; then
+                        rm -rf "$install_dir/.xkeen"
+                    fi
+                    mv "$install_dir/_xkeen" "$install_dir/.xkeen"
+                    echo -e "  XKeen ${green}успешно восстановлен${reset}"
                 fi
-                mv "$install_dir/_xkeen" "$install_dir/.xkeen"
-                echo -e "  XKeen ${green}успешно восстановлен${reset}"
+            else
+                echo "  Не удалось скопировать xkeen"
             fi
         else
             echo "  Не удалось скопировать _xkeen"
         fi
     else
-        echo "  Не удалось скопировать _xkeen"
+        echo "  Подходящая резервная копия XKeen не найдена"
     fi
-else
-    echo "  Подходящая резервная копия XKeen не найдена"
-fi
-
-# Удаление временного скрипта
-rm "\$0"
-eof
-
-    chmod +x "$restore_script"
-    "$restore_script"
 }

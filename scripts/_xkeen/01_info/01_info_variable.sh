@@ -54,14 +54,12 @@ initd_cron="$initd_dir/S05crond"
 # -------------------------------------
 # Время
 # -------------------------------------
-existing_content=$(cat "$status_file")
-installed_size=$(du -s "$install_dir" | cut -f1)
-source_date_epoch=$(date +%s)
 current_datetime=$(date "+%d-%b-%y_%H-%M")
 
 # -------------------------------------
-# IP для проверки доступа в интернет
+# Ресурсы для проверки доступа в интернет
 # -------------------------------------
+conn_URL="ya.ru"
 conn_IP1="195.208.4.1"
 conn_IP2="77.88.44.55"
 
@@ -104,23 +102,24 @@ geoipv4_url="https://github.com/jameszeroX/zkeen-ip/releases/latest/download/ru"
 geoipv6_url="https://github.com/jameszeroX/zkeen-ip/releases/latest/download/ru6"
 
 # -------------------------------------
-# Создание директорий и файлов
-# -------------------------------------
-mkdir -p "$xray_log_dir" || { echo "Ошибка: Не удалось создать директорию $xray_log_dir"; exit 1; }
-mkdir -p "$initd_dir" || { echo "Ошибка: Не удалось создать директорию $initd_dir"; exit 1; }
-mkdir -p "$pid_dir" || { echo "Ошибка: Не удалось создать директорию $pid_dir"; exit 1; }
-mkdir -p "$backups_dir" || { echo "Ошибка: Не удалось создать директорию $backups_dir"; exit 1; }
-mkdir -p "$install_dir" || { echo "Ошибка: Не удалось создать директорию $install_dir"; exit 1; }
-mkdir -p "$cron_dir" || { echo "Ошибка: Не удалось создать директорию $cron_dir"; exit 1; }
-
-# -------------------------------------
 # Журналы
 # -------------------------------------
 xray_access_log="$xray_log_dir/access.log"
 xray_error_log="$xray_log_dir/error.log"
 
-touch "$xray_access_log" || { echo "Ошибка: Не удалось создать файл $xray_access_log"; exit 1; }
-touch "$xray_error_log" || { echo "Ошибка: Не удалось создать файл $xray_error_log"; exit 1; }
+# -------------------------------------
+# Создание директорий и файлов
+# -------------------------------------
+init_directories() {
+    mkdir -p "$xray_log_dir" || { echo "Ошибка: Не удалось создать директорию $xray_log_dir"; exit 1; }
+    mkdir -p "$initd_dir" || { echo "Ошибка: Не удалось создать директорию $initd_dir"; exit 1; }
+    mkdir -p "$pid_dir" || { echo "Ошибка: Не удалось создать директорию $pid_dir"; exit 1; }
+    mkdir -p "$backups_dir" || { echo "Ошибка: Не удалось создать директорию $backups_dir"; exit 1; }
+    mkdir -p "$install_dir" || { echo "Ошибка: Не удалось создать директорию $install_dir"; exit 1; }
+    mkdir -p "$cron_dir" || { echo "Ошибка: Не удалось создать директорию $cron_dir"; exit 1; }
+    touch "$xray_access_log" || { echo "Ошибка: Не удалось создать файл $xray_access_log"; exit 1; }
+    touch "$xray_error_log" || { echo "Ошибка: Не удалось создать файл $xray_error_log"; exit 1; }
+}
 
 # Таймаут curl
 [ -e "/tmp/toff" ] && curl_timeout="" || curl_timeout="-m 180"

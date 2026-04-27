@@ -1,16 +1,12 @@
 # Функция проверки доступности интернета
 test_connection() {
-    result=1
+    nslookup "$conn_URL" >/dev/null 2>&1 && return 0
+    curl -Is --connect-timeout 1 "$conn_URL" >/dev/null && return 0
+    ping -c 1 -W 1 "$conn_IP1" >/dev/null 2>&1 && return 0
+    ping -c 1 -W 1 "$conn_IP2" >/dev/null 2>&1 && return 0
 
-    if ! ping -c 2 -W 5 "$conn_IP1" >/dev/null 2>&1 && \
-       ! ping -c 2 -W 5 "$conn_IP2" >/dev/null 2>&1; then
-        result=0
-    fi
-
-    if [ "$result" -eq 0 ]; then
-        printf "  ${red}Отсутствует${reset} интернет-соединение\n"
-        exit 1
-    fi
+    printf "  ${red}Отсутствует${reset} интернет-соединение\n"
+    exit 1
 }
 
 # Функция загрузки
@@ -19,30 +15,17 @@ download_with_check() {
     output_file="$2"
     min_size="${3:-300000}"
 
-    (curl --connect-timeout 10 $curl_timeout -s -L "$url" -o "$output_file" 2>/dev/null) &
-    pid=$!
-
-    i=1
-    while [ $i -le 10 ]; do
-        kill -0 $pid 2>/dev/null || break
-        sleep 1
-        i=$((i + 1))
-    done
-
-    if kill -0 $pid 2>/dev/null; then
-        kill $pid 2>/dev/null
-        wait $pid 2>/dev/null
-    fi
+    curl --connect-timeout 10 $curl_timeout -s -L "$url" -o "$output_file" 2>/dev/null
 
     if [ -f "$output_file" ]; then
         size=$(wc -c < "$output_file" 2>/dev/null || echo 0)
         if [ "$size" -gt "$min_size" ]; then
-            return 0  # Успех
+            return 0
         fi
     fi
 
     rm -f "$output_file" 2>/dev/null
-    return 1  # Ошибка
+    return 1
 }
 
 # Функция проверки доступности Entware
@@ -62,7 +45,6 @@ test_entware() {
         printf "  Репозиторий Entware ${green}доступен${reset}. Продолжаем...\n"
 
         opkg update >/dev/null 2>&1
-        opkg upgrade >/dev/null 2>&1
         info_packages
         install_packages
         rm -f "$tmp_file" 2>/dev/null
@@ -81,29 +63,35 @@ test_github() {
     fi
     use_direct="false"
     gh_proxy=""
-    tmp_file="/tmp/gh_check_$$"
 
     printf "  ${yellow}Проверка доступности${reset} GitHub. Подождите, пожалуйста...\n"
 
-    if download_with_check "$zkeenip_url" "$tmp_file"; then
+    _gh_head_check() {
+        _url="$1"
+        _status=$(curl --connect-timeout 10 $curl_timeout -s -L -I -o /dev/null -w "%{http_code}" "$_url" 2>/dev/null)
+        if [ "$_status" = "405" ]; then
+            _status=$(curl --connect-timeout 10 $curl_timeout -s -L -r 0-0 -o /dev/null -w "%{http_code}" "$_url" 2>/dev/null)
+        fi
+        case "$_status" in
+            2[0-9][0-9]) return 0 ;;
+            *) return 1 ;;
+        esac
+    }
+
+    if _gh_head_check "$zkeenip_url"; then
         use_direct="true"
-        rm -f "$tmp_file" 2>/dev/null
         printf "  GitHub ${green}доступен${reset}. Продолжаем...\n"
         return 0
     fi
 
-    proxied_url="${gh_proxy1}/${zkeenip_url}"
-    if download_with_check "$proxied_url" "$tmp_file"; then
+    if _gh_head_check "${gh_proxy1}/${zkeenip_url}"; then
         gh_proxy="$gh_proxy1"
-        rm -f "$tmp_file" 2>/dev/null
         printf "  GitHub ${green}доступен через прокси${reset}. Продолжаем...\n"
         return 0
     fi
 
-    proxied_url="${gh_proxy2}/${zkeenip_url}"
-    if download_with_check "$proxied_url" "$tmp_file"; then
+    if _gh_head_check "${gh_proxy2}/${zkeenip_url}"; then
         gh_proxy="$gh_proxy2"
-        rm -f "$tmp_file" 2>/dev/null
         printf "  GitHub ${green}доступен через прокси${reset}. Продолжаем...\n"
         return 0
     fi

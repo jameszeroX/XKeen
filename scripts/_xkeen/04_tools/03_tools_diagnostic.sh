@@ -24,6 +24,7 @@ diagnostic() {
 
     # Очищаем файл diagnostic перед записью новых данных
     > "$diagnostic"
+    chmod 600 "$diagnostic"
 
     # Функция записи заголовка
     write_header() {
@@ -38,6 +39,27 @@ diagnostic() {
         write_header "$1"
         cat >> "$diagnostic"
         echo >> "$diagnostic"; echo >> "$diagnostic"
+    }
+
+    # Функция маскирования чувствительных данных в JSON-конфигах
+    mask_sensitive_data() {
+        sed -E \
+            -e 's/("id"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("password"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("publicKey"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("privateKey"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("shortId"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("secretKey"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("key"[[:space:]]*:[[:space:]]*")[^"]{16,}/\1***MASKED***/g' \
+            -e 's/("serverName"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("host"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("encryption"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("path"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("auth"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("user"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("pass"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("mldsa65Verify"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
+            -e 's/("address"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g'
     }
 
     # Функция логирования файлов
@@ -117,9 +139,14 @@ diagnostic() {
 
     if [ "${name_client}" = "xray" ] && [ -d "$install_conf_dir" ]; then
         ls -p "$install_conf_dir" | log_block "Содержимое директории configs"
-        for conf in dns inbounds routing; do
+
+        for conf in dns inbounds routing outbounds; do
             file=$(ls "$install_conf_dir"/*${conf}*.json 2>/dev/null | head -n 1)
-            [ -n "$file" ] && log_file "$file" "Содержимое файла ${conf}.json"
+            if [ -n "$file" ]; then
+                write_header "Содержимое файла $file"
+                mask_sensitive_data < "$file" >> "$diagnostic"
+                echo >> "$diagnostic"; echo >> "$diagnostic"
+            fi
         done
     fi
 
