@@ -27,7 +27,30 @@ add_chmod_init() {
 for arg in "$@"; do
     [ "$arg" = "-toff" ] && touch "/tmp/toff"
     [ "$arg" = "-restart" ] && apply="restart"
+    case "$arg" in
+        -restart|-start|-stop) detach_eligible=true ;;
+    esac
 done
+
+# Self-detach в новую session/pgid когда вызвали без TTY (ssh без -t, cron, CGI)
+# чтобы форсированный обрыв caller-сессии не убивал начальные проверки.
+# Подробности в commit-message. XKEEN_FOREGROUND=1 отключает детач для callers
+# требующих синхронной семантики (скрипты с && cleanup).
+if [ -n "$detach_eligible" ] && [ -z "$XKEEN_DETACHED" ] \
+   && [ ! -t 0 ] && [ ! -t 1 ] && [ -z "$XKEEN_FOREGROUND" ]; then
+    export XKEEN_DETACHED=1
+    [ -d /opt/var/log ] || mkdir -p /opt/var/log
+    log=/opt/var/log/xkeen-detached.log
+    {
+        echo
+        echo "=== $(date '+%F %T') $0 $* ==="
+    } >>"$log"
+    start-stop-daemon -S -b -n "xkdtch.$$" \
+        -x "$0" -- "$@" \
+        >>"$log" 2>&1
+    echo "  Запуск в фоновом режиме, лог: $log" >&2
+    exit 0
+fi
 
 get_state_arg() {
     if [ "$1" = "on" ] || [ "$1" = "off" ]; then
