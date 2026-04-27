@@ -14,7 +14,7 @@ diagnostic() {
     fi
 
     ip4_supported=$(ip -4 addr show | grep -q "inet " && echo true || echo false)
-    ip6_supported=$(ip -6 addr show | grep -q "inet6 " && echo true || echo false)
+    ip6_supported=$(ip -6 addr show | grep -q "inet6 fe80::" && echo true || echo false)
 
     iptables_supported=$([ "$ip4_supported" = "true" ] && command -v iptables >/dev/null 2>&1 && echo true || echo false)
     ip6tables_supported=$([ "$ip6_supported" = "true" ] && command -v ip6tables >/dev/null 2>&1 && echo true || echo false)
