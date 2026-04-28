@@ -1915,7 +1915,7 @@ case "$1" in
         if proxy_status; then
             mode_proxy=""
             if [ -f "$file_netfilter_hook" ]; then
-                mode_proxy=$(grep '^mode_proxy=' "$file_netfilter_hook" | awk -F'"' '{print $2}' 2>/dev/null)
+                mode_proxy=$(grep '^mode_proxy=' "$file_netfilter_hook" | awk -F"=" '{print $2}' | tr -d "'" 2>/dev/null)
             fi
             [ -z "$mode_proxy" ] && mode_proxy="Other"
             echo -e "  Прокси-клиент ${yellow}$name_client${reset} ${green}запущен${reset} в режиме ${light_blue}$mode_proxy${reset}"
