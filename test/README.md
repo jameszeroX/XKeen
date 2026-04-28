@@ -21,6 +21,8 @@
 - Задержка автозапуска XKeen теперь не влияет на запуск остальных пакетов, установленных в Entware
 - Интерактивные параметры `-auto`, `-fd`, `-dns`, `-pr`, `-extmsg`, `-cbk`, `-aghfix` теперь умеют работать в автоматическом режиме (`-dns on`, `-auto off`,... ), а так же поддерживают перезапуск XKeen (`-dns on -restart`), если это необходимо
 - Доработан сценарий установки. Корректное определение режима работы XKeen, не зависящее он имен входящих тегов `redirect` и `tproxy` [@UltraFeed](https://github.com/UltraFeed)
+- PR [#32](https://github.com/jameszeroX/XKeen/pull/32) - [@levmnkv](https://github.com/levmnkv)
+- PR [#33](https://github.com/jameszeroX/XKeen/pull/33), [#34](https://github.com/jameszeroX/XKeen/pull/34), [#35](https://github.com/jameszeroX/XKeen/pull/35), [#36](https://github.com/jameszeroX/XKeen/pull/36), [#37](https://github.com/jameszeroX/XKeen/pull/37), [#38](https://github.com/jameszeroX/XKeen/pull/38), [#39](https://github.com/jameszeroX/XKeen/pull/39), [#40](https://github.com/jameszeroX/XKeen/pull/40)  - [@oviron](https://github.com/oviron)
 - Удалены неиспользуемые параметры запуска `-rrk`, `-rrx`, `-rrm`, `-drk`, `-drx`, `-drm`
 - Рефакторинг кода скриптов
 
