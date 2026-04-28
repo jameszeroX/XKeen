@@ -67,72 +67,81 @@ change_channel_xkeen() {
 change_ipv6_support() {
     ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::" && ip6_supported="true" || ip6_supported="false"
 
-    echo
-    echo -e "  Текущее состояние IPv6 в ${yellow}KeeneticOS${reset}:"
-    if [ "$ip6_supported" = "true" ]; then
-        echo -e "  IPv6 ${green}включён${reset}"
-        echo
-        echo "     1. Отключить IPv6"
-        echo "     0. Оставить без изменений"
+    if [ "$1" = "on" ]; then
+        [ "$ip6_supported" = "true" ] && return 0
+        desired_state="on"
+    elif [ "$1" = "off" ]; then
+        [ "$ip6_supported" = "false" ] && return 0
         desired_state="off"
     else
-        echo -e "  IPv6 ${green}отключён${reset}"
         echo
-        echo "     1. Включить IPv6"
-        echo "     0. Оставить без изменений"
-        desired_state="on"
-    fi
-
-    echo
-    while true; do
-        read -r -p "  Ваш выбор: " choice
-        if echo "$choice" | grep -qE '^[0-1]$'; then
-            case "$choice" in
-                0)
-                    return 0
-                    ;;
-                1)
-                    break
-                    ;;
-            esac
+        echo -e "  Текущее состояние IPv6 в ${yellow}KeeneticOS${reset}:"
+        if [ "$ip6_supported" = "true" ]; then
+            echo -e "  IPv6 ${green}включён${reset}"
+            echo
+            echo "     1. Отключить IPv6"
+            echo "     0. Оставить без изменений"
+            desired_state="off"
         else
-            echo -e "  ${red}Некорректный ввод${reset}"
+            echo -e "  IPv6 ${green}отключён${reset}"
+            echo
+            echo "     1. Включить IPv6"
+            echo "     0. Оставить без изменений"
+            desired_state="on"
         fi
-    done
+
+        echo
+        while true; do
+            read -r -p "  Ваш выбор: " choice
+            if echo "$choice" | grep -qE '^[0-1]$'; then
+                case "$choice" in
+                    0) return 0 ;;
+                    1) break ;;
+                esac
+            else
+                echo -e "  ${red}Некорректный ввод${reset}"
+            fi
+        done
+    fi
 
     if [ -f "$initd_file" ]; then
         sed -i "s/ipv6_support=\"[a-z]*\"/ipv6_support=\"$desired_state\"/" "$initd_file"
-            if [ "$desired_state" = "off" ]; then
-                sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
-                for dir in /proc/sys/net/ipv6/conf/*; do
-                    [ -d "$dir" ] || continue
-                    iface="${dir##*/}"
-                    case "$iface" in
-                        all|ezcfg0|t2s*)
-                            continue
-                            ;;
-                        *)
-                            [ -f "$dir/disable_ipv6" ] && echo "1" > "$dir/disable_ipv6" 2>/dev/null
-                            ;;
-                    esac
-                done
-            else
-                sysctl -w net.ipv6.conf.all.disable_ipv6=0 >/dev/null 2>&1
-                sysctl -w net.ipv6.conf.default.disable_ipv6=0 >/dev/null 2>&1
-            fi
+
+        if [ "$desired_state" = "off" ]; then
+            sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
+            for dir in /proc/sys/net/ipv6/conf/*; do
+                [ -d "$dir" ] || continue
+                iface="${dir##*/}"
+                case "$iface" in
+                    all|ezcfg0|t2s*) continue ;;
+                    *) [ -f "$dir/disable_ipv6" ] && echo "1" > "$dir/disable_ipv6" 2>/dev/null ;;
+                esac
+            done
+        else
+            sysctl -w net.ipv6.conf.all.disable_ipv6=0 >/dev/null 2>&1
+            sysctl -w net.ipv6.conf.default.disable_ipv6=0 >/dev/null 2>&1
+        fi
+
+        # Перезапуск прокси-клиента, если запущен
         if pidof xray >/dev/null || pidof mihomo >/dev/null; then
             echo -e "  ${yellow}Выполняется${reset}. Пожалуйста, подождите..."
             "$initd_file" restart on >/dev/null 2>&1
         fi
-        if ! ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::" &&
-           [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 1 ]; then
-            echo -e "  Поддержка IPv6 в KeeneticOS ${green}отключена${reset}"
-            echo -e "  ${red}Дополнительно убедитесь, что IPv6 отключен в веб-интерфейсе роутера${reset}"
-        elif [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 0 ] &&
-           [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 0 ]; then
-            echo -e "  Поддержка IPv6 в KeeneticOS ${green}включена${reset}"
+
+        # Проверка и вывод результата
+        if [ "$desired_state" = "off" ]; then
+            if ! ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::"; then
+                echo -e "  Поддержка IPv6 в KeeneticOS ${green}отключена${reset}"
+                echo -e "  ${red}Дополнительно убедитесь, что IPv6 отключен в веб-интерфейсе роутера${reset}"
+            else
+                echo -e "  ${red}Ошибка${reset} при выключении IPv6"
+            fi
         else
-            echo -e "  ${red}Ошибка${reset} при смене статуса IPv6"
+            if [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 0 ]; then
+                echo -e "  Поддержка IPv6 в KeeneticOS ${green}включена${reset}"
+            else
+                echo -e "  ${red}Ошибка${reset} при включении IPv6"
+            fi
         fi
     else
         echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S05xkeen${reset}"

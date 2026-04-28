@@ -24,6 +24,22 @@ add_chmod_init() {
     [ -f "$initd_file" ] && chmod +x "$initd_file"
 }
 
+# Подсчет количества логических команд (параметров, начинающихся с - или --)
+LOGICAL_CMD_COUNT=0
+for arg in "$@"; do
+    case "$arg" in
+        -*) LOGICAL_CMD_COUNT=$((LOGICAL_CMD_COUNT + 1)) ;;
+    esac
+done
+
+# Функция умной очистки экрана
+smart_clear() {
+    # Очищаем экран, только если запущена одна логическая команда
+    if [ "$LOGICAL_CMD_COUNT" -le 1 ]; then
+        clear
+    fi
+}
+
 for arg in "$@"; do
     [ "$arg" = "-toff" ] && touch "/tmp/toff"
     [ "$arg" = "-restart" ] && apply="restart"
@@ -108,7 +124,7 @@ while [ $# -gt 0 ]; do
             test_github
             sleep 2
 
-            clear
+            smart_clear
             echo
             check_keen_mode
             if [ -n "$keen_mode" ]; then
@@ -141,7 +157,7 @@ while [ $# -gt 0 ]; do
            fi
 
             if [ "$add_xray" = "true" ]; then
-                clear
+                smart_clear
                 echo
                 download_xray
             else
@@ -154,14 +170,14 @@ while [ $# -gt 0 ]; do
             fi
 
             if [ "$xray_installed" = "installed" ]; then
-                clear
+                smart_clear
                 # Устанавливаем GeoSite
                 choice_geosite
                 delete_geosite
                 install_geosite
                 sleep 2
 
-                clear
+                smart_clear
                 # Устанавливаем GeoIP
                 choice_geoip
                 delete_geoip
@@ -169,25 +185,25 @@ while [ $# -gt 0 ]; do
                 sleep 2
             fi
 
-                clear
+                smart_clear
                 # Устанавливаем GeoIPSET
                 install_geoipset init
                 sleep 2
 
                 if [ "$bypass_cron_geosite" = "false" ] || [ "$bypass_cron_geoip" = "false" ] || [ "$bypass_cron_geoipset" = "false" ]; then
-                    clear
+                    smart_clear
                     # Настраиваем автоматические обновления
                     info_cron
                     choice_update_cron
                     update_cron_geofile_task
-                    clear
+                    smart_clear
                     choice_cron_time
                     install_cron
                     sleep 2
                 fi
 
                 if [ "$xray_installed" = "installed" ]; then
-                    clear
+                    smart_clear
                     echo
                     install_configs
                 fi
@@ -215,7 +231,7 @@ while [ $# -gt 0 ]; do
             fi
 
             if [ "$add_mihomo" = "true" ]; then
-                clear
+                smart_clear
                 echo
                 if ! download_mihomo; then
                     bypass_mihomo="true"
@@ -263,7 +279,7 @@ while [ $# -gt 0 ]; do
 
             if [ "$xray_installed" = "installed" ] || [ "$mihomo_installed" = "installed" ]; then
                 delete_register_xkeen
-                clear
+                smart_clear
                 echo
                 echo -e "  Выполняется регистрация ${yellow}XKeen${reset}"
                 register_xkeen_list
@@ -282,7 +298,7 @@ while [ $# -gt 0 ]; do
                 create_xkeen_cfg
                 sleep 2
 
-                clear
+                smart_clear
                 choice_autostart_xkeen
             fi
 
@@ -306,7 +322,7 @@ while [ $# -gt 0 ]; do
             delete_tmp
             sleep 2
 
-            clear
+            smart_clear
             echo
             echo -e "  ${green}Установка XKeen завершена!${reset}"
 
@@ -348,7 +364,7 @@ while [ $# -gt 0 ]; do
 
 
         -io)    # Установка XKeen OffLine
-            clear
+            smart_clear
             echo
             check_keen_mode
             if [ -n "$keen_mode" ]; then
@@ -377,7 +393,7 @@ while [ $# -gt 0 ]; do
                     exit 1
                 fi
             else
-                clear
+                smart_clear
                 echo
                 echo -e "  ${red}Не найдено ядро проксирования xray или mihomo${reset}"
                 echo
@@ -398,7 +414,7 @@ while [ $# -gt 0 ]; do
                     mkdir -p "$geo_dir"
                 fi
 
-                clear
+                smart_clear
                 delete_register_xray
                 info_xray
                 info_version_xray
@@ -435,7 +451,7 @@ while [ $# -gt 0 ]; do
                 sleep 2
             fi
 
-            clear
+            smart_clear
             delete_register_xkeen
             echo
             echo -e "  Выполняется регистрация ${yellow}XKeen${reset}"
@@ -454,7 +470,7 @@ while [ $# -gt 0 ]; do
 
             fixed_register_packages
 
-            clear
+            smart_clear
             choice_autostart_xkeen
             add_chmod_init
 
@@ -466,7 +482,7 @@ while [ $# -gt 0 ]; do
             delete_tmp
             sleep 2
 
-            clear
+            smart_clear
             echo
             echo -e "  ${green}Установка XKeen завершена!${reset}"
             echo
@@ -491,7 +507,7 @@ while [ $# -gt 0 ]; do
             test_github
             sleep 2
 
-            clear
+            smart_clear
             echo
             echo "  Обновление установленных баз GeoFile/GeoIPSET"
             info_geosite
@@ -525,7 +541,7 @@ while [ $# -gt 0 ]; do
             test_github
             sleep 2
 
-            clear
+            smart_clear
             echo
             echo "  Проверка обновлений XKeen"
             xkeen_info
@@ -600,7 +616,7 @@ while [ $# -gt 0 ]; do
             . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
             status_file="/opt/lib/opkg/status"
             info_cpu
-            clear
+            smart_clear
             info_4g
             info_xray
             info_version_xray
@@ -653,7 +669,7 @@ while [ $# -gt 0 ]; do
                         register_xray_status
                         logs_register_xray_status_info_console
                         sleep 2
-                        clear
+                        smart_clear
                         echo
                         echo -e "  Установка ядра ${yellow}Xray${reset} ${green}выполнена${reset}"
                     fi
@@ -673,7 +689,7 @@ while [ $# -gt 0 ]; do
             . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
             status_file="/opt/lib/opkg/status"
             info_cpu
-            clear
+            smart_clear
             info_4g
             info_mihomo
             info_version_mihomo
@@ -740,7 +756,7 @@ while [ $# -gt 0 ]; do
                     register_yq_status
                     logs_register_yq_status_info_console
                     sleep 2
-                    clear
+                    smart_clear
                     echo
                     echo -e "  Установка ядра ${yellow}Mihomo${reset} ${green}выполнена${reset}"
                 fi
@@ -753,7 +769,7 @@ while [ $# -gt 0 ]; do
 
         -ugc)    # Создать или изменить существующюю задачу автообновления баз GeoFile/GeoIPSET
             info_cron
-            clear
+            smart_clear
             echo -e "  Создание или изменение задачи автообновления баз ${yellow}GeoFile/GeoIPSET${reset}"
             choice_update_cron
             update_cron_geofile_task
@@ -765,7 +781,7 @@ while [ $# -gt 0 ]; do
 
 
         -ri)    # Пересоздать файл автозапуска XKeen
-            clear
+            smart_clear
             "$initd_file" stop >/dev/null 2>&1
             [ -e "$initd_file" ] && rm -f "$initd_file"
 
@@ -783,14 +799,14 @@ while [ $# -gt 0 ]; do
 
 
         -dgc)    # Удалить задачу автообновления баз GeoFile/GeoIPSET
-            clear
+            smart_clear
             echo
             choice_for_remove="задачу автообновления баз GeoFile/GeoIPSET"
             choice_remove
 
             info_cron
 
-            clear
+            smart_clear
             echo
             echo -e "  Удаление задачи автообновления баз ${yellow}GeoFile/GeoIPSET${reset}"
 
@@ -803,11 +819,11 @@ while [ $# -gt 0 ]; do
 
 
         -dx)    # Удалить Xray
-            clear
+            smart_clear
             echo
             choice_for_remove="Xray"
             choice_remove
-            clear
+            smart_clear
             echo
             command -v xray >/dev/null 2>&1 || { echo -e "  Xray ${red}не установлен${reset}"; exit 1; }
             echo -e "  Удаление ${yellow}Xray${reset}"
@@ -828,11 +844,11 @@ while [ $# -gt 0 ]; do
 
 
         -dm)    # Удалить Mihomo
-            clear
+            smart_clear
             echo
             choice_for_remove="Mihomo"
             choice_remove
-            clear
+            smart_clear
             echo
             command -v mihomo >/dev/null 2>&1 || { echo -e "  Mihomo ${red}не установлен${reset}"; exit 1; }
             echo -e "  Удаление ${yellow}Mihomo${reset}"
@@ -849,22 +865,22 @@ while [ $# -gt 0 ]; do
 
 
         -dk)    # Удалить XKeen
-            clear
+            smart_clear
             echo
             choice_for_remove="XKeen"
             choice_remove
 
-            clear
+            smart_clear
             echo
             echo -e "  Удаление ${yellow}XKeen${reset}"
             opkg remove xkeen
             delete_tmp
 
-            clear
+            smart_clear
             echo
             delete_all
 
-            clear
+            smart_clear
             echo
             echo -e "  Удаление XKeen ${green}выполнено${reset}"
             echo
@@ -878,12 +894,12 @@ while [ $# -gt 0 ]; do
 
 
         -dgi)    # Удалить GeoIP
-            clear
+            smart_clear
             echo
             choice_for_remove="GeoIP"
             choice_remove
 
-            clear
+            smart_clear
             echo
             echo -e "  Удаление всех баз ${yellow}GeoIP${reset}"
 
@@ -896,12 +912,12 @@ while [ $# -gt 0 ]; do
 
 
         -dgs)    # Удалить GeoSite
-            clear
+            smart_clear
             echo
             choice_for_remove="GeoSite"
             choice_remove
 
-            clear
+            smart_clear
             echo
             echo -e "  Удаление всех баз ${yellow}GeoSite${reset}"
 
@@ -914,12 +930,12 @@ while [ $# -gt 0 ]; do
 
 
         -remove)    # Полная деинсталляция XKeen
-            clear
+            smart_clear
             choice_for_remove="XKeen полностью со всеми зависимостями"
             choice_remove
 
             info_cron
-            clear
+            smart_clear
             echo
             echo -e "  Удаление задачи автообновления баз ${yellow}GeoFile${reset}"
             delete_cron_geofile
@@ -930,7 +946,7 @@ while [ $# -gt 0 ]; do
             sleep 2
 
             # Удаление GeoSite's
-            clear
+            smart_clear
             echo
             echo -e "  Удаление всех баз ${yellow}GeoSite${reset}"
 
@@ -941,7 +957,7 @@ while [ $# -gt 0 ]; do
             sleep 2
 
             # Удаление GeoIP's
-            clear
+            smart_clear
             echo
             echo -e "  Удаление всех баз ${yellow}GeoIP${reset}"
 
@@ -952,7 +968,7 @@ while [ $# -gt 0 ]; do
             sleep 2
 
             # Удаление GeoIPSET
-            clear
+            smart_clear
             echo
             echo -e "  Удаление ${yellow}GeoIPSET${reset}"
 
@@ -963,7 +979,7 @@ while [ $# -gt 0 ]; do
             sleep 2
 
             # Удаление файлов конфигурации Xray
-            clear
+            smart_clear
             echo
             echo -e "  Удаление ${yellow}конфигурационных файлов Xray${reset}"
 
@@ -975,7 +991,7 @@ while [ $# -gt 0 ]; do
             sleep 2
 
             # Удаление Xray
-            clear
+            smart_clear
             echo
             echo -e "  ${yellow}Удаление${reset} Xray"
 
@@ -989,7 +1005,7 @@ while [ $# -gt 0 ]; do
             sleep 2
 
             # Удаление Mihomo
-            clear
+            smart_clear
             echo
             echo -e "  ${yellow}Удаление${reset} Mihomo"
             opkg remove mihomo_s
@@ -1002,16 +1018,16 @@ while [ $# -gt 0 ]; do
             sleep 2
 
             # Удаление XKeen
-            clear
+            smart_clear
             echo
             echo -e "  Удаление ${yellow}XKeen${reset}"
             opkg remove xkeen
             delete_tmp
 
-            clear
+            smart_clear
             delete_all
 
-            clear
+            smart_clear
             echo
             echo -e "  Полная деинсталляция ${yellow}XKeen${reset} и всех зависимостей ${green}выполнена${reset}"
             echo
@@ -1028,7 +1044,7 @@ while [ $# -gt 0 ]; do
             xkeen_info
             xkeen_set_info
 
-            clear
+            smart_clear
             echo
             echo -e "  Переустановка ${yellow}XKeen${reset}"
 
@@ -1105,7 +1121,7 @@ while [ $# -gt 0 ]; do
             test_github
             sleep 2
 
-            clear
+            smart_clear
             info_geosite
             info_geoip
 
@@ -1114,13 +1130,13 @@ while [ $# -gt 0 ]; do
             install_geosite
             sleep 2
 
-            clear
+            smart_clear
             choice_geoip
             delete_geoip
             install_geoip
             sleep 2
 
-            clear
+            smart_clear
             echo
             echo -e "  Установка баз GeoFile ${green}выполнена${reset}"
         ;;
@@ -1130,13 +1146,13 @@ while [ $# -gt 0 ]; do
             test_connection
             test_github
 
-            clear
+            smart_clear
             install_geoipset init
         ;;
 
 
         -dgips)    # Удаление GeoIPSET
-            clear
+            smart_clear
             delete_geoipset
         ;;
 
@@ -1210,25 +1226,25 @@ while [ $# -gt 0 ]; do
 
 
         -about)    # О программе
-            clear
+            smart_clear
             about_xkeen
         ;;
 
 
         -ad|-donate)    # Поддержать разработчиков
-            clear
+            smart_clear
             author_donate
         ;;
 
 
         -af|-feedback)    # Обратная связь
-            clear
+            smart_clear
             author_feedback
         ;;
 
 
         -h|-help)    # Помощь
-            clear
+            smart_clear
             help_xkeen
         ;;
 
@@ -1259,7 +1275,7 @@ while [ $# -gt 0 ]; do
         -auto)    # Смена режима запуска XKeen
             action=$(get_state_arg "$2")
             [ -n "$action" ] && shift
-            clear
+            smart_clear
             change_autostart_xkeen "$action"
             add_chmod_init
         ;;
@@ -1268,7 +1284,7 @@ while [ $# -gt 0 ]; do
         -fd)    # Смена режима контроля файловых дескрипторов
             action=$(get_state_arg "$2")
             [ -n "$action" ] && shift
-            clear
+            smart_clear
             change_file_descriptors "$action"
         ;;
 
@@ -1328,13 +1344,13 @@ while [ $# -gt 0 ]; do
 
 
         -modules)    # Obsolete
-            clear
+            smart_clear
             echo
             migration_modules
         ;;
 
         -delmodules)    # Obsolete
-            clear
+            smart_clear
             echo
             remove_modules
         ;;
@@ -1349,13 +1365,13 @@ while [ $# -gt 0 ]; do
 
         -diag)    # Диагностика XKeen
             location_entware_storage
-            clear
+            smart_clear
             diagnostic
         ;;
 
 
         -channel)    # Смена канала обновлений XKeen (Stable/Dev)
-            clear
+            smart_clear
             choice_channel_xkeen
             change_channel_xkeen
         ;;
@@ -1372,15 +1388,17 @@ while [ $# -gt 0 ]; do
 
 
         -ipv6)    # Включение/отключение IPv6 в KeeneticOS
-            clear
-            change_ipv6_support
+            action=$(get_state_arg "$2")
+            [ -n "$action" ] && shift
+            smart_clear
+            change_ipv6_support "$action"
         ;;
 
 
         -dns)    # Включение/отключение перенаправления DNS в прокси
             action=$(get_state_arg "$2")
             [ -n "$action" ] && shift
-            clear
+            smart_clear
             [ -n "$action" ] || warn_proxy_dns
             change_proxy_dns "$action"
         ;;
@@ -1389,7 +1407,7 @@ while [ $# -gt 0 ]; do
         -pr)    # Включение/отключение проксирования трафика Entware
             action=$(get_state_arg "$2")
             [ -n "$action" ] && shift
-            clear
+            smart_clear
             change_proxy_router "$action"
         ;;
 
@@ -1397,7 +1415,7 @@ while [ $# -gt 0 ]; do
         -extmsg)    # Включение/отключение расширенных сообщений запуска XKeen
             action=$(get_state_arg "$2")
             [ -n "$action" ] && shift
-            clear
+            smart_clear
             change_extended_msg "$action"
         ;;
 
@@ -1405,7 +1423,7 @@ while [ $# -gt 0 ]; do
         -cbk)    # Включение/отключение резервного копирования XKeen при обновлении
             action=$(get_state_arg "$2")
             [ -n "$action" ] && shift
-            clear
+            smart_clear
             change_backup_xkeen "$action"
         ;;
 
@@ -1413,7 +1431,7 @@ while [ $# -gt 0 ]; do
         -aghfix)    # Включение/отключение исправления для AdGuard Home
             action=$(get_state_arg "$2")
             [ -n "$action" ] && shift
-            clear
+            smart_clear
             change_aghfix_xkeen "$action"
         ;;
 
