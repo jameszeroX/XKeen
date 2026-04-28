@@ -29,7 +29,7 @@
 - Добавлена возможность отключить/включить перехват DNS запросов при соответствующей настройке прокси-клиента (параметр запуска `-dns`)
 - Поддержка внешних файлов `ip_exclude.lst`, `port_proxying.lst` и `port_exclude.lst` в директории `/opt/etc/xkeen/` для указания IP и портов (проксирования/исключения из проксирования)
 - Возможность загружать компоненты XKeen через [Self-Hosted прокси](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#self-hosted-прокси-для-загрузки-компонентов) при недоступности GitHub (переменные `gh_proxy(1|2)` в файле `01_info_variable.sh`)
-- Возможность отключить резервное копирование XKeen при обновлении (переменная `backup` в файле `S99xkeen`)
+- Возможность отключить резервное копирование XKeen при обновлении (переменная `backup` в стартовом скрипте)
 - Возможность [OffLine установки](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#offline-установка) (параметр `-io`)
 - Возможность установки GeoIP базы [zkeenip.dat](https://github.com/jameszeroX/zkeen-ip)
 - Обновление [zkeen.dat](https://github.com/jameszeroX/zkeen-domains) и [zkeenip.dat](https://github.com/jameszeroX/zkeen-ip) по расписанию средствами XKeen

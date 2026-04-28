@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # нужен полный fetch для коммитов
+          fetch-depth: 0
 
       - name: Set up Git user
         run: |
@@ -40,17 +40,24 @@ jobs:
           chmod +x xkeen
           find . -type f -o -type l | sed 's|^\./||' | tar -czf "../output/xkeen.tar.gz" -T -
 
-      - name: Move archive to test folder in main
+      - name: Generate SHA256 checksum
+        run: |
+          cd output
+          sha256sum xkeen.tar.gz > xkeen.tar.gz.sha256
+          cat xkeen.tar.gz.sha256
+
+      - name: Move archive and checksum to test folder in main
         run: |
           mkdir -p test
           mv output/xkeen.tar.gz test/
+          mv output/xkeen.tar.gz.sha256 test/
 
       - name: Clean up temporary files
         run: |
           rm -rf scripts_for_build output
 
-      - name: Commit and push archive to test folder
+      - name: Commit and push archive and checksum to test folder
         run: |
-          git add test/xkeen.tar.gz
-          git commit -m "[github-actions] automated compiling build" || echo "No changes"
+          git add test/xkeen.tar.gz test/xkeen.tar.gz.sha256
+          git commit -m "[github-actions] automated compiling build (sha256: $(cat test/xkeen.tar.gz.sha256 | cut -d' ' -f1))" || echo "No changes"
           git push origin main
