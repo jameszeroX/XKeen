@@ -19,14 +19,15 @@ register_xkeen_list() {
     touch xkeen.list
 
     # Генерация списка файлов и директорий
-    find /opt/sbin/.xkeen -mindepth 1 | while read -r entry; do
+    find "$xkeen_dir" -mindepth 1 | while read -r entry; do
         echo "$entry" >> xkeen.list
     done
 
     # Добавление дополнительных путей
-    echo "/opt/sbin/xkeen" >> xkeen.list
-    echo "/opt/sbin/.xkeen" >> xkeen.list
+    echo "$install_dir/xkeen" >> xkeen.list
+    echo "$xkeen_dir" >> xkeen.list
     echo "$initd_file" >> xkeen.list
+    echo "$log_dir/xkeen-detached.log" >> xkeen.list
 }
 
 register_xkeen_status() {

@@ -64,7 +64,7 @@ choice_xray_core() {
             sed -i 's/name_client="mihomo"/name_client="xray"/' $initd_file
             add_chmod_init
             echo -e "  ${green}Выполнена${reset} смена ядра на ${yellow}Xray${reset}"
-            echo -e "  Настройте конфигурацию по пути '${yellow}$install_conf_dir/${reset}'"
+            echo -e "  Настройте конфигурацию по пути '${yellow}$xray_conf_dir/${reset}'"
             echo -e "  И запустите проксирование командой ${yellow}xkeen -start${reset}"
         else
             echo -e " Произошла ${red}ошибка${reset} при смене ядра проксирования"

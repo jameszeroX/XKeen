@@ -55,8 +55,9 @@ done
 if [ -n "$detach_eligible" ] && [ -z "$XKEEN_DETACHED" ] \
    && [ ! -t 0 ] && [ ! -t 1 ] && [ -z "$XKEEN_FOREGROUND" ]; then
     export XKEEN_DETACHED=1
-    [ -d /opt/var/log ] || mkdir -p /opt/var/log
-    log=/opt/var/log/xkeen-detached.log
+    log_dir="/opt/var/log"
+    [ -d "$log_dir" ] || mkdir -p "$log_dir"
+    log="$log_dir/xkeen-detached.log"
     {
         echo
         echo "=== $(date '+%F %T') $0 $* ==="
@@ -328,7 +329,7 @@ while [ $# -gt 0 ]; do
 
             if [ "$xray_installed" = "installed" ] || [ "$mihomo_installed" = "installed" ]; then
                 if grep -q 'name_client="xray"' "$initd_file"; then
-                    echo -e "  1. Настройте конфигурацию Xray по пути '${yellow}$install_conf_dir/${reset}'"
+                    echo -e "  1. Настройте конфигурацию Xray по пути '${yellow}$xray_conf_dir/${reset}'"
                     echo -e "  2. Запустите XKeen командой ${yellow}xkeen -start${reset}"
                     echo -e "  3. ${green}Enjoy!${reset}"
                     echo
@@ -351,7 +352,7 @@ while [ $# -gt 0 ]; do
                 elif grep -q 'name_client="mihomo"' "$initd_file"; then
                     echo -e "  Если хотите переключить XKeen на ядро ${yellow}Xray${reset}"
                     echo
-                    echo -e "  1. Настройте конфигурацию Xray по пути '${yellow}$install_conf_dir/${reset}'"
+                    echo -e "  1. Настройте конфигурацию Xray по пути '${yellow}$xray_conf_dir/${reset}'"
                     echo -e "  2. Переключите ядро проксирования командой ${yellow}xkeen -xray${reset}"
                     echo -e "  3. Запустите XKeen командой ${yellow}xkeen -start${reset}"
                     echo -e "  4. ${green}Enjoy!${reset}"
@@ -488,7 +489,7 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  Для использования ядра '${yellow}$Xray${reset}'"
             echo -e "  1. Поместите необходимые геофайлы в директорию '${yellow}$geo_dir/${reset}'"
-            echo -e "  2. Настройте конфигурацию Xray по пути '${yellow}$install_conf_dir/${reset}'"
+            echo -e "  2. Настройте конфигурацию Xray по пути '${yellow}$xray_conf_dir/${reset}'"
             echo -e "  3. Запустите XKeen командой ${yellow}xkeen -start${reset}"
             echo -e "  4. ${green}Enjoy!${reset}"
             echo

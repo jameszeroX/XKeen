@@ -9,52 +9,51 @@ italic="\033[3m"	# Курсив
 reset="\033[0m"		# Сброс цветов
 
 # -------------------------------------
-# Директории
+# Информация
 # -------------------------------------
-tmp_dir_global="/opt/tmp"		 # Временная директория общая
-tmp_dir="/opt/tmp/xkeen"		 # Временная директория XKeen
-xtmp_dir="/opt/tmp/xray"		 # Временная директория Xray
-mtmp_dir="/opt/tmp/mihomo"		 # Временная директория Mihomo
-xkeen_dir="/opt/sbin/.xkeen"		 # Директория скриптов XKeen
-xkeen_cfg="/opt/etc/xkeen"		 # Директория конфигурации XKeen
-ipset_cfg="$xkeen_cfg/ipset"		 # Директория IPSET
-xkeen_log_dir="/opt/var/log/xkeen"	 # Директория логов XKeen
-xray_log_dir="/opt/var/log/xray"	 # Директория логов Xray
-initd_dir="/opt/etc/init.d"		 # Директория init.d
-pid_dir="/opt/var/run"			 # Директория pid файлов
-backups_dir="/opt/backups"		 # Директория бекапов
-install_dir="/opt/sbin"			 # Директория установки
-geo_dir="/opt/etc/xray/dat"		 # Директория для dat
-cron_dir="/opt/var/spool/cron/crontabs"	 # Директория планировщика
-cron_file="root"			 # Файл планировщика
-install_conf_dir="/opt/etc/xray/configs" # Директория конфигурации Xray
-mihomo_conf_dir="/opt/etc/mihomo"	 # Директория конфигурации Mihomo
-xray_conf_dir="$xkeen_dir/02_install/08_install_configs/02_configs_dir"
-xkeen_var_file="$xkeen_dir/01_info/01_info_variable.sh"
-register_dir="/opt/lib/opkg/info"
-status_file="/opt/lib/opkg/status"
-os_modules="/lib/modules/$(uname -r)"
-user_modules="/opt/lib/modules"
+current_datetime=$(date "+%d-%b-%y_%H-%M")
 xkeen_current_version="2.0"
 xkeen_build="Beta"
 build_timestamp=""
 
 # -------------------------------------
+# Директории
+# -------------------------------------
+tmp_dir="/opt/tmp"			 # Временная директория
+ktmp_dir="$tmp_dir/xkeen"		 # Временная директория XKeen
+xtmp_dir="$tmp_dir/xray"		 # Временная директория Xray
+mtmp_dir="$tmp_dir/mihomo"		 # Временная директория Mihomo
+install_dir="/opt/sbin"			 # Директория установки
+xkeen_dir="$install_dir/.xkeen"		 # Директория скриптов XKeen
+xkeen_cfg="/opt/etc/xkeen"		 # Директория конфигурации XKeen
+ipset_cfg="$xkeen_cfg/ipset"		 # Директория IPSET
+log_dir="/opt/var/log"			 # Директория логов
+xray_log_dir="$log_dir/xray"		 # Директория логов Xray
+initd_dir="/opt/etc/init.d"		 # Директория init.d
+backups_dir="/opt/backups"		 # Директория бекапов
+geo_dir="/opt/etc/xray/dat"		 # Директория для dat
+cron_dir="/opt/var/spool/cron/crontabs"	 # Директория планировщика
+mihomo_conf_dir="/opt/etc/mihomo"	 # Директория конфигурации Mihomo
+xray_conf_dir="/opt/etc/xray/configs"	 # Директория конфигурации Xray
+xray_conf_smpl="$xkeen_dir/02_install/08_install_configs/02_configs_dir"
+register_dir="/opt/lib/opkg/info"
+os_modules="/lib/modules/$(uname -r)"
+user_modules="/opt/lib/modules"
+
+# -------------------------------------
 # Файлы
 # -------------------------------------
+xkeen_var_file="$xkeen_dir/01_info/01_info_variable.sh"
 file_port_proxying="$xkeen_cfg/port_proxying.lst"
 file_port_exclude="$xkeen_cfg/port_exclude.lst"
 file_ip_exclude="$xkeen_cfg/ip_exclude.lst"
 ru_exclude_ipv4="$ipset_cfg/ru_exclude_ipv4.lst"
 ru_exclude_ipv6="$ipset_cfg/ru_exclude_ipv6.lst"
 xkeen_config="$xkeen_cfg/xkeen.json"
+status_file="/opt/lib/opkg/status"
 initd_file="$initd_dir/S05xkeen"
 initd_cron="$initd_dir/S05crond"
-
-# -------------------------------------
-# Время
-# -------------------------------------
-current_datetime=$(date "+%d-%b-%y_%H-%M")
+cron_file="root"
 
 # -------------------------------------
 # Ресурсы для проверки доступа в интернет
@@ -113,7 +112,6 @@ xray_error_log="$xray_log_dir/error.log"
 init_directories() {
     mkdir -p "$xray_log_dir" || { echo "Ошибка: Не удалось создать директорию $xray_log_dir"; exit 1; }
     mkdir -p "$initd_dir" || { echo "Ошибка: Не удалось создать директорию $initd_dir"; exit 1; }
-    mkdir -p "$pid_dir" || { echo "Ошибка: Не удалось создать директорию $pid_dir"; exit 1; }
     mkdir -p "$backups_dir" || { echo "Ошибка: Не удалось создать директорию $backups_dir"; exit 1; }
     mkdir -p "$install_dir" || { echo "Ошибка: Не удалось создать директорию $install_dir"; exit 1; }
     mkdir -p "$cron_dir" || { echo "Ошибка: Не удалось создать директорию $cron_dir"; exit 1; }

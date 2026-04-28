@@ -137,11 +137,11 @@ diagnostic() {
 
     [ -f "$xkeen_config" ] && log_file "$xkeen_config" "Файл xkeen.json"
 
-    if [ "${name_client}" = "xray" ] && [ -d "$install_conf_dir" ]; then
-        ls -p "$install_conf_dir" | log_block "Содержимое директории configs"
+    if [ "${name_client}" = "xray" ] && [ -d "$xray_conf_dir" ]; then
+        ls -p "$xray_conf_dir" | log_block "Содержимое директории configs"
 
         for conf in dns inbounds routing outbounds; do
-            file=$(ls "$install_conf_dir"/*${conf}*.json 2>/dev/null | head -n 1)
+            file=$(ls "$xray_conf_dir"/*${conf}*.json 2>/dev/null | head -n 1)
             if [ -n "$file" ]; then
                 write_header "Содержимое файла $file"
                 mask_sensitive_data < "$file" >> "$diagnostic"

@@ -4,7 +4,7 @@ backup_configs_xray() {
     mkdir -p "$backup_configs_dir"
 
     # Резервное копирование всех файлов конфигурации Xray
-    cp -r "$install_conf_dir"/* "$backup_configs_dir/"
+    cp -r "$xray_conf_dir"/* "$backup_configs_dir/"
 
     if [ $? -eq 0 ]; then
         echo -e "  Резервная копия конфигурации Xray создана: ${yellow}$backup_filename${reset}"
@@ -20,8 +20,8 @@ restore_backup_configs_xray() {
     if [ -n "$latest_backup" ]; then
         backup_path="$backups_dir/$latest_backup"
 		
-        rm -rf "$install_conf_dir"/*
-        cp -r "$backup_path"/* "$install_conf_dir/"
+        rm -rf "$xray_conf_dir"/*
+        cp -r "$backup_path"/* "$xray_conf_dir/"
 
         echo -e "  Конфигурация Xray ${green}успешно восстановлена${reset}"
     fi

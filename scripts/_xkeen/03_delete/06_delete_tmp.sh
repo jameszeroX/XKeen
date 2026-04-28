@@ -1,12 +1,12 @@
 # Удаление временных файлов и директорий
 delete_tmp() {
-    [ -d "$tmp_dir_global/xkeen" ] && rm -rf "$tmp_dir_global/xkeen"
+    [ -d "$ktmp_dir" ] && rm -rf "$ktmp_dir"
+    [ -d "$xtmp_dir" ] && rm -rf "$xtmp_dir"
+    [ -d "$mtmp_dir" ] && rm -rf "$mtmp_dir"
     [ -f "$cron_dir/root.tmp" ] && rm -f "$cron_dir/root.tmp"
     [ -f "$register_dir/new_entry.txt" ] && rm -f "$register_dir/new_entry.txt"
     [ -f "$install_dir/xray_bak" ] && rm -f "$install_dir/xray_bak"
     [ -f "$install_dir/mihomo_bak" ] && rm -f "$install_dir/mihomo_bak"
-    [ -d "$xtmp_dir" ] && rm -rf "$xtmp_dir"
-    [ -d "$mtmp_dir" ] && rm -rf "$mtmp_dir"
     [ -f "/tmp/xkrun" ] && rm -f "/tmp/xkrun"
     [ -f "/tmp/toff" ] && rm -f "/tmp/toff"
 

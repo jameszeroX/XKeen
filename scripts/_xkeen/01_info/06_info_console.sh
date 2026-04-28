@@ -27,8 +27,8 @@ logs_cpu_info_console() {
 logs_delete_configs_info_console() {
     local deleted_files=""
     
-    if [ -d "$install_conf_dir" ]; then
-        deleted_files=$(find "$install_conf_dir" -maxdepth 1 -name '*.json' -type f)
+    if [ -d "$xray_conf_dir" ]; then
+        deleted_files=$(find "$xray_conf_dir" -maxdepth 1 -name '*.json' -type f)
     fi
 
     if [ -z "$deleted_files" ]; then

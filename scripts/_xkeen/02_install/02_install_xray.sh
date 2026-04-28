@@ -42,11 +42,11 @@ install_xray() {
     rm -rf "${xtmp_dir}/xray"
 
     # Фикс для новых ядер xray
-    if [ -d "$install_conf_dir" ]; then
-        for file in "$install_conf_dir"/*.json; do
+    if [ -d "$xray_conf_dir" ]; then
+        for file in "$xray_conf_dir"/*.json; do
             [ -f "$file" ] || continue
             if grep -qE '"transport"\s*:' "$file"; then
-                mv "$file" "${file}.bad"
+                mv "$file" "${file}.obsolete"
             fi
         done
     fi
