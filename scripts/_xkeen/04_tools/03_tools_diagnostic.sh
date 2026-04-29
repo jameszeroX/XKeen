@@ -41,25 +41,22 @@ diagnostic() {
         echo >> "$diagnostic"; echo >> "$diagnostic"
     }
 
-    # Функция маскирования чувствительных данных в JSON-конфигах
-    mask_sensitive_data() {
+    # Функция маскировки чувствительных данных в конфигах Xray
+    mask_xray_sensitive_data() {
         sed -E \
-            -e 's/("id"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("password"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("publicKey"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("privateKey"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("shortId"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("secretKey"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("key"[[:space:]]*:[[:space:]]*")[^"]{16,}/\1***MASKED***/g' \
-            -e 's/("serverName"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("host"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("encryption"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("path"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("auth"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("user"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("pass"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("mldsa65Verify"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g' \
-            -e 's/("address"[[:space:]]*:[[:space:]]*")[^"]+/\1***MASKED***/g'
+            -e 's/("(id|uuid|password|user|pass|auth|secretKey|preSharedKey)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
+            -e 's/("(address|host|serverName|sni|path|email|token)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
+            -e 's/("(publicKey|privateKey|shortId|mldsa65Verify|encryption)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
+            -e 's/("key")[[:space:]]*:[[:space:]]*"?[^",[:space:]]{16,}"?(,?)/\1: "***MASKED***"\2/g'
+    }
+
+    # Функция маскировки чувствительных данных в конфигах Mihomo
+    mask_mihomo_sensitive_data() {
+        sed -E \
+            -e 's/^([[:space:]]*(- )?(password|username|uuid|pre-shared-key|private-key|private-key-passphrase):).*/\1 ***MASKED***/i' \
+            -e 's/^([[:space:]]*(- )?(server|servername|sni|host|address|query-server-name|external-controller):).*/\1 ***MASKED***/i' \
+            -e 's/^([[:space:]]*(- )?(url|path|certificate|config|public-key|short-id|client-id|auth-str):).*/\1 ***MASKED***/i' \
+            -e 's/^([[:space:]]*(- )?(obfs-password|obfs|encryption|token|secret|psk|shadow-tls-password):).*/\1 ***MASKED***/i'
     }
 
     # Функция логирования файлов
@@ -144,7 +141,17 @@ diagnostic() {
             file=$(ls "$xray_conf_dir"/*${conf}*.json 2>/dev/null | head -n 1)
             if [ -n "$file" ]; then
                 write_header "Содержимое файла $file"
-                mask_sensitive_data < "$file" >> "$diagnostic"
+                mask_xray_sensitive_data < "$file" >> "$diagnostic"
+                echo >> "$diagnostic"; echo >> "$diagnostic"
+            fi
+        done
+    fi
+
+    if [ "${name_client}" = "mihomo" ]; then
+        for conf_file in "$mihomo_conf_dir/config.yaml" "$mihomo_conf_dir/config.yml"; do
+            if [ -f "$conf_file" ]; then
+                write_header "Содержимое файла $conf_file"
+                mask_mihomo_sensitive_data < "$conf_file" >> "$diagnostic"
                 echo >> "$diagnostic"; echo >> "$diagnostic"
             fi
         done
