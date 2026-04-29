@@ -126,8 +126,6 @@ download_xray() {
 
         printf "  ${yellow}Выполняется загрузка${reset} последней версии Xray\n"
 
-        dgst_direct_url="${xray_zip_url}/${VERSION_ARG}/${filename}.dgst"
-
         if curl --connect-timeout 10 $curl_timeout \
                -fL \
                -o "$xray_dist" \
@@ -136,12 +134,6 @@ download_xray() {
                 if head -c 100 "$xray_dist" 2>/dev/null | grep -iq "<!DOCTYPE html\|<html\|Error\|404\|Not Found"; then
                     rm -f "$xray_dist"
                     printf "  ${red}Ошибка${reset}: Получена HTML страница ошибки вместо файла\n"
-                    exit 1
-                fi
-                expected_sha256=$(fetch_xray_dgst_sha256 "$dgst_direct_url")
-                if ! verify_download_integrity "$xray_dist" "$expected_sha256"; then
-                    rm -f "$xray_dist"
-                    printf "  ${red}Ошибка${reset}: Проверка целостности не пройдена\n"
                     exit 1
                 fi
                 mv "$xray_dist" "$xtmp_dir/xray.$extension"
@@ -245,9 +237,6 @@ download_xray() {
 
         printf "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray\n"
 
-        # URL для .dgst файла — всегда напрямую с GitHub (не через прокси)
-        dgst_direct_url="${xray_zip_url}/${VERSION_ARG}/${filename}.dgst"
-
         # Загрузка Xray
         if curl --connect-timeout 10 $curl_timeout \
                -fL \
@@ -258,14 +247,6 @@ download_xray() {
                 if head -c 100 "$xray_dist" 2>/dev/null | grep -iq "<!DOCTYPE html\|<html\|Error\|404\|Not Found"; then
                     rm -f "$xray_dist"
                     printf "  ${red}Ошибка${reset}: Получена HTML страница ошибки вместо файла\n"
-                    continue
-                fi
-
-                # Проверка целостности через .dgst файл
-                expected_sha256=$(fetch_xray_dgst_sha256 "$dgst_direct_url")
-                if ! verify_download_integrity "$xray_dist" "$expected_sha256"; then
-                    rm -f "$xray_dist"
-                    printf "  ${red}Файл удалён${reset}. Попробуйте загрузить другую версию\n"
                     continue
                 fi
 
