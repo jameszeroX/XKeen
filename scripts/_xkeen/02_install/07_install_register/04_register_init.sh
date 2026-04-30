@@ -1101,12 +1101,101 @@ restart_script() {
 
 if pidof "$name_client" >/dev/null; then
 
+    # Аккумулируем правила в строки, применяем атомарно одним
+    # iptables-restore --noflush на (family, table) в _xkeen_apply.
+    # Сохраняем семантику старого ipt() для всех существующих helper'ов.
+    _xkeen_v4_nat_rules=""
+    _xkeen_v4_mangle_rules=""
+    _xkeen_v6_nat_rules=""
+    _xkeen_v6_mangle_rules=""
+
     ipt() {
-        if [ "$family" = "iptables" ] && [ "$iptables_supported" = "true" ]; then
-            iptables -w -t "$table" "$@"
-        elif [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" = "true" ]; then
-            ip6tables -w -t "$table" "$@"
+        [ "$family" = "iptables" ] && [ "$iptables_supported" != "true" ] && return 0
+        [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ] && return 0
+
+        case "$1" in
+            -C)
+                # Custom chain :xkeen всегда flush'ится в blob, PREROUTING -A
+                # дедуплицируется через -D + -A в одной транзакции - поэтому
+                # имитируем "правила нет" и даём caller-у выйти на ветку -A/-I.
+                return 1
+                ;;
+            -S|-L|-nL)
+                # Запросы пробрасываем в реальный iptables (нужны flush_xkeen_rules).
+                if [ "$family" = "iptables" ]; then
+                    iptables -w -t "$table" "$@"
+                else
+                    ip6tables -w -t "$table" "$@"
+                fi
+                return $?
+                ;;
+            -A|-I|-D)
+                _line=$*
+                case "${family}_${table}" in
+                    iptables_nat)     _xkeen_v4_nat_rules="${_xkeen_v4_nat_rules}${_line}
+" ;;
+                    iptables_mangle)  _xkeen_v4_mangle_rules="${_xkeen_v4_mangle_rules}${_line}
+" ;;
+                    ip6tables_nat)    _xkeen_v6_nat_rules="${_xkeen_v6_nat_rules}${_line}
+" ;;
+                    ip6tables_mangle) _xkeen_v6_mangle_rules="${_xkeen_v6_mangle_rules}${_line}
+" ;;
+                esac
+                return 0
+                ;;
+            *)
+                # Прочие операции (-F, -X) - в реальный iptables.
+                if [ "$family" = "iptables" ]; then
+                    iptables -w -t "$table" "$@"
+                else
+                    ip6tables -w -t "$table" "$@"
+                fi
+                return $?
+                ;;
+        esac
+    }
+
+    # Применяет аккумулированные правила одной таблицы атомарно через
+    # iptables-restore --noflush. Custom chain $name_chain flush'ится
+    # объявлением ":$name_chain -" перед добавлением новых правил.
+    _xkeen_apply_table() {
+        _family="$1"
+        _table="$2"
+        _rules_var="$3"
+
+        eval "_rules=\${$_rules_var}"
+        [ -z "$_rules" ] && return 0
+
+        # Удаляем устаревшие xkeen-tagged правила из built-in/system chain'ов
+        # (PREROUTING, OUTPUT, _NDM_HOTSPOT_DNSREDIR), правила из самой $name_chain
+        # игнорируются - там ":chain -" в blob их сам flush'ит.
+        if [ "$_family" = "iptables" ] && [ "$iptables_supported" = "true" ]; then
+            _deletes=$(iptables-save -t "$_table" 2>/dev/null | grep -E -- "$comment_tag" | grep -vE "^-A ${name_chain}( |\$)|^-A ${name_chain}_out( |\$)" | sed 's/^-A /-D /')
+        elif [ "$_family" = "ip6tables" ] && [ "$ip6tables_supported" = "true" ]; then
+            _deletes=$(ip6tables-save -t "$_table" 2>/dev/null | grep -E -- "$comment_tag" | grep -vE "^-A ${name_chain}( |\$)|^-A ${name_chain}_out( |\$)" | sed 's/^-A /-D /')
+        else
+            _deletes=""
         fi
+
+        {
+            printf '*%s\n' "$_table"
+            printf ':%s -\n' "$name_chain"
+            [ "$proxy_router" = "on" ] && printf ':%s_out -\n' "$name_chain"
+            [ -n "$_deletes" ] && printf '%s\n' "$_deletes"
+            printf '%s' "$_rules"
+            printf 'COMMIT\n'
+        } | if [ "$_family" = "iptables" ]; then
+            iptables-restore --noflush
+        else
+            ip6tables-restore --noflush
+        fi
+    }
+
+    _xkeen_apply() {
+        [ "$iptables_supported" = "true" ] && _xkeen_apply_table iptables nat _xkeen_v4_nat_rules
+        [ "$iptables_supported" = "true" ] && _xkeen_apply_table iptables mangle _xkeen_v4_mangle_rules
+        [ "$ip6tables_supported" = "true" ] && _xkeen_apply_table ip6tables nat _xkeen_v6_nat_rules
+        [ "$ip6tables_supported" = "true" ] && _xkeen_apply_table ip6tables mangle _xkeen_v6_mangle_rules
     }
 
     # Добавление правил-исключений
@@ -1161,10 +1250,9 @@ if pidof "$name_client" >/dev/null; then
         [ "$family" = "iptables" ] && [ "$iptables_supported" = "false" ] && return
         [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" = "false" ] && return
 
-        if ! "$family" -w -t "$table" -nL "$chain" >/dev/null 2>&1; then
-            "$family" -w -t "$table" -N "$chain" || exit 0
-
-            add_exclude_rules "$chain"
+        # Custom chain создаётся/flush'ится одной строкой ":$name_chain -" в blob,
+        # поэтому ни -nL guard, ни -N не нужны - всегда заполняем body.
+        add_exclude_rules "$chain"
 
             if [ "$table" = "$table_tproxy" ]; then
                 if [ "$mode_proxy" = "Hybrid" ]; then
@@ -1218,11 +1306,10 @@ if pidof "$name_client" >/dev/null; then
                 *) exit 0 ;;
             esac
 
-            if [ -n "$dscp_exclude" ]; then
-                for dscp in "$dscp_exclude"; do
-                    ipt -I "$chain" -m dscp --dscp "$dscp" $comment -j RETURN >/dev/null 2>&1
-                done
-            fi
+        if [ -n "$dscp_exclude" ]; then
+            for dscp in "$dscp_exclude"; do
+                ipt -I "$chain" -m dscp --dscp "$dscp" $comment -j RETURN >/dev/null 2>&1
+            done
         fi
     }
 
@@ -1340,7 +1427,9 @@ if pidof "$name_client" >/dev/null; then
             fi
 
             # Пользовательские политики из xkeen.json
-            echo "$user_policies" | while IFS='|' read -r pname pmark pmode pports; do
+            # Heredoc вместо echo|while - while должен исполниться в parent shell,
+            # чтобы аккумуляторы _xkeen_*_rules в ipt() модифицировались в нужном scope.
+            while IFS='|' read -r pname pmark pmode pports; do
                 [ -z "$pmark" ] && continue
 
                 pmark=$(echo "$pmark" | tr -d ' \r\n')
@@ -1357,7 +1446,9 @@ if pidof "$name_client" >/dev/null; then
                     set -- -m connmark --mark 0x"$pmark" -m conntrack ! --ctstate INVALID -p "$net" $comment -j "$name_chain"
                     ipt -C PREROUTING "$@" >/dev/null 2>&1 || ipt -A PREROUTING "$@" >/dev/null 2>&1
                 fi
-            done
+            done <<USER_POLICIES_EOF
+$user_policies
+USER_POLICIES_EOF
 
             # Политика xkeen (стандартная)
             if [ -n "$policy_mark" ]; then
@@ -1402,23 +1493,21 @@ if pidof "$name_client" >/dev/null; then
 
         out_chain="${name_chain}_out"
 
-        if ! "$family" -w -t "$table" -nL "$out_chain" >/dev/null 2>&1; then
-            "$family" -w -t "$table" -N "$out_chain" || return
+        # ":${name_chain}_out -" в blob создаст/flush'ит chain атомарно,
+        # body заполняется всегда.
+        orig_chain="$chain"
+        chain="$out_chain"
 
-            orig_chain="$chain"
-            chain="$out_chain"
+        ipt -A "$out_chain" -o lo $comment -j RETURN >/dev/null 2>&1
+        ipt -A "$out_chain" -m mark --mark 255 $comment -j RETURN >/dev/null 2>&1
 
-            ipt -A "$out_chain" -o lo $comment -j RETURN >/dev/null 2>&1
-            ipt -A "$out_chain" -m mark --mark 255 $comment -j RETURN >/dev/null 2>&1
+        add_exclude_rules "$out_chain"
 
-            add_exclude_rules "$out_chain"
+        add_ipset_exclude ext_exclude hash:ip
+        add_ipset_exclude geo_exclude hash:net
+        add_ipset_exclude user_exclude hash:net
 
-            add_ipset_exclude ext_exclude hash:ip
-            add_ipset_exclude geo_exclude hash:net
-            add_ipset_exclude user_exclude hash:net
-
-            chain="$orig_chain"
-        fi
+        chain="$orig_chain"
 
         for net in $networks; do
             if [ "$mode_proxy" = "Hybrid" ]; then
@@ -1506,6 +1595,10 @@ if pidof "$name_client" >/dev/null; then
 
         dns_redir "$family"
     done
+
+    # Атомарно применяем все аккумулированные правила одним
+    # iptables-restore --noflush per (family, table).
+    _xkeen_apply
 else
     [ -f "/tmp/xkeen_starting.lock" ] && exit 0
     touch "/tmp/xkeen_starting.lock"
