@@ -722,28 +722,47 @@ get_modules() {
 }
 
 # Получение transparent inbound'ов Xray
-get_xray_transparent_inbounds() {
-    for file in "$directory_xray_config"/*.json; do
-        [ -f "$file" ] || continue
+_invalidate_inbounds_cache() {
+    rm -f /tmp/xkeen-inbounds-cache
+}
 
-        strip_json_comments "$file" |
-        jq -r --arg file "$file" '
-            .inbounds[]? |
-            select(
-                (.protocol == "dokodemo-door" or .protocol == "tunnel") and
-                ((.settings.followRedirect? // false) == true)
-            ) |
-            (.streamSettings.sockopt.tproxy? // "") as $tproxy |
-            select($tproxy == "" or $tproxy == "redirect" or $tproxy == "tproxy") |
-            [
-                (if $tproxy == "tproxy" then "tproxy" else "redirect" end),
-                (.port // ""),
-                (.settings.network // ""),
-                (.tag // ""),
-                $file
-            ] | @tsv
-        ' 2>/dev/null
-    done
+get_xray_transparent_inbounds() {
+    cache_file="/tmp/xkeen-inbounds-cache"
+    cache_valid=0
+    if [ -f "$cache_file" ]; then
+        newer=$(find "$directory_xray_config" -maxdepth 1 -name '*.json' -newer "$cache_file" 2>/dev/null | head -n 1)
+        [ -z "$newer" ] && cache_valid=1
+    fi
+    if [ "$cache_valid" = "1" ]; then
+        cat "$cache_file"
+        return 0
+    fi
+    cache_tmp="${cache_file}.tmp.$$"
+    {
+        for file in "$directory_xray_config"/*.json; do
+            [ -f "$file" ] || continue
+
+            strip_json_comments "$file" |
+            jq -r --arg file "$file" '
+                .inbounds[]? |
+                select(
+                    (.protocol == "dokodemo-door" or .protocol == "tunnel") and
+                    ((.settings.followRedirect? // false) == true)
+                ) |
+                (.streamSettings.sockopt.tproxy? // "") as $tproxy |
+                select($tproxy == "" or $tproxy == "redirect" or $tproxy == "tproxy") |
+                [
+                    (if $tproxy == "tproxy" then "tproxy" else "redirect" end),
+                    (.port // ""),
+                    (.settings.network // ""),
+                    (.tag // ""),
+                    $file
+                ] | @tsv
+            ' 2>/dev/null
+        done
+    } > "$cache_tmp"
+    mv "$cache_tmp" "$cache_file"
+    cat "$cache_file"
 }
 
 get_xray_port_by_mode() {
@@ -1727,6 +1746,7 @@ info_health_binary() {
 proxy_start() {
     start_manual="$1"
     if [ "$start_manual" = "on" ] || [ "$start_auto" = "on" ]; then
+        _invalidate_inbounds_cache
         apply_ipv6_state
         get_ipver_support
         info_health_binary
