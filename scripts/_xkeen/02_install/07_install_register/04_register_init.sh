@@ -1832,9 +1832,12 @@ proxy_start() {
                 sleep 2
                 if proxy_status; then
                     [ "$mode_proxy" != "Other" ] && configure_firewall
-                    [ "$iptables_supported" = "true" ] && [ -f "$ru_exclude_ipv4" ] && load_ipset geo_exclude "$ru_exclude_ipv4" inet
-                    [ "$ip6tables_supported" = "true" ] && [ -f "$ru_exclude_ipv6" ] && load_ipset geo_exclude6 "$ru_exclude_ipv6" inet6
-                    load_user_ipset
+                    _pids=""
+                    [ "$iptables_supported" = "true" ] && [ -f "$ru_exclude_ipv4" ] && { load_ipset geo_exclude "$ru_exclude_ipv4" inet & _pids="$_pids $!"; }
+                    [ "$ip6tables_supported" = "true" ] && [ -f "$ru_exclude_ipv6" ] && { load_ipset geo_exclude6 "$ru_exclude_ipv6" inet6 & _pids="$_pids $!"; }
+                    load_user_ipset & _pids="$_pids $!"
+                    [ -n "$_pids" ] && wait $_pids
+                    unset _pids
                     echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${light_blue}${mode_proxy}${reset}"
                     if [ -n "$api_policy_json" ]; then
                         if echo "$api_policy_json" | jq --arg policy "$name_policy" -e 'any(.[]; .description | ascii_downcase == $policy)' > /dev/null; then
