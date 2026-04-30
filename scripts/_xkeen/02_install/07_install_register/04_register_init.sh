@@ -1829,7 +1829,13 @@ proxy_start() {
                         ;;
                     *) log_error_terminal "Неизвестный прокси-клиент: ${yellow}$name_client${reset}" ;;
                 esac
-                sleep 2
+                _probe_attempt=0
+                while [ "$_probe_attempt" -lt 60 ]; do
+                    proxy_status && break
+                    _probe_attempt=$((_probe_attempt + 1))
+                    usleep 50000
+                done
+                unset _probe_attempt
                 if proxy_status; then
                     [ "$mode_proxy" != "Other" ] && configure_firewall
                     [ "$iptables_supported" = "true" ] && [ -f "$ru_exclude_ipv4" ] && load_ipset geo_exclude "$ru_exclude_ipv4" inet
