@@ -1884,10 +1884,16 @@ proxy_stop() {
         while [ "$attempt" -le "$start_attempts" ]; do
             clean_firewall
             killall -q "$name_client" 2>/dev/null
-            sleep 1
+            _stop_attempt=0
+            while [ "$_stop_attempt" -lt 30 ]; do
+                pidof "$name_client" >/dev/null 2>&1 || break
+                _stop_attempt=$((_stop_attempt + 1))
+                usleep 50000
+            done
+            unset _stop_attempt
             if pidof "$name_client" >/dev/null 2>&1; then
-                sleep 2
                 killall -q -9 "$name_client" 2>/dev/null
+                usleep 200000
             fi
             if ! proxy_status; then
                 echo -e "  Прокси-клиент ${red}остановлен${reset}"
