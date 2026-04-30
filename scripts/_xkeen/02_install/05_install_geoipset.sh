@@ -106,15 +106,24 @@ install_geoipset() {
         fi
     fi
 
+    local do_v4=0 do_v6=0
     if ip -4 addr show 2>/dev/null | grep -q "inet " && command -v iptables >/dev/null 2>&1; then
-        [ "$action" != "init" ] && [ ! -f "$ru_exclude_ipv4" ] && return 0
-        install_geoipset_lst "$geoipv4_url" "$ru_exclude_ipv4" "IPv4 (IPSet)" "ipv4"
-        load_geoipset geo_exclude "$ru_exclude_ipv4" inet
+        if [ "$action" = "init" ] || [ -f "$ru_exclude_ipv4" ]; then
+            do_v4=1
+        fi
+    fi
+    if ip -6 addr show 2>/dev/null | grep -q "inet6 " && command -v ip6tables >/dev/null 2>&1; then
+        if [ "$action" = "init" ] || [ -f "$ru_exclude_ipv6" ]; then
+            do_v6=1
+        fi
     fi
 
-    if ip -6 addr show 2>/dev/null | grep -q "inet6 " && command -v ip6tables >/dev/null 2>&1; then
-        [ "$action" != "init" ] && [ ! -f "$ru_exclude_ipv6" ] && return 0
-        install_geoipset_lst "$geoipv6_url" "$ru_exclude_ipv6" "IPv6 (IPSet)" "ipv6"
-        load_geoipset geo_exclude6 "$ru_exclude_ipv6" inet6
-    fi
+    # Параллельная загрузка независимых списков
+    local _pids=""
+    [ "$do_v4" = "1" ] && { install_geoipset_lst "$geoipv4_url" "$ru_exclude_ipv4" "IPv4 (IPSet)" "ipv4" & _pids="$_pids $!"; }
+    [ "$do_v6" = "1" ] && { install_geoipset_lst "$geoipv6_url" "$ru_exclude_ipv6" "IPv6 (IPSet)" "ipv6" & _pids="$_pids $!"; }
+    [ -n "$_pids" ] && wait $_pids
+
+    [ "$do_v4" = "1" ] && load_geoipset geo_exclude "$ru_exclude_ipv4" inet
+    [ "$do_v6" = "1" ] && load_geoipset geo_exclude6 "$ru_exclude_ipv6" inet6
 }

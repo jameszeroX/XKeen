@@ -71,35 +71,43 @@ process_geo_file() {
 install_geosite() {
     mkdir -p "$geo_dir" || { echo "Ошибка: Не удалось создать директорию $geo_dir"; exit 1; }
 
-    # Установка GeoSite Re:filter
+    local zkeen_datfile=""
+    if [ "$install_zkeen_geosite" = "true" ] || [ "$update_zkeen_geosite" = "true" ]; then
+        zkeen_datfile="geosite_zkeen.dat"
+        if [ -L "$geo_dir/geosite_zkeen.dat" ]; then
+            zkeen_datfile="zkeen.dat"
+        elif [ -L "$geo_dir/zkeen.dat" ]; then
+            zkeen_datfile="geosite_zkeen.dat"
+        elif [ -f "$geo_dir/zkeen.dat" ] && ! [ -f "$geo_dir/geosite_zkeen.dat" ]; then
+            zkeen_datfile="zkeen.dat"
+        fi
+    fi
+
+    # Параллельная загрузка независимых геофайлов
+    local _pids=""
     if [ "$install_refilter_geosite" = "true" ] || [ "$update_refilter_geosite" = "true" ]; then
         process_geo_file "$refilter_url" "geosite_refilter.dat" \
-            "GeoSite Re:filter" "$update_refilter_geosite"
+            "GeoSite Re:filter" "$update_refilter_geosite" &
+        _pids="$_pids $!"
     fi
 
-    # Установка GeoSite V2Fly
     if [ "$install_v2fly_geosite" = "true" ] || [ "$update_v2fly_geosite" = "true" ]; then
         process_geo_file "$v2fly_url" "geosite_v2fly.dat" \
-            "GeoSite V2Fly" "$update_v2fly_geosite"
+            "GeoSite V2Fly" "$update_v2fly_geosite" &
+        _pids="$_pids $!"
     fi
 
-    # Установка GeoSite ZKeen
-    if [ "$install_zkeen_geosite" = "true" ] || [ "$update_zkeen_geosite" = "true" ]; then
-        local datfile="geosite_zkeen.dat"
+    if [ -n "$zkeen_datfile" ]; then
+        process_geo_file "$zkeen_url" "$zkeen_datfile" \
+            "GeoSite ZKeen" "$update_zkeen_geosite" &
+        _pids="$_pids $!"
+    fi
 
-        if [ -L "$geo_dir/geosite_zkeen.dat" ]; then
-            datfile="zkeen.dat"
-        elif [ -L "$geo_dir/zkeen.dat" ]; then
-            datfile="geosite_zkeen.dat"
-        elif [ -f "$geo_dir/zkeen.dat" ] && ! [ -f "$geo_dir/geosite_zkeen.dat" ]; then
-            datfile="zkeen.dat"
-        fi
+    [ -n "$_pids" ] && wait $_pids
 
-        process_geo_file "$zkeen_url" "$datfile" \
-            "GeoSite ZKeen" "$update_zkeen_geosite"
-
-        # Создание симлинков для совместимости
-        if [ "$datfile" = "geosite_zkeen.dat" ]; then
+    # Симлинки zkeen после успешной загрузки
+    if [ -n "$zkeen_datfile" ]; then
+        if [ "$zkeen_datfile" = "geosite_zkeen.dat" ]; then
             rm -f "$geo_dir/zkeen.dat"
             ln -sf "$geo_dir/geosite_zkeen.dat" "$geo_dir/zkeen.dat"
         else
@@ -113,35 +121,43 @@ install_geosite() {
 install_geoip() {
     mkdir -p "$geo_dir" || { echo "Ошибка: Не удалось создать директорию $geo_dir"; exit 1; }
 
-    # Установка GeoIP Re:filter
+    local zkeenip_datfile=""
+    if [ "$install_zkeenip_geoip" = "true" ] || [ "$update_zkeenip_geoip" = "true" ]; then
+        zkeenip_datfile="geoip_zkeenip.dat"
+        if [ -L "$geo_dir/geoip_zkeenip.dat" ]; then
+            zkeenip_datfile="zkeenip.dat"
+        elif [ -L "$geo_dir/zkeenip.dat" ]; then
+            zkeenip_datfile="geoip_zkeenip.dat"
+        elif [ -f "$geo_dir/zkeenip.dat" ] && ! [ -f "$geo_dir/geoip_zkeenip.dat" ]; then
+            zkeenip_datfile="zkeenip.dat"
+        fi
+    fi
+
+    # Параллельная загрузка независимых геофайлов
+    local _pids=""
     if [ "$install_refilter_geoip" = "true" ] || [ "$update_refilter_geoip" = "true" ]; then
         process_geo_file "$refilterip_url" "geoip_refilter.dat" \
-            "GeoIP Re:filter" "$update_refilter_geoip"
+            "GeoIP Re:filter" "$update_refilter_geoip" &
+        _pids="$_pids $!"
     fi
 
-    # Установка GeoIP V2Fly
     if [ "$install_v2fly_geoip" = "true" ] || [ "$update_v2fly_geoip" = "true" ]; then
         process_geo_file "$v2flyip_url" "geoip_v2fly.dat" \
-            "GeoIP V2Fly" "$update_v2fly_geoip"
+            "GeoIP V2Fly" "$update_v2fly_geoip" &
+        _pids="$_pids $!"
     fi
 
-    # Установка GeoIP ZKeenIP
-    if [ "$install_zkeenip_geoip" = "true" ] || [ "$update_zkeenip_geoip" = "true" ]; then
-        local datfile="geoip_zkeenip.dat"
+    if [ -n "$zkeenip_datfile" ]; then
+        process_geo_file "$zkeenip_url" "$zkeenip_datfile" \
+            "GeoIP ZKeenIP" "$update_zkeenip_geoip" &
+        _pids="$_pids $!"
+    fi
 
-        if [ -L "$geo_dir/geoip_zkeenip.dat" ]; then
-            datfile="zkeenip.dat"
-        elif [ -L "$geo_dir/zkeenip.dat" ]; then
-            datfile="geoip_zkeenip.dat"
-        elif [ -f "$geo_dir/zkeenip.dat" ] && ! [ -f "$geo_dir/geoip_zkeenip.dat" ]; then
-            datfile="zkeenip.dat"
-        fi
+    [ -n "$_pids" ] && wait $_pids
 
-        process_geo_file "$zkeenip_url" "$datfile" \
-            "GeoIP ZKeenIP" "$update_zkeenip_geoip"
-
-        # Создание симлинков для совместимости
-        if [ "$datfile" = "geoip_zkeenip.dat" ]; then
+    # Симлинки zkeenip после успешной загрузки
+    if [ -n "$zkeenip_datfile" ]; then
+        if [ "$zkeenip_datfile" = "geoip_zkeenip.dat" ]; then
             rm -f "$geo_dir/zkeenip.dat"
             ln -sf "$geo_dir/geoip_zkeenip.dat" "$geo_dir/zkeenip.dat"
         else
