@@ -121,12 +121,12 @@ diagnostic() {
     curl -kfsS "localhost:79/rci/show/version" | jq -r '.title, .model, .region' | log_block "Данные из localhost:79/rci/show/version"
 
     {
-        if [ "${name_client}" = "xray" ]; then xray -version; else mihomo -v; fi
+        if [ "${name_client}" = "xray" ]; then xray version; else mihomo -v; fi
         echo
-        echo "Разрешено файловых дескрипторов:"
+        echo "Открыто файловых дескрипторов:"
+        ls "/proc/$(pidof ${name_client})/fd" | wc -l
+        echo "Лимит файловых дескрипторов:"
         grep 'Max open files' "/proc/$(pidof ${name_client})/limits" | awk '{print $4}'
-        echo "Использовано файловых дескрипторов:"
-        ls -l "/proc/$(pidof ${name_client})/fd" | wc -l
     } | log_block "Версия $name_client и файловые дескрипторы"
 
     echo "Версия XKeen $xkeen_current_version $xkeen_build (время сборки: $build_timestamp)" | log_block "Версия XKeen"

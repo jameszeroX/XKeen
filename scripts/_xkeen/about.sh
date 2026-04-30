@@ -195,6 +195,7 @@ help_xkeen() {
         echo -e "	-auto	${italic}	Включить | Отключить автозапуск прокси-клиента${reset}"
         echo -e "	-d	${italic}	Установить задержку автозапуска прокси-клиента${reset}"
         echo -e "	-fd	${italic}	Включить | Отключить контроль файловых дескрипторов прокси-клиента${reset}"
+        echo -e "	-cfd	${italic}	Проверить количество файловых дескрипторов открытых прокси-клиентом${reset}"
         echo -e "	-diag	${italic}	Выполнить диагностику${reset}"
         echo -e "	-channel${italic}	Переключить канал получения обновлений XKeen (Stable/Dev версия)${reset}"
         echo -e "	-xray	${italic}	Переключить XKeen на ядро Xray${reset}"

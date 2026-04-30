@@ -194,6 +194,27 @@ choice_remove() {
     fi
 }
 
+check_file_descriptors() {
+    pid=""
+    if pid=$(pidof xray | awk '{print $1}') && [ -n "$pid" ]; then
+        name_client="xray"
+    elif pid=$(pidof mihomo | awk '{print $1}') && [ -n "$pid" ]; then
+        name_client="mihomo"
+    else
+        echo -e "\n  Команда работает только при работающем ${yellow}XKeen${reset}"
+        return 1
+    fi
+
+    fd_count=$(ls /proc/"$pid"/fd | wc -l)
+
+    maxfd=$(grep 'Max open files' "/proc/$pid/limits" | awk '{print $4}')
+
+    echo -e "\n  Прокси-клиент ${light_blue}$name_client${reset} открыл файловых дескрипторов - ${green}$fd_count${reset}"
+    echo -e "  Лимит для вашего роутера - ${green}$maxfd${reset}"
+    echo -e "\n  При высоких значениях открытых файловых дескрипторов,"
+    echo -e "  можете включить их контроль командой ${yellow}xkeen -fd${reset}"
+}
+
 warn_proxy_dns() {
     echo
     echo -e "  ${red}Внимание!${reset} Значение данного параметра без соответствующих настроек прокси-клиента ${green}игнорируется${reset}"

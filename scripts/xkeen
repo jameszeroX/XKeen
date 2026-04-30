@@ -1290,6 +1290,14 @@ while [ $# -gt 0 ]; do
         ;;
 
 
+        -cfd)    # Проверка количества открытых файловых дескрипторов
+            action=$(get_state_arg "$2")
+            [ -n "$action" ] && shift
+            smart_clear
+            check_file_descriptors
+        ;;
+
+
         -ap)    # Добавить порт проксирования
             shift
             add_ports_donor "$*"
