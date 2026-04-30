@@ -199,13 +199,8 @@ download_mihomo() {
                 if [ -s "$yq_dist" ]; then
                     mv "$yq_dist" "$install_dir/yq"
                     chmod +x "$install_dir/yq"
-                    if "$install_dir/yq" -V >/dev/null 2>&1; then
-                        yq_available="true"
-                        printf "  Yq ${green}успешно загружен и установлен${reset}\n"
-                    else
-                        rm -f "$install_dir/yq"
-                        printf "  ${red}Ошибка${reset}: Загруженный Yq не запускается на этой архитектуре (возможно, регрессия upstream — см. ${yellow}$yq_workaround_issue_url${reset})\n"
-                    fi
+                    yq_available="true"
+                    printf "  Yq ${green}успешно загружен и установлен${reset}\n"
                 else
                     rm -f "$yq_dist"
                     printf "  ${red}Ошибка${reset}: Загруженный файл Yq поврежден\n"
@@ -222,12 +217,8 @@ download_mihomo() {
 
         if [ "$yq_available" != "true" ] && [ -x "$install_dir/yq" ]; then
             rm -f "$yq_dist"
-            if "$install_dir/yq" -V >/dev/null 2>&1; then
-                yq_available="true"
-                printf "  ${yellow}Используется${reset} уже установленный Yq\n"
-            else
-                printf "  ${red}Ошибка${reset}: Уже установленный Yq не запускается (возможно, несовместим с архитектурой — см. ${yellow}$yq_workaround_issue_url${reset})\n"
-            fi
+            yq_available="true"
+            printf "  ${yellow}Используется${reset} уже установленный Yq\n"
         fi
 
         if [ "$yq_available" != "true" ]; then

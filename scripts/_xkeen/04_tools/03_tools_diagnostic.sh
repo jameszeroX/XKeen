@@ -45,18 +45,17 @@ diagnostic() {
     mask_xray_sensitive_data() {
         sed -E \
             -e 's/("(id|uuid|password|user|pass|auth|secretKey|preSharedKey)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
-            -e 's/("(address|host|serverName|sni|path|email|token)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
-            -e 's/("(publicKey|privateKey|shortId|mldsa65Verify|encryption)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
-            -e 's/("key")[[:space:]]*:[[:space:]]*"?[^",[:space:]]{16,}"?(,?)/\1: "***MASKED***"\2/g'
+            -e 's/("(address|host|serverName|sni|path|token|spiderX)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
+            -e 's/("(publicKey|privateKey|shortId|mldsa65Verify|encryption)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g'
     }
 
     # Функция маскировки чувствительных данных в конфигах Mihomo
     mask_mihomo_sensitive_data() {
         sed -E \
             -e 's/^([[:space:]]*(- )?(password|username|uuid|pre-shared-key|private-key|private-key-passphrase):).*/\1 ***MASKED***/i' \
-            -e 's/^([[:space:]]*(- )?(server|servername|sni|host|address|query-server-name|external-controller):).*/\1 ***MASKED***/i' \
+            -e 's/^([[:space:]]*(- )?(server|servername|sni|host|query-server-name|external-controller):).*/\1 ***MASKED***/i' \
             -e 's/^([[:space:]]*(- )?(url|path|certificate|config|public-key|short-id|client-id|auth-str):).*/\1 ***MASKED***/i' \
-            -e 's/^([[:space:]]*(- )?(obfs-password|obfs|encryption|token|secret|psk|shadow-tls-password):).*/\1 ***MASKED***/i'
+            -e 's/^([[:space:]]*(- )?(obfs-password|encryption|token|secret|psk):).*/\1 ***MASKED***/i'
     }
 
     # Функция логирования файлов
