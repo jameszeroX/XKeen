@@ -1547,7 +1547,13 @@ else
             "$name_client" >/dev/null 2>&1 &
         ;;
     esac
-    sleep 5
+    _probe=0
+    while [ "$_probe" -lt 60 ]; do
+        pidof "$name_client" >/dev/null 2>&1 && break
+        _probe=$((_probe + 1))
+        usleep 100000
+    done
+    unset _probe
     rm -f "/tmp/xkeen_starting.lock"
     if pidof "$name_client" >/dev/null; then
         restart_script "$@"
