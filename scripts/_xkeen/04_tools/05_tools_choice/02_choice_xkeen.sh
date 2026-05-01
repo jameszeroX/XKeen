@@ -210,7 +210,7 @@ check_file_descriptors() {
     maxfd=$(grep 'Max open files' "/proc/$pid/limits" | awk '{print $4}')
 
     echo -e "\n  Прокси-клиент ${light_blue}$name_client${reset} открыл файловых дескрипторов - ${green}$fd_count${reset}"
-    echo -e "  Лимит для вашего роутера - ${green}$maxfd${reset}"
+    echo -e "  Лимит файловых дескрипторов для вашего роутера  - ${green}$maxfd${reset}"
     echo -e "\n  При высоких значениях открытых файловых дескрипторов,"
     echo -e "  можете включить их контроль командой ${yellow}xkeen -fd${reset}"
 }
