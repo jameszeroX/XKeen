@@ -157,7 +157,6 @@ diagnostic() {
     fi
 
     echo
-    echo
     echo -e "  Диагностика ${green}выполнена${reset}"
     echo -e "  Отправьте файл '${yellow}$diagnostic${reset}' в телеграм-чат ${yellow}XKeen${reset}, подробно описав возникшую проблему"
     echo

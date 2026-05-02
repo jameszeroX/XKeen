@@ -1211,10 +1211,10 @@ if pidof "$name_client" >/dev/null; then
     }
 
     _xkeen_apply() {
-        [ "$iptables_supported" = "true" ] && _xkeen_apply_table iptables nat _xkeen_v4_nat_rules
-        [ "$iptables_supported" = "true" ] && _xkeen_apply_table iptables mangle _xkeen_v4_mangle_rules
-        [ "$ip6tables_supported" = "true" ] && _xkeen_apply_table ip6tables nat _xkeen_v6_nat_rules
-        [ "$ip6tables_supported" = "true" ] && _xkeen_apply_table ip6tables mangle _xkeen_v6_mangle_rules
+        [ "$iptables_supported" = "true" ] && _xkeen_apply_table iptables nat _xkeen_v4_nat_rules || true
+        [ "$iptables_supported" = "true" ] && _xkeen_apply_table iptables mangle _xkeen_v4_mangle_rules || true
+        [ "$ip6tables_supported" = "true" ] && _xkeen_apply_table ip6tables nat _xkeen_v6_nat_rules || true
+        [ "$ip6tables_supported" = "true" ] && _xkeen_apply_table ip6tables mangle _xkeen_v6_mangle_rules || true
     }
 
     # Добавление правил-исключений
@@ -1273,57 +1273,57 @@ if pidof "$name_client" >/dev/null; then
         # поэтому ни -nL guard, ни -N не нужны - всегда заполняем body.
         add_exclude_rules "$chain"
 
-            if [ "$table" = "$table_tproxy" ]; then
-                if [ "$mode_proxy" = "Hybrid" ]; then
-                    set -- -p udp -m conntrack --ctstate ESTABLISHED,RELATED $comment -j CONNMARK --restore-mark
-                else
-                    set -- -m conntrack --ctstate ESTABLISHED,RELATED $comment -j CONNMARK --restore-mark
-                fi
-                ipt -C "$chain" "$@" >/dev/null 2>&1 || ipt -I "$chain" 1 "$@" >/dev/null 2>&1
+        if [ "$table" = "$table_tproxy" ]; then
+            if [ "$mode_proxy" = "Hybrid" ]; then
+                set -- -p udp -m conntrack --ctstate ESTABLISHED,RELATED $comment -j CONNMARK --restore-mark
+            else
+                set -- -m conntrack --ctstate ESTABLISHED,RELATED $comment -j CONNMARK --restore-mark
             fi
+            ipt -C "$chain" "$@" >/dev/null 2>&1 || ipt -I "$chain" 1 "$@" >/dev/null 2>&1
+        fi
 
-            case "$mode_proxy" in
-                Hybrid)
-                    if [ "$table" = "$table_redirect" ]; then
-                        ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
-                        add_ipset_exclude ext_exclude hash:ip
-                        add_ipset_exclude geo_exclude hash:net
-                        add_ipset_exclude user_exclude hash:net
-                        ipt -A "$chain" -p tcp $comment -j REDIRECT --to-port "$port_redirect" >/dev/null 2>&1
-                    else
-                        ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
-                        add_ipset_exclude ext_exclude hash:ip
-                        add_ipset_exclude geo_exclude hash:net
-                        add_ipset_exclude user_exclude hash:net
-                        ipt -A "$chain" -p udp -m socket --transparent $comment -j MARK --set-mark "$table_mark" >/dev/null 2>&1
-                        ipt -A "$chain" -p udp -m mark ! --mark 0 $comment -j CONNMARK --save-mark >/dev/null 2>&1
-                        ipt -A "$chain" -p udp $comment -j TPROXY --on-ip "$proxy_ip" --on-port "$port_tproxy" --tproxy-mark "$table_mark" >/dev/null 2>&1
-                    fi
-                    ;;
-                TProxy)
-                    ipt -C "$chain" -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1 ||
-                    ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
-                    for net in $network_tproxy; do
-                        add_ipset_exclude ext_exclude hash:ip
-                        add_ipset_exclude geo_exclude hash:net
-                        add_ipset_exclude user_exclude hash:net
-                        ipt -A "$chain" -p "$net" -m socket --transparent $comment -j MARK --set-mark "$table_mark" >/dev/null 2>&1
-                        ipt -A "$chain" -p "$net" -m mark ! --mark 0 $comment -j CONNMARK --save-mark >/dev/null 2>&1
-                        ipt -A "$chain" -p "$net" $comment -j TPROXY --on-ip "$proxy_ip" --on-port "$port_tproxy" --tproxy-mark "$table_mark" >/dev/null 2>&1
-                    done
-                    ;;
-                Redirect)
-                    ipt -C "$chain" -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1 ||
+        case "$mode_proxy" in
+            Hybrid)
+                if [ "$table" = "$table_redirect" ]; then
                     ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
                     add_ipset_exclude ext_exclude hash:ip
                     add_ipset_exclude geo_exclude hash:net
                     add_ipset_exclude user_exclude hash:net
-                    for net in $network_redirect; do
-                        ipt -A "$chain" -p "$net" $comment -j REDIRECT --to-port "$port_redirect" >/dev/null 2>&1
-                    done
-                    ;;
-                *) exit 0 ;;
-            esac
+                    ipt -A "$chain" -p tcp $comment -j REDIRECT --to-port "$port_redirect" >/dev/null 2>&1
+                else
+                    ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
+                    add_ipset_exclude ext_exclude hash:ip
+                    add_ipset_exclude geo_exclude hash:net
+                    add_ipset_exclude user_exclude hash:net
+                    ipt -A "$chain" -p udp -m socket --transparent $comment -j MARK --set-mark "$table_mark" >/dev/null 2>&1
+                    ipt -A "$chain" -p udp -m mark ! --mark 0 $comment -j CONNMARK --save-mark >/dev/null 2>&1
+                    ipt -A "$chain" -p udp $comment -j TPROXY --on-ip "$proxy_ip" --on-port "$port_tproxy" --tproxy-mark "$table_mark" >/dev/null 2>&1
+                fi
+                ;;
+            TProxy)
+                ipt -C "$chain" -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1 ||
+                ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
+                for net in $network_tproxy; do
+                    add_ipset_exclude ext_exclude hash:ip
+                    add_ipset_exclude geo_exclude hash:net
+                    add_ipset_exclude user_exclude hash:net
+                    ipt -A "$chain" -p "$net" -m socket --transparent $comment -j MARK --set-mark "$table_mark" >/dev/null 2>&1
+                    ipt -A "$chain" -p "$net" -m mark ! --mark 0 $comment -j CONNMARK --save-mark >/dev/null 2>&1
+                    ipt -A "$chain" -p "$net" $comment -j TPROXY --on-ip "$proxy_ip" --on-port "$port_tproxy" --tproxy-mark "$table_mark" >/dev/null 2>&1
+                done
+                ;;
+            Redirect)
+                ipt -C "$chain" -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1 ||
+                ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
+                add_ipset_exclude ext_exclude hash:ip
+                add_ipset_exclude geo_exclude hash:net
+                add_ipset_exclude user_exclude hash:net
+                for net in $network_redirect; do
+                    ipt -A "$chain" -p "$net" $comment -j REDIRECT --to-port "$port_redirect" >/dev/null 2>&1
+                done
+                ;;
+            *) exit 0 ;;
+        esac
 
         if [ -n "$dscp_exclude" ]; then
             for dscp in "$dscp_exclude"; do
@@ -1585,6 +1585,10 @@ USER_POLICIES_EOF
         [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ] && [ -n "$port_donor" ] && port_donor="53,$port_donor"
     fi
     for family in iptables ip6tables; do
+
+        [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ] && continue
+        [ "$family" = "iptables" ] && [ "$iptables_supported" != "true" ] && continue
+
         if [ "$family" = "ip6tables" ]; then
             exclude_list="$val_exclude_ip6"
             proxy_ip="$ipv6_proxy"
