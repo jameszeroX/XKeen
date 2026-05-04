@@ -226,7 +226,9 @@ ${custom_details}
     fi
 }
 
-for cmd in jq curl grep awk sed ipset; do
+utils="jq curl grep awk sed ipset"
+[ "$name_client" = "mihomo" ] && utils="$utils yq"
+for cmd in $utils; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
          log_error_terminal "Не найдена необходимая утилита: ${yellow}$cmd${reset}"
     fi
@@ -1139,15 +1141,6 @@ if pidof "$name_client" >/dev/null; then
                 # имитируем "правила нет" и даём caller-у выйти на ветку -A/-I.
                 return 1
                 ;;
-            -S|-L|-nL)
-                # Запросы пробрасываем в реальный iptables (нужны flush_xkeen_rules).
-                if [ "$family" = "iptables" ]; then
-                    iptables -w -t "$table" "$@"
-                else
-                    ip6tables -w -t "$table" "$@"
-                fi
-                return $?
-                ;;
             -A|-I|-D)
                 _line=$*
                 case "${family}_${table}" in
@@ -1188,13 +1181,23 @@ if pidof "$name_client" >/dev/null; then
         # Удаляем устаревшие xkeen-tagged правила из built-in/system chain'ов
         # (PREROUTING, OUTPUT, _NDM_HOTSPOT_DNSREDIR), правила из самой $name_chain
         # игнорируются - там ":chain -" в blob их сам flush'ит.
-        if [ "$_family" = "iptables" ] && [ "$iptables_supported" = "true" ]; then
-            _deletes=$(iptables-save -t "$_table" 2>/dev/null | grep -E -- "$comment_tag" | grep -vE "^-A ${name_chain}( |\$)|^-A ${name_chain}_out( |\$)" | sed 's/^-A /-D /')
-        elif [ "$_family" = "ip6tables" ] && [ "$ip6tables_supported" = "true" ]; then
-            _deletes=$(ip6tables-save -t "$_table" 2>/dev/null | grep -E -- "$comment_tag" | grep -vE "^-A ${name_chain}( |\$)|^-A ${name_chain}_out( |\$)" | sed 's/^-A /-D /')
-        else
-            _deletes=""
-        fi
+        save_cmd=""
+        [ "$_family" = "iptables" ] && [ "$iptables_supported" = "true" ] && save_cmd="iptables-save"
+        [ "$_family" = "ip6tables" ] && [ "$ip6tables_supported" = "true" ] && save_cmd="ip6tables-save"
+        [ -z "$save_cmd" ] && { _deletes=""; return; }
+
+        _deletes=$($save_cmd -t "$_table" 2>/dev/null | awk \
+            -v tag="$comment_tag" \
+            -v c1="$name_chain" \
+            -v c2="${name_chain}_out" '
+            index($0, tag) &&
+            $1 == "-A" &&
+            $2 != c1 &&
+            $2 != c2 {
+                sub(/^-A /, "-D ")
+                print
+            }
+        ')
 
         {
             printf '*%s\n' "$_table"
@@ -1326,7 +1329,7 @@ if pidof "$name_client" >/dev/null; then
         esac
 
         if [ -n "$dscp_exclude" ]; then
-            for dscp in "$dscp_exclude"; do
+            for dscp in $dscp_exclude; do
                 ipt -I "$chain" -m dscp --dscp "$dscp" $comment -j RETURN >/dev/null 2>&1
             done
         fi
@@ -1383,12 +1386,6 @@ if pidof "$name_client" >/dev/null; then
         return 0
     }
 
-    flush_xkeen_rules() {
-        ipt -S PREROUTING 2>/dev/null | grep -E -- "$comment_tag" | sed 's/^-A /-D /' | while IFS= read -r _r; do
-            [ -n "$_r" ] && ipt $_r >/dev/null 2>&1
-        done
-    }
-
     # Создание множественных правил multiport
     add_multiport_rules() {
         family="$1"
@@ -1420,8 +1417,6 @@ if pidof "$name_client" >/dev/null; then
     add_prerouting() {
         family="$1"
         table="$2"
-
-        flush_xkeen_rules
 
         for net in $networks; do
             if [ "$mode_proxy" = "Hybrid" ]; then
