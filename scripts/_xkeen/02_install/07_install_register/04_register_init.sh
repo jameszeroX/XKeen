@@ -98,33 +98,13 @@ backup="on"
 aghfix="off"
 
 # Функции журналирования
-log_info_router() {
-    logger -p notice -t "$name_app" "$1"
-}
+log_info_router() { logger -p notice -t "$name_app" "$1"; }
+log_warning_router() { logger -p warning -t "$name_app" "$1"; }
+log_error_router() { logger -p error -t "$name_app" "$1"; }
 
-log_warning_router() {
-    logger -p warning -t "$name_app" "$1"
-}
-
-log_error_router() {
-    logger -p error -t "$name_app" "$1"
-}
-
-log_info_terminal() {
-    echo
-    echo -e "${green}Информация${reset}: $1" >&2
-}
-
-log_warning_terminal() {
-    echo
-    echo -e "${yellow}Предупреждение${reset}: $1" >&2
-}
-
-log_error_terminal() {
-    echo
-    echo -e "${red}Ошибка${reset}: $1" >&2
-    exit 1
-}
+log_info_terminal() { echo -e "\n${green}Информация${reset}: $1" >&2; }
+log_warning_terminal() { echo -e "\n${yellow}Предупреждение${reset}: $1" >&2; }
+log_error_terminal() { echo -e "\n${red}Ошибка${reset}: $1" >&2; exit 1; }
 
 print_policy_info() {
     found="$1"
@@ -229,14 +209,10 @@ ${custom_details}
 utils="jq curl grep awk sed ipset"
 [ "$name_client" = "mihomo" ] && utils="$utils yq"
 for cmd in $utils; do
-    if ! command -v "$cmd" >/dev/null 2>&1; then
-         log_error_terminal "Не найдена необходимая утилита: ${yellow}$cmd${reset}"
-    fi
+    command -v "$cmd" >/dev/null 2>&1 || log_error_terminal "Не найдена необходимая утилита: ${yellow}$cmd${reset}"
 done
 
-log_clean() {
-    [ "$name_client" = "xray" ] && : > "$log_access" && : > "$log_error"
-}
+log_clean() { [ "$name_client" = "xray" ] && : > "$log_access" && : > "$log_error"; }
 
 api_cache_init() {
     api_policy_json=$(curl -kfsS "${url_server}/${url_policy}" 2>/dev/null)
@@ -244,15 +220,9 @@ api_cache_init() {
     api_static_json=$(curl -kfsS "${url_server}/${url_redirect_port}" 2>/dev/null)
 }
 
-refresh_port_cache() {
-    api_port_json=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null)
-}
+refresh_port_cache() { api_port_json=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null); }
 
-json_get_ports() {
-    if [ -n "$api_port_json" ]; then
-        printf '%s' "$api_port_json" | jq -r '.port, (.ssl.port // empty)' 2>/dev/null
-    fi
-}
+json_get_ports() { [ -n "$api_port_json" ] && printf '%s' "$api_port_json" | jq -r '.port, (.ssl.port // empty)' 2>/dev/null; }
 
 # Получение портов Keenetic
 get_keenetic_port() {
@@ -301,10 +271,7 @@ apply_ipv6_state() {
 
     ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::" || return 0
 
-    if ! wait_for_webui; then
-        log_error_router "Веб-интерфейс роутера недоступен"
-        return 1
-    fi
+    wait_for_webui || { log_error_router "Веб-интерфейс недоступен"; return 1; }
 
     sleep 5
 
@@ -573,13 +540,7 @@ validate_and_clean_ports() {
 # Функция обработки пользовательских портов
 process_user_ports() {
     raw_donor=$(read_ports_from_file "$file_port_proxying")
-
-    if [ -n "$raw_donor" ]; then
-        port_donor=$(validate_and_clean_ports "$raw_donor" "80,443")
-    else
-        port_donor=""
-    fi
-
+    [ -n "$raw_donor" ] && port_donor=$(validate_and_clean_ports "$raw_donor" "80,443") || port_donor=""
     port_exclude=$(validate_and_clean_ports "$(read_ports_from_file "$file_port_exclude")")
 
     if [ -n "$port_donor" ] && [ -n "$port_exclude" ]; then
@@ -598,9 +559,7 @@ process_custom_mark() {
     clean_mark=""
     for mark in $(echo "$custom_mark" | tr ',' ' '); do
         val="${mark#0x}"
-        if echo "$val" | grep -Eq '^[0-9a-fA-F]+$'; then
-            clean_mark="$clean_mark 0x$val"
-        fi
+        echo "$val" | grep -Eq '^[0-9a-fA-F]+$' && clean_mark="$clean_mark 0x$val"
     done
 
     custom_mark="${clean_mark# }"
@@ -616,29 +575,19 @@ check_dns_config() {
     if [ "$name_client" = "xray" ]; then
         for file in "$directory_xray_config"/*.json; do
             [ -f "$file" ] || continue
-            if strip_json_comments "$file" | jq -e '.dns.servers? != null' >/dev/null 2>&1; then
-                echo "true"
-                return
-            fi
+            strip_json_comments "$file" | jq -e '.dns.servers? != null' >/dev/null 2>&1 && { echo "true"; return; }
         done
     elif [ "$name_client" = "mihomo" ]; then
-        if [ -f "$mihomo_config" ] && yq -e '.dns.enable == true' "$mihomo_config" >/dev/null 2>&1; then
-            echo "true"
-            return
-        fi
+        [ -f "$mihomo_config" ] && yq -e '.dns.enable == true' "$mihomo_config" >/dev/null 2>&1 && { echo "true"; return; }
     fi
 
     echo "false"
-    return
 }
 file_dns=$(check_dns_config)
 
 # Кэш списка загруженных модулей; is_module_loaded читает его без форков
 _loaded_modules=""
-
-_refresh_modules_cache() {
-    _loaded_modules=" $(lsmod 2>/dev/null | awk '{print $1}' | tr '\n' ' ') "
-}
+_refresh_modules_cache() { _loaded_modules=" $(lsmod 2>/dev/null | awk '{print $1}' | tr '\n' ' ') "; }
 
 is_module_loaded() {
     case "$_loaded_modules" in
@@ -649,14 +598,10 @@ is_module_loaded() {
 
 # Загрузка модулей
 load_modules() {
-    module="$1"
-    name="${module%.ko}"
-
+    name="${1%.ko}"
     if ! is_module_loaded "$name"; then
         for dir in "$directory_os_modules" "$directory_user_modules"; do
-            if [ -f "$dir/$module" ]; then
-                insmod "$dir/$module" >/dev/null 2>&1 && return
-            fi
+            [ -f "$dir/$1" ] && insmod "$dir/$1" >/dev/null 2>&1 && return
         done
     fi
 }
@@ -724,9 +669,7 @@ get_modules() {
 }
 
 # Получение transparent inbound'ов Xray
-_invalidate_inbounds_cache() {
-    rm -f /tmp/xkeen-inbounds-cache
-}
+_invalidate_inbounds_cache() { rm -f /tmp/xkeen-inbounds-cache; }
 
 get_xray_transparent_inbounds() {
     cache_file="/tmp/xkeen-inbounds-cache"
@@ -986,47 +929,39 @@ check_policy_name_conflict() {
 
 # Получаем порты пользовательских политик
 resolve_user_policies() {
-    api_exclude_ports=""
     api_exclude_ports=$(get_api_exclude_ports)
 
-    get_user_policies | while IFS='|' read -r pname pports; do
-        if [ -n "$api_policy_json" ]; then
-            mark=$(echo "$api_policy_json" | jq -r --arg pname "$pname" '.[] | select(.description | ascii_downcase == ($pname | ascii_downcase)) | .mark' 2>/dev/null | head -n 1)
-        fi
+    # Выполняем сопоставление имен и меток внутри одного jq
+    # Вместо awk и tr внутри цикла
+    [ -f "$xkeen_config" ] && [ -n "$api_policy_json" ] || return
 
-        [ -z "$mark" ] && continue
+    printf '%s' "$api_policy_json" | jq -r --argjson user_cfg "$(cat "$xkeen_config")" '
+        ($user_cfg.xkeen.policy // []) as $up |
+        .[] | . as $api |
+        $up[] | select((.name | ascii_downcase) == ($api.description | ascii_downcase)) |
+        "\(.name)|\($api.mark)|\(.port // "")"
+    ' | while IFS='|' read -r pname mark pports; do
 
         if [ -z "$pports" ]; then
             # Порты не указаны -> режим "all" (все порты)
             if [ -n "$api_exclude_ports" ]; then
-                mode="exclude"
-                clean_ports="$api_exclude_ports"
+                mode="exclude"; clean_ports="$api_exclude_ports"
             else
-                mode="all"
-                clean_ports=""
+                mode="all"; clean_ports=""
             fi
         else
-            case "$pports" in
-                !*)
-                    mode="exclude"
-                    ports="${pports#!}"
 
-                    if [ -n "$api_exclude_ports" ]; then
-                        if [ -n "$ports" ]; then
-                            ports="$ports,$api_exclude_ports"
-                        else
-                            ports="$api_exclude_ports"
-                        fi
-                    fi
-                    ;;
-                *)
-                    mode="include"
-                    ports="$pports"
-                    ;;
+            case "$pports" in
+                !*) mode="exclude"; ports="${pports#!}"
+                    [ -n "$api_exclude_ports" ] && ports="${ports:+$ports,}$api_exclude_ports" ;;
+                *)  mode="include"; ports="$pports" ;;
             esac
 
             if [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ] && [ "$mode" = "include" ]; then
-                echo "$ports" | tr ',' '\n' | grep -q '^53$' || ports="53,$ports"
+                case ",$ports," in
+                    *,53,*) ;;
+                    *) ports="53,$ports" ;;
+                esac
             fi
 
             clean_ports=$(validate_and_clean_ports "$ports")
