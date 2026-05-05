@@ -77,7 +77,7 @@ mihomo_jsd_url="https://data.jsdelivr.com/v1/package/gh/MetaCubeX/mihomo"			# р
 mihomo_gz_url="https://github.com/MetaCubeX/mihomo/releases/download"				# url для загрузки Mihomo
 yq_upstream_dist_url="https://github.com/mikefarah/yq/releases/latest/download"			# url для загрузки оригинального Yq
 yq_workaround_dist_url="https://github.com/jameszeroX/yq/releases/latest/download"		# url для загрузки рабочего Yq
-gh_proxy1="https://ghfast.top"								        # 1 прокси для загрузок с GitHub
+gh_proxy1="https://ghproxy.it"								        # 1 прокси для загрузок с GitHub
 gh_proxy2="https://gh-proxy.com"								# 2 прокси для загрузок с GitHub
 
 yq_use_workaround="true"									# отключить после исправления issue 2609 (по желанию)
