@@ -997,6 +997,7 @@ configure_firewall() {
     cat > "$file_netfilter_hook" <<'EOL'
 #!/bin/sh
 # XKeen: Auto-generated file. DO NOT EDIT!
+[ -f /tmp/xkeen_ready ] || exit 0
 EOL
 
     # Securely inject variables into the script
@@ -1844,6 +1845,9 @@ proxy_start() {
         fi
         if proxy_status; then
             echo -e "  Прокси-клиент уже ${green}запущен${reset}"
+            # Marker до configure_firewall: тот завершается `sh proxy.sh`,
+            # gate в хуке читает /tmp/xkeen_ready.
+            touch "/tmp/xkeen_ready"
             [ "$mode_proxy" != "Other" ] && configure_firewall
             if [ "$start_manual" = "on" ]; then
                 log_error_terminal "Не удалось запустить ${yellow}$name_client${reset}, так как он уже запущен"
@@ -1891,6 +1895,8 @@ proxy_start() {
                 done
                 unset _probe_attempt
                 if proxy_status; then
+                    # См. alive-branch: marker до configure_firewall.
+                    touch "/tmp/xkeen_ready"
                     [ "$mode_proxy" != "Other" ] && configure_firewall
                     _pids=""
                     [ "$iptables_supported" = "true" ] && [ -f "$ru_exclude_ipv4" ] && { load_ipset geo_exclude "$ru_exclude_ipv4" inet & _pids="$_pids $!"; }
@@ -1929,8 +1935,33 @@ proxy_start() {
     fi
 }
 
+# Активная проба готовности окружения вместо sleep $start_delay.
+# Ждём ndmc, default route и insmod-ability xt_TPROXY (deps ndm
+# подгружает асинхронно уже после ndmc-ready). $start_delay сохранён
+# как safety cap (FAQ #12).
+wait_for_ready() {
+    _max=$(( ${start_delay:-60} * 2 ))
+    _attempt=0
+    _probe_ko="$directory_os_modules/xt_TPROXY.ko"
+    while [ "$_attempt" -lt "$_max" ]; do
+        if ndmc -c "show version" >/dev/null 2>&1 \
+           && ip route show default 2>/dev/null | grep -q '^default'; then
+            # .ko отсутствует (не TProxy/Hybrid), уже загружен, либо insmod удался
+            if [ ! -f "$_probe_ko" ] \
+               || grep -q '^xt_TPROXY ' /proc/modules 2>/dev/null \
+               || insmod "$_probe_ko" >/dev/null 2>&1; then
+                return 0
+            fi
+        fi
+        usleep 500000
+        _attempt=$((_attempt + 1))
+    done
+    return 0
+}
+
 # Остановка прокси-клиента
 proxy_stop() {
+    rm -f "/tmp/xkeen_ready"
     if ! proxy_status; then
         echo -e "  Прокси-клиент ${red}не запущен${reset}"
         cleanup_fd_monitor
@@ -1973,7 +2004,7 @@ case "$1" in
         if [ -z "$2" ]; then
             [ "$start_auto" != "on" ] && exit 0
             log_info_router "Подготовка к запуску прокси-клиента"
-            nohup sh -c "sleep $start_delay && $0 restart" >/dev/null 2>&1 &
+            nohup "$0" cold_start >/dev/null 2>&1 &
             touch "/tmp/xkeen_coldstart.lock"
             exit 0
         fi
@@ -1993,6 +2024,12 @@ case "$1" in
         fi
         ;;
     restart) proxy_stop; proxy_start "$2" ;;
+    cold_start)
+        # Re-spawn в чистый S05xkeen: sh-функции (wait_for_ready) не
+        # наследуются через nohup sh -c, поэтому пробу зовём отсюда.
+        wait_for_ready
+        proxy_start ""
+        ;;
     *) echo -e "  Команды: ${green}start${reset} | ${red}stop${reset} | ${yellow}restart${reset} | status" ;;
 esac
 
