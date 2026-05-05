@@ -73,7 +73,7 @@ test_github() {
             _status=$(curl --connect-timeout 10 $curl_timeout -s -L -r 0-0 -o /dev/null -w "%{http_code}" "$_url" 2>/dev/null)
         fi
         case "$_status" in
-            2[0-9][0-9]) return 0 ;;
+            2[0-9][0-9]|3[0-9][0-9]) return 0 ;;
             *) return 1 ;;
         esac
     }
