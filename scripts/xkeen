@@ -888,7 +888,7 @@ while [ $# -gt 0 ]; do
             echo -e "  Установить ${yellow}XKeen${reset} заново можно командами:"
             echo
             echo -e "  ${green}opkg update && opkg upgrade && opkg install curl tar && cd /tmp${reset}"
-            echo -e "  ${green}sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)"${reset}"
+            echo -e "  ${green}sh -c \"\$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)\"${reset}"
 
 
         ;;
@@ -1035,7 +1035,7 @@ while [ $# -gt 0 ]; do
             echo -e "  Установить ${yellow}XKeen${reset} заново можно командами:"
             echo
             echo -e "  ${green}opkg update && opkg upgrade && opkg install curl tar && cd /tmp${reset}"
-            echo -e "  ${green}sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)"${reset}"
+            echo -e "  ${green}sh -c \"\$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)\"${reset}"
         ;;
 
 

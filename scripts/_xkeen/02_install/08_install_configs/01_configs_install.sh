@@ -8,7 +8,7 @@ install_configs() {
         return 0
     fi
 
-    xray_files="xray_conf_smpl"/*.json
+    xray_files="$xray_conf_smpl"/*.json
     for file in $xray_files; do
         filename=$(basename "$file")
         cp "$file" "$xray_conf_dir/"

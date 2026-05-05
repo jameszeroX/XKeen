@@ -1061,6 +1061,7 @@ configure_firewall() {
 
     cat > "$file_netfilter_hook" <<'EOL'
 #!/bin/sh
+# XKeen: Auto-generated file. DO NOT EDIT!
 EOL
 
     # Securely inject variables into the script
@@ -1654,7 +1655,7 @@ else
     fi
 fi
 EOL
-
+    sed -i '1,2!{/^[[:space:]]*#/d; /^[[:space:]]*$/d}' "$file_netfilter_hook"
     chmod 700 "$file_netfilter_hook"
     sh "$file_netfilter_hook"
 }
