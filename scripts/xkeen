@@ -219,6 +219,7 @@ while [ $# -gt 0 ]; do
                 info_version_xray
                 delete_register_xray
 
+                echo
                 echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
                 register_xray_list
                 logs_register_xray_list_info_console

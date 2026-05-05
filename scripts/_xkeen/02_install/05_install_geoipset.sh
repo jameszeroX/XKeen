@@ -112,7 +112,7 @@ install_geoipset() {
             do_v4=1
         fi
     fi
-    if ip -6 addr show 2>/dev/null | grep -q "inet6 " && command -v ip6tables >/dev/null 2>&1; then
+    if ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::" && command -v ip6tables >/dev/null 2>&1; then
         if [ "$action" = "init" ] || [ -f "$ru_exclude_ipv6" ]; then
             do_v6=1
         fi
