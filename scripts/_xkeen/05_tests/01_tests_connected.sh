@@ -13,7 +13,7 @@ test_connection() {
 download_with_check() {
     url="$1"
     output_file="$2"
-    min_size="${3:-300000}"
+    min_size="${3:-50000}"
 
     eval curl $curl_extra --connect-timeout 10 $curl_timeout -s -L "$url" -o "$output_file" 2>/dev/null
 
@@ -66,36 +66,45 @@ test_github() {
 
     printf "  ${yellow}Проверка доступности${reset} GitHub. Подождите, пожалуйста...\n"
 
-    _gh_head_check() {
-        _url="$1"
-        _status=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout -s -L -I -o /dev/null -w "%{http_code}" "$_url" 2>/dev/null)
-        if [ "$_status" = "405" ]; then
-            _status=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout -s -L -r 0-0 -o /dev/null -w "%{http_code}" "$_url" 2>/dev/null)
-        fi
-        case "$_status" in
-            2[0-9][0-9]|3[0-9][0-9]) return 0 ;;
-            *) return 1 ;;
-        esac
+    _tmp1="/tmp/.xkeen_test_1.$$"
+    _tmp2="/tmp/.xkeen_test_2.$$"
+
+    _cleanup() {
+        rm -f "$_tmp1" "$_tmp2" 2>/dev/null
     }
 
-    if _gh_head_check "$zkeenip_url"; then
+    _check_pair_download() {
+        _prefix="$1"
+
+        download_with_check "${_prefix}${xkeen_tar_url}" "$_tmp1" &&
+        download_with_check "${_prefix}${xkeen_dev_url}" "$_tmp2"
+    }
+
+    # Прямая загрузка
+    if _check_pair_download ""; then
         use_direct="true"
+        _cleanup
         printf "  GitHub ${green}доступен${reset}. Продолжаем...\n"
         return 0
     fi
 
-    if _gh_head_check "${gh_proxy1}/${zkeenip_url}"; then
+    # Загрузка через Proxy 1
+    if _check_pair_download "${gh_proxy1}/"; then
         gh_proxy="$gh_proxy1"
+        _cleanup
         printf "  GitHub ${green}доступен через прокси${reset}. Продолжаем...\n"
         return 0
     fi
 
-    if _gh_head_check "${gh_proxy2}/${zkeenip_url}"; then
+    # Загрузка через Proxy 2
+    if _check_pair_download "${gh_proxy2}/"; then
         gh_proxy="$gh_proxy2"
+        _cleanup
         printf "  GitHub ${green}доступен через прокси${reset}. Продолжаем...\n"
         return 0
     fi
 
+    _cleanup
     printf "  ${red}Ошибка${reset}: GitHub недоступен\n"
     exit 1
 }
