@@ -75,23 +75,13 @@ test_github() {
 
     _check_pair_download() {
         _prefix="$1"
-
         download_with_check "${_prefix}${xkeen_tar_url}" "$_tmp1" &&
         download_with_check "${_prefix}${xkeen_dev_url}" "$_tmp2"
     }
 
-    # Прямая загрузка
-    if _check_pair_download ""; then
-        use_direct="true"
-        _cleanup
-        printf "  GitHub ${green}доступен${reset}. Продолжаем...\n"
-        return 0
-    fi
-
     # Загрузка через Proxy 1
     if _check_pair_download "${gh_proxy1}/"; then
         gh_proxy="$gh_proxy1"
-        _cleanup
         printf "  GitHub ${green}доступен через прокси${reset}. Продолжаем...\n"
         return 0
     fi
@@ -99,8 +89,14 @@ test_github() {
     # Загрузка через Proxy 2
     if _check_pair_download "${gh_proxy2}/"; then
         gh_proxy="$gh_proxy2"
-        _cleanup
         printf "  GitHub ${green}доступен через прокси${reset}. Продолжаем...\n"
+        return 0
+    fi
+
+    # Прямая загрузка
+    if _check_pair_download ""; then
+        use_direct="true"
+        printf "  GitHub ${green}доступен${reset}. Продолжаем...\n"
         return 0
     fi
 
