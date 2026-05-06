@@ -48,15 +48,15 @@ get_release_var_file() {
 }
 
 download_xkeen_release() {
-    if curl -fLo "$archive_name" --connect-timeout 10 -m 180 "$url"; then
+    if curl -fLo "$archive_name" --connect-timeout 10 -m 15 "$url"; then
         return 0
     fi
 
-    if curl -fLo "$archive_name" --connect-timeout 10 -m 180 "https://gh-proxy.com/$url"; then
+    if curl -fLo "$archive_name" --connect-timeout 10 -m 15 "https://gh-proxy.com/$url"; then
         return 0
     fi
 
-    if curl -fLo "$archive_name" --connect-timeout 10 -m 180 "https://ghfast.top/$url"; then
+    if curl -fLo "$archive_name" --connect-timeout 10 -m 15 "https://ghproxy.it/$url"; then
         return 0
     fi
 
@@ -67,15 +67,15 @@ download_xkeen_release() {
 download_release_fix() {
     target_file="$1"
 
-    if curl -fLo "$target_file" --connect-timeout 10 -m 180 "$release_fix_url"; then
+    if curl -fLo "$target_file" --connect-timeout 10 -m 15 "$release_fix_url"; then
         return 0
     fi
 
-    if curl -fLo "$target_file" --connect-timeout 10 -m 180 "https://gh-proxy.com/$release_fix_url"; then
+    if curl -fLo "$target_file" --connect-timeout 10 -m 15 "https://gh-proxy.com/$release_fix_url"; then
         return 0
     fi
 
-    if curl -fLo "$target_file" --connect-timeout 10 -m 180 "https://ghfast.top/$release_fix_url"; then
+    if curl -fLo "$target_file" --connect-timeout 10 -m 15 "https://ghproxy.it/$release_fix_url"; then
         return 0
     fi
 
