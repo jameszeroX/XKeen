@@ -931,46 +931,51 @@ check_policy_name_conflict() {
 
 # Получаем порты пользовательских политик
 resolve_user_policies() {
-    api_exclude_ports=$(get_api_exclude_ports)
-
-    # Выполняем сопоставление имен и меток внутри одного jq
-    # Вместо awk и tr внутри цикла
     [ -f "$xkeen_config" ] && [ -n "$api_policy_json" ] || return
 
-    printf '%s' "$api_policy_json" | jq -r --argjson user_cfg "$(cat "$xkeen_config")" '
-        ($user_cfg.xkeen.policy // []) as $up |
-        .[] | . as $api |
-        $up[] | select((.name | ascii_downcase) == ($api.description | ascii_downcase)) |
-        "\(.name)|\($api.mark)|\(.port // "")"
-    ' | while IFS='|' read -r pname mark pports; do
+    api_exclude_ports=$(get_api_exclude_ports)
 
+    # Получаем сопоставленные политики одним вызовом jq
+    matched_policies=$(printf '%s' "$api_policy_json" | jq -r --argjson user_cfg "$(cat "$xkeen_config")" '
+        ($user_cfg.xkeen.policy // []) as $up |
+        .[] as $api |
+        $up[] | 
+        select(
+            (.name | ascii_downcase) == 
+            ($api.description | ascii_downcase)
+        ) |
+        "\(.name)|\($api.mark)|\(.port // "")"
+    ' 2>/dev/null)
+
+    [ -z "$matched_policies" ] && return
+
+    # Обрабатываем каждую политику в одном цикле
+    echo "$matched_policies" | while IFS='|' read -r pname mark pports; do
         if [ -z "$pports" ]; then
             # Порты не указаны -> режим "all" (все порты)
             if [ -n "$api_exclude_ports" ]; then
-                mode="exclude"; clean_ports="$api_exclude_ports"
+                echo "${pname}|${mark}|exclude|${api_exclude_ports}"
             else
-                mode="all"; clean_ports=""
+                echo "${pname}|${mark}|all|"
             fi
         else
 
             case "$pports" in
                 !*) mode="exclude"; ports="${pports#!}"
                     [ -n "$api_exclude_ports" ] && ports="${ports:+$ports,}$api_exclude_ports" ;;
-                *)  mode="include"; ports="$pports" ;;
+                *) mode="include"; ports="$pports"
+                    if [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ]; then
+                        case ",$ports," in
+                            *,53,*) ;;
+                            *) ports="53,$ports" ;;
+                        esac
+                    fi
+                    ;;
             esac
 
-            if [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ] && [ "$mode" = "include" ]; then
-                case ",$ports," in
-                    *,53,*) ;;
-                    *) ports="53,$ports" ;;
-                esac
-            fi
-
             clean_ports=$(validate_and_clean_ports "$ports")
-            [ -z "$clean_ports" ] && continue
+            [ -n "$clean_ports" ] && echo "${pname}|${mark}|${mode}|${clean_ports}"
         fi
-
-        echo "${pname}|${mark}|${mode}|${clean_ports}"
     done
 }
 
@@ -1074,12 +1079,6 @@ if pidof "$name_client" >/dev/null; then
         [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ] && return 0
 
         case "$1" in
-            -C)
-                # Custom chain :xkeen всегда flush'ится в blob, PREROUTING -A
-                # дедуплицируется через -D + -A в одной транзакции - поэтому
-                # имитируем "правила нет" и даём caller-у выйти на ветку -A/-I.
-                return 1
-                ;;
             -A|-I|-D)
                 _line=$*
                 case "${family}_${table}" in
@@ -1198,7 +1197,6 @@ if pidof "$name_client" >/dev/null; then
 
         ipset create "$set_name" "$set_type" family "$ipset_family" -exist || return
 
-        ipt -C "$chain" -m set --match-set "$set_name" dst $comment -j RETURN >/dev/null 2>&1 ||
         ipt -I "$chain" 1 -m set --match-set "$set_name" dst $comment -j RETURN >/dev/null 2>&1
     }
 
@@ -1221,7 +1219,7 @@ if pidof "$name_client" >/dev/null; then
             else
                 set -- -m conntrack --ctstate ESTABLISHED,RELATED $comment -j CONNMARK --restore-mark
             fi
-            ipt -C "$chain" "$@" >/dev/null 2>&1 || ipt -I "$chain" 1 "$@" >/dev/null 2>&1
+            ipt -I "$chain" 1 "$@" >/dev/null 2>&1
         fi
 
         case "$mode_proxy" in
@@ -1243,7 +1241,6 @@ if pidof "$name_client" >/dev/null; then
                 fi
                 ;;
             TProxy)
-                ipt -C "$chain" -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1 ||
                 ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
                 for net in $network_tproxy; do
                     add_ipset_exclude ext_exclude hash:ip
@@ -1255,7 +1252,6 @@ if pidof "$name_client" >/dev/null; then
                 done
                 ;;
             Redirect)
-                ipt -C "$chain" -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1 ||
                 ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
                 add_ipset_exclude ext_exclude hash:ip
                 add_ipset_exclude geo_exclude hash:net
@@ -1347,7 +1343,7 @@ if pidof "$name_client" >/dev/null; then
             else
                 set -- -m conntrack ! --ctstate INVALID -p "$net" -m multiport --dports "$chunk" $comment -j "$target"
             fi
-            ipt -C PREROUTING "$@" >/dev/null 2>&1 || ipt -A PREROUTING "$@" >/dev/null 2>&1
+            ipt -A PREROUTING "$@" >/dev/null 2>&1
             i=$((i + 7))
         done
     }
@@ -1371,12 +1367,12 @@ if pidof "$name_client" >/dev/null; then
 
             for dscp in $dscp_proxy; do
                 set -- -m conntrack ! --ctstate INVALID $proto_match -m dscp --dscp "$dscp" $comment -j "$name_chain"
-                ipt -C PREROUTING "$@" >/dev/null 2>&1 || ipt -A PREROUTING "$@" >/dev/null 2>&1
+                ipt -A PREROUTING "$@" >/dev/null 2>&1
             done
 
             if [ "$proxy_router" = "on" ]; then
                 set -- -i lo -m mark --mark "$table_mark" $proto_match $comment -j "$name_chain"
-                ipt -C PREROUTING "$@" >/dev/null 2>&1 || ipt -A PREROUTING "$@" >/dev/null 2>&1
+                ipt -A PREROUTING "$@" >/dev/null 2>&1
             fi
 
             # Пользовательские политики из xkeen.json
@@ -1391,13 +1387,13 @@ if pidof "$name_client" >/dev/null; then
 
                 if [ "$pmode" = "all" ]; then
                     set -- -m connmark --mark 0x"$pmark" -m conntrack ! --ctstate INVALID $comment -j "$name_chain"
-                    ipt -C PREROUTING "$@" >/dev/null 2>&1 || ipt -A PREROUTING "$@" >/dev/null 2>&1
+                    ipt -A PREROUTING "$@" >/dev/null 2>&1
                 elif [ "$pmode" = "include" ]; then
                     add_multiport_rules "$family" "$table" "$net" "0x$pmark" "$pports" "$name_chain"
                 elif [ "$pmode" = "exclude" ]; then
                     add_multiport_rules "$family" "$table" "$net" "0x$pmark" "$pports" "RETURN"
                     set -- -m connmark --mark 0x"$pmark" -m conntrack ! --ctstate INVALID -p "$net" $comment -j "$name_chain"
-                    ipt -C PREROUTING "$@" >/dev/null 2>&1 || ipt -A PREROUTING "$@" >/dev/null 2>&1
+                    ipt -A PREROUTING "$@" >/dev/null 2>&1
                 fi
             done <<USER_POLICIES_EOF
 $user_policies
@@ -1412,11 +1408,11 @@ USER_POLICIES_EOF
                 elif [ -n "$port_exclude" ]; then
                     add_multiport_rules "$family" "$table" "$net" "$policy_mark" "$port_exclude" "RETURN"
                     set -- -m connmark --mark "$policy_mark" -m conntrack ! --ctstate INVALID -p "$net" $comment -j "$name_chain"
-                    ipt -C PREROUTING "$@" >/dev/null 2>&1 || ipt -A PREROUTING "$@" >/dev/null 2>&1
+                    ipt -A PREROUTING "$@" >/dev/null 2>&1
                 else
                     # Политика xkeen, когда порты не указаны (проксирование на всех портах)
                     set -- -m connmark --mark "$policy_mark" -m conntrack ! --ctstate INVALID $comment -j "$name_chain"
-                    ipt -C PREROUTING "$@" >/dev/null 2>&1 || ipt -A PREROUTING "$@" >/dev/null 2>&1
+                    ipt -A PREROUTING "$@" >/dev/null 2>&1
                 fi
             # НЕТ политики xkeen
             else
@@ -1427,11 +1423,11 @@ USER_POLICIES_EOF
                 elif [ -n "$port_exclude" ]; then
                     add_multiport_rules "$family" "$table" "$net" "" "$port_exclude" "RETURN"
                     set -- -m conntrack ! --ctstate INVALID -p "$net" $comment -j "$name_chain"
-                    ipt -C PREROUTING "$@" >/dev/null 2>&1 || ipt -A PREROUTING "$@" >/dev/null 2>&1
+                    ipt -A PREROUTING "$@" >/dev/null 2>&1
                 # Если нет ни xkeen, ни пользовательских политик -> перехватываем всё
                 else
                     set -- -m conntrack ! --ctstate INVALID $comment -j "$name_chain"
-                    ipt -C PREROUTING "$@" >/dev/null 2>&1 || ipt -A PREROUTING "$@" >/dev/null 2>&1
+                    ipt -A PREROUTING "$@" >/dev/null 2>&1
                 fi
             fi
         done
@@ -1475,14 +1471,14 @@ USER_POLICIES_EOF
             fi
 
             set -- -m conntrack ! --ctstate INVALID $proto_match $comment -j "$out_chain"
-            ipt -C OUTPUT "$@" >/dev/null 2>&1 || ipt -A OUTPUT "$@" >/dev/null 2>&1
+            ipt -A OUTPUT "$@" >/dev/null 2>&1
 
             if [ "$table" = "$table_redirect" ]; then
                 set -- -p "$net" $comment -j REDIRECT --to-port "$port_redirect"
-                ipt -C "$out_chain" "$@" >/dev/null 2>&1 || ipt -A "$out_chain" "$@" >/dev/null 2>&1
+                ipt -A "$out_chain" "$@" >/dev/null 2>&1
             elif [ "$table" = "$table_tproxy" ]; then
                 set -- -p "$net" $comment -j MARK --set-mark "$table_mark"
-                ipt -C "$out_chain" "$@" >/dev/null 2>&1 || ipt -A "$out_chain" "$@" >/dev/null 2>&1
+                ipt -A "$out_chain" "$@" >/dev/null 2>&1
             fi
         done
     }
@@ -1510,7 +1506,7 @@ USER_POLICIES_EOF
 
             for proto in udp tcp; do
                 set -- -p "$proto" -m mark --mark "$mark" -m pkttype --pkt-type unicast -m "$proto" --dport 53 $comment -j REDIRECT --to-ports 53
-                ipt -C _NDM_HOTSPOT_DNSREDIR "$@" >/dev/null 2>&1 || ipt -I _NDM_HOTSPOT_DNSREDIR "$@" >/dev/null 2>&1
+                ipt -I _NDM_HOTSPOT_DNSREDIR "$@" >/dev/null 2>&1
             done
         done
     }
@@ -1598,7 +1594,7 @@ EOL
     sh "$file_netfilter_hook"
 }
 
-# Удаление правил Iptables
+# Удаление правил iptables
 clean_firewall() {
     [ -f "$file_netfilter_hook" ] && : > "$file_netfilter_hook"
 
