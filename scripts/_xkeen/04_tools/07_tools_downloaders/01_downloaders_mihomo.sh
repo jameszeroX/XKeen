@@ -6,7 +6,7 @@ download_mihomo() {
         url=$1
         timeout=$2
 
-        http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
+        http_status=$(eval curl $curl_extra --connect-timeout "$timeout" $curl_timeout \
                           -I \
                           -s \
                           -L \
@@ -16,7 +16,7 @@ download_mihomo() {
         curl_exit_code=$?
 
         if [ "$curl_exit_code" -eq 0 ] && [ "$http_status" = "405" ]; then
-            http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
+            http_status=$(eval curl $curl_extra --connect-timeout "$timeout" $curl_timeout \
                               -s \
                               -L \
                               -r 0-0 \
@@ -62,14 +62,14 @@ download_mihomo() {
     printf "  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"
 
     # Получаем список релизов через GitHub API
-    RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "${mihomo_api_url}?per_page=20" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
+    RELEASE_TAGS=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout -s "${mihomo_api_url}?per_page=20" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
 
     if [ -z "$RELEASE_TAGS" ]; then
         echo
         printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
 
         # Получаем список релизов через jsDelivr
-        RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "$mihomo_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
+        RELEASE_TAGS=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout -s "$mihomo_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
 
         if [ -z "$RELEASE_TAGS" ]; then
             echo
@@ -192,7 +192,7 @@ download_mihomo() {
 
         # Загрузка Yq
         if check_url_availability "$download_yq" 10; then
-            if curl --connect-timeout 10 $curl_timeout \
+            if eval curl $curl_extra --connect-timeout 10 $curl_timeout \
                    -fL \
                    -o "$yq_dist" \
                    "$download_yq" 2>/dev/null; then
@@ -228,7 +228,7 @@ download_mihomo() {
         fi
 
         # Загрузка Mihomo
-        if curl --connect-timeout 10 $curl_timeout \
+        if eval curl $curl_extra --connect-timeout 10 $curl_timeout \
                -fL \
                -o "$mihomo_dist" \
                "$download_url" 2>/dev/null; then

@@ -18,7 +18,7 @@ install_geoipset_lst() {
         fetch_url="$gh_proxy/$url"
     fi
 
-    curl --connect-timeout 10 $curl_timeout -fL -o "$temp_file" "$fetch_url" >/dev/null 2>&1
+    eval curl $curl_extra --connect-timeout 10 $curl_timeout -fL -o "$temp_file" "$fetch_url" >/dev/null 2>&1
     if [ $? -ne 0 ]; then
         rm -f "$temp_file"
         printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n\n" "$display_name"

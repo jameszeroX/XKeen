@@ -2,7 +2,7 @@
   "inbounds": [
     {
       "port": 1181,
-      "protocol": "dokodemo-door",
+      "protocol": "tunnel",
       "settings": {
         "network": "tcp",
         "followRedirect": true
@@ -16,7 +16,7 @@
     },
     {
       "port": 1181,
-      "protocol": "dokodemo-door",
+      "protocol": "tunnel",
       "settings": {
         "network": "udp",
         "followRedirect": true
@@ -30,6 +30,12 @@
         "destOverride": ["quic"]
       },
       "tag": "tproxy"
+    },
+    {
+      "port": 1080,
+      "protocol": "mixed",
+      "settings": {"udp": true},
+      "tag": "socks"
     }
   ]
 }

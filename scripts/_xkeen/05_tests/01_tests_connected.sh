@@ -15,7 +15,7 @@ download_with_check() {
     output_file="$2"
     min_size="${3:-300000}"
 
-    curl --connect-timeout 10 $curl_timeout -s -L "$url" -o "$output_file" 2>/dev/null
+    eval curl $curl_extra --connect-timeout 10 $curl_timeout -s -L "$url" -o "$output_file" 2>/dev/null
 
     if [ -f "$output_file" ]; then
         size=$(wc -c < "$output_file" 2>/dev/null || echo 0)
@@ -68,9 +68,9 @@ test_github() {
 
     _gh_head_check() {
         _url="$1"
-        _status=$(curl --connect-timeout 10 $curl_timeout -s -L -I -o /dev/null -w "%{http_code}" "$_url" 2>/dev/null)
+        _status=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout -s -L -I -o /dev/null -w "%{http_code}" "$_url" 2>/dev/null)
         if [ "$_status" = "405" ]; then
-            _status=$(curl --connect-timeout 10 $curl_timeout -s -L -r 0-0 -o /dev/null -w "%{http_code}" "$_url" 2>/dev/null)
+            _status=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout -s -L -r 0-0 -o /dev/null -w "%{http_code}" "$_url" 2>/dev/null)
         fi
         case "$_status" in
             2[0-9][0-9]|3[0-9][0-9]) return 0 ;;

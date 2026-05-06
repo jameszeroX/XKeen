@@ -6,7 +6,7 @@ download_xray() {
         url=$1
         timeout=$2
 
-        http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
+        http_status=$(eval curl $curl_extra --connect-timeout "$timeout" $curl_timeout \
                           -I \
                           -s \
                           -L \
@@ -16,7 +16,7 @@ download_xray() {
         curl_exit_code=$?
 
         if [ "$curl_exit_code" -eq 0 ] && [ "$http_status" = "405" ]; then
-            http_status=$(curl --connect-timeout "$timeout" $curl_timeout \
+            http_status=$(eval curl $curl_extra --connect-timeout "$timeout" $curl_timeout \
                               -s \
                               -L \
                               -r 0-0 \
@@ -62,14 +62,14 @@ download_xray() {
     printf "  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
 
     # Получаем список релизов через GitHub API
-    RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "${xray_api_url}?per_page=50" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
+    RELEASE_TAGS=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout -s "${xray_api_url}?per_page=50" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
 
     if [ -z "$RELEASE_TAGS" ]; then
         echo
         printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
 
         # Получаем список релизов через jsDelivr
-        RELEASE_TAGS=$(curl --connect-timeout 10 $curl_timeout -s "$xray_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
+        RELEASE_TAGS=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout -s "$xray_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
 
         if [ -z "$RELEASE_TAGS" ]; then
             echo
@@ -126,7 +126,7 @@ download_xray() {
 
         printf "  ${yellow}Выполняется загрузка${reset} последней версии Xray\n"
 
-        if curl --connect-timeout 10 $curl_timeout \
+        if eval curl $curl_extra --connect-timeout 10 $curl_timeout \
                -fL \
                -o "$xray_dist" \
                "$download_url" 2>/dev/null; then
@@ -238,7 +238,7 @@ download_xray() {
         printf "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray\n"
 
         # Загрузка Xray
-        if curl --connect-timeout 10 $curl_timeout \
+        if eval curl $curl_extra --connect-timeout 10 $curl_timeout \
                -fL \
                -o "$xray_dist" \
                "$download_url" 2>/dev/null; then

@@ -121,3 +121,7 @@ init_directories() {
 
 # Таймаут curl
 [ -e "/tmp/toff" ] && curl_timeout="" || curl_timeout="-m 180"
+
+# Дополнительные параметры curl
+# Пример загрузки через socks5 inbound: curl_extra="--socks5 192.168.1.1:1080"
+curl_extra="-A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0\""

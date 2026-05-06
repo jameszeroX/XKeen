@@ -17,7 +17,7 @@ process_geo_file() {
     local min_size=24576  # 24 KB
 
     download() {
-        curl --connect-timeout 10 $curl_timeout -fL -o "$temp_file" "$1" >/dev/null 2>&1
+        eval curl $curl_extra --connect-timeout 10 $curl_timeout -fL -o "$temp_file" "$1" >/dev/null 2>&1
         return $?
     }
 
