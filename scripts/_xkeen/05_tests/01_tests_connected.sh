@@ -15,7 +15,7 @@ download_with_check() {
     output_file="$2"
     min_size="${3:-50000}"
 
-    eval curl $curl_extra --connect-timeout 10 $curl_timeout -s -L "$url" -o "$output_file" 2>/dev/null
+    eval curl $curl_extra --connect-timeout 5 -m 15 -y 1000 -Y 5 -s -L "$url" -o "$output_file" 2>/dev/null
 
     if [ -f "$output_file" ]; then
         size=$(wc -c < "$output_file" 2>/dev/null || echo 0)
@@ -79,6 +79,13 @@ test_github() {
         download_with_check "${_prefix}${xkeen_dev_url}" "$_tmp2"
     }
 
+    # Прямая загрузка
+    if _check_pair_download ""; then
+        use_direct="true"
+        printf "  GitHub ${green}доступен${reset}. Продолжаем...\n"
+        return 0
+    fi
+
     # Загрузка через Proxy 1
     if _check_pair_download "${gh_proxy1}/"; then
         gh_proxy="$gh_proxy1"
@@ -90,13 +97,6 @@ test_github() {
     if _check_pair_download "${gh_proxy2}/"; then
         gh_proxy="$gh_proxy2"
         printf "  GitHub ${green}доступен через прокси${reset}. Продолжаем...\n"
-        return 0
-    fi
-
-    # Прямая загрузка
-    if _check_pair_download ""; then
-        use_direct="true"
-        printf "  GitHub ${green}доступен${reset}. Продолжаем...\n"
         return 0
     fi
 
