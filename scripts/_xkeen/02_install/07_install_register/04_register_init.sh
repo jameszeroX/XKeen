@@ -763,51 +763,55 @@ get_xray_network_by_mode() {
 
 # Получение порта для Redirect
 get_port_redirect() {
-    if [ "$name_client" = "mihomo" ]; then
+    if [ "$name_client" = "xray" ]; then
+        port=$(get_xray_port_by_mode "redirect")
+        [ -n "$port" ] && echo "$port" && return 0
+    elif [ "$name_client" = "mihomo" ]; then
         port=$(yq eval '.redir-port // ""' "$mihomo_config" 2>/dev/null)
         if [ -z "$port" ]; then
             port=$(yq eval '.listeners[] | select(.type == "redir") | .port // ""' "$mihomo_config" 2>/dev/null)
         fi
         [ -n "$port" ] && echo "$port" && return 0
     else
-        port=$(get_xray_port_by_mode "redirect")
-        [ -n "$port" ] && echo "$port" && return 0
+	return 1
     fi
-
-    echo ""
 }
 
 # Получение порта для TProxy
 get_port_tproxy() {
-    if [ "$name_client" = "mihomo" ]; then
+    if [ "$name_client" = "xray" ]; then
+        port=$(get_xray_port_by_mode "tproxy")
+        [ -n "$port" ] && echo "$port" && return 0
+    elif [ "$name_client" = "mihomo" ]; then
         port=$(yq eval '.tproxy-port // ""' "$mihomo_config" 2>/dev/null)
         if [ -z "$port" ]; then
             port=$(yq eval '.listeners[] | select(.type == "tproxy") | .port // ""' "$mihomo_config" 2>/dev/null)
         fi
         [ -n "$port" ] && echo "$port" && return 0
     else
-        port=$(get_xray_port_by_mode "tproxy")
-        [ -n "$port" ] && echo "$port" && return 0
+	return 1
     fi
-
-    echo ""
 }
 
 # Получение сети для Redirect
 get_network_redirect() {
-    if [ "$name_client" = "mihomo" ]; then
+    if [ "$name_client" = "xray" ]; then
+        network=$(get_xray_network_by_mode "redirect")
+        [ -n "$network" ] && echo "$network" && return 0
+    elif [ "$name_client" = "mihomo" ]; then
         [ -n "$port_redirect" ] && echo "tcp" && return 0
         echo "" && return 0
     else
-        network=$(get_xray_network_by_mode "redirect")
-        [ -n "$network" ] && echo "$network" && return 0
-        echo "" && return 0
+	return 1
     fi
 }
 
 # Получение сети для TProxy
 get_network_tproxy() {
-    if [ "$name_client" = "mihomo" ]; then
+    if [ "$name_client" = "xray" ]; then
+        network=$(get_xray_network_by_mode "tproxy")
+        [ -n "$network" ] && echo "$network" && return 0
+    elif [ "$name_client" = "mihomo" ]; then
         if [ -n "$port_redirect" ] && [ -n "$port_tproxy" ]; then
             echo "udp"
         elif [ -z "$port_redirect" ] && [ -n "$port_tproxy" ]; then
@@ -817,9 +821,7 @@ get_network_tproxy() {
         fi
         return 0
     else
-        network=$(get_xray_network_by_mode "tproxy")
-        [ -n "$network" ] && echo "$network" && return 0
-        echo "" && return 0
+	return 1
     fi
 }
 
