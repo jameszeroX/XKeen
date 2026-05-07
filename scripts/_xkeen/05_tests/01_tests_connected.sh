@@ -56,15 +56,28 @@ test_entware() {
     fi
 }
 
+# Функция определения пользовательского прокси для GitHub
+get_user_proxy() {
+    [ ! -f "$xkeen_config" ] && return 1
+
+    if command -v jq >/dev/null 2>&1; then
+        gh_proxy_user=$(jq -r '.xkeen.gh_proxy // empty' "$xkeen_config" 2>/dev/null)
+    fi
+
+    if [ -z "$gh_proxy_user" ]; then
+        gh_proxy_user=$(sed -n 's/.*"gh_proxy": *"\([^"]*\)".*/\1/p' "$xkeen_config" | xargs 2>/dev/null)
+    fi
+
+    [ "$gh_proxy_user" = "null" ] && gh_proxy_user=""
+}
+
 # Функция проверки доступности GitHub
 test_github() {
     if [ "$use_direct" = "true" ] || [ -n "$gh_proxy" ]; then
         return 0
     fi
-    use_direct="false"
-    gh_proxy=""
 
-    printf "  ${yellow}Проверка доступности${reset} GitHub. Подождите, пожалуйста...\n"
+    get_user_proxy
 
     _tmp1="/tmp/.xkeen_test_1.$$"
     _tmp2="/tmp/.xkeen_test_2.$$"
@@ -86,6 +99,28 @@ test_github() {
         # Возвращаем 0 (успех) только если оба теста успешны
         [ $res1 -eq 0 ] && [ $res2 -eq 0 ]
     }
+
+    if [ -n "$gh_proxy_user" ]; then
+        printf "  ${yellow}Используется пользовательский прокси:${reset} $gh_proxy_user\n"
+
+        _proxy_prefix="${gh_proxy_user%/}/"
+
+        if _check_pair_download "$_proxy_prefix"; then
+            gh_proxy="$gh_proxy_user"
+            use_direct="false"
+            printf "  GitHub ${green}доступен через ваш прокси${reset}. Продолжаем...\n"
+            return 0
+        else
+            printf "  ${red}Ошибка${reset}: Указанный вами прокси $gh_proxy_user недоступен\n"
+            _cleanup
+            exit 1
+        fi
+    fi
+
+    use_direct="false"
+    gh_proxy=""
+
+    printf "  ${yellow}Проверка доступности${reset} GitHub. Подождите, пожалуйста...\n"
 
     # Прямая загрузка
     if _check_pair_download ""; then
