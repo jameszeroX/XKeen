@@ -77,8 +77,8 @@ mihomo_jsd_url="https://data.jsdelivr.com/v1/package/gh/MetaCubeX/mihomo"			# р
 mihomo_gz_url="https://github.com/MetaCubeX/mihomo/releases/download"				# url для загрузки Mihomo
 yq_upstream_dist_url="https://github.com/mikefarah/yq/releases/latest/download"			# url для загрузки оригинального Yq
 yq_workaround_dist_url="https://github.com/jameszeroX/yq/releases/latest/download"		# url для загрузки рабочего Yq
-gh_proxy1="https://ghproxy.it"								        # 1 прокси для загрузок с GitHub
-gh_proxy2="https://gh-proxy.com"								# 2 прокси для загрузок с GitHub
+gh_proxy1="https://gh-proxy.com"								# 1 прокси для загрузок с GitHub
+gh_proxy2="https://ghproxy.cc"									# 2 прокси для загрузок с GitHub
 
 yq_use_workaround="true"									# отключить после исправления issue 2609 (по желанию)
 yq_workaround_issue_url="https://github.com/mikefarah/yq/issues/2609"				# issue с поломанным релизом Yq
@@ -124,4 +124,4 @@ init_directories() {
 
 # Дополнительные параметры curl
 # Пример загрузки через socks5 inbound: curl_extra="--socks5 192.168.1.1:1080"
-curl_extra="-A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0\""
+curl_extra="-k -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0\""
