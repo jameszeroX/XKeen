@@ -30,12 +30,6 @@
         "destOverride": ["quic"]
       },
       "tag": "tproxy"
-    },
-    {
-      "port": 1080,
-      "protocol": "mixed",
-      "settings": {"udp": true},
-      "tag": "socks"
     }
   ]
 }
