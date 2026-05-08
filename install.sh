@@ -56,7 +56,7 @@ download_xkeen_release() {
         return 0
     fi
 
-    if curl -kfLo "$archive_name" --connect-timeout 10 -m 15 "https://ghproxy.сс/$url"; then
+    if curl -kfLo "$archive_name" --connect-timeout 10 -m 15 "https://ghproxy.cc/$url"; then
         return 0
     fi
 
@@ -75,7 +75,7 @@ download_release_fix() {
         return 0
     fi
 
-    if curl -kfLo "$target_file" --connect-timeout 10 -m 15 "https://ghproxy.сс/$release_fix_url"; then
+    if curl -kfLo "$target_file" --connect-timeout 10 -m 15 "https://ghproxy.cc/$release_fix_url"; then
         return 0
     fi
 
