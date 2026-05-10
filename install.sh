@@ -56,7 +56,7 @@ download_xkeen_release() {
         return 0
     fi
 
-    if curl -kfLo "$archive_name" --connect-timeout 10 -m 15 "https://ghproxy.cc/$url"; then
+    if curl -fLo "$archive_name" --connect-timeout 10 -m 15 "https://ghfast.top/$url"; then
         return 0
     fi
 
@@ -75,7 +75,7 @@ download_release_fix() {
         return 0
     fi
 
-    if curl -kfLo "$target_file" --connect-timeout 10 -m 15 "https://ghproxy.cc/$release_fix_url"; then
+    if curl -fLo "$target_file" --connect-timeout 10 -m 15 "https://ghfast.top/$release_fix_url"; then
         return 0
     fi
 
