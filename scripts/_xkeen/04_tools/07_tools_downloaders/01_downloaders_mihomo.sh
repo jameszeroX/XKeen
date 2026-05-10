@@ -149,7 +149,11 @@ download_mihomo() {
                 download_yq="$yq_download_base_url/yq_linux_arm64"
             ;;
             "mips32le")
-                download_url="$URL_BASE/mihomo-linux-mipsle-hardfloat-$VERSION_ARG.gz"
+                if [ "$softfloat" = "true" ]; then
+                    download_url="$URL_BASE/mihomo-linux-mipsle-softfloat-$VERSION_ARG.gz"
+                else
+                    download_url="$URL_BASE/mihomo-linux-mipsle-hardfloat-$VERSION_ARG.gz"
+                fi
                 download_yq="$yq_download_base_url/yq_linux_mipsle"
             ;;
             "mips32")

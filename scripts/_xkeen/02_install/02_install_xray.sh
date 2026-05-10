@@ -20,8 +20,22 @@ install_xray() {
         rm -rf "${xtmp_dir}/xray"
     fi
 
-    if ! unzip -q "${xray_archive}" -d "${xtmp_dir}/xray" || [ ! -f "${xtmp_dir}/xray/xray" ]; then
-        echo -e "  ${red}Ошибка${reset}: Не удалось распаковать архив или отсутствует бинарный файл"
+    if ! unzip -q "${xray_archive}" -d "${xtmp_dir}/xray"; then
+        echo -e "  ${red}Ошибка${reset}: Не удалось распаковать архив"
+        [ -f "$install_dir/xray_bak" ] && mv "$install_dir/xray_bak" "$install_dir/xray"
+        return 1
+    fi
+
+    bin_source="${xtmp_dir}/xray/xray"
+
+    if [ "$softfloat" = "true" ]; then
+        if [ -f "${xtmp_dir}/xray/xray_softfloat" ]; then
+            bin_source="${xtmp_dir}/xray/xray_softfloat"
+        fi
+    fi
+
+    if [ ! -f "$bin_source" ]; then
+        echo -e "  ${red}Ошибка${reset}: Бинарный файл Xray не найден в архиве"
         if [ -f "$install_dir/xray_bak" ]; then
             mv "$install_dir/xray_bak" "$install_dir/xray"
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Xray"
@@ -31,14 +45,11 @@ install_xray() {
         return 1
     fi
 
-    mv "${xtmp_dir}/xray/xray" "$install_dir/"
+    mv "$bin_source" "$install_dir/xray"
     chmod +x "$install_dir/xray"
     echo -e "  Xray ${green}успешно установлен${reset}"
 
-    # Удаление архива Xray
     rm -f "$xray_archive"
-
-    # Удаление временных файлов
     rm -rf "${xtmp_dir}/xray"
 
     # Фикс для новых ядер xray

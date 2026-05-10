@@ -138,7 +138,6 @@ while [ $# -gt 0 ]; do
             init_directories
             xkeen_info
             xkeen_set_info
-            info_4g
             logs_cpu_info_console
 
             case "$architecture" in
@@ -619,7 +618,6 @@ while [ $# -gt 0 ]; do
             status_file="/opt/lib/opkg/status"
             info_cpu
             smart_clear
-            info_4g
             info_xray
             info_version_xray
 
@@ -692,7 +690,6 @@ while [ $# -gt 0 ]; do
             status_file="/opt/lib/opkg/status"
             info_cpu
             smart_clear
-            info_4g
             info_mihomo
             info_version_mihomo
             mihomo_was_installed="$mihomo_installed"
