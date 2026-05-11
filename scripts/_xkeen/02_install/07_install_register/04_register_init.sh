@@ -1276,11 +1276,9 @@ if pidof "$name_client" >/dev/null; then
 
         # Определяем таблицу маршрутизации
         if [ -n "$policy_mark" ]; then
-            policy_table=$(ip rule show | awk -v policy="$policy_mark" '$0 ~ policy && /lookup/ && !/blackhole/ {print $(NF)}' | sed -n '1p')
-            source_table="$policy_table"
-        else
-            source_table="main"
+            policy_table=$(ip rule show | awk -v policy="$policy_mark" '$0 ~ policy && /lookup/ && !/blackhole/ {print $(NF); exit}')
         fi
+        source_table="${policy_table:-main}"
 
         # Проверяем есть ли default маршрут
         check_default() {
@@ -1315,7 +1313,7 @@ if pidof "$name_client" >/dev/null; then
         ip -"$ip_version" route show table "$source_table" 2>/dev/null | while read -r route_line; do
             case "$route_line" in
                 default*|unreachable*|blackhole*) continue ;;
-                *) ip -"$ip_version" route add table "$table_id" "$route_line" >/dev/null 2>&1 || true ;;
+                *) ip -"$ip_version" route add table "$table_id" $route_line >/dev/null 2>&1 || true ;;
             esac
         done
         return 0
