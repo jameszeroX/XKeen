@@ -11,6 +11,8 @@ on:
 jobs:
   build-and-push-to-main-test-folder:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -18,10 +20,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Git user
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v7
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
+          git_config_global: true
 
       - name: Prepare scripts with build timestamp
         run: |
@@ -40,24 +46,17 @@ jobs:
           chmod +x xkeen
           find . -type f -o -type l | sed 's|^\./||' | tar -czf "../output/xkeen.tar.gz" -T -
 
-      - name: Generate SHA256 checksum
-        run: |
-          cd output
-          sha256sum xkeen.tar.gz > xkeen.tar.gz.sha256
-          cat xkeen.tar.gz.sha256
-
-      - name: Move archive and checksum to test folder in main
+      - name: Move archive to test folder in main
         run: |
           mkdir -p test
           mv output/xkeen.tar.gz test/
-          mv output/xkeen.tar.gz.sha256 test/
 
       - name: Clean up temporary files
         run: |
           rm -rf scripts_for_build output
 
-      - name: Commit and push archive and checksum to test folder
+      - name: Commit and push signed archive to test folder
         run: |
-          git add test/xkeen.tar.gz test/xkeen.tar.gz.sha256
-          git commit -m "[github-actions] automated compiling build (sha256: $(cat test/xkeen.tar.gz.sha256 | cut -d' ' -f1))" || echo "No changes"
+          git add test/xkeen.tar.gz
+          git commit -S -m "[github-actions] automated compiling build"
           git push origin main

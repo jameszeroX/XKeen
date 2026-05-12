@@ -62,22 +62,10 @@ jobs:
       - name: Clean up temporary files
         run: rm -rf scripts_for_release
 
-      - name: Create checksums
-        run: |
-          cd dist
-          sha256sum *.tar.gz > xkeen.tar.gz.sha256
-          sha256sum *.tar > xkeen.tar.sha256
-
       - name: Generate release notes with downloads badge
         run: |
           cat > /tmp/release_notes.md << EOF
           ![downloads](https://img.shields.io/github/downloads/jameszeroX/Xkeen/${{ env.VERSION }}/total?label=downloads)
-
-          ## 📦 SHA256 Checksums
-
-          \`\`\`
-          $(cat dist/*.sha256)
-          \`\`\`
           EOF
 
       - name: Create signed tag and release
@@ -98,7 +86,6 @@ jobs:
           gh release create "$TAG_NAME" \
             dist/*.tar.gz \
             dist/*.tar \
-            dist/*.sha256 \
             --title "${{ env.VERSION }}" \
             --notes-file /tmp/release_notes.md \
             ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }} \
