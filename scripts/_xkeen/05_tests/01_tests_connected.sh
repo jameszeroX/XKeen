@@ -71,79 +71,36 @@ get_user_proxy() {
     [ "$gh_proxy_user" = "null" ] && gh_proxy_user=""
 }
 
-# Функция проверки доступности GitHub
+# Функция проверки доступности GitHub.
+# Тонкая обёртка над probe_with_mirrors: идентичная философия (пара URL
+# через одну цепочку префиксов, exclusive gh_proxy_user, exit 1 на
+# полную недоступность), но один engine fallback в helper'е вместо
+# дублирования логики direct/proxy1/proxy2 здесь.
 test_github() {
-    if [ "$use_direct" = "true" ] || [ -n "$gh_proxy" ]; then
-        return 0
-    fi
+    [ -n "$_gh_probed" ] && return 0
 
     get_user_proxy
 
-    _tmp1="/tmp/.xkeen_test_1.$$"
-    _tmp2="/tmp/.xkeen_test_2.$$"
-
-    _cleanup() {
-        rm -f "$_tmp1" "$_tmp2" 2>/dev/null
-    }
-
-    _check_pair_download() {
-        _prefix="$1"
-
-        # Запускаем оба теста в фоновом режиме
-        download_with_check "${_prefix}${xkeen_tar_url}" "$_tmp1" & pid1=$!
-        download_with_check "${_prefix}${xkeen_dev_url}" "$_tmp2" & pid2=$!
-
-        wait $pid1; res1=$?
-        wait $pid2; res2=$?
-
-        # Возвращаем 0 (успех) только если оба теста успешны
-        [ $res1 -eq 0 ] && [ $res2 -eq 0 ]
-    }
-
-    if [ -n "$gh_proxy_user" ]; then
-        printf "  ${yellow}Используется пользовательский прокси:${reset} $gh_proxy_user\n"
-
-        _proxy_prefix="${gh_proxy_user%/}/"
-
-        if _check_pair_download "$_proxy_prefix"; then
-            gh_proxy="$gh_proxy_user"
-            use_direct="false"
-            printf "  GitHub ${green}доступен через ваш прокси${reset}. Продолжаем...\n"
-            return 0
-        else
-            printf "  ${red}Ошибка${reset}: Указанный вами прокси $gh_proxy_user недоступен\n"
-            _cleanup
-            exit 1
-        fi
-    fi
-
-    use_direct="false"
-    gh_proxy=""
-
     printf "  ${yellow}Проверка доступности${reset} GitHub. Подождите, пожалуйста...\n"
 
-    # Прямая загрузка
-    if _check_pair_download ""; then
-        use_direct="true"
-        printf "  GitHub ${green}доступен${reset}. Продолжаем...\n"
+    # Pair probe: github.com (releases) + raw.githubusercontent.com
+    # (для dev-обновления). Разные CDN, разный uptime, проверяем оба.
+    if probe_with_mirrors "$xkeen_tar_url" && probe_with_mirrors "$xkeen_dev_url"; then
+        _gh_probed=1
+        if [ -n "$gh_proxy_user" ]; then
+            printf "  GitHub ${green}доступен через ваш прокси${reset}: ${yellow}$gh_proxy_user${reset}. Продолжаем...\n"
+        elif [ -r /tmp/.xkeen_mirror_cache ] && grep -q "__direct__" /tmp/.xkeen_mirror_cache 2>/dev/null; then
+            printf "  GitHub ${green}доступен${reset}. Продолжаем...\n"
+        else
+            printf "  GitHub ${green}доступен через прокси${reset}. Продолжаем...\n"
+        fi
         return 0
     fi
 
-    # Загрузка через Proxy 1
-    if [ -n "$gh_proxy1" ] && _check_pair_download "${gh_proxy1}/"; then
-        gh_proxy="$gh_proxy1"
-        printf "  GitHub ${green}доступен через прокси${reset}. Продолжаем...\n"
-        return 0
+    if [ -n "$gh_proxy_user" ]; then
+        printf "  ${red}Ошибка${reset}: Указанный вами прокси $gh_proxy_user недоступен\n"
+    else
+        printf "  ${red}Ошибка${reset}: GitHub недоступен\n"
     fi
-
-    # Загрузка через Proxy 2
-    if [ -n "$gh_proxy2" ] && _check_pair_download "${gh_proxy2}/"; then
-        gh_proxy="$gh_proxy2"
-        printf "  GitHub ${green}доступен через прокси${reset}. Продолжаем...\n"
-        return 0
-    fi
-
-    _cleanup
-    printf "  ${red}Ошибка${reset}: GitHub недоступен\n"
     exit 1
 }

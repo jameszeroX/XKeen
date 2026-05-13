@@ -11,6 +11,11 @@ main_dir="$script_dir/.xkeen"
 # Модуль информации
 . "$xinfo_dir/00_info_import.sh"
 
+# Mirror-fallback helper. Загружается до install-модуля, потому что
+# install-модуль (04_install_geofile, 05_install_geoipset) вызывает
+# fetch_with_mirrors напрямую.
+. "$xtools_dir/07_tools_downloaders/00_fetch_with_mirrors.sh"
+
 # Модуль установки
 . "$xinstall_dir/00_install_import.sh"
 

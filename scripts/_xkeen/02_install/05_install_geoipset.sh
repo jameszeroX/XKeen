@@ -1,50 +1,59 @@
+# Валидаторы для fetch_with_mirrors: проверяют размер + базовый синтаксис
+# содержимого (catch HTML-stub и мусор от proxy-error-page).
+_validate_geoipset_v4() {
+    _validate_default "$1" "$2" || return 1
+    if ! grep -q "^[0-9]" "$1"; then
+        _last_error="content_v4"
+        return 1
+    fi
+    return 0
+}
+
+_validate_geoipset_v6() {
+    _validate_default "$1" "$2" || return 1
+    if ! grep -q ":" "$1"; then
+        _last_error="content_v6"
+        return 1
+    fi
+    return 0
+}
+
 # Функция для установки и обновления GeoIPSET
 install_geoipset_lst() {
     mkdir -p "$ipset_cfg" || { echo "Ошибка: Не удалось создать директорию $ipset_cfg"; exit 1; }
-
-    test_github
 
     url="$1"
     dest_file="$2"
     display_name="$3"
     ip_type="$4"
 
-    temp_file=$(mktemp)
     printf "  Загрузка %s...\n" "$display_name"
 
-    if [ "$use_direct" = "true" ]; then
-        fetch_url="$url"
+    if [ "$ip_type" = "ipv4" ]; then
+        _validator_name="_validate_geoipset_v4"
     else
-        fetch_url="$gh_proxy/$url"
+        _validator_name="_validate_geoipset_v6"
     fi
 
-    eval curl $curl_extra --connect-timeout 10 $curl_timeout -fL -o "$temp_file" "$fetch_url" >/dev/null 2>&1
-    if [ $? -ne 0 ]; then
-        rm -f "$temp_file"
-        printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n\n" "$display_name"
-        return 1
-    fi
-
-    # Проверка на HTML-страницу заглушку
-    if grep -qi "<html" "$temp_file"; then
-        rm -f "$temp_file"
-        printf "  ${red}Ошибка${reset}: получена HTML-страница вместо списка IP\n  Оставляем старый файл\n\n"
-        return 1
-    fi
-
-    # Валидация
-    if [ "$ip_type" = "ipv4" ] && ! grep -q "^[0-9]" "$temp_file"; then
-        rm -f "$temp_file"
-        printf "  ${red}Ошибка${reset}: %s не содержит корректных IPv4-адресов\n  Оставляем старый файл\n\n" "$display_name"
-        return 1
-        elif [ "$ip_type" = "ipv6" ] && ! grep -q ":" "$temp_file"; then
-        rm -f "$temp_file"
-        printf "  ${red}Ошибка${reset}: %s не содержит корректных IPv6-адресов\n  Оставляем старый файл\n\n" "$display_name"
+    if ! fetch_with_mirrors "$url" "$dest_file" 0 "$_validator_name"; then
+        case "$_last_error" in
+            html_stub)
+                printf "  ${red}Ошибка${reset}: получена HTML-страница вместо списка IP\n  Оставляем старый файл\n\n"
+                ;;
+            content_v4)
+                printf "  ${red}Ошибка${reset}: %s не содержит корректных IPv4-адресов\n  Оставляем старый файл\n\n" "$display_name"
+                ;;
+            content_v6)
+                printf "  ${red}Ошибка${reset}: %s не содержит корректных IPv6-адресов\n  Оставляем старый файл\n\n" "$display_name"
+                ;;
+            *)
+                printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n\n" "$display_name"
+                ;;
+        esac
         return 1
     fi
 
     [ "$action" = "init" ] && msg_geoipset="установлен" || msg_geoipset="обновлён"
-    mv -f "$temp_file" "$dest_file"
     printf "  %s ${green}успешно $msg_geoipset${reset}\n\n" "$display_name"
     return 0
 }

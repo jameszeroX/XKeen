@@ -11,51 +11,23 @@ process_geo_file() {
         return 1
     fi
 
-    test_github
-
-    local temp_file=$(mktemp)
     local min_size=24576  # 24 KB
-
-    download() {
-        eval curl $curl_extra --connect-timeout 10 $curl_timeout -fL -o "$temp_file" "$1" >/dev/null 2>&1
-        return $?
-    }
 
     printf "  Загрузка %s...\n" "$display_name"
 
-    if [ "$use_direct" = "true" ]; then
-        :
-    else
-        url="$gh_proxy/$url"
-    fi
-
-    download "$url"
-    if [ $? -eq 0 ]; then
-        :
-    else
-        rm -f "$temp_file"
-        printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n" "$display_name"
+    if ! fetch_with_mirrors "$url" "$geo_dir/$filename" "$min_size"; then
+        case "$_last_error" in
+            size)
+                printf "  ${red}Ошибка${reset}: загруженный файл слишком мал (%s bytes) или повреждён\n  Невозможно обновить. Оставляем старый файл\n\n" "$_last_size"
+                ;;
+            html_stub)
+                printf "  ${red}Ошибка${reset}: получена HTML-страница вместо dat-файла\n  Невозможно обновить. Оставляем старый файл\n\n"
+                ;;
+            *)
+                printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n" "$display_name"
+                ;;
+        esac
         return 1
-    fi
-
-    # Проверка размера файла
-    local actual_size=$(wc -c < "$temp_file")
-    if [ "$actual_size" -lt "$min_size" ]; then
-        printf "  ${red}Ошибка${reset}: загруженный файл слишком мал (%s bytes) или повреждён\n  Невозможно обновить. Оставляем старый файл\n\n" "$actual_size"
-        rm -f "$temp_file"
-        return 1
-    fi
-
-    # Проверка на HTML
-    if grep -qi "<html" "$temp_file"; then
-        printf "  ${red}Ошибка${reset}: получена HTML-страница вместо dat-файла\n  Невозможно обновить. Оставляем старый файл\n\n"
-        rm -f "$temp_file"
-        return 1
-    fi
-
-    # Безопасная замена
-    if mv "$temp_file" "$geo_dir/$filename.new"; then
-        mv -f "$geo_dir/$filename.new" "$geo_dir/$filename"
     fi
 
     if [ "$update_flag" = "true" ]; then
