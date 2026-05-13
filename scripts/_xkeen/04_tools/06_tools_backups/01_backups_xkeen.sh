@@ -4,17 +4,15 @@ backup_xkeen() {
         return 0
     fi
 
-    backup_dir="${backups_dir}/${current_datetime}_xkeen_v${xkeen_current_version}"
+    backup_filename="${current_datetime}_xkeen_v${xkeen_current_version}"
+    backup_dir="${backups_dir}/${backup_filename}"
     mkdir -p "$backup_dir"
 
-    # Копирование конфигурации и файлов XKeen в резервную копию
-    cp -r "$install_dir/.xkeen" "$install_dir/xkeen" "$backup_dir/"
-
-    # Переименование скрытой директории .xkeen в _xkeen в резервной копии
-    mv "$backup_dir/.xkeen" "$backup_dir/_xkeen"
-
-    if [ -s "$backup_dir/xkeen" ]; then
-        echo -e "  Резервная копия XKeen создана: ${yellow}${current_datetime}_xkeen_v${xkeen_current_version}${reset}"
+    # Копирование файлов. Проверяем успех всей операции копирования
+    if cp -r "$install_dir/.xkeen" "$install_dir/xkeen" "$backup_dir/"; then
+        # Переименование скрытой директории для удобства хранения
+        mv "$backup_dir/.xkeen" "$backup_dir/_xkeen"
+        echo -e "  Резервная копия XKeen создана: ${yellow}${backup_filename}${reset}"
     else
         echo -e "  ${red}Ошибка${reset} при создании резервной копии XKeen"
     fi
@@ -22,25 +20,29 @@ backup_xkeen() {
 
 # Восстановление XKeen из резервной копии
 restore_backup_xkeen() {
-    latest_backup_dir=$(ls -t -d "$backups_dir"/*xkeen* 2>/dev/null | head -n 1)
+    latest_backup_dir=""
+
+    for entry in "$backups_dir"/*xkeen*; do
+        if [ -d "$entry" ]; then
+            latest_backup_dir="$entry"
+        fi
+    done
 
     if [ -n "$latest_backup_dir" ]; then
-        if cp -r "$latest_backup_dir"/_xkeen "$install_dir/"; then
-            if cp -f "$latest_backup_dir"/xkeen "$install_dir/"; then
-                if [ -d "$install_dir/_xkeen" ]; then
-                    if [ -d "$install_dir/.xkeen" ]; then
-                        rm -rf "$install_dir/.xkeen"
-                    fi
-                    mv "$install_dir/_xkeen" "$install_dir/.xkeen"
-                    echo -e "  XKeen ${green}успешно восстановлен${reset}"
-                fi
-            else
-                echo "  Не удалось скопировать xkeen"
-            fi
+        # Используем временную директорию для безопасности при восстановлении
+        # Чтобы не удалить старый .xkeen, пока не убедимся, что копия цела
+
+        if cp -r "$latest_backup_dir/_xkeen" "$install_dir/" && \
+           cp -f "$latest_backup_dir/xkeen" "$install_dir/"; then
+
+            rm -rf "${install_dir:?}/.xkeen"
+            mv "$install_dir/_xkeen" "$install_dir/.xkeen"
+            
+            echo -e "  XKeen ${green}успешно восстановлен${reset} из: $(basename "$latest_backup_dir")"
         else
-            echo "  Не удалось скопировать _xkeen"
+            echo -e "  ${red}Ошибка:${reset} Не удалось скопировать файлы из резервной копии"
         fi
     else
-        echo "  Подходящая резервная копия XKeen не найдена"
+        echo -e "  ${red}Ошибка:${reset} Подходящая резервная копия XKeen не найдена"
     fi
 }

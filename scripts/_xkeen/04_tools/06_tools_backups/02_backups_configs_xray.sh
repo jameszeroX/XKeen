@@ -3,10 +3,7 @@ backup_configs_xray() {
     backup_configs_dir="$backups_dir/$backup_filename"
     mkdir -p "$backup_configs_dir"
 
-    # Резервное копирование всех файлов конфигурации Xray
-    cp -r "$xray_conf_dir"/* "$backup_configs_dir/"
-
-    if [ $? -eq 0 ]; then
+    if cp -r "$xray_conf_dir"/* "$backup_configs_dir/"; then
         echo -e "  Резервная копия конфигурации Xray создана: ${yellow}$backup_filename${reset}"
     else
         echo -e "  ${red}Ошибка${reset} при создании резервной копии конфигураций Xray"
@@ -14,15 +11,23 @@ backup_configs_xray() {
 }
 
 restore_backup_configs_xray() {
-    # Найти последнюю резервную копию конфигурации Xray
-    latest_backup=$(ls -t "$backups_dir" | grep "configs_xray" | head -n 1)
+    latest_backup=""
+
+    for entry in "$backups_dir"/*_configs_xray; do
+        if [ -e "$entry" ]; then
+            latest_backup="$entry"
+        fi
+    done
 
     if [ -n "$latest_backup" ]; then
-        backup_path="$backups_dir/$latest_backup"
-		
-        rm -rf "$xray_conf_dir"/*
-        cp -r "$backup_path"/* "$xray_conf_dir/"
+        rm -rf "${xray_conf_dir:?}"/*
 
-        echo -e "  Конфигурация Xray ${green}успешно восстановлена${reset}"
+        if cp -r "$latest_backup"/* "$xray_conf_dir/"; then
+            echo -e "  Конфигурация Xray ${green}успешно восстановлена${reset} из: $(basename "$latest_backup")"
+        else
+            echo -e "  ${red}Ошибка${reset} при восстановлении файлов"
+        fi
+    else
+        echo -e "  ${red}Ошибка:${reset} Резервные копии не найдены в $backups_dir"
     fi
 }

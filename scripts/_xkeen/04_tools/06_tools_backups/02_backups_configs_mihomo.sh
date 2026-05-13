@@ -3,10 +3,7 @@ backup_configs_mihomo() {
     backup_configs_dir="$backups_dir/$backup_filename"
     mkdir -p "$backup_configs_dir"
 
-    # Резервное копирование всех файлов конфигурации Mihomo
-    cp -r "$mihomo_conf_dir"/* "$backup_configs_dir/"
-
-    if [ $? -eq 0 ]; then
+    if cp -r "$mihomo_conf_dir"/* "$backup_configs_dir/"; then
         echo -e "  Резервная копия конфигурации Mihomo создана: ${yellow}$backup_filename${reset}"
     else
         echo -e "  ${red}Ошибка${reset} при создании резервной копии конфигураций Mihomo"
@@ -14,15 +11,23 @@ backup_configs_mihomo() {
 }
 
 restore_backup_configs_mihomo() {
-    # Найти последнюю резервную копию конфигурации Mihomo
-    latest_backup=$(ls -t "$backups_dir" | grep "configs_mihomo" | head -n 1)
+    latest_backup=""
+
+    for entry in "$backups_dir"/*_configs_mihomo; do
+        if [ -e "$entry" ]; then
+            latest_backup="$entry"
+        fi
+    done
 
     if [ -n "$latest_backup" ]; then
-        backup_path="$backups_dir/$latest_backup"
-		
-        rm -rf "$mihomo_conf_dir"/*
-        cp -r "$backup_path"/* "$mihomo_conf_dir/"
+        rm -rf "${mihomo_conf_dir:?}"/*
 
-        echo -e "  Конфигурация Mihomo ${green}успешно восстановлена${reset}"
+        if cp -r "$latest_backup"/* "$mihomo_conf_dir/"; then
+            echo -e "  Конфигурация Mihomo ${green}успешно восстановлена${reset} из: $(basename "$latest_backup")"
+        else
+            echo -e "  ${red}Ошибка${reset} при восстановлении файлов"
+        fi
+    else
+        echo -e "  ${red}Ошибка:${reset} Резервные копии не найдены в $backups_dir"
     fi
 }
