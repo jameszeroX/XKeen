@@ -1,63 +1,5 @@
 # Загрузка Xray
 download_xray() {
-    test_github
-
-    check_url_availability() {
-        url=$1
-        timeout=$2
-
-        http_status=$(eval curl $curl_extra --connect-timeout "$timeout" $curl_timeout \
-                          -I \
-                          -s \
-                          -L \
-                          -w "%{http_code}" \
-                          -o /dev/null \
-                          "$url" 2>/dev/null)
-        curl_exit_code=$?
-
-        if [ "$curl_exit_code" -eq 0 ] && [ "$http_status" = "405" ]; then
-            http_status=$(eval curl $curl_extra --connect-timeout "$timeout" $curl_timeout \
-                              -s \
-                              -L \
-                              -r 0-0 \
-                              -w "%{http_code}" \
-                              -o /dev/null \
-                              "$url" 2>/dev/null)
-            curl_exit_code=$?
-        fi
-
-        if [ "$curl_exit_code" -eq 28 ]; then
-            printf "  ${red}Таймаут${reset} при проверке\n"
-            return 1
-        elif [ "$curl_exit_code" -ne 0 ]; then
-            printf "  ${red}Ошибка curl ($curl_exit_code)${reset} при проверке\n"
-            return 1
-        fi
-
-        case "$http_status" in
-            2[0-9][0-9])
-                printf "  Файл ${green}доступен${reset}\n"
-                return 0
-                ;;
-            404)
-                printf "  Файл ${red}не найден${reset} (404)\n"
-                return 2
-                ;;
-            403)
-                printf "  ${red}Доступ запрещен${reset} (403)\n"
-                return 2
-                ;;
-            000)
-                printf "  ${red}Нет соединения${reset}\n"
-                return 1
-                ;;
-            *)
-                printf "  ${yellow}Проблема с доступом${reset} (HTTP: $http_status)\n"
-                return 1
-                ;;
-        esac
-    }
-
     USE_JSDELIVR=""
     printf "  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
 
@@ -109,46 +51,47 @@ download_xray() {
 
         filename=$(basename "$download_url")
         extension="${filename##*.}"
-        xray_dist=$(mktemp)
         mkdir -p "$xtmp_dir"
-
-        if [ "$use_direct" != "true" ]; then
-            download_url="$gh_proxy/$download_url"
-        fi
 
         printf "  ${yellow}Проверка${reset} доступности версии %s...\n" "$version_selected"
 
-        if ! check_url_availability "$download_url" 10; then
-            rm -f "$xray_dist"
-            printf "  ${red}Ошибка${reset}: Версия %s недоступна\n" "$version_selected"
-            exit 1
-        fi
+        probe_with_mirrors "$download_url"
+        case "$?" in
+            0)
+                printf "  Файл ${green}доступен${reset}\n"
+                ;;
+            2)
+                case "$_last_http" in
+                    403) printf "  ${red}Доступ запрещен${reset} (403)\n" ;;
+                    404) printf "  Файл ${red}не найден${reset} (404)\n" ;;
+                    *)   printf "  ${yellow}Проблема с доступом${reset} (HTTP: %s)\n" "$_last_http" ;;
+                esac
+                printf "  ${red}Ошибка${reset}: Версия %s недоступна\n" "$version_selected"
+                exit 1
+                ;;
+            *)
+                if [ "$_last_curl_rc" = "28" ]; then  # curl OPERATION_TIMEDOUT
+                    printf "  ${red}Таймаут${reset} при проверке\n"
+                elif [ "$_last_curl_rc" != "0" ]; then
+                    printf "  ${red}Ошибка curl (%s)${reset} при проверке\n" "$_last_curl_rc"
+                elif [ -n "$_last_http" ] && [ "$_last_http" != "000" ]; then
+                    printf "  ${yellow}Проблема с доступом${reset} (HTTP: %s)\n" "$_last_http"
+                else
+                    printf "  ${red}Нет соединения${reset}\n"
+                fi
+                printf "  ${red}Ошибка${reset}: Версия %s недоступна\n" "$version_selected"
+                exit 1
+                ;;
+        esac
 
         printf "  ${yellow}Выполняется загрузка${reset} последней версии Xray\n"
 
-        if eval curl $curl_extra --connect-timeout 10 $curl_timeout \
-               -fL \
-               -o "$xray_dist" \
-               "$download_url" 2>/dev/null; then
-            if [ -s "$xray_dist" ]; then
-                if head -c 100 "$xray_dist" 2>/dev/null | grep -iq "<!DOCTYPE html\|<html\|Error\|404\|Not Found"; then
-                    rm -f "$xray_dist"
-                    printf "  ${red}Ошибка${reset}: Получена HTML страница ошибки вместо файла\n"
-                    exit 1
-                fi
-                mv "$xray_dist" "$xtmp_dir/xray.$extension"
-                printf "  Xray ${green}успешно загружен${reset}\n"
-                return 0
-            else
-                rm -f "$xray_dist"
-                printf "  ${red}Ошибка${reset}: Загруженный файл Xray поврежден\n"
-                exit 1
-            fi
-        else
-            rm -f "$xray_dist"
+        if ! fetch_with_mirrors "$download_url" "$xtmp_dir/xray.$extension" 1024; then
             printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray %s\n" "$version_selected"
             exit 1
         fi
+        printf "  Xray ${green}успешно загружен${reset}\n"
+        return 0
     fi
 
     while true; do
@@ -219,49 +162,46 @@ download_xray() {
 
         filename=$(basename "$download_url")
         extension="${filename##*.}"
-        xray_dist=$(mktemp)
         mkdir -p "$xtmp_dir"
-
-        if [ "$use_direct" != "true" ]; then
-            download_url="$gh_proxy/$download_url"
-        fi
 
         printf "  ${yellow}Проверка${reset} доступности версии $version_selected...\n"
 
-        # Проверка доступности версии
-        if ! check_url_availability "$download_url" 10; then
-            rm -f "$xray_dist"
-            printf "  ${red}Ошибка${reset}: Версия $version_selected недоступна\n"
-            continue
-        fi
+        probe_with_mirrors "$download_url"
+        case "$?" in
+            0)
+                printf "  Файл ${green}доступен${reset}\n"
+                ;;
+            2)
+                case "$_last_http" in
+                    403) printf "  ${red}Доступ запрещен${reset} (403)\n" ;;
+                    404) printf "  Файл ${red}не найден${reset} (404)\n" ;;
+                    *)   printf "  ${yellow}Проблема с доступом${reset} (HTTP: %s)\n" "$_last_http" ;;
+                esac
+                printf "  ${red}Ошибка${reset}: Версия $version_selected недоступна\n"
+                continue
+                ;;
+            *)
+                if [ "$_last_curl_rc" = "28" ]; then  # curl OPERATION_TIMEDOUT
+                    printf "  ${red}Таймаут${reset} при проверке\n"
+                elif [ "$_last_curl_rc" != "0" ]; then
+                    printf "  ${red}Ошибка curl (%s)${reset} при проверке\n" "$_last_curl_rc"
+                elif [ -n "$_last_http" ] && [ "$_last_http" != "000" ]; then
+                    printf "  ${yellow}Проблема с доступом${reset} (HTTP: %s)\n" "$_last_http"
+                else
+                    printf "  ${red}Нет соединения${reset}\n"
+                fi
+                printf "  ${red}Ошибка${reset}: Версия $version_selected недоступна\n"
+                continue
+                ;;
+        esac
 
         printf "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray\n"
 
-        # Загрузка Xray
-        if eval curl $curl_extra --connect-timeout 10 $curl_timeout \
-               -fL \
-               -o "$xray_dist" \
-               "$download_url" 2>/dev/null; then
-
-            if [ -s "$xray_dist" ]; then
-                if head -c 100 "$xray_dist" 2>/dev/null | grep -iq "<!DOCTYPE html\|<html\|Error\|404\|Not Found"; then
-                    rm -f "$xray_dist"
-                    printf "  ${red}Ошибка${reset}: Получена HTML страница ошибки вместо файла\n"
-                    continue
-                fi
-
-                mv "$xray_dist" "$xtmp_dir/xray.$extension"
-                printf "  Xray ${green}успешно загружен${reset}\n"
-                return 0
-            else
-                rm -f "$xray_dist"
-                printf "  ${red}Ошибка${reset}: Загруженный файл Xray поврежден\n"
-                continue
-            fi
-        else
-            rm -f "$xray_dist"
+        if ! fetch_with_mirrors "$download_url" "$xtmp_dir/xray.$extension" 1024; then
             printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray $version_selected\n"
             continue
         fi
+        printf "  Xray ${green}успешно загружен${reset}\n"
+        return 0
     done
 }
