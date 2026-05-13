@@ -58,6 +58,7 @@ test_entware() {
 
 # Функция определения пользовательского прокси для GitHub
 get_user_proxy() {
+    gh_proxy_user=""
     [ ! -f "$xkeen_config" ] && return 1
 
     if command -v jq >/dev/null 2>&1; then

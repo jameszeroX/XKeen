@@ -151,8 +151,7 @@ download_mihomo() {
 
         printf "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - Yq\n"
 
-        probe_with_mirrors "$download_yq"
-        if [ "$?" = "0" ]; then
+        if probe_with_mirrors "$download_yq"; then
             if fetch_with_mirrors "$download_yq" "$install_dir/yq" 1024; then
                 chmod +x "$install_dir/yq"
                 yq_available="true"
