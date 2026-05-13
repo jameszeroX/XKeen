@@ -4,7 +4,7 @@
 > Это версия из канала разработки. Она регулярно дорабатывается, содержит новейшие функции, возможности и исправления, но может иметь не выявленные ошибки. Если столкнулись с проблемой - обязательно обновитесь командой `xkeen -uk`, возможно ошибка уже известна и исправлена. Если же проблема сохранилась, выполните `xkeen -diag` и покажите диагностический отчёт в телеграм-чате https://t.me/+8Cvh7oVf6cE0MWRi, подробно описав возникшую проблему
 
 ### Изменения
-- Исправлен выбор WAN при подключении нескольких провайдеров: трафик прокси-ядра теперь уходит через WAN, отмеченный в Keenetic-policy «xkeen» (включая «Резервное»). Реализовано через `net_cls` cgroup и маркировку `OUTPUT mangle` policy-меткой Keenetic (см. раздел «Резервный WAN в policy XKeen» ниже)
+- Исправлен выбор WAN при подключении нескольких провайдеров: трафик прокси-ядра теперь уходит через WAN, отмеченный в Keenetic-policy «xkeen» (включая «Резервное»). Реализовано через системную группу `xkeen` (GID 23333), запуск xray/mihomo с этим GID и маркировку `OUTPUT mangle` правилом `-m owner --gid-owner` (см. раздел «Резервный WAN в policy XKeen» ниже)
 - Реализована работа с пользовательскими политиками <sup>1</sup>
 - Доработан модуль работы с DNS <sup>2</sup>
 - Реализована работа с IPSET и возможность исключать из проксирования IP-подсети России (параметры `-gips`, `-dgips`) <sup>3</sup>
@@ -88,33 +88,38 @@ routing-mark: 255
 
 ### Резервный WAN в policy XKeen
 
-При подключении к роутеру нескольких провайдеров XKeen теперь корректно следует
-выбору WAN в Keenetic-policy «xkeen». Если в политике отмечен резервный канал,
-исходящий трафик прокси-ядра уходит через него.
+XKeen корректно следует выбору WAN в Keenetic-policy «xkeen». Если в политике
+отмечен резервный канал — исходящий трафик прокси-ядра уходит через него.
 
-Реализовано через `net_cls` cgroup: процессы `xray`/`mihomo` помещаются в группу
-`/sys/fs/cgroup/net_cls/xkeen` с classid `0x110001`. В `OUTPUT mangle`
-исходящие пакеты этой cgroup маркируются меткой `policy_mark` Keenetic, после
-чего NDM-правило `ip rule fwmark <pmark> lookup <ptable>` направляет их в
-таблицу маршрутизации политики — туда, где `default` указывает на выбранный WAN.
+Реализация:
+1. При первом старте создаётся системная группа `xkeen` (GID 23333) в
+   `/etc/group` (idempotent — если запись уже есть, переиспользуется её GID).
+2. Процессы `xray`/`mihomo` запускаются через `start-stop-daemon -c 0:23333`
+   (UID=root, GID=xkeen). UID остаётся root чтобы не требовать `setcap` и
+   chown на конфиги/логи.
+3. В `iptables -t mangle OUTPUT` правило `-m owner --gid-owner 23333`
+   помечает исходящие сокеты прокси-ядра меткой `policy_mark` Keenetic.
+4. NDM-правило `ip rule fwmark <pmark> lookup <ptable>` направляет помеченные
+   пакеты в таблицу политики, где `default` указывает на выбранный WAN.
 
-Системный трафик роутера (opkg, dnsmasq, ntpd) метку не получает и продолжает
-идти через `main` таблицу, как раньше.
+Системный трафик роутера (opkg, dnsmasq, ntpd) под другими GID метку не
+получает и продолжает идти через `main` как раньше.
 
 Требования:
-- Модуль ядра `cls_cgroup` (доступен в прошивках Keenetic ≥ 3.7)
-- Расширение iptables `xt_cgroup` (`iptables -m cgroup --help`)
-- Точка монтирования `/sys/fs/cgroup/net_cls` (создаётся автоматически)
+- Модуль ядра `xt_owner` (`iptables -m owner --help` показывает `--gid-owner`)
+- busybox `start-stop-daemon` с поддержкой флага `-c USER[:GRP]`
+- Writable `/etc/group` (Entware обычно делает `/etc` writable bind-mount)
 
-Если cgroup недоступен — поведение деградирует к прежнему (трафик через `main`),
-без регрессов.
+Если `xt_owner` или `start-stop-daemon -c` недоступны — поведение деградирует
+к прежнему (трафик через `main`, без policy-routing), регрессов нет.
 
 Проверка:
 ```sh
-cat /sys/fs/cgroup/net_cls/xkeen/cgroup.procs           # pid xray/mihomo
-iptables -t mangle -L OUTPUT -nv | grep cgroup          # правило с --cgroup 0x110001
-ip rule show | grep fwmark                              # NDM ptable rule
-ip route get 8.8.8.8 mark <policy_mark_hex>             # должен вернуть выбранный WAN
+getent group xkeen                                       # xkeen:x:23333:
+cat /proc/$(pidof xray)/status | grep -E '^(Uid|Gid):'   # Gid: 23333 23333 23333 23333
+iptables -t mangle -L OUTPUT -nv | grep gid-owner        # правило --gid-owner 23333
+ip rule show | grep fwmark                               # NDM ptable rule
+ip route get 8.8.8.8 mark <policy_mark_hex>              # должен вернуть выбранный WAN
 ```
 
 ---

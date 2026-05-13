@@ -28,9 +28,14 @@ delete_register_mihomo() {
 delete_register_xkeen() {
     # Удаляем соответствующие записи из файла статуса opkg
     sed -i -e '/Package: xkeen/,/Installed-Time:/d' "/opt/lib/opkg/status"
-    
+
     # Удаляем файлы регистрации, если они существуют
     if [ -f "$register_dir/xkeen.control" ] || [ -f "$register_dir/xkeen.list" ]; then
         rm -f "$register_dir/xkeen.control" "$register_dir/xkeen.list"
+    fi
+
+    # Удаляем группу xkeen (создаётся S05xkeen для GID-based policy routing)
+    if [ -f /etc/group ] && grep -q '^xkeen:' /etc/group 2>/dev/null; then
+        sed -i '/^xkeen:/d' /etc/group 2>/dev/null || true
     fi
 }
