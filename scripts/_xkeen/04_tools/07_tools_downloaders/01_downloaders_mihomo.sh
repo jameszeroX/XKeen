@@ -121,7 +121,8 @@ download_mihomo() {
         printf "  ${yellow}Проверка${reset} доступности версии $version_selected...\n"
 
         probe_with_mirrors "$download_url"
-        case "$?" in
+        _rc=$?
+        case "$_rc" in
             0)
                 printf "  Файл ${green}доступен${reset}\n"
                 ;;
