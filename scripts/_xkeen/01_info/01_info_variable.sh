@@ -54,6 +54,9 @@ status_file="/opt/lib/opkg/status"
 initd_file="$initd_dir/S05xkeen"
 initd_cron="$initd_dir/S05crond"
 cron_file="root"
+file_netfilter_hook="/opt/etc/ndm/netfilter.d/proxy.sh"
+file_schedule_hook="/opt/etc/ndm/schedule.d/00-xkeen-hotspot-sync.sh"
+name_ipset_deny_mac="xkeen_deny_mac"
 
 # -------------------------------------
 # Ресурсы для проверки доступа в интернет
