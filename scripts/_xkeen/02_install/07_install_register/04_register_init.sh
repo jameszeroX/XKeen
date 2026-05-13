@@ -19,6 +19,7 @@ name_app="XKeen"
 name_policy="xkeen"
 name_profile="xkeen"
 name_chain="xkeen"
+name_ipset_deny_mac="xkeen_deny_mac"
 
 # Директории
 directory_os_modules="/lib/modules/$(uname -r)"
@@ -33,6 +34,7 @@ install_dir="/opt/sbin"
 
 # Файлы
 file_netfilter_hook="/opt/etc/ndm/netfilter.d/proxy.sh"
+file_schedule_hook="/opt/etc/ndm/schedule.d/00-xkeen-hotspot-sync.sh"
 log_access="$directory_logs/$name_client/access.log"
 log_error="$directory_logs/$name_client/error.log"
 mihomo_config="$directory_configs_app/config.yaml"
@@ -49,6 +51,7 @@ url_server="localhost:79"
 url_policy="rci/show/ip/policy"
 url_keenetic_port="rci/ip/http"
 url_redirect_port="rci/ip/static"
+url_hotspot="rci/show/ip/hotspot"
 
 # Настройки правил iptables
 table_id="111"
@@ -218,6 +221,7 @@ api_cache_init() {
     api_policy_json=$(curl -kfsS "${url_server}/${url_policy}" 2>/dev/null)
     api_port_json=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null)
     api_static_json=$(curl -kfsS "${url_server}/${url_redirect_port}" 2>/dev/null)
+    api_hotspot_json=$(curl -kfsS "${url_server}/${url_hotspot}" 2>/dev/null)
 }
 
 refresh_port_cache() { api_port_json=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null); }
@@ -905,6 +909,48 @@ get_policy_mark() {
     fi
 }
 
+# MAC-адреса хостов из built-in политики Keenetic «Без доступа в интернет».
+# Hotspot API возвращает access: "permit" | "deny". Хосты с deny блокируются
+# NDM-цепочкой _NDM_HOTSPOT_FWD в FORWARD, но XKeen перехватывает их пакеты в
+# PREROUTING (TPROXY/REDIRECT/MARK) до FORWARD, обходя блокировку. Возвращаемый
+# список используется для исключения этих MAC из проксирования.
+get_no_internet_macs() {
+    [ -z "$api_hotspot_json" ] && return
+    echo "$api_hotspot_json" | jq -r '
+        ((.host // . // []) |
+         (if type == "array" then .[] else . end)) |
+        select((.access // "") == "deny" and (.mac // "") != "") |
+        .mac
+    ' 2>/dev/null | tr '[:lower:]' '[:upper:]'
+}
+
+# Атомарная синхронизация ipset xkeen_deny_mac с текущим состоянием hotspot API.
+# Идемпотентна: создаёт основной набор при первом вызове, в дальнейшем
+# наполняет tmp-набор и делает ipset swap. Вызывается на старте XKeen и
+# на каждой netfilter.d/schedule.d-инвокации — это даёт динамику без
+# `xkeen -restart` при работе Keenetic-расписаний (родительский контроль).
+sync_deny_mac_ipset() {
+    command -v ipset >/dev/null 2>&1 || return 0
+    ipset create "$name_ipset_deny_mac" hash:mac -exist 2>/dev/null || return 0
+    _xkeen_deny_tmp="${name_ipset_deny_mac}_tmp"
+    ipset create "$_xkeen_deny_tmp" hash:mac -exist 2>/dev/null
+    ipset flush "$_xkeen_deny_tmp" >/dev/null 2>&1
+    _xkeen_hotspot_json=$(curl -kfsS "${url_server}/${url_hotspot}" 2>/dev/null)
+    if [ -n "$_xkeen_hotspot_json" ]; then
+        printf '%s' "$_xkeen_hotspot_json" | jq -r '
+            ((.host // . // []) |
+             (if type == "array" then .[] else . end)) |
+            select((.access // "") == "deny" and (.mac // "") != "") |
+            .mac
+        ' 2>/dev/null | tr '[:lower:]' '[:upper:]' | while IFS= read -r _xkeen_mac; do
+            [ -n "$_xkeen_mac" ] && ipset add "$_xkeen_deny_tmp" "$_xkeen_mac" -exist 2>/dev/null
+        done
+    fi
+    ipset swap "$_xkeen_deny_tmp" "$name_ipset_deny_mac" 2>/dev/null
+    ipset destroy "$_xkeen_deny_tmp" 2>/dev/null
+    unset _xkeen_deny_tmp _xkeen_hotspot_json _xkeen_mac
+}
+
 # Получаем пользовательские политики
 get_user_policies() {
     [ ! -f "$xkeen_config" ] && return
@@ -1056,6 +1102,9 @@ EOL
     inject_var ipv4_proxy "$ipv4_proxy"
     inject_var val_exclude_ip6 "$val_exclude_ip6"
     inject_var val_exclude_ip4 "$val_exclude_ip4"
+    inject_var name_ipset_deny_mac "$name_ipset_deny_mac"
+    inject_var url_server "$url_server"
+    inject_var url_hotspot "$url_hotspot"
 
     cat >> "$file_netfilter_hook" <<'EOL'
 
@@ -1065,6 +1114,34 @@ restart_script() {
 }
 
 if pidof "$name_client" >/dev/null; then
+
+    # Динамическая синхронизация ipset с deny-MAC из hotspot API.
+    # Закрывает обход built-in политики «Без доступа в интернет» при включенном
+    # проксировании: PREROUTING на эти MAC делает RETURN до TPROXY, пакет идёт
+    # в FORWARD, где штатно дропается NDM-цепочкой _NDM_HOTSPOT_FWD.
+    # Хук перезапускается NDM при netfilter rewrite, schedule.d дёргает этот же
+    # скрипт на start/stop расписаний — список MAC всегда актуален.
+    _xkeen_sync_deny_mac_ipset() {
+        command -v ipset >/dev/null 2>&1 || return 0
+        ipset create "$name_ipset_deny_mac" hash:mac -exist 2>/dev/null || return 0
+        _tmp="${name_ipset_deny_mac}_tmp"
+        ipset create "$_tmp" hash:mac -exist 2>/dev/null
+        ipset flush "$_tmp" >/dev/null 2>&1
+        _hjson=$(curl -kfsS "${url_server}/${url_hotspot}" 2>/dev/null)
+        if [ -n "$_hjson" ]; then
+            printf '%s' "$_hjson" | jq -r '
+                ((.host // . // []) |
+                 (if type == "array" then .[] else . end)) |
+                select((.access // "") == "deny" and (.mac // "") != "") |
+                .mac
+            ' 2>/dev/null | tr '[:lower:]' '[:upper:]' | while IFS= read -r _m; do
+                [ -n "$_m" ] && ipset add "$_tmp" "$_m" -exist 2>/dev/null
+            done
+        fi
+        ipset swap "$_tmp" "$name_ipset_deny_mac" 2>/dev/null
+        ipset destroy "$_tmp" 2>/dev/null
+    }
+    _xkeen_sync_deny_mac_ipset
 
     # Аккумулируем правила в строки, применяем атомарно одним
     # iptables-restore --noflush на (family, table) в _xkeen_apply.
@@ -1351,6 +1428,13 @@ if pidof "$name_client" >/dev/null; then
         family="$1"
         table="$2"
 
+        # MAC-bypass для built-in «Без доступа в интернет»: RETURN из PREROUTING
+        # до xkeen-jumps, пакет минует TPROXY/REDIRECT/MARK и попадает в FORWARD,
+        # где NDM-цепочка _NDM_HOTSPOT_FWD его дропнет штатно. -m mac --mac-source
+        # видит L2-MAC только для устройств в одном broadcast-домене с роутером
+        # (LAN/Wi-Fi/guest-bridge); за L3-VLAN правило безвредно неактивно.
+        ipt -I PREROUTING 1 -m set --match-set "$name_ipset_deny_mac" src $comment -j RETURN >/dev/null 2>&1
+
         for net in $networks; do
             if [ "$mode_proxy" = "Hybrid" ]; then
                 [ "$table" = "nat"    ] && [ "$net" != "tcp" ] && continue
@@ -1589,6 +1673,19 @@ fi
 EOL
     sed -i '1,2!{/^[[:space:]]*#/d; /^[[:space:]]*$/d}' "$file_netfilter_hook"
     chmod 700 "$file_netfilter_hook"
+
+    # Schedule.d-хук: NDM вызывает scripts/schedule.d при start/stop расписаний
+    # (родительский контроль). Хук дёргает netfilter.d/proxy.sh, который
+    # ре-синхронизирует ipset deny-MAC из актуального hotspot API.
+    mkdir -p "$(dirname "$file_schedule_hook")" 2>/dev/null
+    cat > "$file_schedule_hook" <<'SCHEDULE_EOL'
+#!/bin/sh
+# XKeen: re-sync deny MAC ipset on schedule start/stop. Auto-generated. DO NOT EDIT!
+[ "$1" = "start" ] || [ "$1" = "stop" ] || exit 0
+[ -x /opt/etc/ndm/netfilter.d/proxy.sh ] && /opt/etc/ndm/netfilter.d/proxy.sh
+SCHEDULE_EOL
+    chmod 755 "$file_schedule_hook"
+
     sh "$file_netfilter_hook"
 }
 
@@ -1647,11 +1744,15 @@ clean_firewall() {
 
     # Очистка и удаление списков ipset
     if command -v ipset >/dev/null 2>&1; then
-        for set in geo_exclude geo_exclude6 user_exclude user_exclude6; do
+        for set in geo_exclude geo_exclude6 user_exclude user_exclude6 "$name_ipset_deny_mac"; do
             ipset flush "$set" >/dev/null 2>&1
             ipset destroy "$set" >/dev/null 2>&1
         done
     fi
+
+    # Schedule.d-hook идемпотентно перегенерируется в configure_firewall,
+    # на остановке убираем чтобы NDM не дёргал мёртвый netfilter.d/proxy.sh.
+    [ -f "$file_schedule_hook" ] && rm -f "$file_schedule_hook"
 }
 
 # Мониторинг файловых дескрипторов
@@ -1787,6 +1888,7 @@ proxy_start() {
         validate_routing_mark
         log_clean
         api_cache_init
+        sync_deny_mac_ipset
         process_user_ports
         process_custom_mark
         port_redirect=$(get_port_redirect)

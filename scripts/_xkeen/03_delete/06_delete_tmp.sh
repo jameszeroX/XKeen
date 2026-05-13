@@ -11,7 +11,12 @@ delete_tmp() {
     [ -f "/tmp/toff" ] && rm -f "/tmp/toff"
 
     if ! pidof xray >/dev/null && ! pidof mihomo >/dev/null ; then
-        [ -f "/opt/etc/ndm/netfilter.d/proxy.sh" ] && rm "/opt/etc/ndm/netfilter.d/proxy.sh"
+        [ -f "$file_netfilter_hook" ] && rm "$file_netfilter_hook"
+        [ -f "$file_schedule_hook" ] && rm "$file_schedule_hook"
+        if command -v ipset >/dev/null 2>&1; then
+            ipset flush "$name_ipset_deny_mac" >/dev/null 2>&1
+            ipset destroy "$name_ipset_deny_mac" >/dev/null 2>&1
+        fi
     fi
 
     echo
