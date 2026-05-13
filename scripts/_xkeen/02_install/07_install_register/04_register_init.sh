@@ -221,7 +221,6 @@ api_cache_init() {
     api_policy_json=$(curl -kfsS "${url_server}/${url_policy}" 2>/dev/null)
     api_port_json=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null)
     api_static_json=$(curl -kfsS "${url_server}/${url_redirect_port}" 2>/dev/null)
-    api_hotspot_json=$(curl -kfsS "${url_server}/${url_hotspot}" 2>/dev/null)
 }
 
 refresh_port_cache() { api_port_json=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null); }
@@ -907,21 +906,6 @@ get_policy_mark() {
     else
         echo ""
     fi
-}
-
-# MAC-адреса хостов из built-in политики Keenetic «Без доступа в интернет».
-# Hotspot API возвращает access: "permit" | "deny". Хосты с deny блокируются
-# NDM-цепочкой _NDM_HOTSPOT_FWD в FORWARD, но XKeen перехватывает их пакеты в
-# PREROUTING (TPROXY/REDIRECT/MARK) до FORWARD, обходя блокировку. Возвращаемый
-# список используется для исключения этих MAC из проксирования.
-get_no_internet_macs() {
-    [ -z "$api_hotspot_json" ] && return
-    echo "$api_hotspot_json" | jq -r '
-        ((.host // . // []) |
-         (if type == "array" then .[] else . end)) |
-        select((.access // "") == "deny" and (.mac // "") != "") |
-        .mac
-    ' 2>/dev/null | tr '[:lower:]' '[:upper:]'
 }
 
 # Атомарная синхронизация ipset xkeen_deny_mac с текущим состоянием hotspot API.
