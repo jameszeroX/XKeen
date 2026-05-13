@@ -63,6 +63,13 @@ custom_mark=""
 dscp_exclude="62"
 dscp_proxy="63"
 
+# Cgroup net_cls для трафика прокси-ядра.
+# Используется чтобы маркировать исходящие сокеты xray/mihomo
+# меткой Keenetic policy_mark и направлять их в правильный WAN
+# (важно при подключении к роутеру нескольких провайдеров).
+cgroup_path="/sys/fs/cgroup/net_cls/xkeen"
+cgroup_classid="0x110001"
+
 ipv4_proxy="127.0.0.1"
 ipv4_exclude="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 255.255.255.255"
 ipv6_proxy="::1"
@@ -1038,6 +1045,8 @@ EOL
     inject_var table_tproxy "$table_tproxy"
     inject_var table_mark "$table_mark"
     inject_var table_id "$table_id"
+    inject_var cgroup_path "$cgroup_path"
+    inject_var cgroup_classid "$cgroup_classid"
     inject_var file_dns "$file_dns"
     inject_var proxy_dns "$proxy_dns"
     inject_var proxy_router "$proxy_router"
@@ -1062,6 +1071,26 @@ EOL
 # Перезапуск скрипта
 restart_script() {
     exec /bin/sh "$0" "$@"
+}
+
+# Cgroup net_cls для маршрутизации трафика прокси-ядра в Keenetic policy-WAN.
+# Полная версия в /opt/etc/init.d/S05xkeen — здесь дубликат для self-contained
+# netfilter-hook (вызывается ndm-ом раньше чем S05xkeen).
+ensure_cgroup() {
+    if [ ! -d /sys/fs/cgroup/net_cls ]; then
+        mkdir -p /sys/fs/cgroup/net_cls 2>/dev/null
+        mount -t cgroup -o net_cls cgroup /sys/fs/cgroup/net_cls 2>/dev/null || return 1
+    fi
+    mkdir -p "$cgroup_path" 2>/dev/null || return 1
+    printf '%s' "$cgroup_classid" > "$cgroup_path/net_cls.classid" 2>/dev/null || return 1
+    return 0
+}
+
+cgroup_attach_pid() {
+    pid="$1"
+    [ -z "$pid" ] && return 1
+    [ -f "$cgroup_path/cgroup.procs" ] || return 1
+    printf '%s' "$pid" > "$cgroup_path/cgroup.procs" 2>/dev/null
 }
 
 if pidof "$name_client" >/dev/null; then
@@ -1268,6 +1297,13 @@ if pidof "$name_client" >/dev/null; then
                 ipt -I "$chain" -m dscp --dscp "$dscp" $comment -j RETURN >/dev/null 2>&1
             done
         fi
+
+        # Ответы upstream-серверов на исходящие xray-запросы возвращаются
+        # на роутер с connmark=policy_mark (NDM CONNMARK --restore-mark).
+        # PREROUTING-jump в xkeen chain по connmark может зациклить их
+        # через TPROXY/REDIRECT, поэтому пакеты адресованные самому
+        # роутеру (любой его IP) — пропускаем.
+        ipt -I "$chain" 1 -m addrtype --dst-type LOCAL $comment -j RETURN >/dev/null 2>&1
     }
 
     # Настройка таблицы маршрутов
@@ -1481,6 +1517,28 @@ USER_POLICIES_EOF
         done
     }
 
+    # Маркирует исходящие сокеты xray/mihomo меткой Keenetic policy_mark.
+    # NDM для каждой пользовательской политики создаёт правило
+    # "ip rule fwmark <pmark> lookup <ptable>", где ptable содержит default
+    # через выбранный в policy WAN (основной или резервный). Маркировка
+    # OUTPUT-mangle по cgroup попадает под это правило, и трафик прокси-ядра
+    # уходит через тот WAN, что отмечен в Keenetic-policy "xkeen".
+    # Без этой функции исходящие сокеты xray всегда идут через main table
+    # и игнорируют резерв.
+    add_output_policy_mark() {
+        family="$1"
+        table="$2"
+
+        [ "$table" = "$table_tproxy" ] || return 0
+        [ -z "$policy_mark" ] && return 0
+        [ ! -d "$cgroup_path" ] && return 0
+
+        set -- -m cgroup --cgroup "$cgroup_classid" -m mark --mark 0x0 $comment -j MARK --set-mark "$policy_mark"
+        ipt -A OUTPUT "$@" >/dev/null 2>&1
+        set -- -m cgroup --cgroup "$cgroup_classid" $comment -j CONNMARK --save-mark
+        ipt -A OUTPUT "$@" >/dev/null 2>&1
+    }
+
     dns_redir() {
         family="$1"
         table="nat"
@@ -1512,6 +1570,17 @@ USER_POLICIES_EOF
     if [ -n "$port_donor" ] || [ -n "$port_exclude" ]; then
         [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ] && [ -n "$port_donor" ] && port_donor="53,$port_donor"
     fi
+
+    # Cgroup создаётся в proxy_start, но netfilter-hook может вызываться
+    # раньше (например после reboot до S05xkeen). Гарантируем готовность
+    # и перевешиваем pidof проксика на случай если cgroup был пуст.
+    if ensure_cgroup; then
+        for _xpid in $(pidof "$name_client" 2>/dev/null); do
+            cgroup_attach_pid "$_xpid" 2>/dev/null
+        done
+        unset _xpid
+    fi
+
     for family in iptables ip6tables; do
 
         [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ] && continue
@@ -1531,17 +1600,20 @@ USER_POLICIES_EOF
                 add_ipt_rule "$family" "$table" "$name_chain"
                 add_prerouting "$family" "$table"
                 add_output "$family" "$table"
+                add_output_policy_mark "$family" "$table"
             done
         elif [ -z "$port_redirect" ] && [ -n "$port_tproxy" ]; then
             table="$table_tproxy"
             add_ipt_rule "$family" "$table" "$name_chain"
             add_prerouting "$family" "$table"
             add_output "$family" "$table"
+            add_output_policy_mark "$family" "$table"
         elif [ -n "$port_redirect" ] && [ -z "$port_tproxy" ]; then
             table="$table_redirect"
             add_ipt_rule "$family" "$table" "$name_chain"
             add_prerouting "$family" "$table"
             add_output "$family" "$table"
+            add_output_policy_mark "$family" "$table"
         fi
 
         dns_redir "$family"
@@ -1561,17 +1633,23 @@ else
     [ "$architecture" = "arm64-v8a" ] && fd_limit="$arm64_fd"
     ulimit -SHn "$fd_limit"
 
+    ensure_cgroup || true
+
     case "$name_client" in
         xray)
             export XRAY_LOCATION_CONFDIR="$directory_xray_config"
             export XRAY_LOCATION_ASSET="$directory_xray_asset"
             "$name_client" run >/dev/null 2>&1 &
+            _proxy_pid=$!
         ;;
         mihomo)
             export CLASH_HOME_DIR="$directory_configs_app"
             "$name_client" >/dev/null 2>&1 &
+            _proxy_pid=$!
         ;;
     esac
+    [ -n "$_proxy_pid" ] && cgroup_attach_pid "$_proxy_pid" 2>/dev/null
+    unset _proxy_pid
     _probe=0
     while [ "$_probe" -lt 60 ]; do
         pidof "$name_client" >/dev/null 2>&1 && break
@@ -1703,6 +1781,26 @@ cleanup_fd_monitor() {
     [ -f "$file_pid_fd" ] || return 0
     kill "$(cat "$file_pid_fd")" 2>/dev/null
     rm -f "$file_pid_fd"
+}
+
+# Гарантирует наличие net_cls cgroup для трафика прокси-ядра.
+# Возвращает 0 если cgroup готов, 1 если net_cls недоступен на ядре.
+ensure_cgroup() {
+    if [ ! -d /sys/fs/cgroup/net_cls ]; then
+        mkdir -p /sys/fs/cgroup/net_cls 2>/dev/null
+        mount -t cgroup -o net_cls cgroup /sys/fs/cgroup/net_cls 2>/dev/null || return 1
+    fi
+    mkdir -p "$cgroup_path" 2>/dev/null || return 1
+    printf '%s' "$cgroup_classid" > "$cgroup_path/net_cls.classid" 2>/dev/null || return 1
+    return 0
+}
+
+# Помещает pid в cgroup xkeen.
+cgroup_attach_pid() {
+    pid="$1"
+    [ -z "$pid" ] && return 1
+    [ -f "$cgroup_path/cgroup.procs" ] || return 1
+    printf '%s' "$pid" > "$cgroup_path/cgroup.procs" 2>/dev/null
 }
 
 missing_files_template='
@@ -1858,6 +1956,8 @@ proxy_start() {
             status_file="/opt/lib/opkg/status"
             info_cpu
             while [ "$attempt" -le "$start_attempts" ]; do
+                ensure_cgroup || true
+                _proxy_pid=""
                 case "$name_client" in
                     xray)
                         export XRAY_LOCATION_CONFDIR="$directory_xray_config"
@@ -1866,9 +1966,11 @@ proxy_start() {
                         apply_fd_limit
                         if [ -n "$fd_out" ]; then
                             nohup "$name_client" run >/dev/null 2>&1 &
+                            _proxy_pid=$!
                             unset fd_out
                         else
                             "$name_client" run &
+                            _proxy_pid=$!
                         fi
                     ;;
                     mihomo)
@@ -1876,13 +1978,17 @@ proxy_start() {
                         apply_fd_limit
                         if [ -n "$fd_out" ]; then
                             nohup "$name_client" >/dev/null 2>&1 &
+                            _proxy_pid=$!
                             unset fd_out
                         else
                             "$name_client" &
+                            _proxy_pid=$!
                         fi
                         ;;
                     *) log_error_terminal "Неизвестный прокси-клиент: ${yellow}$name_client${reset}" ;;
                 esac
+                [ -n "$_proxy_pid" ] && cgroup_attach_pid "$_proxy_pid" 2>/dev/null
+                unset _proxy_pid
                 _probe_attempt=0
                 while [ "$_probe_attempt" -lt 60 ]; do
                     proxy_status && break
