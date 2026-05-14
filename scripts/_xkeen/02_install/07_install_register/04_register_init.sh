@@ -1858,6 +1858,13 @@ info_health_binary() {
     fi
 }
 
+# Очистка при аварийной остановке прокси-клиента
+emergency_clear() {
+    rm -f "/tmp/xkeen_ready"
+    cleanup_fd_monitor
+    clean_firewall
+}
+
 # Запуск прокси-клиента
 proxy_start() {
     start_manual="$1"
@@ -1987,6 +1994,22 @@ proxy_start() {
                     [ -n "$_pids" ] && wait $_pids
                     unset _pids
                     echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${light_blue}${mode_proxy}${reset}"
+                    (
+                        # Даём ядру прокси время полностью инициализироваться
+                        # Это защищает от ситуаций, когда xray/mihomo
+                        # успевает создать PID, но затем аварийно завершается,
+                        # например, из-за битой конфигурации
+                        sleep 3
+
+                        if ! proxy_status; then
+                            echo
+                            echo -e "  Прокси-клиент ${red}аварийно завершился${reset}"
+                            echo -e "  ${green}Выполняется очистка${reset} правил прозрачного проксирования"
+                            log_error_router "Прокси-клиент аварийно завершился после запуска"
+                            emergency_clear
+                            printf '\n~ # '
+                        fi
+                    ) &
                     if [ -n "$api_policy_json" ]; then
                         if echo "$api_policy_json" | jq --arg policy "$name_policy" -e 'any(.[]; .description | ascii_downcase == $policy)' > /dev/null; then
                             if [ -e "/tmp/noinet" ]; then
