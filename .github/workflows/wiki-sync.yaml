@@ -1,0 +1,54 @@
+name: Sync GitHub Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'wiki/**'
+      - '.github/workflows/wiki-sync.yaml'
+  workflow_dispatch:
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v7
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
+          git_config_global: true
+
+      - name: Clone wiki repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" wiki-repo
+
+      - name: Sync wiki content
+        run: |
+          rsync -a --delete --exclude='.git' wiki/ wiki-repo/
+
+      - name: Commit and push signed wiki update
+        working-directory: wiki-repo
+        run: |
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No wiki changes to commit"
+            exit 0
+          fi
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          git commit -S -m "[github-actions] sync wiki from main@${SHORT_SHA}"
+          BRANCH=$(git symbolic-ref --short HEAD)
+          git push origin "$BRANCH"
