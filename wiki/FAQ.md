@@ -481,3 +481,14 @@ routing.json:
 **Причина:** Если использовать ру аккаунт google через proxy, то google помечает ip как proxy, и определяет страну как РФ. Смена аккаунта не всегда помогает.
 
 **A:** Проксировать gemini через warp-native <https://github.com/distillium/warp-native> . Дефолтный Warp xray/3x-ui не всегда отрабатывает корректно. Warp-native устанавливается на VPS.
+
+### 25. Хочу перейти на ядро mihomo, какие rule sets использовать?
+
+**A:** Вот несколько вариантов:
+
+- rule-sets от "zxc-rv" <https://github.com/zxc-rv/assets/tree/main/rules>
+- rule-sets от "legiz-ru" <https://github.com/legiz-ru/mihomo-rule-sets>
+
+### 26. Не работают правила mihomo, что делать?
+
+**A:** <https://wiki.metacubex.one/ru/config/> - проверяйте корректность настроек
