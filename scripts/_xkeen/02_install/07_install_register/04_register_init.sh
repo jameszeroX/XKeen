@@ -971,10 +971,10 @@ resolve_user_policies() {
         .[] as $api |
         $up[] | 
         select(
-            (.name | ascii_downcase) == 
-            ($api.description | ascii_downcase)
+            (.name // "" | ascii_downcase) == 
+            ($api.description // "" | ascii_downcase)
         ) |
-        "\(.name)|\($api.mark)|\(.port // "")"
+        "\(.name)|\($api.mark // "")|\(.port // "")"
     ' 2>/dev/null)
 
     [ -z "$matched_policies" ] && return
@@ -989,7 +989,6 @@ resolve_user_policies() {
                 echo "${pname}|${mark}|all|"
             fi
         else
-
             case "$pports" in
                 !*) mode="exclude"; ports="${pports#!}"
                     [ -n "$api_exclude_ports" ] && ports="${ports:+$ports,}$api_exclude_ports" ;;
