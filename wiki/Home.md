@@ -4,7 +4,7 @@
 
 ## Зачем нужен XKeen
 
-- **Обход блокировок** на уровне роутера: одна точка настройки для всех домашних устройств — телефоны, ТВ, консоли, ПК.
+- **Полноценный доступ к сети** на уровне роутера: одна точка настройки для всех домашних устройств — телефоны, ТВ, консоли, ПК.
 - **Гибкая маршрутизация**: разные клиенты могут идти через разные прокси-серверы или напрямую, в зависимости от политик XKeen, IP-адресов и доменов.
 - **Защита DNS-запросов**: возможна организация DNS-over-VLESS — DNS-трафик передаётся туннелем Xray, что исключает прослушку и подмену ответов на пути от роутера до прокси. См. [DNS-over-VLESS](DNS-over-VLESS).
 - **DSCP-маршрутизация**: проксирование/исключение конкретных приложений по QoS-меткам Windows. См. [Маршрутизация по DSCP](Маршрутизация-по-DSCP).
@@ -21,10 +21,8 @@
 На роутере под Entware:
 
 ```sh
-opkg update && opkg upgrade && opkg install curl tar
-curl -OL https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz
-tar -xvzf xkeen.tar.gz -C /opt/sbin > /dev/null && rm xkeen.tar.gz
-xkeen -i
+opkg update && opkg upgrade && opkg install curl tar && cd /tmp
+sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)"
 ```
 
 Дальше следуйте интерактивному установщику: выбор ядра (Xray / Mihomo / оба), установка geofile, настройка автообновлений.
