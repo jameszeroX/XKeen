@@ -15,13 +15,25 @@ install_mihomo() {
         mv "$install_dir/mihomo" "$install_dir/mihomo_bak"
     fi
 
-    if ! gzip -d "${mihomo_archive}" || [ ! -f "${mtmp_dir}/mihomo" ]; then
+    _mihomo_tmp="${mtmp_dir}/mihomo.tmp.$$"
+    if gzip -cd "${mihomo_archive}" > "${_mihomo_tmp}" 2>/dev/null && [ -s "${_mihomo_tmp}" ]; then
+        mv "${_mihomo_tmp}" "${mtmp_dir}/mihomo"
+        rm -f "${mihomo_archive}"
+    else
+        rm -f "${_mihomo_tmp}" "${mihomo_archive}"
         echo -e "  ${red}Ошибка${reset}: Не удалось распаковать архив или файл отсутствует"
         if [ -f "$install_dir/mihomo_bak" ]; then
             mv "$install_dir/mihomo_bak" "$install_dir/mihomo"
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Mihomo"
         fi
-        rm -f "${mtmp_dir}/mihomo.gz" "${mtmp_dir}/mihomo"
+        return 1
+    fi
+    if [ ! -f "${mtmp_dir}/mihomo" ]; then
+        echo -e "  ${red}Ошибка${reset}: Не удалось распаковать архив или файл отсутствует"
+        if [ -f "$install_dir/mihomo_bak" ]; then
+            mv "$install_dir/mihomo_bak" "$install_dir/mihomo"
+            echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Mihomo"
+        fi
         return 1
     fi
 
