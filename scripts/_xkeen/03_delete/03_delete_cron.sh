@@ -3,6 +3,6 @@ delete_cron_geofile() {
     if [ -f "$cron_dir/$cron_file" ]; then
         tmp_file="$cron_dir/${cron_file}.tmp"
         cp "$cron_dir/$cron_file" "$tmp_file"
-        grep -v "ug" "$tmp_file" | grep -v '^\s*$' > "$cron_dir/$cron_file"
+        grep -v "xkeen.*-ug" "$tmp_file" | grep -v '^\s*$' > "$cron_dir/$cron_file"
     fi
 }
