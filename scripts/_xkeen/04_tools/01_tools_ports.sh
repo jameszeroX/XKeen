@@ -128,7 +128,7 @@ add_ports_donor() {
   Приоритет у портов проксирования, порты исключения будут проигнорированы"
     fi
 
-    new_ports=$(normalize_ports "$1")
+    new_ports=$(normalize_ports "$(printf '%s,' "$@" | sed 's/,$//')")
     current_ports=$(read_ports_file "$file_port_proxying")
     current_ports=$(normalize_ports "$current_ports")
 
@@ -146,7 +146,7 @@ add_ports_donor() {
 }
 
 dell_ports_donor() {
-    ports_to_del=$(normalize_ports "$1")
+    ports_to_del=$(normalize_ports "$(printf '%s,' "$@" | sed 's/,$//')")
     current_ports=$(read_ports_file "$file_port_proxying")
 
     [ -z "$current_ports" ] && {
@@ -182,7 +182,7 @@ add_ports_exclude() {
   Приоритет у портов проксирования, порты исключения будут проигнорированы"
     fi
 
-    new_ports=$(normalize_ports "$1")
+    new_ports=$(normalize_ports "$(printf '%s,' "$@" | sed 's/,$//')")
     current_ports=$(read_ports_file "$file_port_exclude")
     current_ports=$(normalize_ports "$current_ports")
 
@@ -198,7 +198,7 @@ add_ports_exclude() {
 }
 
 dell_ports_exclude() {
-    ports_to_del=$(normalize_ports "$1")
+    ports_to_del=$(normalize_ports "$(printf '%s,' "$@" | sed 's/,$//')")
     current_ports=$(read_ports_file "$file_port_exclude")
 
     [ -z "$current_ports" ] && {
