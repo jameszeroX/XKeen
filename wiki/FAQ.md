@@ -193,7 +193,13 @@ xkeen -d 30
 
 **A:** Убедитесь в параметре `"routeOnly": true` (Xray) или `"override-destination": false` (Mihomo).
 
-Для XKeen 2.0+ поместите скрипт `aghfix.sh` в `/opt/etc/ndm/netfilter.d/` и сделайте исполняемым:
+Для XKeen 2.0+ фикс уже встроен в основной скрипт. Включите его командой:
+
+```shell
+xkeen -aghfix on
+```
+
+Для XKeen 1.1.3.9 и младше поместите внешний скрипт `aghfix.sh` в `/opt/etc/ndm/netfilter.d/` и сделайте исполняемым:
 
 ```shell
 chmod +x /opt/etc/ndm/netfilter.d/aghfix.sh
