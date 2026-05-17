@@ -6,4 +6,4 @@
 # Модули загрузки
 . "$xtools_dir/07_tools_downloaders/01_downloaders_xray.sh"
 . "$xtools_dir/07_tools_downloaders/01_downloaders_mihomo.sh"
-. "$xtools_dir/07_tools_downloaders/02_donwloaders_xkeen.sh"
+. "$xtools_dir/07_tools_downloaders/02_downloaders_xkeen.sh"
