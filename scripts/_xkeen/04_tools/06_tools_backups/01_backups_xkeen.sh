@@ -4,7 +4,7 @@ backup_xkeen() {
         return 0
     fi
 
-    backup_filename="${current_datetime}_xkeen_v${xkeen_current_version}"
+    backup_filename="$(get_current_datetime)_xkeen_v${xkeen_current_version}"
     backup_dir="${backups_dir}/${backup_filename}"
     mkdir -p "$backup_dir"
 

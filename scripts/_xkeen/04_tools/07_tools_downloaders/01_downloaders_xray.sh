@@ -1,17 +1,35 @@
+# Сформировать download_url и extension для указанной версии Xray.
+# $1 = version_selected (например v25.4.30)
+# Устанавливает глобальные переменные: download_url, filename, extension
+# Возврат: 0 — успех, 1 — неизвестная архитектура
+_xray_build_url() {
+    _xbu_version="$1"
+    _xbu_base="${xray_zip_url}/$_xbu_version"
+    case "$architecture" in
+        "arm64-v8a") download_url="$_xbu_base/Xray-linux-arm64-v8a.zip" ;;
+        "mips32le")  download_url="$_xbu_base/Xray-linux-mips32le.zip" ;;
+        "mips32")    download_url="$_xbu_base/Xray-linux-mips32.zip" ;;
+        *)           download_url=; return 1 ;;
+    esac
+    filename=$(basename "$download_url")
+    extension="${filename##*.}"
+    return 0
+}
+
 # Загрузка Xray
 download_xray() {
     USE_JSDELIVR=""
     printf "  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
 
     # Получаем список релизов через GitHub API
-    RELEASE_TAGS=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout -s "${xray_api_url}?per_page=50" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
+    RELEASE_TAGS=$(eval curl $curl_extra --connect-timeout 10 $(get_curl_timeout) -s "${xray_api_url}?per_page=50" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
 
     if [ -z "$RELEASE_TAGS" ]; then
         echo
         printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
 
         # Получаем список релизов через jsDelivr
-        RELEASE_TAGS=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout -s "$xray_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
+        RELEASE_TAGS=$(eval curl $curl_extra --connect-timeout 10 $(get_curl_timeout) -s "$xray_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
 
         if [ -z "$RELEASE_TAGS" ]; then
             echo
@@ -34,23 +52,10 @@ download_xray() {
         [ "$USE_JSDELIVR" = "true" ] && version_selected="v$version_selected"
         printf "  ${green}Авто-режим${reset}: выбрана последняя версия ${yellow}%s${reset}\n" "$version_selected"
 
-        VERSION_ARG="$version_selected"
-        URL_BASE="${xray_zip_url}/$VERSION_ARG"
-
-        case $architecture in
-            "arm64-v8a") download_url="$URL_BASE/Xray-linux-arm64-v8a.zip" ;;
-            "mips32le")  download_url="$URL_BASE/Xray-linux-mips32le.zip" ;;
-            "mips32")    download_url="$URL_BASE/Xray-linux-mips32.zip" ;;
-            *)           download_url= ;;
-        esac
-
-        if [ -z "$download_url" ]; then
+        if ! _xray_build_url "$version_selected"; then
             printf "  ${red}Ошибка${reset}: Не удалось получить URL для загрузки Xray\n"
             exit 1
         fi
-
-        filename=$(basename "$download_url")
-        extension="${filename##*.}"
         mkdir -p "$xtmp_dir"
 
         printf "  ${yellow}Проверка${reset} доступности версии %s...\n" "$version_selected"
@@ -145,24 +150,10 @@ download_xray() {
             fi
         fi
 
-        VERSION_ARG="$version_selected"
-
-        URL_BASE="${xray_zip_url}/$VERSION_ARG"
-
-        case $architecture in
-            "arm64-v8a") download_url="$URL_BASE/Xray-linux-arm64-v8a.zip" ;;
-            "mips32le") download_url="$URL_BASE/Xray-linux-mips32le.zip" ;;
-            "mips32") download_url="$URL_BASE/Xray-linux-mips32.zip" ;;
-            *) download_url= ;;
-        esac
-
-        if [ -z "$download_url" ]; then
+        if ! _xray_build_url "$version_selected"; then
             printf "  ${red}Ошибка${reset}: Не удалось получить URL для загрузки Xray\n"
             exit 1
         fi
-
-        filename=$(basename "$download_url")
-        extension="${filename##*.}"
         mkdir -p "$xtmp_dir"
 
         printf "  ${yellow}Проверка${reset} доступности версии $version_selected...\n"

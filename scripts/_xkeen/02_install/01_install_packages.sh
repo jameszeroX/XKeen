@@ -4,7 +4,15 @@ install_packages() {
     package_name="$2"
 
     if [ "${package_status}" = "not_installed" ]; then
-        opkg install "$package_name" &>/dev/null
+        if [ ! -e "/tmp/.xkeen_opkg_updated" ]; then
+            opkg update >/dev/null 2>&1 && touch "/tmp/.xkeen_opkg_updated"
+        fi
+        opkg install "$package_name" >/dev/null 2>&1
+        opkg_rc=$?
+        if [ "$opkg_rc" -ne 0 ]; then
+            echo "  Ошибка установки пакета: $package_name (opkg rc=$opkg_rc)" >&2
+            return 1
+        fi
     fi
 }
 
