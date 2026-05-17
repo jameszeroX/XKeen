@@ -15,24 +15,17 @@ register_xray_list() {
     touch xray_s.list
 
     # Генерация списка файлов
-    find /opt/etc/xray/dat -maxdepth 1 -name "*.dat" -type f | while read -r file; do
-        echo "$file" >> xray_s.list
-    done
-
-    find /opt/etc/xray/configs -maxdepth 1 -name "*.json" -type f | while read -r file; do
-        echo "$file" >> xray_s.list
-    done
-
-    find /opt/var/log/xray -maxdepth 1 -name "*.log" -type f | while read -r file; do
-        echo "$file" >> xray_s.list
-    done
-
-    # Добавление дополнительных путей
-    echo "/opt/var/log/xray" >> xray_s.list
-    echo "/opt/etc/xray/configs" >> xray_s.list
-    echo "/opt/etc/xray/dat" >> xray_s.list
-    echo "/opt/etc/xray" >> xray_s.list
-    echo "/opt/sbin/xray" >> xray_s.list
+    {
+        find "$geo_dir"       -maxdepth 1 -name "*.dat"  -type f
+        find "$xray_conf_dir" -maxdepth 1 -name "*.json" -type f
+        find "$xray_log_dir"  -maxdepth 1 -name "*.log"  -type f
+        # Добавление дополнительных путей
+        echo "$xray_log_dir"
+        echo "$xray_conf_dir"
+        echo "$geo_dir"
+        echo "$(dirname "$xray_conf_dir")"
+        echo "$install_dir/xray"
+    } >> xray_s.list
 }
 
 register_xray_status() {
