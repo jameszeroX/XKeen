@@ -4,6 +4,13 @@ install_xkeen() {
 
     # Проверка наличия архива XKeen
     if [ -f "$xkeen_archive" ]; then
+        # Валидация целостности архива
+        if ! tar -tzf "$xkeen_archive" >/dev/null 2>&1; then
+            echo -e "  ${red}Ошибка${reset}: Архив XKeen повреждён или имеет неверный формат"
+            rm -f "$xkeen_archive"
+            return 1
+        fi
+
         # Распаковка архива
         tar -xzf "$xkeen_archive" -C "$install_dir" xkeen _xkeen
 
@@ -13,6 +20,8 @@ install_xkeen() {
             mv "$install_dir/_xkeen" "$install_dir/.xkeen"
         else
             echo -e "  ${red}Ошибка${reset}: _xkeen не была правильно перенесена"
+            rm -f "$xkeen_archive"
+            return 1
         fi
 
         # Удаление архива

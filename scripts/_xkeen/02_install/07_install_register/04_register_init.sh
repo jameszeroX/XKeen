@@ -1041,7 +1041,7 @@ EOL
         local name="$1"
         local val="$2"
         local safe_val
-        safe_val="${val//\'/\'\\\'\'}"
+        safe_val=$(printf '%s' "$val" | sed "s/'/'\\\\''/g")
         printf "%s='%s'\n" "$name" "$safe_val" >> "$file_netfilter_hook"
     }
 
