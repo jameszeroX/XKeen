@@ -81,6 +81,7 @@ proxy_router="off"
 start_attempts=10
 start_auto="on"
 start_delay=20
+init_delay=0
 
 # Контроль файловых дескрипторов
 check_fd="off"
@@ -2048,15 +2049,16 @@ wait_for_ready() {
     _attempt=0
     _probe_ko="$directory_os_modules/xt_TPROXY.ko"
     while [ "$_attempt" -lt "$_max" ]; do
-        # Проверка готовности API политик
-        api_policy_json=$(curl -kfsS "${url_server}/${url_policy}" 2>/dev/null)
-        if ip route show default 2>/dev/null | grep -q '^default' \
-           && [ -n "$api_policy_json" ] && [ "$api_policy_json" != "[]" ]; then
-            # .ko отсутствует (не TProxy/Hybrid), уже загружен, либо insmod удался
-            if [ ! -f "$_probe_ko" ] \
-               || grep -q '^xt_TPROXY ' /proc/modules 2>/dev/null \
-               || insmod "$_probe_ko" >/dev/null 2>&1; then
-                return 0
+        if ip route show default 2>/dev/null | grep -q '^default'; then
+            # Проверка готовности API политик
+            api_policy_json=$(curl -kfsS --max-time 2 "${url_server}/${url_policy}" 2>/dev/null)
+            if [ -n "$api_policy_json" ] && [ "$api_policy_json" != "[]" ]; then
+                # .ko отсутствует (не TProxy/Hybrid), уже загружен, либо insmod удался
+                if [ ! -f "$_probe_ko" ] \
+                   || grep -q '^xt_TPROXY ' /proc/modules 2>/dev/null \
+                   || insmod "$_probe_ko" >/dev/null 2>&1; then
+                    return 0
+                fi
             fi
         fi
         usleep 500000
@@ -2131,6 +2133,11 @@ case "$1" in
         ;;
     restart) proxy_stop; proxy_start "$2" ;;
     cold_start)
+        # Гарантированная задержка перед попыткой запуска прокси-клиента
+        if [ -n "$init_delay" ] && [ "$init_delay" -gt 0 ] 2>/dev/null; then
+            log_info_router "Ожидание перед проверкой готовности к запуску XKeen (${init_delay} сек...)"
+            sleep "$init_delay"
+        fi
         # Re-spawn в чистый S05xkeen: sh-функции (wait_for_ready) не
         # наследуются через nohup sh -c, поэтому пробу зовём отсюда.
         wait_for_ready
