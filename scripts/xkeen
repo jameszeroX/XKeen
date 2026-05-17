@@ -77,7 +77,7 @@ get_state_arg() {
 # Импортируем модули
 . "$script_dir/.xkeen/import.sh"
 
-# Маркер /tmp/toff отключает таймаут curl (get_curl_timeout) — снимаем при прерывании
+# Маркер /tmp/toff отключает таймаут curl — снимаем при прерывании
 trap 'rm -f /tmp/toff; exit 1' INT TERM
 	
 xkeen_info() {

@@ -123,7 +123,7 @@ fetch_with_mirrors() {
         else
             _fwm_fetch="$_fwm_url"
         fi
-        if eval curl $curl_extra --connect-timeout 10 $(get_curl_timeout) \
+        if eval curl $curl_extra --connect-timeout 10 $curl_timeout \
                -fL -o "$_fwm_tmp" "$_fwm_fetch" >/dev/null 2>&1; then
             if "$_fwm_validator" "$_fwm_tmp" "$_fwm_min"; then
                 _fwm_winner="$_fwm_prefix"
@@ -173,11 +173,11 @@ probe_with_mirrors() {
             _pwm_probe="$_pwm_url"
         fi
         _pwm_attempts=$((_pwm_attempts + 1))
-        _pwm_code=$(eval curl $curl_extra --connect-timeout 10 $(get_curl_timeout) \
+        _pwm_code=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout \
             -I -s -L -w '%{http_code}' -o /dev/null "$_pwm_probe" 2>/dev/null)
         _last_curl_rc=$?
         if [ "$_pwm_code" = "405" ]; then
-            _pwm_code=$(eval curl $curl_extra --connect-timeout 10 $(get_curl_timeout) \
+            _pwm_code=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout \
                 -s -L -r 0-0 -w '%{http_code}' -o /dev/null "$_pwm_probe" 2>/dev/null)
             _last_curl_rc=$?
         fi

@@ -23,7 +23,7 @@ register_xray_list() {
         echo "$xray_log_dir"
         echo "$xray_conf_dir"
         echo "$geo_dir"
-        echo "$(dirname "$xray_conf_dir")"
+        dirname "$xray_conf_dir"
         echo "$install_dir/xray"
     } >> xray_s.list
 }

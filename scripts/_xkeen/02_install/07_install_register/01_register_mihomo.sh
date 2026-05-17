@@ -58,8 +58,8 @@ add_mihomo_config() {
             mkdir "$mihomo_conf_dir"
         fi
             cat << EOF > "$mihomo_conf_dir/config.yaml"
-tproxy-port: $mihomo_default_tproxy_port
-redir-port: $mihomo_default_redir_port
+tproxy-port: 1181
+redir-port: 1182
 # Руководство по конфигурации Mihomo - https://wiki.metacubex.one/ru/config/
 EOF
 
