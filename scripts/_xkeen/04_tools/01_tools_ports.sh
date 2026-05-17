@@ -39,34 +39,6 @@ ports_conflict_check() {
     return 1
 }
 
-data_is_updated_donor() {
-    file=$1
-    new_ports=$2
-    current_ports=$(
-        awk -F= '/^port_donor/{print $2; exit}' "$file" \
-        | tr -d '"'
-    )
-    if [ "$current_ports" = "$new_ports" ]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-data_is_updated_excluded() {
-    file=$1
-    new_ports=$2
-    current_ports=$(
-        awk -F= '/^port_exclude/{print $2; exit}' "$file" \
-        | tr -d '"'
-    )
-    if [ "$current_ports" = "$new_ports" ]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
 normalize_ports() {
     echo "$1" | tr ',' '\n' | awk '
     function valid(p) {
