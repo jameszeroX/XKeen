@@ -66,8 +66,6 @@ custom_mark=""
 dscp_exclude="62"
 dscp_proxy="63"
 
-wan_probe_ip4_1="195.208.4.1"
-wan_probe_ip4_2="77.88.8.8"
 ipv4_proxy="127.0.0.1"
 ipv4_exclude="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 255.255.255.255"
 ipv6_proxy="::1"
@@ -881,8 +879,8 @@ get_exclude_ip4() {
     [ "$iptables_supported" != "true" ] && return
 
     # Получаем провайдерский IPv4
-    ipv4_eth=$(ip -o route get "$wan_probe_ip4_1" 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p' || \
-               ip -o route get "$wan_probe_ip4_2" 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
+    ipv4_eth=$(ip -o route get 195.208.4.1 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p' || \
+               ip -o route get 77.88.8.8 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
     [ -n "$ipv4_eth" ] && ipv4_eth="${ipv4_eth}/32"
     echo "${ipv4_eth} ${ipv4_exclude}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
 }
