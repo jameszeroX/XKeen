@@ -4,7 +4,7 @@ register_cron_initd() {
     opkg list-installed 2>/dev/null | grep -q "^cron " && return
 
     # Определение переменных
-    s05crond_filename="${current_datetime}_S05crond"
+    s05crond_filename="$(get_current_datetime)_S05crond"
     required_script_version="0.6"
 
     # Получение текущей версии скрипта

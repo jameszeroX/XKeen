@@ -11,7 +11,7 @@ reset="\033[0m"		# Сброс цветов
 # -------------------------------------
 # Информация
 # -------------------------------------
-current_datetime=$(date +"%Y-%m-%d_%H-%M")
+get_current_datetime() { date +"%Y-%m-%d_%H-%M"; }
 xkeen_current_version="2.0"
 xkeen_build="Beta"
 build_timestamp=""
@@ -51,6 +51,8 @@ ru_exclude_ipv4="$ipset_cfg/ru_exclude_ipv4.lst"
 ru_exclude_ipv6="$ipset_cfg/ru_exclude_ipv6.lst"
 xkeen_config="$xkeen_cfg/xkeen.json"
 status_file="/opt/lib/opkg/status"
+mihomo_default_tproxy_port="1181"
+mihomo_default_redir_port="1182"
 initd_file="$initd_dir/S05xkeen"
 initd_cron="$initd_dir/S05crond"
 cron_file="root"
@@ -64,6 +66,8 @@ name_ipset_deny_mac="xkeen_deny_mac"
 conn_URL="ya.ru"
 conn_IP1="195.208.4.1"
 conn_IP2="77.88.44.55"
+wan_probe_ip4_1="195.208.4.1"
+wan_probe_ip4_2="77.88.8.8"
 
 # -------------------------------------
 # URL
@@ -122,8 +126,13 @@ init_directories() {
     touch "$xray_error_log" || { echo "Ошибка: Не удалось создать файл $xray_error_log"; exit 1; }
 }
 
-# Таймаут curl
-[ -e "/tmp/toff" ] && curl_timeout="" || curl_timeout="-m 180"
+# Таймаут curl (вычисляется при каждом вызове — учитывает /tmp/toff, созданный во время сессии)
+get_curl_timeout() { [ -e "/tmp/toff" ] && printf '' || printf '%s' "-m 180"; }
 
 # Дополнительные параметры curl
 curl_extra=""
+
+# Проверка: запущен ли прокси-клиент (xray или mihomo)
+is_proxy_running() {
+    pidof xray >/dev/null 2>&1 || pidof mihomo >/dev/null 2>&1
+}
