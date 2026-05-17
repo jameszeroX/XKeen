@@ -1356,6 +1356,7 @@ while [ $# -gt 0 ]; do
             migration_modules
         ;;
 
+
         -delmodules)    # Obsolete
             smart_clear
             echo
@@ -1363,7 +1364,14 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -d)    # Установка задержки автозапуска в секундах
+        -di)    # Время ожидания инициализации роутера
+            shift
+            delay_init "$1"
+            add_chmod_init
+        ;;
+
+
+        -d)    # Время ожидания успешного запуска
             shift
             delay_autostart "$1"
             add_chmod_init
