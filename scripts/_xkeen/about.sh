@@ -190,6 +190,7 @@ help_xkeen() {
         echo -e "	-start	${italic}	Запуск${reset}"
         echo -e "	-stop	${italic}	Остановка${reset}"
         echo -e "	-restart${italic}	Перезапуск${reset}"
+        echo -e "	-ri	${italic}	Пересоздать файл автозапуска init.d${reset}"
         echo -e "	-status	${italic}	Статус работы${reset}"
         echo -e "	-tp	${italic}	Порты, шлюз и протокол прокси-клиента${reset}"
         echo -e "	-auto	${italic}	Включить | Отключить автозапуск прокси-клиента${reset}"
