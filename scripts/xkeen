@@ -42,7 +42,6 @@ smart_clear() {
 
 for arg in "$@"; do
     [ "$arg" = "-toff" ] && touch "/tmp/toff"
-    [ "$arg" = "-restart" ] && apply="restart"
     case "$arg" in
         -restart|-start|-stop) detach_eligible=true ;;
     esac
@@ -78,7 +77,7 @@ get_state_arg() {
 # Импортируем модули
 . "$script_dir/.xkeen/import.sh"
 
-# Маркер /tmp/toff отключает curl_timeout — снимаем при прерывании
+# Маркер /tmp/toff отключает таймаут curl (get_curl_timeout) — снимаем при прерывании
 trap 'rm -f /tmp/toff; exit 1' INT TERM
 	
 xkeen_info() {
@@ -315,7 +314,7 @@ while [ $# -gt 0 ]; do
 
             add_chmod_init
 
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+            if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
 
@@ -475,7 +474,7 @@ while [ $# -gt 0 ]; do
             choice_autostart_xkeen
             add_chmod_init
 
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+            if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
 
@@ -570,7 +569,7 @@ while [ $# -gt 0 ]; do
 
 
         -uk_post_update)
-            . "/opt/sbin/.xkeen/import.sh"
+            . "$xkeen_dir/import.sh"
             init_directories
             xkeen_info
             xkeen_set_info
@@ -599,7 +598,7 @@ while [ $# -gt 0 ]; do
             update_cron_geofile_task
             fixed_register_packages
 
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+            if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
 
@@ -614,8 +613,6 @@ while [ $# -gt 0 ]; do
             test_github
             sleep 2
 
-            . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
-            status_file="/opt/lib/opkg/status"
             info_cpu
             smart_clear
             info_xray
@@ -686,8 +683,6 @@ while [ $# -gt 0 ]; do
             test_github
             sleep 2
 
-            . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
-            status_file="/opt/lib/opkg/status"
             info_cpu
             smart_clear
             info_mihomo
@@ -1038,8 +1033,6 @@ while [ $# -gt 0 ]; do
 
 
         -k)    # Переустановка XKeen
-            . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
-            status_file="/opt/lib/opkg/status"
             xkeen_info
             xkeen_set_info
 
@@ -1074,7 +1067,7 @@ while [ $# -gt 0 ]; do
 
 
         -k_post_install)
-            . "/opt/sbin/.xkeen/import.sh"
+            . "$xkeen_dir/import.sh"
             init_directories
             xkeen_info
             xkeen_set_info
@@ -1103,7 +1096,7 @@ while [ $# -gt 0 ]; do
             update_cron_geofile_task
             fixed_register_packages
 
-            if pidof xray >/dev/null || pidof mihomo >/dev/null ; then
+            if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
 
@@ -1302,7 +1295,7 @@ while [ $# -gt 0 ]; do
             shift $#
             sleep 2
             add_chmod_init
-            if pidof xray >/dev/null || pidof mihomo >/dev/null; then
+            if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
         ;;
@@ -1314,7 +1307,7 @@ while [ $# -gt 0 ]; do
             shift $#
             sleep 2
             add_chmod_init
-            if pidof xray >/dev/null || pidof mihomo >/dev/null; then
+            if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
         ;;
@@ -1331,7 +1324,7 @@ while [ $# -gt 0 ]; do
             shift $#
             sleep 2
             add_chmod_init
-            if pidof xray >/dev/null || pidof mihomo >/dev/null; then
+            if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
         ;;
@@ -1343,7 +1336,7 @@ while [ $# -gt 0 ]; do
             shift $#
             sleep 2
             add_chmod_init
-            if pidof xray >/dev/null || pidof mihomo >/dev/null; then
+            if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
         ;;
