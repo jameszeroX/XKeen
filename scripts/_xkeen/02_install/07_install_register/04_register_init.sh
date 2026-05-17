@@ -27,7 +27,7 @@ directory_user_modules="/opt/lib/modules"
 directory_configs_app="/opt/etc/$name_client"
 directory_xray_config="$directory_configs_app/configs"
 directory_xray_asset="$directory_configs_app/dat"
-directory_logs="/opt/var/log"
+log_dir="/opt/var/log"
 xkeen_cfg="/opt/etc/xkeen"
 ipset_cfg="$xkeen_cfg/ipset"
 install_dir="/opt/sbin"
@@ -35,8 +35,8 @@ install_dir="/opt/sbin"
 # Файлы
 file_netfilter_hook="/opt/etc/ndm/netfilter.d/proxy.sh"
 file_schedule_hook="/opt/etc/ndm/schedule.d/00-xkeen-hotspot-sync.sh"
-log_access="$directory_logs/$name_client/access.log"
-log_error="$directory_logs/$name_client/error.log"
+log_access="$log_dir/$name_client/access.log"
+log_error="$log_dir/$name_client/error.log"
 mihomo_config="$directory_configs_app/config.yaml"
 file_port_proxying="$xkeen_cfg/port_proxying.lst"
 file_port_exclude="$xkeen_cfg/port_exclude.lst"
@@ -66,6 +66,8 @@ custom_mark=""
 dscp_exclude="62"
 dscp_proxy="63"
 
+wan_probe_ip4_1="195.208.4.1"
+wan_probe_ip4_2="77.88.8.8"
 ipv4_proxy="127.0.0.1"
 ipv4_exclude="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 255.255.255.255"
 ipv6_proxy="::1"
@@ -219,12 +221,12 @@ done
 log_clean() { [ "$name_client" = "xray" ] && : > "$log_access" && : > "$log_error"; }
 
 api_cache_init() {
-    api_policy_json=$(curl -kfsS "${url_server}/${url_policy}" 2>/dev/null)
-    api_port_json=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null)
-    api_static_json=$(curl -kfsS "${url_server}/${url_redirect_port}" 2>/dev/null)
+    api_policy_json=$(curl --connect-timeout 2 -m 5 -kfsS "${url_server}/${url_policy}" 2>/dev/null)
+    api_port_json=$(curl --connect-timeout 2 -m 5 -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null)
+    api_static_json=$(curl --connect-timeout 2 -m 5 -kfsS "${url_server}/${url_redirect_port}" 2>/dev/null)
 }
 
-refresh_port_cache() { api_port_json=$(curl -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null); }
+refresh_port_cache() { api_port_json=$(curl --connect-timeout 2 -m 5 -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null); }
 
 json_get_ports() { [ -n "$api_port_json" ] && printf '%s' "$api_port_json" | jq -r '.port, (.ssl.port // empty)' 2>/dev/null; }
 
@@ -879,8 +881,8 @@ get_exclude_ip4() {
     [ "$iptables_supported" != "true" ] && return
 
     # Получаем провайдерский IPv4
-    ipv4_eth=$(ip -o route get 195.208.4.1 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p' || \
-               ip -o route get 77.88.8.8 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
+    ipv4_eth=$(ip -o route get "$wan_probe_ip4_1" 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p' || \
+               ip -o route get "$wan_probe_ip4_2" 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
     [ -n "$ipv4_eth" ] && ipv4_eth="${ipv4_eth}/32"
     echo "${ipv4_eth} ${ipv4_exclude}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
 }
