@@ -2048,8 +2048,11 @@ wait_for_ready() {
     _attempt=0
     _probe_ko="$directory_os_modules/xt_TPROXY.ko"
     while [ "$_attempt" -lt "$_max" ]; do
-        if ndmc -c "show version" >/dev/null 2>&1 \
-           && ip route show default 2>/dev/null | grep -q '^default'; then
+        # Проверка готовности API политик
+        api_policy_json=$(curl -kfsS "${url_server}/${url_policy}" 2>/dev/null)
+        if ip route show default 2>/dev/null | grep -q '^default' \
+           && [ -n "$api_policy_json" ] \
+           && echo "$api_policy_json" | jq -e 'type == "array"' >/dev/null 2>&1; then
             # .ko отсутствует (не TProxy/Hybrid), уже загружен, либо insmod удался
             if [ ! -f "$_probe_ko" ] \
                || grep -q '^xt_TPROXY ' /proc/modules 2>/dev/null \
