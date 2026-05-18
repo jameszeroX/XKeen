@@ -1,5 +1,5 @@
 backup_configs_xray() {
-    backup_filename="$current_datetime_configs_xray"
+    backup_filename="${current_datetime}_configs_xray"
     backup_configs_dir="$backups_dir/$backup_filename"
     mkdir -p "$backup_configs_dir"
 
