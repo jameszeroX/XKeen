@@ -173,13 +173,11 @@ probe_with_mirrors() {
             _pwm_probe="$_pwm_url"
         fi
         _pwm_attempts=$((_pwm_attempts + 1))
-        # shellcheck disable=SC2086
-        _pwm_code=$(curl $curl_extra --connect-timeout 10 $curl_timeout \
+        _pwm_code=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout \
             -I -s -L -w '%{http_code}' -o /dev/null "$_pwm_probe" 2>/dev/null)
         _last_curl_rc=$?
         if [ "$_pwm_code" = "405" ]; then
-            # shellcheck disable=SC2086
-            _pwm_code=$(curl $curl_extra --connect-timeout 10 $curl_timeout \
+            _pwm_code=$(eval curl $curl_extra --connect-timeout 10 $curl_timeout \
                 -s -L -r 0-0 -w '%{http_code}' -o /dev/null "$_pwm_probe" 2>/dev/null)
             _last_curl_rc=$?
         fi
