@@ -1,5 +1,12 @@
 # XKeen 2.0 Beta
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/xkeen-light.png">
+    <img alt="XKeen" src="./docs/xkeen-dark.png">
+  </picture>
+</p>
+
 > **XKeen** — утилита для выборочной маршрутизации сетевого трафика через прокси‑движки **Xray** и **Mihomo** на роутерах **Keenetic**/**Netcraze**.  
 > Позволяет прозрачно направлять TCP/UDP‑трафик только выбранных клиентов, не затрагивая остальную сеть.
 
