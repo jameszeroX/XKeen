@@ -42,6 +42,7 @@ smart_clear() {
 
 for arg in "$@"; do
     [ "$arg" = "-toff" ] && touch "/tmp/toff"
+    [ "$arg" = "-restart" ] && apply="restart"
     case "$arg" in
         -restart|-start|-stop) detach_eligible=true ;;
     esac
