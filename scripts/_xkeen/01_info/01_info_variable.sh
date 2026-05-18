@@ -125,9 +125,6 @@ init_directories() {
 # Таймаут curl
 [ -e "/tmp/toff" ] && curl_timeout="" || curl_timeout="-m 180"
 
-# Дополнительные параметры curl
-curl_extra=""
-
 # Проверка: запущен ли прокси-клиент (xray или mihomo)
 is_proxy_running() {
     pidof xray >/dev/null 2>&1 || pidof mihomo >/dev/null 2>&1
