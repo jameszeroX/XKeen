@@ -2050,16 +2050,20 @@ wait_for_ready() {
     _probe_ko="$directory_os_modules/xt_TPROXY.ko"
     while [ "$_attempt" -lt "$_max" ]; do
         if ip route show default 2>/dev/null | grep -q '^default'; then
-            # Проверка готовности API политик
+            # Проверка готовности API политик и модуля xt_TPROXY
             api_policy_json=$(curl -kfsS --max-time 2 "${url_server}/${url_policy}" 2>/dev/null)
-            if [ -n "$api_policy_json" ] && [ "$api_policy_json" != "[]" ]; then
-                # .ko отсутствует (не TProxy/Hybrid), уже загружен, либо insmod удался
-                if [ ! -f "$_probe_ko" ] \
-                   || grep -q '^xt_TPROXY ' /proc/modules 2>/dev/null \
-                   || insmod "$_probe_ko" >/dev/null 2>&1; then
-                    return 0
-                fi
-            fi
+            case "$api_policy_json" in
+                ""|"{}")
+                    ;;
+                \{*)
+                    if [ ! -f "$_probe_ko" ] \
+                       || grep -q '^xt_TPROXY ' /proc/modules 2>/dev/null \
+                       || insmod "$_probe_ko" >/dev/null 2>&1
+                    then
+                        return 0
+                    fi
+                    ;;
+            esac
         fi
         usleep 500000
         _attempt=$((_attempt + 1))
