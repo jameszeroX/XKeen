@@ -123,8 +123,7 @@ fetch_with_mirrors() {
         else
             _fwm_fetch="$_fwm_url"
         fi
-        # shellcheck disable=SC2086
-        if curl $curl_extra --connect-timeout 10 $curl_timeout \
+        if eval curl $curl_extra --connect-timeout 10 $curl_timeout \
                -fL -o "$_fwm_tmp" "$_fwm_fetch" >/dev/null 2>&1; then
             if "$_fwm_validator" "$_fwm_tmp" "$_fwm_min"; then
                 _fwm_winner="$_fwm_prefix"
