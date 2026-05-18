@@ -218,13 +218,17 @@ done
 
 log_clean() { [ "$name_client" = "xray" ] && : > "$log_access" && : > "$log_error"; }
 
-api_cache_init() {
-    api_policy_json=$(curl --connect-timeout 2 -m 5 -kfsS "${url_server}/${url_policy}" 2>/dev/null)
-    api_port_json=$(curl --connect-timeout 2 -m 5 -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null)
-    api_static_json=$(curl --connect-timeout 2 -m 5 -kfsS "${url_server}/${url_redirect_port}" 2>/dev/null)
+curl_with_timeout() {
+    curl --connect-timeout 2 -m 5 "$@"
 }
 
-refresh_port_cache() { api_port_json=$(curl --connect-timeout 2 -m 5 -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null); }
+api_cache_init() {
+    api_policy_json=$(curl_with_timeout -kfsS "${url_server}/${url_policy}" 2>/dev/null)
+    api_port_json=$(curl_with_timeout -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null)
+    api_static_json=$(curl_with_timeout -kfsS "${url_server}/${url_redirect_port}" 2>/dev/null)
+}
+
+refresh_port_cache() { api_port_json=$(curl_with_timeout -kfsS "${url_server}/${url_keenetic_port}" 2>/dev/null); }
 
 json_get_ports() { [ -n "$api_port_json" ] && printf '%s' "$api_port_json" | jq -r '.port, (.ssl.port // empty)' 2>/dev/null; }
 
@@ -920,7 +924,7 @@ sync_deny_mac_ipset() {
     _xkeen_deny_tmp="${name_ipset_deny_mac}_tmp"
     ipset create "$_xkeen_deny_tmp" hash:mac -exist 2>/dev/null
     ipset flush "$_xkeen_deny_tmp" >/dev/null 2>&1
-    _xkeen_hotspot_json=$(curl -kfsS "${url_server}/${url_hotspot}" 2>/dev/null)
+    _xkeen_hotspot_json=$(curl_with_timeout -kfsS "${url_server}/${url_hotspot}" 2>/dev/null)
     if [ -n "$_xkeen_hotspot_json" ]; then
         printf '%s' "$_xkeen_hotspot_json" | jq -r '
             ((.host // . // []) |
@@ -1111,7 +1115,7 @@ if pidof "$name_client" >/dev/null; then
         _tmp="${name_ipset_deny_mac}_tmp"
         ipset create "$_tmp" hash:mac -exist 2>/dev/null
         ipset flush "$_tmp" >/dev/null 2>&1
-        _hjson=$(curl -kfsS "${url_server}/${url_hotspot}" 2>/dev/null)
+        _hjson=$(curl --connect-timeout 2 -m 5 -kfsS "${url_server}/${url_hotspot}" 2>/dev/null)
         if [ -n "$_hjson" ]; then
             printf '%s' "$_hjson" | jq -r '
                 ((.host // . // []) |
@@ -2051,7 +2055,7 @@ wait_for_ready() {
     while [ "$_attempt" -lt "$_max" ]; do
         if ip route show default 2>/dev/null | grep -q '^default'; then
             # Проверка готовности API политик и модуля xt_TPROXY
-            api_policy_json=$(curl -kfsS --max-time 2 "${url_server}/${url_policy}" 2>/dev/null)
+            api_policy_json=$(curl_with_timeout -kfsS "${url_server}/${url_policy}" 2>/dev/null)
             case "$api_policy_json" in
                 ""|"{}")
                     ;;
