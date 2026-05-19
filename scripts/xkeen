@@ -116,7 +116,6 @@ xkeen_set_info() {
     info_version_yq
 }
 
-
 # Проверяем запущен ли прокси-клиент
 is_proxy_running() { pidof xray >/dev/null 2>&1 || pidof mihomo >/dev/null 2>&1; }
 
@@ -209,7 +208,7 @@ while [ $# -gt 0 ]; do
                 if [ "$xray_installed" = "installed" ]; then
                     smart_clear
                     echo
-                    install_configs
+                    xray_conf_install
                 fi
 
                 # Создаем init для cron
@@ -413,7 +412,7 @@ while [ $# -gt 0 ]; do
             fi
 
             if [ -f "$install_dir/xray" ]; then
-                install_configs
+                xray_conf_install
 
                 if [ ! -d "$geo_dir" ]; then
                     mkdir -p "$geo_dir"
@@ -655,7 +654,7 @@ while [ $# -gt 0 ]; do
                     info_version_xray
 
                     if [ -f "$install_dir/xray" ]; then
-                        install_configs
+                        xray_conf_install
         
                         if [ ! -d "$geo_dir" ]; then
                             mkdir -p "$geo_dir"
@@ -1450,6 +1449,11 @@ while [ $# -gt 0 ]; do
             [ -n "$action" ] && shift
             smart_clear
             change_aghfix_xkeen "$action"
+        ;;
+
+
+        -xtest)    # Проверка конфигурации Xray
+            xray_conf_test
         ;;
 
 

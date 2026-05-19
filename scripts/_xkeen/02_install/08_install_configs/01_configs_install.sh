@@ -1,5 +1,5 @@
 # Функция для установки файлов конфигурации Xray
-install_configs() {
+xray_conf_install() {
     if [ ! -d "$xray_conf_dir" ]; then
         mkdir -p "$xray_conf_dir"
     fi
@@ -16,4 +16,11 @@ install_configs() {
         echo -e "  ${yellow}$filename${reset}"
         sleep 1
     done
+}
+
+# Проверка конфигурации xray
+xray_conf_test() {
+    export XRAY_LOCATION_CONFDIR="$xray_conf_dir"
+    export XRAY_LOCATION_ASSET="$geo_dir"
+    xray -format=json -test
 }
