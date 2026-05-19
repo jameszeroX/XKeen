@@ -122,7 +122,7 @@ sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/insta
 
 ## Источники и ссылки
 
-- Origin XKeen — https://github.com/Skrill0/XKeen
+- XKeen — https://github.com/Skrill0/XKeen (оригинальный проект, с которого всё началось)
 - Xray-core — https://github.com/XTLS/Xray-core
 - Mihomo — https://github.com/MetaCubeX/mihomo
 - Yq — https://github.com/mikefarah/yq
