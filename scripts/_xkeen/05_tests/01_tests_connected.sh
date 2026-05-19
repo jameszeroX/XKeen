@@ -15,7 +15,7 @@ download_with_check() {
     output_file="$2"
     min_size="${3:-50000}"
 
-    eval curl $curl_extra --connect-timeout 5 -m 15 -y 1000 -Y 5 -s -L "$url" -o "$output_file" 2>/dev/null
+    curl --connect-timeout 5 -m 15 -y 1000 -Y 5 -s -L "$url" -o "$output_file" 2>/dev/null
 
     if [ -f "$output_file" ]; then
         size=$(wc -c < "$output_file" 2>/dev/null || echo 0)

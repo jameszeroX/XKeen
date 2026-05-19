@@ -122,10 +122,12 @@ init_directories() {
     touch "$xray_error_log" || { echo "Ошибка: Не удалось создать файл $xray_error_log"; exit 1; }
 }
 
-# Таймаут curl
-[ -e "/tmp/toff" ] && curl_timeout="" || curl_timeout="-m 180"
-
-# Проверка: запущен ли прокси-клиент (xray или mihomo)
-is_proxy_running() {
-    pidof xray >/dev/null 2>&1 || pidof mihomo >/dev/null 2>&1
+# Параметры curl
+curl_api() { curl --connect-timeout 2 -m 5 -kfsS "$@"; }
+curl_with_timeout() {
+    if [ -e "/tmp/toff" ]; then
+        curl --connect-timeout 10 "$@"
+    else
+        curl --connect-timeout 10 -m 180 "$@"
+    fi
 }

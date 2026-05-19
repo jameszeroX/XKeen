@@ -116,6 +116,10 @@ xkeen_set_info() {
     info_version_yq
 }
 
+
+# Проверяем запущен ли прокси-клиент
+is_proxy_running() { pidof xray >/dev/null 2>&1 || pidof mihomo >/dev/null 2>&1; }
+
 while [ $# -gt 0 ]; do
     case "$1" in
 

@@ -16,7 +16,7 @@ info_cpu() {
 
     # Получение информации о необходимости softfloat банарников
     [ "$architecture" != "mips32le" ] && echo && return
-    version="$(curl -kfsS "localhost:79/rci/show/version" 2>/dev/null)"
+    version="$(curl_api "localhost:79/rci/show/version" 2>/dev/null)"
 
     case "$version" in
         *KN-1212*|*KN-2910*) softfloat="true" ;;
