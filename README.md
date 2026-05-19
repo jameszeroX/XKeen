@@ -1,5 +1,7 @@
 # XKeen 2.0 Beta
 
+[![CodeFactor](https://www.codefactor.io/repository/github/jameszerox/xkeen/badge)](https://www.codefactor.io/repository/github/jameszerox/xkeen)
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./docs/xkeen-light.png">
