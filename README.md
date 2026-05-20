@@ -1,6 +1,6 @@
 # XKeen 2.0 Beta
 
-[![CodeFactor](https://www.codefactor.io/repository/github/jameszerox/xkeen/badge)](https://www.codefactor.io/repository/github/jameszerox/xkeen)
+[![CodeFactor](https://www.codefactor.io/repository/github/jameszerox/xkeen/badge)](https://www.codefactor.io/repository/github/jameszerox/xkeen) [![Github All Releases](https://img.shields.io/github/downloads/jameszeroX/XKeen/total.svg)]()
 
 <p align="center">
   <picture>
@@ -46,11 +46,6 @@ XKeen работает полностью на стороне роутера, н
 
 ## Ключевые изменения форка
 
-### Исправлено
-
-- автозапуск XKeen
-- сняты ограничения на количество используемых портов
-
 ### Добавлено
 
 - поддержка **KeeneticOS 5+**
@@ -61,6 +56,17 @@ XKeen работает полностью на стороне роутера, н
 - [внешние списки](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#внешние-списки-портов-и-ip) IP и портов
 - [OffLine](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#offline-установка)‑установка
 - [Self-Hosted](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#self-hosted-прокси-для-загрузки)-прокси для загрузки компонентов
+- работа с [пользовательскими политиками](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#пользовательские-политики)
+- возможность [проксирования DNS](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#Проксирование-dns)
+- возможность [работы с IPSET](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#описание-работы-ipset-в-xkeen)
+- поддержка [DSCP-меток QoS](https://jameszero.net/4509.htm)
+- возможность ([проксирования трафика Entware](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#проксирование-трафика-entware))
+- Совместимость с родительским контролем и политикой "Без доступа в интернет"
+
+### Исправлено
+
+- автозапуск XKeen
+- сняты ограничения на количество используемых портов
 
 ### Удалено
 
@@ -74,7 +80,7 @@ XKeen работает полностью на стороне роутера, н
 
 ---
 
-Список параметров запуска XKeen доступен в справке:
+Полный список параметров запуска XKeen доступен в справке:
 ```bash
 xkeen -h
 ```
@@ -86,8 +92,15 @@ xkeen -h
 Требуется роутер **Keenetic**/**Netcraze** с предварительно установленной средой Entware и компонентом `Модули ядра подсистемы Netfilter`
 
 ```bash
-opkg update && opkg upgrade && opkg install curl tar && cd /tmp
+opkg update && opkg install curl tar && cd /tmp
 sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)"
+```
+
+либо
+
+```bash
+opkg update && opkg install curl tar && cd /tmp
+sh -c "$(curl -sSL https://cdn.jsdelivr.net/gh/jameszeroX/XKeen@main/install.sh)"
 ```
 
 ---
