@@ -18,9 +18,25 @@ xray_conf_install() {
     done
 }
 
-# Проверка конфигурации xray
-xray_conf_test() {
-    export XRAY_LOCATION_CONFDIR="$xray_conf_dir"
-    export XRAY_LOCATION_ASSET="$geo_dir"
-    xray -format=json -test
+# Проверка конфигурации прокси-клиента
+core_conf_test() {
+    local core="$1"
+    local path="$install_dir/$core"
+
+    if [ ! -f "$path" ] || [ ! -x "$path" ]; then
+        echo -e "  ${red}Ошибка${reset}: Не найден или повреждён исполняемый файл прокси-клиента ${green}$core${reset}"
+        return 1
+    fi
+
+    case "$core" in
+        "xray")
+            export XRAY_LOCATION_CONFDIR="$xray_conf_dir"
+            export XRAY_LOCATION_ASSET="$geo_dir"
+            "$path" -format=json -test
+            ;;
+        "mihomo")
+            export CLASH_HOME_DIR="$mihomo_conf_dir"
+            "$path" -t
+            ;;
+    esac
 }

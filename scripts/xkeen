@@ -1453,7 +1453,12 @@ while [ $# -gt 0 ]; do
 
 
         -xtest)    # Проверка конфигурации Xray
-            xray_conf_test
+            core_conf_test xray
+        ;;
+
+
+        -mtest)    # Проверка конфигурации Mihomo
+            core_conf_test mihomo
         ;;
 
 
