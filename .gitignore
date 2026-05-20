@@ -14,3 +14,9 @@ src/output
 
 # Локальные release-notes (не для коммита в PR)
 docs/release-notes/
+
+# MkDocs build artifacts
+/site/
+/site_src/
+.venv/
+__pycache__/

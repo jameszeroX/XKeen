@@ -1,6 +1,6 @@
 # FAQ по XKeen
 
-> Источник: [jameszero.net/faq-xkeen.htm](https://jameszero.net/faq-xkeen.htm)
+> Источник: [github.com/jameszeroX/XKeen/wiki/FAQ](https://github.com/jameszeroX/XKeen/wiki/FAQ)
 
 ## Введение
 
