@@ -199,6 +199,7 @@ help_xkeen() {
         echo -e "	-fd	${italic}	Включить | Отключить контроль файловых дескрипторов прокси-клиента${reset}"
         echo -e "	-cfd	${italic}	Проверить количество файловых дескрипторов открытых прокси-клиентом${reset}"
         echo -e "	-xtest	${italic}	Проверить конфигурацию Xray на ошибки${reset}"
+        echo -e "	-mtest	${italic}	Проверить конфигурацию Mihomo на ошибки${reset}"
         echo -e "	-diag	${italic}	Выполнить диагностику Xkeen${reset}"
         echo -e "	-channel${italic}	Переключить канал получения обновлений XKeen (Stable/Dev версия)${reset}"
         echo -e "	-xray	${italic}	Переключить XKeen на ядро Xray${reset}"
