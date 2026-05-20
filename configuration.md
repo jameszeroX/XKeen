@@ -20,7 +20,7 @@
 
 ## Self-Hosted-прокси для загрузки
 
-В базовый конфиг добавлены два GitHub-прокси, через которые возможна загрузка XKeen и его компонентов в случае недоступности GitHub. Если же и они окажутся недоступны, можете установить [Self-Hosted прокси](https://github.com/hunshcn/gh-proxy) на своём сервере и указать его в переменной `gh_proxy1` или `gh_proxy2` файла `/opt/sbin/.xkeen/01_info/01_info_variable.sh`
+В базовый конфиг добавлены два GitHub-прокси, через которые возможна загрузка XKeen и его компонентов в случае недоступности GitHub. Если же и они окажутся недоступны, можете установить [Self-Hosted прокси](https://github.com/hunshcn/gh-proxy) на своём сервере и указать его в параметре `gh_proxy` конфигурационного файла [xkeen.json](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#пользовательские-политики) (пример `"gh_proxy": "https://ghproxy.me",`)
 
 ---
 
@@ -44,7 +44,7 @@ xkeen -io
 
 Если недоступен не только GitHub, но и [репозиторий Entware](http://bin.entware.net), то перед OffLine установкой XKeen требуется вручную установить недостающие пакеты из следующего списка:
 ```
-curl, tar, lscpu, jq, libc, libssp, librt, libpthread, iptables, ca-bundle, coreutils-uname, coreutils-nohup
+curl, tar, lscpu, jq, libc, libssp, librt, libpthread, iptables, ca-bundle, coreutils-uname, coreutils-nohup, ipset
 ```
 либо прописать в файл `/opt/etc/opkg.conf` рабочее зеркало репозитория
 
