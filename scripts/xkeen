@@ -575,10 +575,10 @@ while [ $# -gt 0 ]; do
         -uk_post_update)
             . "$xkeen_dir/import.sh"
             init_directories
+            test_connection
+            test_entware
             xkeen_info
             xkeen_set_info
-            info_packages
-            install_packages
 
             echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
             delete_register_xkeen
@@ -884,7 +884,7 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  Установить ${yellow}XKeen${reset} заново можно командами:"
             echo
-            echo -e "  ${green}opkg update && opkg upgrade && opkg install curl tar && cd /tmp${reset}"
+            echo -e "  ${green}opkg update && opkg install curl tar && cd /tmp${reset}"
             echo -e "  ${green}sh -c \"\$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)\"${reset}"
 
 
@@ -1031,7 +1031,7 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  Установить ${yellow}XKeen${reset} заново можно командами:"
             echo
-            echo -e "  ${green}opkg update && opkg upgrade && opkg install curl tar && cd /tmp${reset}"
+            echo -e "  ${green}opkg update && opkg install curl tar && cd /tmp${reset}"
             echo -e "  ${green}sh -c \"\$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)\"${reset}"
         ;;
 
@@ -1056,10 +1056,6 @@ while [ $# -gt 0 ]; do
                 test_github
                 sleep 2
                 "$download_func"
-            else
-                opkg update >/dev/null 2>&1
-                info_packages
-                install_packages
             fi
 
             echo
@@ -1073,10 +1069,10 @@ while [ $# -gt 0 ]; do
         -k_post_install)
             . "$xkeen_dir/import.sh"
             init_directories
+            test_connection
+            test_entware
             xkeen_info
             xkeen_set_info
-            info_packages
-            install_packages
 
             echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
             delete_register_xkeen
