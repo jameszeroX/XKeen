@@ -117,5 +117,5 @@ sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/insta
 - Xray-core — https://github.com/XTLS/Xray-core
 - Mihomo — https://github.com/MetaCubeX/mihomo
 - Yq — https://github.com/mikefarah/yq
-- FAQ — https://jameszero.net/faq-xkeen.htm
+- FAQ — https://github.com/jameszeroX/XKeen/wiki/FAQ
 - Telegram‑чат — https://t.me/+8Cvh7oVf6cE0MWRi

@@ -3,3 +3,10 @@ graphify-out
 done
 src/graphify
 src/output
+docs/release-notes/
+
+# MkDocs build artifacts
+/site/
+/site_src/
+.venv/
+__pycache__/
