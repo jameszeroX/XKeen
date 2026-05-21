@@ -61,9 +61,9 @@ install_xray() {
     fi
 
     # Валидация ELF-сигнатуры (защита от обрезанного unzip-вывода)
-    elf_magic="$(dd if="$bin_source" bs=4 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n\t')"
+    elf_magic="$(hexdump -n 4 -e '4/1 "%02x"' "$bin_source" 2>/dev/null)"
     if [ "${elf_magic}" != "7f454c46" ]; then
-        echo -e "  ${red}Ошибка${reset}: Распакованный файл Xray не является ELF-бинарём (повреждён или не докачан)"
+        echo -e "  ${red}Ошибка${reset}: Распакованный файл Xray не является ELF-бинарником (повреждён или не докачан)"
         if [ -f "$install_dir/xray_bak" ]; then
             mv "$install_dir/xray_bak" "$install_dir/xray"
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Xray"
@@ -112,7 +112,7 @@ install_xray() {
 
     chmod +x "$install_dir/xray"
 
-    # Финальная проверка: бинарь существует, исполняем, запускается
+    # Финальная проверка: бинарник существует, исполняем, запускается
     if [ ! -x "$install_dir/xray" ] || ! "$install_dir/xray" version >/dev/null 2>&1; then
         echo -e "  ${red}Ошибка${reset}: Установленный Xray не запускается (повреждён или несовместим с архитектурой)"
         rm -f "$install_dir/xray"
