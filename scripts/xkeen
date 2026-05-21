@@ -626,7 +626,7 @@ while [ $# -gt 0 ]; do
             info_xray
             info_version_xray
 
-            [ "$xray_installed" = "installed" ] && echo && echo -e "  В роутере установлен Xray версии ${yellow}$xray_current_version${reset}" && echo
+            [ "$xray_installed" = "installed" ] && echo && echo -e "  В роутере установлен Xray версии ${yellow}$xray_current_version${reset}"
             download_xray
 
             if [ -z "$bypass_xray" ]; then
@@ -701,7 +701,7 @@ while [ $# -gt 0 ]; do
             info_version_mihomo
             mihomo_was_installed="$mihomo_installed"
 
-            [ "$mihomo_installed" = "installed" ] && echo && echo -e "  В роутере установлен Mihomo версии ${yellow}$mihomo_current_version${reset}" && echo
+            [ "$mihomo_installed" = "installed" ] && echo && echo -e "  В роутере установлен Mihomo версии ${yellow}$mihomo_current_version${reset}"
             if ! download_mihomo; then
                 delete_tmp
                 exit 1
