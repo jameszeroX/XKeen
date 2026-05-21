@@ -37,10 +37,10 @@ install_mihomo() {
     fi
 
     # Валидация ELF-сигнатуры распакованного файла (защита от обрезанного gzip-вывода)
-    elf_magic="$(dd if="${_mihomo_tmp}" bs=4 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n\t')"
+    elf_magic="$(hexdump -n 4 -e '4/1 "%02x"' "${_mihomo_tmp}" 2>/dev/null)"
     if [ "${elf_magic}" != "7f454c46" ]; then
         rm -f "${_mihomo_tmp}" "${mihomo_archive}"
-        echo -e "  ${red}Ошибка${reset}: Распакованный файл Mihomo не является ELF-бинарём (повреждён или не докачан)"
+        echo -e "  ${red}Ошибка${reset}: Распакованный файл Mihomo не является ELF-бинарником (повреждён или не докачан)"
         if [ -f "$install_dir/mihomo_bak" ]; then
             mv "$install_dir/mihomo_bak" "$install_dir/mihomo"
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Mihomo"
@@ -96,7 +96,7 @@ install_mihomo() {
 
     chmod +x "$install_dir/mihomo"
 
-    # Финальная проверка: бинарь существует, исполняем, запускается
+    # Финальная проверка: бинарник существует, исполняем, запускается
     if [ ! -x "$install_dir/mihomo" ] || ! "$install_dir/mihomo" -v >/dev/null 2>&1; then
         echo -e "  ${red}Ошибка${reset}: Установленный Mihomo не запускается (повреждён или несовместим с архитектурой)"
         rm -f "$install_dir/mihomo"
