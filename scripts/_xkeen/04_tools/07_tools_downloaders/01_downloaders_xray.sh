@@ -19,7 +19,7 @@ _xray_build_url() {
 # Загрузка Xray
 download_xray() {
     USE_JSDELIVR=""
-    printf "  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
+    printf "\n  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
 
     # Получаем список релизов через GitHub API
     RELEASE_TAGS=$(curl_with_timeout -s "${xray_api_url}?per_page=50" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)

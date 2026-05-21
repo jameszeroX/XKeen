@@ -1,7 +1,7 @@
 # Загрузка Mihomo
 download_mihomo() {
     USE_JSDELIVR=""
-    printf "  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"
+    printf "\n  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"
 
     # Получаем список релизов через GitHub API
     RELEASE_TAGS=$(curl_with_timeout -s "${mihomo_api_url}?per_page=20" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
