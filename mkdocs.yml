@@ -41,6 +41,7 @@ theme:
 plugins:
   - search:
       lang: ru
+  - awesome-pages
 
 hooks:
   - hooks/edit_url.py
@@ -62,21 +63,4 @@ markdown_extensions:
         kwds:
           case: lower
 
-nav:
-  - Главная: index.md
-  - FAQ: faq.md
-  - Конфигурация: configuration.md
-  - Изменения форка:
-    - Описание изменений: forkinfo.md
-    - Известные проблемы: knownissues.md
-  - Команды: commands.md
-  - Руководства:
-    - DNS-over-VLESS: guides/dns-over-vless.md
-    - Маршрутизация по DSCP: guides/dscp-routing.md
-  - Для разработчиков:
-    - Обзор: dev/index.md
-    - Архитектура: dev/architecture.md
-    - Сборка и релиз: dev/build-and-release.md
-    - Пути на роутере: dev/runtime-paths.md
-    - Участие в проекте: dev/contributing.md
-    - XKeen 2.0 Beta: dev/beta-notes.md
+# nav: задаётся через .pages (awesome-pages plugin), генерируется в stage-docs.sh
