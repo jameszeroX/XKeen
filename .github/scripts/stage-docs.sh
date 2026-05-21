@@ -14,6 +14,32 @@ REPO_EDIT="$REPO/edit/main"
 rm -rf "$SRC"
 mkdir -p "$SRC/guides" "$SRC/dev"
 
+# .pages для awesome-pages plugin: задают title раздела, порядок и подмешивают «...»
+# для автоматического включения остальных файлов.
+cat > "$SRC/.pages" <<'EOF'
+nav:
+  - Главная: index.md
+  - FAQ: faq.md
+  - Конфигурация: configuration.md
+  - Изменения форка:
+    - Описание изменений: forkinfo.md
+    - Известные проблемы: knownissues.md
+  - Команды: commands.md
+  - guides
+  - dev
+EOF
+
+cat > "$SRC/guides/.pages" <<'EOF'
+title: Руководства
+EOF
+
+cat > "$SRC/dev/.pages" <<'EOF'
+title: Для разработчиков
+nav:
+  - index.md
+  - ...
+EOF
+
 # inject_fm <target_file> <canonical_source_path_in_repo>
 # Добавляет YAML front-matter с edit_url, указывающим на canonical-источник,
 # чтобы кнопка "Edit on GitHub" в Material вела на правильный файл, а не в site_src/.
@@ -45,32 +71,63 @@ inject_fm "$SRC/forkinfo.md"       "forkinfo.md"
 cp "$ROOT/knownissues.md"     "$SRC/knownissues.md"
 inject_fm "$SRC/knownissues.md"    "knownissues.md"
 
-cp "$ROOT/wiki/FAQ.md"                          "$SRC/faq.md"
-inject_fm "$SRC/faq.md"                              "wiki/FAQ.md"
+# wiki/*.md → авто-цикл. Исключения:
+#   - _*.md      — GH Wiki scaffolding (_Sidebar.md, _Footer.md, _Header.md)
+#   - .gitignore — через `git check-ignore`
+# Спецслучай: FAQ.md → site_src/faq.md (top-level URL /faq/).
+# Остальные → site_src/guides/<имя>.md (имя файла сохраняется как есть).
+for src in "$ROOT"/wiki/*.md; do
+    [ -f "$src" ] || continue
+    name=$(basename "$src")
+    case "$name" in
+        _*) continue ;;
+    esac
+    rel="wiki/$name"
+    if git -C "$ROOT" check-ignore -q "$rel" 2>/dev/null; then
+        continue
+    fi
+    case "$name" in
+        FAQ.md)
+            cp "$src" "$SRC/faq.md"
+            inject_fm "$SRC/faq.md" "$rel"
+            ;;
+        *)
+            cp "$src" "$SRC/guides/$name"
+            inject_fm "$SRC/guides/$name" "$rel"
+            ;;
+    esac
+done
 
-cp "$ROOT/wiki/DNS-over-VLESS.md"               "$SRC/guides/dns-over-vless.md"
-inject_fm "$SRC/guides/dns-over-vless.md"            "wiki/DNS-over-VLESS.md"
-
-cp "$ROOT/wiki/Маршрутизация-по-DSCP.md"        "$SRC/guides/dscp-routing.md"
-inject_fm "$SRC/guides/dscp-routing.md"              "wiki/Маршрутизация-по-DSCP.md"
-
-cp "$ROOT/docs/README.md"           "$SRC/dev/index.md"
-inject_fm "$SRC/dev/index.md"                        "docs/README.md"
-
-cp "$ROOT/docs/architecture.md"     "$SRC/dev/architecture.md"
-inject_fm "$SRC/dev/architecture.md"                 "docs/architecture.md"
-
-cp "$ROOT/docs/build-and-release.md" "$SRC/dev/build-and-release.md"
-inject_fm "$SRC/dev/build-and-release.md"            "docs/build-and-release.md"
-
-cp "$ROOT/docs/runtime-paths.md"    "$SRC/dev/runtime-paths.md"
-inject_fm "$SRC/dev/runtime-paths.md"                "docs/runtime-paths.md"
-
-cp "$ROOT/docs/commands.md"         "$SRC/commands.md"
-inject_fm "$SRC/commands.md"                         "docs/commands.md"
-
-cp "$ROOT/docs/contributing.md"     "$SRC/dev/contributing.md"
-inject_fm "$SRC/dev/contributing.md"                 "docs/contributing.md"
+# docs/*.md → авто-цикл. Исключения те же (_*.md, .gitignore — release-notes/ авто-скип).
+# Спецслучаи:
+#   README.md   → site_src/dev/index.md (раздел «Для разработчиков»)
+#   commands.md → site_src/commands.md  (top-level URL /commands/)
+# Остальные → site_src/dev/<имя>.md
+for src in "$ROOT"/docs/*.md; do
+    [ -f "$src" ] || continue
+    name=$(basename "$src")
+    case "$name" in
+        _*) continue ;;
+    esac
+    rel="docs/$name"
+    if git -C "$ROOT" check-ignore -q "$rel" 2>/dev/null; then
+        continue
+    fi
+    case "$name" in
+        README.md)
+            cp "$src" "$SRC/dev/index.md"
+            inject_fm "$SRC/dev/index.md" "$rel"
+            ;;
+        commands.md)
+            cp "$src" "$SRC/commands.md"
+            inject_fm "$SRC/commands.md" "$rel"
+            ;;
+        *)
+            cp "$src" "$SRC/dev/$name"
+            inject_fm "$SRC/dev/$name" "$rel"
+            ;;
+    esac
+done
 
 cp "$ROOT/test/README.md"           "$SRC/dev/beta-notes.md"
 inject_fm "$SRC/dev/beta-notes.md"                   "test/README.md"
@@ -91,13 +148,24 @@ sed -i \
     -e 's|https://github.com/jameszeroX/XKeen/blob/main/forkinfo\.md|./forkinfo.md|g' \
     "$SRC/index.md" "$SRC/forkinfo.md"
 
-# (3) Wiki extensionless wikilinks (Home.md → dev/index.md, FAQ-style)
+# (3a) Wiki extensionless wikilinks из dev/index.md и faq.md (на уровень выше guides/)
 for f in "$SRC/dev/index.md" "$SRC/faq.md"; do
     sed -i \
         -e 's|](FAQ)|](../faq.md)|g' \
-        -e 's|](Home)|](../dev/index.md)|g' \
-        -e 's|](DNS-over-VLESS)|](../guides/dns-over-vless.md)|g' \
-        -e 's|](Маршрутизация-по-DSCP)|](../guides/dscp-routing.md)|g' \
+        -e 's|](Home)|](../guides/Home.md)|g' \
+        -e 's|](DNS-over-VLESS)|](../guides/DNS-over-VLESS.md)|g' \
+        -e 's|](Маршрутизация-по-DSCP)|](../guides/Маршрутизация-по-DSCP.md)|g' \
+        "$f"
+done
+
+# (3b) Wiki extensionless wikilinks из самих guides/*.md (siblings)
+for f in "$SRC"/guides/*.md; do
+    [ -f "$f" ] || continue
+    sed -i \
+        -e 's|](FAQ)|](../faq.md)|g' \
+        -e 's|](Home)|](Home.md)|g' \
+        -e 's|](DNS-over-VLESS)|](DNS-over-VLESS.md)|g' \
+        -e 's|](Маршрутизация-по-DSCP)|](Маршрутизация-по-DSCP.md)|g' \
         "$f"
 done
 
@@ -108,9 +176,8 @@ find "$SRC/dev" -type f -name '*.md' -exec sed -i \
     -e "s|\.\./install\.sh|$REPO_BLOB/install.sh|g" \
     -e "s|\.\./test/xkeen\.tar\.gz|$REPO_BLOB/test/xkeen.tar.gz|g" \
     -e "s|\.\./test/README\.md|beta-notes.md|g" \
-    -e "s|\.\./wiki/Маршрутизация-по-DSCP\.md|../guides/dscp-routing.md|g" \
     -e "s|\.\./wiki/FAQ\.md|../faq.md|g" \
-    -e "s|\.\./wiki/DNS-over-VLESS\.md|../guides/dns-over-vless.md|g" \
+    -e "s|\.\./wiki/\([^/)]*\)\.md|../guides/\1.md|g" \
     -e "s|\.\./wiki/|$REPO_BLOB/wiki/|g" \
     -e "s|](\.\./wiki)|]($REPO/wiki)|g" \
     -e 's|\.\./README\.md|../index.md|g' \
