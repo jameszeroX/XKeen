@@ -79,6 +79,8 @@ install_mihomo() {
     if ! mv "${mtmp_dir}/mihomo" "$install_dir/" 2>"${mv_err}"; then
         _err="$(cat "${mv_err}" 2>/dev/null)"
         rm -f "${mv_err}" "${mtmp_dir}/mihomo"
+        # Зачищаем возможный недописанный мусор в целевой директории
+        rm -f "$install_dir/mihomo"
         echo -e "  ${red}Ошибка${reset}: Не удалось переместить Mihomo в ${install_dir}"
         [ -n "${_err}" ] && echo -e "  Подробности: ${_err}"
         case "${_err}" in
