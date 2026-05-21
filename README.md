@@ -1,6 +1,6 @@
 # XKeen 2.0 Beta
 
-[![CodeFactor](https://www.codefactor.io/repository/github/jameszerox/xkeen/badge)](https://www.codefactor.io/repository/github/jameszerox/xkeen) [![Github All Releases](https://img.shields.io/github/downloads/jameszeroX/XKeen/total.svg)]()
+[![CodeFactor](https://www.codefactor.io/repository/github/jameszerox/xkeen/badge)](https://www.codefactor.io/repository/github/jameszerox/xkeen) [![Github All Releases](https://img.shields.io/github/downloads/jameszeroX/XKeen/total.svg)](https://github.com/jameszeroX/test/releases) [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
 <p align="center">
   <picture>
@@ -76,7 +76,7 @@ XKeen работает полностью на стороне роутера, н
 
 ---
 
-### Подробное [описание изменений](https://github.com/jameszeroX/XKeen/blob/main/forkinfo.md)
+### [Подробное описание изменений](https://github.com/jameszeroX/XKeen/blob/main/forkinfo.md)
 
 ---
 
@@ -89,7 +89,7 @@ xkeen -h
 
 ## Порядок установки
 
-Требуется роутер **Keenetic**/**Netcraze** с предварительно установленной средой Entware и компонентом `Модули ядра подсистемы Netfilter`
+Требуется роутер **Keenetic**/**Netcraze** с предварительно установленной средой Entware и компонентом `Модули ядра подсистемы Netfilter` [Таблица совместимости роутеров](https://github.com/jameszeroX/XKeen/blob/main/routersinfo.md)
 
 ```bash
 opkg update && opkg install curl tar && cd /tmp
@@ -107,7 +107,7 @@ sh -c "$(curl -sSL https://cdn.jsdelivr.net/gh/jameszeroX/XKeen@main/install.sh)
 
 ## Поддержка проекта
 
-Форк XKeen, как и оригинал, совершено бесплатен и не имеет каких либо ограничений по использованию. Надеюсь, доработки XKeen, многие из которых я сделал по Вашим просьбам, оказались полезны, так же, как и мои сообщения в [телеграм-чате](https://t.me/+8Cvh7oVf6cE0MWRi). Для меня очень важно понимать, что труд и время потрачены не зря. Буду благодарен за любую Вашу поддержку на развитие проекта:
+Форк XKeen, как и оригинал, совершено бесплатен и не имеет каких либо ограничений по использованию. Надеюсь, доработки XKeen, многие из которых я сделал по Вашим просьбам, оказались полезны, так же, как и мои сообщения в [телеграм-чате](https://t.me/+8Cvh7oVf6cE0MWRi). Для меня очень важно понимать, что труд и время потрачены не зря. Буду благодарен за любую Вашу поддержку на кофе для развития проекта:
 
 - [CloudTips](https://pay.cloudtips.ru/p/7edb30ec)
 - [ЮMoney](https://yoomoney.ru/to/41001350776240)
