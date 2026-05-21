@@ -57,3 +57,7 @@ info_packages_iptables=$package_status
 # Проверка наличия пакета "ipset"
 info_packages "ipset"
 info_packages_ipset=$package_status
+
+# Проверка наличия пакета "unzip"
+info_packages "unzip"
+info_packages_unzip=$package_status
