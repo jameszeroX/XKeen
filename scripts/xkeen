@@ -168,7 +168,9 @@ while [ $# -gt 0 ]; do
             fi
 
             if [ -z "$bypass_xray" ]; then
-                install_xray
+                if ! install_xray; then
+                    bypass_xray="true"
+                fi
                 info_xray
             fi
 
@@ -245,7 +247,9 @@ while [ $# -gt 0 ]; do
             fi
 
             if [ -z "$bypass_mihomo" ]; then
-                install_mihomo
+                if ! install_mihomo; then
+                    bypass_mihomo="true"
+                fi
                 info_mihomo
             fi
 
@@ -626,7 +630,11 @@ while [ $# -gt 0 ]; do
             download_xray
 
             if [ -z "$bypass_xray" ]; then
-                install_xray
+                if ! install_xray; then
+                    delete_tmp
+                    echo -e "  ${red}Ошибка${reset}: Установка Xray не выполнена. См. сообщения выше"
+                    exit 1
+                fi
 
                 if [ "$xray_installed" = "installed" ]; then
                     echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}Xray${reset}"
@@ -700,12 +708,16 @@ while [ $# -gt 0 ]; do
             fi
 
             if [ -z "$bypass_mihomo" ]; then
-                install_mihomo
+                if ! install_mihomo; then
+                    delete_tmp
+                    echo -e "  ${red}Ошибка${reset}: Установка Mihomo не выполнена. См. сообщения выше"
+                    exit 1
+                fi
                 info_mihomo
 
                 if [ "$mihomo_installed" != "installed" ]; then
                     delete_tmp
-                    echo -e "  ${red}Ошибка${reset}: Mihomo не установлен, так как отсутствует обязательный Yq"
+                    echo -e "  ${red}Ошибка${reset}: Mihomo не установлен (отсутствует обязательный Yq или бинарь Mihomo)"
                     exit 1
                 elif [ "$mihomo_was_installed" = "installed" ]; then
                     echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}Mihomo${reset}"
