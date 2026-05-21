@@ -20,11 +20,26 @@ install_xray() {
         rm -rf "${xtmp_dir}/xray"
     fi
 
-    if ! unzip -q "${xray_archive}" -d "${xtmp_dir}/xray"; then
-        echo -e "  ${red}Ошибка${reset}: Не удалось распаковать архив"
-        [ -f "$install_dir/xray_bak" ] && mv "$install_dir/xray_bak" "$install_dir/xray"
+    unzip_err="${xtmp_dir}/unzip.err.$$"
+    if ! unzip -q "${xray_archive}" -d "${xtmp_dir}/xray" 2>"${unzip_err}"; then
+        _err="$(cat "${unzip_err}" 2>/dev/null)"
+        rm -f "${unzip_err}"
+        rm -rf "${xtmp_dir}/xray"
+        rm -f "${xray_archive}"
+        echo -e "  ${red}Ошибка${reset}: Не удалось распаковать архив Xray"
+        [ -n "${_err}" ] && echo -e "  Подробности: ${_err}"
+        case "${_err}" in
+            *"No space left"*|*"ENOSPC"*|*"места"*)
+                echo -e "  ${yellow}Недостаточно свободного места${reset} на разделе с ${install_dir}"
+                ;;
+        esac
+        if [ -f "$install_dir/xray_bak" ]; then
+            mv "$install_dir/xray_bak" "$install_dir/xray"
+            echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Xray"
+        fi
         return 1
     fi
+    rm -f "${unzip_err}"
 
     bin_source="${xtmp_dir}/xray/xray"
 
@@ -45,8 +60,72 @@ install_xray() {
         return 1
     fi
 
-    mv "$bin_source" "$install_dir/xray"
+    # Валидация ELF-сигнатуры (защита от обрезанного unzip-вывода)
+    elf_magic="$(dd if="$bin_source" bs=4 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n\t')"
+    if [ "${elf_magic}" != "7f454c46" ]; then
+        echo -e "  ${red}Ошибка${reset}: Распакованный файл Xray не является ELF-бинарём (повреждён или не докачан)"
+        if [ -f "$install_dir/xray_bak" ]; then
+            mv "$install_dir/xray_bak" "$install_dir/xray"
+            echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Xray"
+        fi
+        rm -f "$xray_archive"
+        rm -rf "${xtmp_dir}/xray"
+        return 1
+    fi
+
+    # Sanity-size: Xray binary весит 15+ MB, меньше 1 MB означает обрезанный файл
+    sz="$(wc -c < "$bin_source" 2>/dev/null)"
+    case "$sz" in
+        ''|*[!0-9]*) sz=0 ;;
+    esac
+    if [ "$sz" -lt 1048576 ]; then
+        echo -e "  ${red}Ошибка${reset}: Распакованный файл Xray подозрительно мал (${sz} B) — вероятно, обрезан"
+        if [ -f "$install_dir/xray_bak" ]; then
+            mv "$install_dir/xray_bak" "$install_dir/xray"
+            echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Xray"
+        fi
+        rm -f "$xray_archive"
+        rm -rf "${xtmp_dir}/xray"
+        return 1
+    fi
+
+    mv_err="${xtmp_dir}/mv.err.$$"
+    if ! mv "$bin_source" "$install_dir/xray" 2>"${mv_err}"; then
+        _err="$(cat "${mv_err}" 2>/dev/null)"
+        rm -f "${mv_err}"
+        echo -e "  ${red}Ошибка${reset}: Не удалось переместить Xray в ${install_dir}"
+        [ -n "${_err}" ] && echo -e "  Подробности: ${_err}"
+        case "${_err}" in
+            *"No space left"*|*"ENOSPC"*|*"места"*)
+                echo -e "  ${yellow}Недостаточно свободного места${reset} на разделе с ${install_dir}"
+                ;;
+        esac
+        if [ -f "$install_dir/xray_bak" ]; then
+            mv "$install_dir/xray_bak" "$install_dir/xray"
+            echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Xray"
+        fi
+        rm -f "$xray_archive"
+        rm -rf "${xtmp_dir}/xray"
+        return 1
+    fi
+    rm -f "${mv_err}"
+
     chmod +x "$install_dir/xray"
+
+    # Финальная проверка: бинарь существует, исполняем, запускается
+    if [ ! -x "$install_dir/xray" ] || ! "$install_dir/xray" version >/dev/null 2>&1; then
+        echo -e "  ${red}Ошибка${reset}: Установленный Xray не запускается (повреждён или несовместим с архитектурой)"
+        rm -f "$install_dir/xray"
+        rm -f "$xray_archive"
+        rm -rf "${xtmp_dir}/xray"
+        if [ -f "$install_dir/xray_bak" ]; then
+            mv "$install_dir/xray_bak" "$install_dir/xray"
+            echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Xray"
+        fi
+        return 1
+    fi
+
+    rm -f "$install_dir/xray_bak"
     echo -e "  Xray ${green}успешно установлен${reset}"
 
     rm -f "$xray_archive"
