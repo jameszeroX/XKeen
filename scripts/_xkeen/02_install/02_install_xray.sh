@@ -26,6 +26,8 @@ install_xray() {
         rm -f "${unzip_err}"
         rm -rf "${xtmp_dir}/xray"
         rm -f "${xray_archive}"
+        # Гарантированно убираем возможный маркер незавершенного файла перед восстановлением бэкапа
+        rm -f "${install_dir}/xray"
         echo -e "  ${red}Ошибка${reset}: Не удалось распаковать архив Xray"
         [ -n "${_err}" ] && echo -e "  Подробности: ${_err}"
         case "${_err}" in
@@ -51,6 +53,7 @@ install_xray() {
 
     if [ ! -f "$bin_source" ]; then
         echo -e "  ${red}Ошибка${reset}: Бинарный файл Xray не найден в архиве"
+        rm -f "${install_dir}/xray"
         if [ -f "$install_dir/xray_bak" ]; then
             mv "$install_dir/xray_bak" "$install_dir/xray"
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Xray"
@@ -64,6 +67,7 @@ install_xray() {
     elf_magic="$(hexdump -n 4 -e '4/1 "%02x"' "$bin_source" 2>/dev/null)"
     if [ "${elf_magic}" != "7f454c46" ]; then
         echo -e "  ${red}Ошибка${reset}: Распакованный файл Xray не является ELF-бинарником (повреждён или не докачан)"
+        rm -f "${install_dir}/xray"
         if [ -f "$install_dir/xray_bak" ]; then
             mv "$install_dir/xray_bak" "$install_dir/xray"
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Xray"
@@ -80,6 +84,7 @@ install_xray() {
     esac
     if [ "$sz" -lt 1048576 ]; then
         echo -e "  ${red}Ошибка${reset}: Распакованный файл Xray подозрительно мал (${sz} B) — вероятно, обрезан"
+        rm -f "${install_dir}/xray"
         if [ -f "$install_dir/xray_bak" ]; then
             mv "$install_dir/xray_bak" "$install_dir/xray"
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Xray"
@@ -93,6 +98,7 @@ install_xray() {
     if ! mv "$bin_source" "$install_dir/xray" 2>"${mv_err}"; then
         _err="$(cat "${mv_err}" 2>/dev/null)"
         rm -f "${mv_err}"
+        rm -f "${install_dir}/xray"
         echo -e "  ${red}Ошибка${reset}: Не удалось переместить Xray в ${install_dir}"
         [ -n "${_err}" ] && echo -e "  Подробности: ${_err}"
         case "${_err}" in
