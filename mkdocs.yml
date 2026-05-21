@@ -1,8 +1,8 @@
 site_name: XKeen
 site_description: POSIX-shell утилита для прозрачной маршрутизации трафика через Xray и Mihomo на роутерах Keenetic/Netcraze
-site_url: https://kittylabassistant.github.io/XKeen/
-repo_url: https://github.com/kittylabassistant/XKeen
-repo_name: kittylabassistant/XKeen
+site_url: https://jameszerox.github.io/XKeen/
+repo_url: https://github.com/jameszeroX/XKeen
+repo_name: jameszeroX/XKeen
 edit_uri: edit/main/
 
 docs_dir: site_src

@@ -7,7 +7,7 @@ set -eu
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SRC="$ROOT/site_src"
-REPO="https://github.com/kittylabassistant/XKeen"
+REPO="https://github.com/jameszeroX/XKeen"
 REPO_BLOB="$REPO/blob/main"
 REPO_EDIT="$REPO/edit/main"
 
