@@ -52,15 +52,15 @@ XKeen работает полностью на стороне роутера, н
 - управление IPv6
 - поддержка ядра **Mihomo**
 - быстрое переключение Xray / Mihomo
-- контроль [файловых дескрипторов](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#контроль-файловых-дескрипторов)
-- [внешние списки](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#внешние-списки-портов-и-ip) IP и портов
-- [OffLine](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#offline-установка)‑установка
-- [Self-Hosted](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#self-hosted-прокси-для-загрузки)-прокси для загрузки компонентов
-- работа с [пользовательскими политиками](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#пользовательские-политики)
-- возможность [проксирования DNS](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#Проксирование-dns)
-- возможность [работы с IPSET](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#описание-работы-ipset-в-xkeen)
+- контроль [файловых дескрипторов](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#контроль-файловых-дескрипторов)
+- [внешние списки](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#внешние-списки-портов-и-ip) IP и портов
+- [OffLine](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#offline-установка)‑установка
+- [Self-Hosted](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#self-hosted-прокси-для-загрузки)-прокси для загрузки компонентов
+- работа с [пользовательскими политиками](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#пользовательские-политики)
+- возможность [проксирования DNS](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#Проксирование-dns)
+- возможность [работы с IPSET](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#описание-работы-ipset-в-xkeen)
 - поддержка [DSCP-меток QoS](https://jameszero.net/4509.htm)
-- возможность ([проксирования трафика Entware](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#проксирование-трафика-entware))
+- возможность ([проксирования трафика Entware](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#проксирование-трафика-entware))
 - Совместимость с родительским контролем и политикой "Без доступа в интернет"
 
 ### Исправлено
@@ -76,7 +76,7 @@ XKeen работает полностью на стороне роутера, н
 
 ---
 
-### [Подробное описание изменений](https://github.com/jameszeroX/XKeen/blob/main/forkinfo.md)
+### [Подробное описание изменений](https://github.com/jameszeroX/XKeen/blob/main/wiki/Forkinfo.md)
 
 ---
 

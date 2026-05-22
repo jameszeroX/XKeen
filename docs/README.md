@@ -1,6 +1,6 @@
 # Документация XKeen
 
-Этот каталог содержит техническую документацию для разработчиков и контрибьюторов. Если вы пользователь и просто хотите установить XKeen — начните с корневого [`README.md`](../README.md) и [`configuration.md`](../configuration.md).
+Этот каталог содержит техническую документацию для разработчиков и контрибьюторов. Если вы пользователь и просто хотите установить XKeen — начните с корневого [`README.md`](../README.md) и [`Configuration.md`](../wiki/Configuration.md).
 
 ## Содержание
 
@@ -12,12 +12,12 @@
 | [commands.md](commands.md) | Справочник флагов `xkeen` |
 | [contributing.md](contributing.md) | Правила правки кода, ограничения POSIX-`sh`, рабочий цикл проверки |
 
-## Связанные документы в корне репозитория
+## Связанные документы
 
-- [`README.md`](../README.md) — обзор и установка для пользователей.
-- [`configuration.md`](../configuration.md) — внешние списки портов/IP, fd-контроль, Self-Hosted прокси, OffLine-установка.
-- [`forkinfo.md`](../forkinfo.md) — отличия форка от оригинала Skrill0/XKeen.
-- [`knownissues.md`](../knownissues.md) — известные ограничения. Читать перед триажом багов.
+- [`README.md`](../README.md) — обзор и установка для пользователей (в корне репозитория).
+- [`wiki/Configuration.md`](../wiki/Configuration.md) — внешние списки портов/IP, fd-контроль, Self-Hosted прокси, OffLine-установка.
+- [`wiki/Forkinfo.md`](../wiki/Forkinfo.md) — отличия форка от оригинала Skrill0/XKeen.
+- [`wiki/Knownissues.md`](../wiki/Knownissues.md) — известные ограничения. Читать перед триажом багов.
 - [`test/README.md`](../test/README.md) — release-notes 2.0 Beta, новые параметры и инварианты.
 
 ## Wiki

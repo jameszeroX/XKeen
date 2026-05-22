@@ -3,16 +3,16 @@
 Добавлено:
 - Совместимость с прошивкой KeeneticOS 5+
 - Поддержка ядра Mihomo и смена ядра проксирования (Xray/Mihomo) параметрами запуска `-xray` и `-mihomo`
-- Реализована работа с пользовательскими политиками [подробнее](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#пользовательские-политики)
-- Реализовано проксирование DNS [подробнее](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#Проксирование-dns) (параметр запуска `-dns`)
-- Реализована работа с IPSET и возможность исключать из проксирования IP-подсети России (параметры запуска `-gips`, `-dgips`) [подробнее](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#описание-работы-ipset-в-xkeen)
+- Реализована работа с пользовательскими политиками [подробнее](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#пользовательские-политики)
+- Реализовано проксирование DNS [подробнее](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#Проксирование-dns) (параметр запуска `-dns`)
+- Реализована работа с IPSET и возможность исключать из проксирования IP-подсети России (параметры запуска `-gips`, `-dgips`) [подробнее](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#описание-работы-ipset-в-xkeen)
 - Поддержка [DSCP-меток QoS](https://jameszero.net/4509.htm) (`62` - исключение из проксирования, `63` - проксирование)
-- Возможность проксирования трафика Entware (параметр запуска `-pr`) [подробнее](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#проксирование-трафика-entware)
+- Возможность проксирования трафика Entware (параметр запуска `-pr`) [подробнее](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#проксирование-трафика-entware)
 - Возможность отключить/включить протокол IPv6 в KeeneticOS (параметр запуска `-ipv6`)
 - Поддержка внешних файлов `ip_exclude.lst`, `port_proxying.lst` и `port_exclude.lst` в директории `/opt/etc/xkeen/` для указания IP и портов (проксирования/исключения из проксирования)
 - При недоступности GitHub API используется резервный источник релизов для XKeen, Xray и Mihomo 
-- Возможность загружать компоненты XKeen через [Self-Hosted прокси](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#self-hosted-прокси-для-загрузки-компонентов) при недоступности GitHub. Пользовательский прокси задаётся в параметре `gh_proxy` конфигурационного файла `xkeen.json`
-- Возможность [OffLine установки](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#offline-установка) (параметр запуска `-io`)
+- Возможность загружать компоненты XKeen через [Self-Hosted прокси](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#self-hosted-прокси-для-загрузки-компонентов) при недоступности GitHub. Пользовательский прокси задаётся в параметре `gh_proxy` конфигурационного файла `xkeen.json`
+- Возможность [OffLine установки](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#offline-установка) (параметр запуска `-io`)
 - Возможность отключить резервное копирование XKeen при обновлении (параметр запуска `-cbr`)
 - Возможность установки GeoIP базы [zkeenip.dat](https://github.com/jameszeroX/zkeen-ip)
 - Обновление [zkeen.dat](https://github.com/jameszeroX/zkeen-domains) и [zkeenip.dat](https://github.com/jameszeroX/zkeen-ip) по расписанию средствами XKeen
@@ -31,7 +31,7 @@
 - Параметры запуска `-xtest` и `-mtest` для проверки конфигураций Xray и Mihomo на ошибки
 - Параметр запуска `-toff` для отключения таймаута загрузок при замедлении GitHub. Пример использования: `xkeen -i -toff`
 - Параметры запуска `-mb`, `-mbr` для резервного копирования и восстановления конфигурации Mihomo
-- Параметр запуска `-fd` для контроля открытых файловых дескрипторов [подробнее](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#контроль-файловых-дескрипторов)
+- Параметр запуска `-fd` для контроля открытых файловых дескрипторов [подробнее](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#контроль-файловых-дескрипторов)
 - Параметр запуска `-extmsg` для вывода расширенной информации при запуске прокси-клиента
 
 Измененено:

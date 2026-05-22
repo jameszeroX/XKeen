@@ -20,12 +20,12 @@
 
 ## Self-Hosted-прокси для загрузки
 
-В базовый конфиг добавлены два GitHub-прокси, через которые возможна загрузка XKeen и его компонентов в случае недоступности GitHub. Если же и они окажутся недоступны, можете установить [Self-Hosted прокси](https://github.com/hunshcn/gh-proxy) на своём сервере и указать его в параметре `gh_proxy` конфигурационного файла [xkeen.json](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#пользовательские-политики) (пример `"gh_proxy": "https://ghproxy.me",`)
+В базовый конфиг добавлены два GitHub-прокси, через которые возможна загрузка XKeen и его компонентов в случае недоступности GitHub. Если же и они окажутся недоступны, можете установить [Self-Hosted прокси](https://github.com/hunshcn/gh-proxy) на своём сервере и указать его в параметре `gh_proxy` конфигурационного файла [xkeen.json](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#пользовательские-политики) (пример `"gh_proxy": "https://ghproxy.me",`)
 
 ---
 
 ## OffLine-установка
-Обычная установка XKeen и необходимых компонентов выполняется в OnLine режиме и жёстко привязана к GitHub, а в случае его недоступности будет невозможна. Поэтому в форк дополнительно к способу установки через [Self-Hosted](https://github.com/jameszeroX/XKeen/blob/main/configuration.md#self-hosted-прокси-для-загрузки)-прокси добавлен режим OffLine-установки по команде `xkeen -io`
+Обычная установка XKeen и необходимых компонентов выполняется в OnLine режиме и жёстко привязана к GitHub, а в случае его недоступности будет невозможна. Поэтому в форк дополнительно к способу установки через [Self-Hosted](https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration.md#self-hosted-прокси-для-загрузки)-прокси добавлен режим OffLine-установки по команде `xkeen -io`
 
 Для OffLine-установки необходимо заранее любым способом скачать установочный архив XKeen версии 1.1.3.9+, ядро проксирования [xray](https://github.com/XTLS/Xray-core/releases/latest) и(или) [mihomo](https://github.com/MetaCubeX/mihomo/releases/latest) + парсер yaml-файлов [yq](https://github.com/jameszeroX/yq/releases/latest) подходящей архитектуры. Если планируте использовать xray и геофайлы в роутинге, то загрузите и их. Следующим шагом поместите в папку /opt/sbin/ архив XKeen (не распаковывая) и предварительно извлечённые из архива и при необходимости переименованные в `xray` `mihomo` и `yq` бинарники, затем выполните OffLine-установку командами в ssh-консоли entware Keenetic:
 
