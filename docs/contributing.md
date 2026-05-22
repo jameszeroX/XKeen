@@ -41,7 +41,7 @@ shellcheck scripts/xkeen scripts/_xkeen/**/*.sh
 
 ## Лимиты файловых дескрипторов
 
-Значения в стартовом скрипте: `arm64_fd=40000`, `other_fd=10000`. Не править наугад — увеличение влечёт расход RAM, уменьшение — обрывы соединений на пиках. См. также соответствующий раздел в [`configuration.md`](../configuration.md).
+Значения в стартовом скрипте: `arm64_fd=40000`, `other_fd=10000`. Не править наугад — увеличение влечёт расход RAM, уменьшение — обрывы соединений на пиках. См. также соответствующий раздел в [`wiki/Configuration.md`](../wiki/Configuration.md).
 
 ## Self-detach
 
@@ -62,7 +62,7 @@ shellcheck scripts/xkeen scripts/_xkeen/**/*.sh
 
 ## Документация
 
-- Корневые `README.md`, `configuration.md`, `forkinfo.md`, `knownissues.md` — пользовательская документация. При фичах, затрагивающих пользователя, — обновлять.
+- Корневой `README.md` и `wiki/Configuration.md`, `wiki/Forkinfo.md`, `wiki/Knownissues.md` — пользовательская документация. При фичах, затрагивающих пользователя, — обновлять.
 - [`test/README.md`](../test/README.md) — release-notes 2.0 Beta. При новой Beta-фиче — добавить запись.
 - [`docs/`](.) — техническая документация для контрибьюторов. При структурных изменениях кода — обновлять `architecture.md` / `runtime-paths.md` / `commands.md`.
 - [`wiki/`](../wiki) — публичная Wiki для пользователей. Обновления синхронизируются автоматически.

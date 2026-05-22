@@ -62,18 +62,19 @@ inject_fm() {
 cp "$ROOT/README.md"          "$SRC/index.md"
 inject_fm "$SRC/index.md"          "README.md"
 
-cp "$ROOT/configuration.md"   "$SRC/configuration.md"
-inject_fm "$SRC/configuration.md"  "configuration.md"
+cp "$ROOT/wiki/Configuration.md"   "$SRC/configuration.md"
+inject_fm "$SRC/configuration.md"  "wiki/Configuration.md"
 
-cp "$ROOT/forkinfo.md"        "$SRC/forkinfo.md"
-inject_fm "$SRC/forkinfo.md"       "forkinfo.md"
+cp "$ROOT/wiki/Forkinfo.md"        "$SRC/forkinfo.md"
+inject_fm "$SRC/forkinfo.md"       "wiki/Forkinfo.md"
 
-cp "$ROOT/knownissues.md"     "$SRC/knownissues.md"
-inject_fm "$SRC/knownissues.md"    "knownissues.md"
+cp "$ROOT/wiki/Knownissues.md"     "$SRC/knownissues.md"
+inject_fm "$SRC/knownissues.md"    "wiki/Knownissues.md"
 
 # wiki/*.md → авто-цикл. Исключения:
-#   - _*.md      — GH Wiki scaffolding (_Sidebar.md, _Footer.md, _Header.md)
-#   - .gitignore — через `git check-ignore`
+#   - _*.md                                          — GH Wiki scaffolding (_Sidebar.md, _Footer.md, _Header.md)
+#   - Configuration.md / Forkinfo.md / Knownissues.md — стейджатся выше как top-level страницы
+#   - .gitignore                                      — через `git check-ignore`
 # Спецслучай: FAQ.md → site_src/faq.md (top-level URL /faq/).
 # Остальные → site_src/guides/<имя>.md (имя файла сохраняется как есть).
 for src in "$ROOT"/wiki/*.md; do
@@ -81,6 +82,7 @@ for src in "$ROOT"/wiki/*.md; do
     name=$(basename "$src")
     case "$name" in
         _*) continue ;;
+        Configuration.md|Forkinfo.md|Knownissues.md) continue ;;
     esac
     rel="wiki/$name"
     if git -C "$ROOT" check-ignore -q "$rel" 2>/dev/null; then
@@ -144,8 +146,8 @@ sed -i \
 
 # (2) Абсолютные jameszeroX/* ссылки в README.md и forkinfo.md → site-relative
 sed -i \
-    -e 's|https://github.com/jameszeroX/XKeen/blob/main/configuration\.md|./configuration.md|g' \
-    -e 's|https://github.com/jameszeroX/XKeen/blob/main/forkinfo\.md|./forkinfo.md|g' \
+    -e 's|https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration\.md|./configuration.md|g' \
+    -e 's|https://github.com/jameszeroX/XKeen/blob/main/wiki/Forkinfo\.md|./forkinfo.md|g' \
     "$SRC/index.md" "$SRC/forkinfo.md"
 
 # (3a) Wiki extensionless wikilinks из dev/index.md и faq.md (на уровень выше guides/)
@@ -177,11 +179,13 @@ find "$SRC/dev" -type f -name '*.md' -exec sed -i \
     -e "s|\.\./test/xkeen\.tar\.gz|$REPO_BLOB/test/xkeen.tar.gz|g" \
     -e "s|\.\./test/README\.md|beta-notes.md|g" \
     -e "s|\.\./wiki/FAQ\.md|../faq.md|g" \
+    -e "s|\.\./wiki/Configuration\.md|../configuration.md|g" \
+    -e "s|\.\./wiki/Forkinfo\.md|../forkinfo.md|g" \
+    -e "s|\.\./wiki/Knownissues\.md|../knownissues.md|g" \
     -e "s|\.\./wiki/\([^/)]*\)\.md|../guides/\1.md|g" \
     -e "s|\.\./wiki/|$REPO_BLOB/wiki/|g" \
     -e "s|](\.\./wiki)|]($REPO/wiki)|g" \
     -e 's|\.\./README\.md|../index.md|g' \
-    -e 's|\.\./configuration\.md|../configuration.md|g' \
     {} +
 
 # (5) commands.md (был docs/commands.md, теперь на верхнем уровне site_src/)
