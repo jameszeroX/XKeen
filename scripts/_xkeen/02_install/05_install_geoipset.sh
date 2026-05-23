@@ -135,4 +135,11 @@ install_geoipset() {
 
     [ "$do_v4" = "1" ] && load_geoipset geo_exclude "$ru_exclude_ipv4" inet
     [ "$do_v6" = "1" ] && load_geoipset geo_exclude6 "$ru_exclude_ipv6" inet6
+
+    if [ ! -f "$ru_override" ]; then
+        cat << EOF > "$ru_override"
+
+# Добавьте IP и подсети, которые нужно исключить из IPSET ru_exclude
+EOF
+    fi
 }

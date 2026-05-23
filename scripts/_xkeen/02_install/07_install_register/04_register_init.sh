@@ -45,6 +45,7 @@ xkeen_config="$xkeen_cfg/xkeen.json"
 file_pid_fd="/var/run/xkeen_fd.pid"
 ru_exclude_ipv4="$ipset_cfg/ru_exclude_ipv4.lst"
 ru_exclude_ipv6="$ipset_cfg/ru_exclude_ipv6.lst"
+ru_override="$ipset_cfg/ru_exclude_override.lst"
 
 # URL
 url_server="localhost:79"
@@ -470,6 +471,7 @@ load_user_ipset_family() {
     set_name="$1"
     family="$2"
     addr_regex="$3"
+    source_file="$4"
     tmp="${set_name}_tmp"
 
     # Заполняем tmp; основной набор подменяется только после успешного pipeline
@@ -477,7 +479,7 @@ load_user_ipset_family() {
     ipset create "$tmp" hash:net family "$family" -exist
     ipset flush "$tmp"
 
-    if sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file_ip_exclude" |
+    if sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$source_file" |
        grep -Eo "$addr_regex" |
        awk -v s="$tmp" '{print "add "s" "$1}' | ipset restore -exist; then
         ipset swap "$set_name" "$tmp"
@@ -488,8 +490,18 @@ load_user_ipset_family() {
 # Функция загрузки пользовательских исключений в ipset
 load_user_ipset() {
     [ ! -f "$file_ip_exclude" ] && return
-    [ "$iptables_supported" = "true" ] && load_user_ipset_family user_exclude inet '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?'
-    [ "$ip6tables_supported" = "true" ] && load_user_ipset_family user_exclude6 inet6 '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?'
+    [ "$iptables_supported" = "true" ] && load_user_ipset_family user_exclude inet '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' "$file_ip_exclude"
+    [ "$ip6tables_supported" = "true" ] && load_user_ipset_family user_exclude6 inet6 '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' "$file_ip_exclude"
+
+    # Обработка списка исключений из geo_exclude
+    if [ -f "$ru_override" ]; then
+        [ "$iptables_supported" = "true" ] && load_user_ipset_family geo_override inet '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' "$ru_override"
+        [ "$ip6tables_supported" = "true" ] && load_user_ipset_family geo_override6 inet6 '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' "$ru_override"
+    else
+        # Если файла исключений нет, создаем пустые сеты, чтобы iptables не ругался на их отсутствие
+        [ "$iptables_supported" = "true" ] && ipset create geo_override hash:net -exist
+        [ "$ip6tables_supported" = "true" ] && ipset create geo_override6 hash:net family inet6 -exist
+    fi
 }
 
 # Функция чтения пользовательских портов из файлов
@@ -1263,6 +1275,21 @@ if pidof "$name_client" >/dev/null; then
         ipt -I "$chain" 1 -m set --match-set "$set_name" dst $comment -j RETURN >/dev/null 2>&1
     }
 
+    add_geo_exclude() {
+        if [ "$family" = "ip6tables" ]; then
+            geo_set="geo_exclude6"
+            override_set="geo_override6"
+        else
+            geo_set="geo_exclude"
+            override_set="geo_override"
+        fi
+
+        ipset create "$geo_set" hash:net -exist
+        ipset create "$override_set" hash:net -exist
+
+        ipt -I "$chain" 1 -m set --match-set "$geo_set" dst -m set ! --match-set "$override_set" dst $comment -j RETURN >/dev/null 2>&1
+    }
+
     # Добавление правил iptables
     add_ipt_rule() {
         family="$1"
@@ -1290,14 +1317,14 @@ if pidof "$name_client" >/dev/null; then
                 if [ "$table" = "$table_redirect" ]; then
                     ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
                     add_ipset_exclude ext_exclude hash:ip
-                    add_ipset_exclude geo_exclude hash:net
                     add_ipset_exclude user_exclude hash:net
+                    add_geo_exclude
                     ipt -A "$chain" -p tcp $comment -j REDIRECT --to-port "$port_redirect" >/dev/null 2>&1
                 else
                     ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
                     add_ipset_exclude ext_exclude hash:ip
-                    add_ipset_exclude geo_exclude hash:net
                     add_ipset_exclude user_exclude hash:net
+                    add_geo_exclude
                     ipt -A "$chain" -p udp -m socket --transparent $comment -j MARK --set-mark "$table_mark" >/dev/null 2>&1
                     ipt -A "$chain" -p udp -m mark ! --mark 0 $comment -j CONNMARK --save-mark >/dev/null 2>&1
                     ipt -A "$chain" -p udp $comment -j TPROXY --on-ip "$proxy_ip" --on-port "$port_tproxy" --tproxy-mark "$table_mark" >/dev/null 2>&1
@@ -1307,8 +1334,8 @@ if pidof "$name_client" >/dev/null; then
                 ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
                 for net in $network_tproxy; do
                     add_ipset_exclude ext_exclude hash:ip
-                    add_ipset_exclude geo_exclude hash:net
                     add_ipset_exclude user_exclude hash:net
+                    add_geo_exclude
                     ipt -A "$chain" -p "$net" -m socket --transparent $comment -j MARK --set-mark "$table_mark" >/dev/null 2>&1
                     ipt -A "$chain" -p "$net" -m mark ! --mark 0 $comment -j CONNMARK --save-mark >/dev/null 2>&1
                     ipt -A "$chain" -p "$net" $comment -j TPROXY --on-ip "$proxy_ip" --on-port "$port_tproxy" --tproxy-mark "$table_mark" >/dev/null 2>&1
@@ -1317,8 +1344,8 @@ if pidof "$name_client" >/dev/null; then
             Redirect)
                 ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
                 add_ipset_exclude ext_exclude hash:ip
-                add_ipset_exclude geo_exclude hash:net
                 add_ipset_exclude user_exclude hash:net
+                add_geo_exclude
                 for net in $network_redirect; do
                     ipt -A "$chain" -p "$net" $comment -j REDIRECT --to-port "$port_redirect" >/dev/null 2>&1
                 done
@@ -1521,8 +1548,8 @@ USER_POLICIES_EOF
         add_exclude_rules "$out_chain"
 
         add_ipset_exclude ext_exclude hash:ip
-        add_ipset_exclude geo_exclude hash:net
         add_ipset_exclude user_exclude hash:net
+        add_geo_exclude
 
         chain="$orig_chain"
 
@@ -1730,7 +1757,7 @@ clean_firewall() {
 
     # Очистка и удаление списков ipset
     if command -v ipset >/dev/null 2>&1; then
-        for set in geo_exclude geo_exclude6 user_exclude user_exclude6 "$name_ipset_deny_mac"; do
+        for set in geo_override geo_override6 geo_exclude geo_exclude6 user_exclude user_exclude6 "$name_ipset_deny_mac"; do
             ipset flush "$set" >/dev/null 2>&1
             ipset destroy "$set" >/dev/null 2>&1
         done
