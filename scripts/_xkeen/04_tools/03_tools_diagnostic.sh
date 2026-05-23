@@ -118,7 +118,12 @@ diagnostic() {
     ip rule show | log_block "Результат команды ip rule show"
     ip route show table main | log_block "Результат команды ip route show table main"
 
-    curl_api "localhost:79/rci/show/version" | jq -r '.title, .model, .region' | log_block "Данные из localhost:79/rci/show/version"
+    {
+        curl_api "localhost:79/rci/show/version" | jq -r '.title, .model, .region'
+        echo
+        echo "Архитектура пакетов (opkg):"
+        opkg print-architecture 2>/dev/null || echo "Команда opkg недоступна"
+    } | log_block "Информация о роутере"
 
     {
         if [ "${name_client}" = "xray" ]; then xray version; else mihomo -v; fi
