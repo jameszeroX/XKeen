@@ -89,19 +89,25 @@ xkeen -h
 
 ## Порядок установки
 
-Требуется роутер **Keenetic**/**Netcraze** с предварительно установленной средой Entware и компонентом `Модули ядра подсистемы Netfilter` [Таблица совместимости роутеров](https://github.com/jameszeroX/XKeen/blob/main/wiki/Routers-Info.md)
+Требуется роутер **Keenetic**/**Netcraze** с предварительно установленной средой Entware и компонентом `Модули ядра подсистемы Netfilter`
+
+[Модели роутеров, совместимых с XKeen](https://github.com/jameszeroX/XKeen/blob/main/wiki/Routers-Info.md)
+
+Для установки выполните в ssh-терминале:
 
 ```bash
 opkg update && opkg install curl tar && cd /tmp
 sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)"
 ```
 
-либо
+либо:
 
 ```bash
 opkg update && opkg install curl tar && cd /tmp
 sh -c "$(curl -sSL https://cdn.jsdelivr.net/gh/jameszeroX/XKeen@main/install.sh)"
 ```
+
+И следуйте мастеру установки
 
 ---
 
