@@ -1279,13 +1279,15 @@ if pidof "$name_client" >/dev/null; then
         if [ "$family" = "ip6tables" ]; then
             geo_set="geo_exclude6"
             override_set="geo_override6"
+            ipset_family="inet6"
         else
             geo_set="geo_exclude"
             override_set="geo_override"
+            ipset_family="inet"
         fi
 
-        ipset create "$geo_set" hash:net -exist
-        ipset create "$override_set" hash:net -exist
+        ipset create "$geo_set" hash:net family "$ipset_family" -exist
+        ipset create "$override_set" hash:net family "$ipset_family" -exist
 
         ipt -I "$chain" 1 -m set --match-set "$geo_set" dst -m set ! --match-set "$override_set" dst $comment -j RETURN >/dev/null 2>&1
     }
