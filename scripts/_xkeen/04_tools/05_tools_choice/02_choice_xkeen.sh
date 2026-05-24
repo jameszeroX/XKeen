@@ -68,10 +68,16 @@ change_ipv6_support() {
     ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::" && ip6_supported="true" || ip6_supported="false"
 
     if [ "$1" = "on" ]; then
-        [ "$ip6_supported" = "true" ] && return 0
+        if [ "$ip6_supported" = "true" ]; then
+            echo -e "\n  Поддержка IPv6 в KeeneticOS ${green}уже включена${reset}"
+            return 0
+        fi
         desired_state="on"
     elif [ "$1" = "off" ]; then
-        [ "$ip6_supported" = "false" ] && return 0
+        if [ "$ip6_supported" = "false" ]; then
+            echo -e "\n  Поддержка IPv6 в KeeneticOS ${green}уже отключена${reset}"
+            return 0
+        fi
         desired_state="off"
     else
         echo
@@ -95,7 +101,15 @@ change_ipv6_support() {
             read -r -p "  Ваш выбор: " choice
             if echo "$choice" | grep -qE '^[0-1]$'; then
                 case "$choice" in
-                    0) return 0 ;;
+                    0) 
+                        echo
+                        if [ "$ip6_supported" = "true" ]; then
+                            echo -e "  Поддержка IPv6 в KeeneticOS ${green}оставлена включённой${reset}"
+                        else
+                            echo -e "  Поддержка IPv6 в KeeneticOS ${green}оставлена отключённой${reset}"
+                        fi
+                        return 0 
+                        ;;
                     1) break ;;
                 esac
             else
@@ -124,12 +138,13 @@ change_ipv6_support() {
 
         # Перезапуск прокси-клиента, если запущен
         if pidof xray >/dev/null || pidof mihomo >/dev/null; then
-            echo -e "  ${yellow}Выполняется${reset}. Пожалуйста, подождите..."
+            echo && echo -e "  ${yellow}Выполняется${reset}. Пожалуйста, подождите..."
             "$initd_file" restart on >/dev/null 2>&1
         fi
 
         # Проверка и вывод результата
         if [ "$desired_state" = "off" ]; then
+            echo
             if ! ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::"; then
                 echo -e "  Поддержка IPv6 в KeeneticOS ${green}отключена${reset}"
                 echo -e "  ${red}Дополнительно убедитесь, что IPv6 отключен в веб-интерфейсе роутера${reset}"
@@ -137,6 +152,7 @@ change_ipv6_support() {
                 echo -e "  ${red}Ошибка${reset} при выключении IPv6"
             fi
         else
+            echo
             if [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 0 ]; then
                 echo -e "  Поддержка IPv6 в KeeneticOS ${green}включена${reset}"
             else

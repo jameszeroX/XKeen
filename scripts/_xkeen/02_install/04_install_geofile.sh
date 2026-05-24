@@ -55,27 +55,21 @@ install_geosite() {
         fi
     fi
 
-    # Параллельная загрузка независимых геофайлов
-    local _pids=""
+    # Последовательная загрузка геофайлов вместо параллельной для совместимости с прогресс-баром
     if [ "$install_refilter_geosite" = "true" ] || [ "$update_refilter_geosite" = "true" ]; then
         process_geo_file "$refilter_url" "geosite_refilter.dat" \
-            "GeoSite Re:filter" "$update_refilter_geosite" &
-        _pids="$_pids $!"
+            "GeoSite Re:filter" "$update_refilter_geosite"
     fi
 
     if [ "$install_v2fly_geosite" = "true" ] || [ "$update_v2fly_geosite" = "true" ]; then
         process_geo_file "$v2fly_url" "geosite_v2fly.dat" \
-            "GeoSite V2Fly" "$update_v2fly_geosite" &
-        _pids="$_pids $!"
+            "GeoSite V2Fly" "$update_v2fly_geosite"
     fi
 
     if [ -n "$zkeen_datfile" ]; then
         process_geo_file "$zkeen_url" "$zkeen_datfile" \
-            "GeoSite ZKeen" "$update_zkeen_geosite" &
-        _pids="$_pids $!"
+            "GeoSite ZKeen" "$update_zkeen_geosite"
     fi
-
-    [ -n "$_pids" ] && wait $_pids
 
     # Симлинки zkeen после успешной загрузки
     if [ -n "$zkeen_datfile" ]; then
@@ -105,27 +99,21 @@ install_geoip() {
         fi
     fi
 
-    # Параллельная загрузка независимых геофайлов
-    local _pids=""
+    # Последовательная загрузка геофайлов вместо параллельной для совместимости с прогресс-баром
     if [ "$install_refilter_geoip" = "true" ] || [ "$update_refilter_geoip" = "true" ]; then
         process_geo_file "$refilterip_url" "geoip_refilter.dat" \
-            "GeoIP Re:filter" "$update_refilter_geoip" &
-        _pids="$_pids $!"
+            "GeoIP Re:filter" "$update_refilter_geoip"
     fi
 
     if [ "$install_v2fly_geoip" = "true" ] || [ "$update_v2fly_geoip" = "true" ]; then
         process_geo_file "$v2flyip_url" "geoip_v2fly.dat" \
-            "GeoIP V2Fly" "$update_v2fly_geoip" &
-        _pids="$_pids $!"
+            "GeoIP V2Fly" "$update_v2fly_geoip"
     fi
 
     if [ -n "$zkeenip_datfile" ]; then
         process_geo_file "$zkeenip_url" "$zkeenip_datfile" \
-            "GeoIP ZKeenIP" "$update_zkeenip_geoip" &
-        _pids="$_pids $!"
+            "GeoIP ZKeenIP" "$update_zkeenip_geoip"
     fi
-
-    [ -n "$_pids" ] && wait $_pids
 
     # Симлинки zkeenip после успешной загрузки
     if [ -n "$zkeenip_datfile" ]; then

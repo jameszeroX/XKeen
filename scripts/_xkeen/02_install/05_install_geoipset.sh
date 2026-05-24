@@ -127,12 +127,9 @@ install_geoipset() {
         fi
     fi
 
-    # Параллельная загрузка независимых списков
-    local _pids=""
-    [ "$do_v4" = "1" ] && { install_geoipset_lst "$geoipv4_url" "$ru_exclude_ipv4" "IPv4 (IPSet)" "ipv4" & _pids="$_pids $!"; }
-    [ "$do_v6" = "1" ] && { install_geoipset_lst "$geoipv6_url" "$ru_exclude_ipv6" "IPv6 (IPSet)" "ipv6" & _pids="$_pids $!"; }
-    [ -n "$_pids" ] && wait $_pids
-
+    # Последовательная загрузка списков вместо параллельной для совместимости с прогресс-баром
+    [ "$do_v4" = "1" ] && install_geoipset_lst "$geoipv4_url" "$ru_exclude_ipv4" "IPv4 (IPSet)" "ipv4"
+    [ "$do_v6" = "1" ] && install_geoipset_lst "$geoipv6_url" "$ru_exclude_ipv6" "IPv6 (IPSet)" "ipv6"
     [ "$do_v4" = "1" ] && load_geoipset geo_exclude "$ru_exclude_ipv4" inet
     [ "$do_v6" = "1" ] && load_geoipset geo_exclude6 "$ru_exclude_ipv6" inet6
 

@@ -123,7 +123,7 @@ fetch_with_mirrors() {
         else
             _fwm_fetch="$_fwm_url"
         fi
-        if curl_with_timeout -fL -o "$_fwm_tmp" "$_fwm_fetch" >/dev/null 2>&1; then
+        if curl_with_timeout -fL -o "$_fwm_tmp" "$_fwm_fetch"; then
             if "$_fwm_validator" "$_fwm_tmp" "$_fwm_min"; then
                 _fwm_winner="$_fwm_prefix"
                 break

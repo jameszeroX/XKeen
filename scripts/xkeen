@@ -161,7 +161,6 @@ while [ $# -gt 0 ]; do
 
             if [ "$add_xray" = "true" ]; then
                 smart_clear
-                echo
                 download_xray
             else
                 command -v xray >/dev/null 2>&1 || bypass_xray="true"
@@ -238,7 +237,6 @@ while [ $# -gt 0 ]; do
 
             if [ "$add_mihomo" = "true" ]; then
                 smart_clear
-                echo
                 if ! download_mihomo; then
                     bypass_mihomo="true"
                 fi

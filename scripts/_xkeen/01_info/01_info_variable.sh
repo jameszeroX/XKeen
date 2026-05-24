@@ -129,6 +129,6 @@ curl_with_timeout() {
     if [ -e "/tmp/toff" ]; then
         curl --connect-timeout 10 "$@"
     else
-        curl --connect-timeout 10 -m 180 "$@"
+        curl -# --connect-timeout 10 -m 180 "$@"
     fi
 }

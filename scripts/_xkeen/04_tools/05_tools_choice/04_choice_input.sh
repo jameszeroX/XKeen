@@ -76,7 +76,15 @@ toggle_param() {
         while true; do
             read -r -p "  Ваш выбор: " choice
             case "$choice" in
-                0) return 0 ;;
+                0) 
+                    echo
+                    if [ "$current_state" = "on" ]; then
+                        echo -e "  Состояние ${description} ${green}оставлено включённым${reset}"
+                    else
+                        echo -e "  Состояние ${description} ${red}оставлено отключённым${reset}"
+                    fi
+                    return 0 
+                    ;;
                 1) break ;;
                 *) echo -e "  ${red}Некорректный ввод${reset}" ;;
             esac
