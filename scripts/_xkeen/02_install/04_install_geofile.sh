@@ -24,7 +24,7 @@ process_geo_file() {
                 printf "  ${red}Ошибка${reset}: получена HTML-страница вместо dat-файла\n  Невозможно обновить. Оставляем старый файл\n\n"
                 ;;
             *)
-                printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n" "$display_name"
+                printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n\n" "$display_name"
                 ;;
         esac
         return 1

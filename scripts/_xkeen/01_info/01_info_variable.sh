@@ -126,9 +126,33 @@ init_directories() {
 # Параметры curl
 curl_api() { curl --connect-timeout 2 -m 5 -kfsS "$@"; }
 curl_with_timeout() {
-    if [ -e "/tmp/toff" ]; then
-        curl --connect-timeout 10 "$@"
+    # Фильтр: убирает текстовые ошибки curl, таблицы, пустые строки и форматирует бар
+    indent_stderr() {
+        sed -E \
+            -e '/(% Total|Average Speed|Time Current|curl:)/d' \
+            -e '/^[[:space:]]*$/d' \
+            -e 's/\r/\r  /g' \
+            -e 's/^([# ])/  \1/' >&2
+    }
+
+    # Проверяем контекст: если вывод в /dev/null или это HEAD-запрос (-I), то это проверка (probe)
+    _is_probe=0
+    for _arg in "$@"; do
+        [ "$_arg" = "/dev/null" ] || [ "$_arg" = "-I" ] && _is_probe=1 && break
+    done
+
+    if [ "$_is_probe" = "0" ]; then
+        if [ -e "/tmp/toff" ]; then
+            (curl --progress-bar --connect-timeout 10 "$@" 2>&1 1>&3 | indent_stderr) 3>&1
+        else
+            (curl --progress-bar --connect-timeout 10 -m 180 "$@" 2>&1 1>&3 | indent_stderr) 3>&1
+        fi
     else
-        curl -# --connect-timeout 10 -m 180 "$@"
+        # Режим проверки доступности (probe_with_mirrors / test_github)
+        if [ -e "/tmp/toff" ]; then
+            curl --connect-timeout 10 "$@"
+        else
+            curl --connect-timeout 10 -m 180 "$@"
+        fi
     fi
 }
