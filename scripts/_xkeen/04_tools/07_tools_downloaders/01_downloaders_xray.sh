@@ -47,6 +47,13 @@ download_xray() {
         printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
     fi
 
+    # Инициализация параметров повтора загрузки
+    local max_attempts=1
+    if [ -n "$retries_download" ] && [ "$retries_download" -gt 1 ] 2>/dev/null; then
+        max_attempts=$retries_download
+    fi
+    local delay=${retry_delay_download:-2}
+
     if [ "$autoinstall_mode" = "true" ]; then
         version_selected=$(echo "$RELEASE_TAGS" | head -1)
         [ "$USE_JSDELIVR" = "true" ] && version_selected="v$version_selected"
@@ -92,10 +99,35 @@ download_xray() {
 
         printf "  ${yellow}Выполняется загрузка${reset} последней версии Xray\n"
 
-        if ! fetch_with_mirrors "$download_url" "$xtmp_dir/xray.$extension" 1024; then
-            printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray %s\n" "$version_selected"
+        local auto_attempt=1
+        local auto_success=1
+
+        while [ "$auto_attempt" -le "$max_attempts" ]; do
+            if [ "$max_attempts" -gt 1 ]; then
+                printf "  Загрузка Xray (Попытка %d из %d)...\n" "$auto_attempt" "$max_attempts"
+            fi
+
+            if fetch_with_mirrors "$download_url" "$xtmp_dir/xray.$extension" 1024; then
+                auto_success=0
+                break
+            fi
+
+            if [ "$auto_attempt" -lt "$max_attempts" ]; then
+                printf "  ${yellow}Предупреждение${reset}: Не удалось загрузить Xray. Повтор через %d сек...\n" "$delay"
+                sleep "$delay"
+            fi
+            auto_attempt=$((auto_attempt + 1))
+        done
+
+        if [ "$auto_success" -ne 0 ]; then
+            if [ "$max_attempts" -gt 1 ]; then
+                printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray %s после %d попыток\n" "$version_selected" "$max_attempts"
+            else
+                printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray %s\n" "$version_selected"
+            fi
             exit 1
         fi
+
         printf "  Xray ${green}успешно загружен${reset}\n"
         return 0
     fi
@@ -190,10 +222,35 @@ download_xray() {
 
         printf "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray\n"
 
-        if ! fetch_with_mirrors "$download_url" "$xtmp_dir/xray.$extension" 1024; then
-            printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray $version_selected\n"
+        local menu_attempt=1
+        local menu_success=1
+
+        while [ "$menu_attempt" -le "$max_attempts" ]; do
+            if [ "$max_attempts" -gt 1 ]; then
+                printf "  Загрузка Xray (Попытка %d из %d)...\n" "$menu_attempt" "$max_attempts"
+            fi
+
+            if fetch_with_mirrors "$download_url" "$xtmp_dir/xray.$extension" 1024; then
+                menu_success=0
+                break
+            fi
+
+            if [ "$menu_attempt" -lt "$max_attempts" ]; then
+                printf "  ${yellow}Предупреждение${reset}: Не удалось загрузить Xray. Повтор через %d сек...\n" "$delay"
+                sleep "$delay"
+            fi
+            menu_attempt=$((menu_attempt + 1))
+        done
+
+        if [ "$menu_success" -ne 0 ]; then
+            if [ "$max_attempts" -gt 1 ]; then
+                printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray $version_selected после %d попыток\n" "$max_attempts"
+            else
+                printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray $version_selected\n"
+            fi
             continue
         fi
+
         printf "  Xray ${green}успешно загружен${reset}\n"
         return 0
     done

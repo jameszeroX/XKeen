@@ -27,7 +27,13 @@ install_geoipset_lst() {
     display_name="$3"
     ip_type="$4"
 
-    printf "  Загрузка %s...\n" "$display_name"
+    # Если переменная retries_download не задана, используем одну попытку
+    local max_attempts=1
+    if [ -n "$retries_download" ] && [ "$retries_download" -gt 1 ] 2>/dev/null; then
+        max_attempts=$retries_download
+    fi
+
+    local delay=${retry_delay_download:-2}
 
     if [ "$ip_type" = "ipv4" ]; then
         _validator_name="_validate_geoipset_v4"
@@ -35,7 +41,33 @@ install_geoipset_lst() {
         _validator_name="_validate_geoipset_v6"
     fi
 
-    if ! fetch_with_mirrors "$url" "$dest_file" 0 "$_validator_name"; then
+    local attempt=1
+    local success=1
+
+    while [ "$attempt" -le "$max_attempts" ]; do
+        # Выводим инфо о попытках только если их больше одной
+        if [ "$max_attempts" -gt 1 ]; then
+            printf "  Загрузка %s (Попытка %d из %d)...\n" "$display_name" "$attempt" "$max_attempts"
+        else
+            printf "  Загрузка %s...\n" "$display_name"
+        fi
+
+        if fetch_with_mirrors "$url" "$dest_file" 0 "$_validator_name"; then
+            success=0
+            break
+        fi
+
+        # Если попытка сорвалась и она НЕ последняя — ждем и повторяем
+        if [ "$attempt" -lt "$max_attempts" ]; then
+            printf "  ${yellow}Предупреждение${reset}: Попытка %d не удалась. Повтор через %d сек...\n" "$attempt" "$delay"
+            sleep "$delay"
+        fi
+
+        attempt=$((attempt + 1))
+    done
+
+    # Если все попытки исчерпаны и загрузка не удалась
+    if [ "$success" -ne 0 ]; then
         case "$_last_error" in
             html_stub)
                 printf "  ${red}Ошибка${reset}: получена HTML-страница вместо списка IP\n  Оставляем старый файл\n\n"
@@ -47,7 +79,11 @@ install_geoipset_lst() {
                 printf "  ${red}Ошибка${reset}: %s не содержит корректных IPv6-адресов\n  Оставляем старый файл\n\n" "$display_name"
                 ;;
             *)
-                printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n\n" "$display_name"
+                if [ "$max_attempts" -gt 1 ]; then
+                    printf "  ${red}Ошибка${reset}: не удалось загрузить %s после %d попыток\n\n" "$display_name" "$max_attempts"
+                else
+                    printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n\n" "$display_name"
+                fi
                 ;;
         esac
         return 1

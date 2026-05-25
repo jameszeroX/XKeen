@@ -13,9 +13,41 @@ process_geo_file() {
 
     local min_size=24576  # 24 KB
 
-    printf "  Загрузка %s...\n" "$display_name"
+    # Если переменная retries_download не задана, используем одну попытку
+    local max_attempts=1
+    if [ -n "$retries_download" ] && [ "$retries_download" -gt 1 ] 2>/dev/null; then
+        max_attempts=$retries_download
+    fi
 
-    if ! fetch_with_mirrors "$url" "$geo_dir/$filename" "$min_size"; then
+    local delay=${retry_delay_download:-2}
+
+    local attempt=1
+    local success=1
+
+    while [ "$attempt" -le "$max_attempts" ]; do
+        # Выводим инфо о попытках только если их больше одной
+        if [ "$max_attempts" -gt 1 ]; then
+            printf "  Загрузка %s (Попытка %d из %d)...\n" "$display_name" "$attempt" "$max_attempts"
+        else
+            printf "  Загрузка %s...\n" "$display_name"
+        fi
+
+        if fetch_with_mirrors "$url" "$geo_dir/$filename" "$min_size"; then
+            success=0
+            break
+        fi
+
+        # Если загрузка сорвалась и это НЕ последняя попытка — ждем и повторяем
+        if [ "$attempt" -lt "$max_attempts" ]; then
+            printf "  ${yellow}Предупреждение${reset}: Попытка %d не удалась. Повтор через %d сек...\n" "$attempt" "$delay"
+            sleep "$delay"
+        fi
+
+        attempt=$((attempt + 1))
+    done
+
+    # Обработка ошибок, если все попытки провалились
+    if [ "$success" -ne 0 ]; then
         case "$_last_error" in
             size)
                 printf "  ${red}Ошибка${reset}: загруженный файл слишком мал (%s bytes) или повреждён\n  Невозможно обновить. Оставляем старый файл\n\n" "$_last_size"
@@ -24,7 +56,11 @@ process_geo_file() {
                 printf "  ${red}Ошибка${reset}: получена HTML-страница вместо dat-файла\n  Невозможно обновить. Оставляем старый файл\n\n"
                 ;;
             *)
-                printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n\n" "$display_name"
+                if [ "$max_attempts" -gt 1 ]; then
+                    printf "  ${red}Ошибка${reset}: не удалось загрузить %s после %d попыток\n\n" "$display_name" "$max_attempts"
+                else
+                    printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n\n" "$display_name"
+                fi
                 ;;
         esac
         return 1

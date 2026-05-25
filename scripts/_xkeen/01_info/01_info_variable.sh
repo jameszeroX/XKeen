@@ -177,3 +177,25 @@ curl_with_timeout() {
         fi
     fi
 }
+
+# Параметры повтора загрузок
+retries_download_settings() {
+    retries_download=1
+    retry_delay_download=2
+
+    if [ -f "$xkeen_config" ] && command -v jq >/dev/null 2>&1; then
+        local parsed_val
+        parsed_val=$(jq -r '.xkeen.retries_download // empty' "$xkeen_config" 2>/dev/null)
+
+        if [ -n "$parsed_val" ] && [ "$parsed_val" -gt 0 ] 2>/dev/null; then
+            retries_download="$parsed_val"
+        fi
+
+        local parsed_delay
+        parsed_delay=$(jq -r '.xkeen.retry_delay_download // empty' "$xkeen_config" 2>/dev/null)
+        if [ -n "$parsed_delay" ] && [ "$parsed_delay" -gt 0 ] 2>/dev/null; then
+            retry_delay_download="$parsed_delay"
+        fi
+    fi
+}
+retries_download_settings

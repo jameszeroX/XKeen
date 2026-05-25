@@ -29,6 +29,13 @@ download_mihomo() {
         printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
     fi
 
+    # Инициализация переменных для повторов загрузки
+    local max_attempts=1
+    if [ -n "$retries_download" ] && [ "$retries_download" -gt 1 ] 2>/dev/null; then
+        max_attempts=$retries_download
+    fi
+    local delay=${retry_delay_download:-2}
+
     while true; do
         echo
         echo "$RELEASE_TAGS" | awk '{printf "    %2d. %s\n", NR, $0}'
@@ -153,12 +160,31 @@ download_mihomo() {
         printf "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - Yq\n"
 
         if probe_with_mirrors "$download_yq"; then
-            if fetch_with_mirrors "$download_yq" "$install_dir/yq" 1024; then
-                chmod +x "$install_dir/yq"
-                yq_available="true"
-                printf "  Yq ${green}успешно загружен и установлен${reset}\n"
-            else
-                printf "  ${red}Ошибка${reset}: Не удалось загрузить Yq\n"
+            local yq_attempt=1
+            local yq_success=1
+
+            while [ "$yq_attempt" -le "$max_attempts" ]; do
+                if [ "$max_attempts" -gt 1 ]; then
+                    printf "  Загрузка Yq (Попытка %d из %d)...\n" "$yq_attempt" "$max_attempts"
+                fi
+
+                if fetch_with_mirrors "$download_yq" "$install_dir/yq" 1024; then
+                    chmod +x "$install_dir/yq"
+                    yq_available="true"
+                    yq_success=0
+                    printf "  Yq ${green}успешно загружен и установлен${reset}\n"
+                    break
+                fi
+
+                if [ "$yq_attempt" -lt "$max_attempts" ]; then
+                    printf "  ${yellow}Предупреждение${reset}: Не удалось загрузить Yq. Повтор через %d сек...\n" "$delay"
+                    sleep "$delay"
+                fi
+                yq_attempt=$((yq_attempt + 1))
+            done
+
+            if [ "$yq_success" -ne 0 ]; then
+                printf "  ${red}Ошибка${reset}: Не удалось загрузить Yq после %d попыток\n" "$max_attempts"
             fi
         else
             printf "  ${yellow}Предупреждение${reset}: Yq недоступен для загрузки, продолжение без него\n"
@@ -176,10 +202,35 @@ download_mihomo() {
             return 1
         fi
 
-        if ! fetch_with_mirrors "$download_url" "$mtmp_dir/mihomo.$extension" 1024; then
-            printf "  ${red}Ошибка${reset}: Не удалось загрузить Mihomo $version_selected\n"
+        local mihomo_attempt=1
+        local mihomo_success=1
+
+        while [ "$mihomo_attempt" -le "$max_attempts" ]; do
+            if [ "$max_attempts" -gt 1 ]; then
+                printf "  Загрузка Mihomo (Попытка %d из %d)...\n" "$mihomo_attempt" "$max_attempts"
+            fi
+
+            if fetch_with_mirrors "$download_url" "$mtmp_dir/mihomo.$extension" 1024; then
+                mihomo_success=0
+                break
+            fi
+
+            if [ "$mihomo_attempt" -lt "$max_attempts" ]; then
+                printf "  ${yellow}Предупреждение${reset}: Не удалось загрузить Mihomo. Повтор через %d сек...\n" "$delay"
+                sleep "$delay"
+            fi
+            mihomo_attempt=$((mihomo_attempt + 1))
+        done
+
+        if [ "$mihomo_success" -ne 0 ]; then
+            if [ "$max_attempts" -gt 1 ]; then
+                printf "  ${red}Ошибка${reset}: Не удалось загрузить Mihomo $version_selected после %d попыток\n" "$max_attempts"
+            else
+                printf "  ${red}Ошибка${reset}: Не удалось загрузить Mihomo $version_selected\n"
+            fi
             continue
         fi
+
         printf "  Mihomo ${green}успешно загружен${reset}\n"
         return 0
     done
