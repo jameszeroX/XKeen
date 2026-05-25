@@ -126,13 +126,30 @@ init_directories() {
 # Параметры curl
 curl_api() { curl --connect-timeout 2 -m 5 -kfsS "$@"; }
 curl_with_timeout() {
-    # Фильтр: убирает текстовые ошибки curl, таблицы, пустые строки и форматирует бар
-    indent_stderr() {
-        sed -E \
-            -e '/(% Total|Average Speed|Time Current|curl:)/d' \
-            -e '/^[[:space:]]*$/d' \
-            -e 's/\r/\r  /g' \
-            -e 's/^([# ])/  \1/' >&2
+    # Функция динамической очистки и форматирования баров в реальном времени
+    indent_stderr_live() {
+        # Меняем RS (разделитель строк) в awk на '\r'. 
+        awk -v RS='\r' '{
+            # Удаляем мусор (таблицы, ошибки curl)
+            if ($0 ~ /(% Total|Average Speed|Time Current|curl:)/) next;
+            if ($0 ~ /^[[:space:]]*$/) next;
+            
+            # Если это самый первый символ прогресс-бара, делаем начальный отступ
+            if (first == 0 && $0 ~ /^[# ]/) {
+                printf "  "
+                first = 1
+            }
+            
+            # Выводим бар обратно в stderr с возвратом каретки и отступом
+            printf "%s\r  ", $0
+            fflush()
+        }
+        END {
+            # Если выполнение закончилось, принудительно сбрасываем каретку 
+            # в самый левый край (\r), чтобы стереть паразитный отступ для caller-скрипта
+            printf "\r"
+            fflush()
+        }' >&2
     }
 
     # Проверяем контекст: если вывод в /dev/null или это HEAD-запрос (-I), то это проверка (probe)
@@ -142,11 +159,15 @@ curl_with_timeout() {
     done
 
     if [ "$_is_probe" = "0" ]; then
+        # Режим скачивания (fetch_with_mirrors)
         if [ -e "/tmp/toff" ]; then
-            (curl --progress-bar --connect-timeout 10 "$@" 2>&1 1>&3 | indent_stderr) 3>&1
+            (curl -# --connect-timeout 10 "$@" 2>&1 1>&3 | indent_stderr_live) 3>&1
         else
-            (curl --progress-bar --connect-timeout 10 -m 180 "$@" 2>&1 1>&3 | indent_stderr) 3>&1
+            (curl -# --connect-timeout 10 -m 180 "$@" 2>&1 1>&3 | indent_stderr_live) 3>&1
         fi
+        _curl_rc=$?
+
+        return $_curl_rc
     else
         # Режим проверки доступности (probe_with_mirrors / test_github)
         if [ -e "/tmp/toff" ]; then
