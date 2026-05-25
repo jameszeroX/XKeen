@@ -3,38 +3,59 @@ download_mihomo() {
     USE_JSDELIVR=""
     printf "\n  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"
 
-    # Получаем список релизов через GitHub API
-    RELEASE_TAGS=$(curl_with_timeout -s "${mihomo_api_url}?per_page=20" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
-
-    if [ -z "$RELEASE_TAGS" ]; then
-        echo
-        printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
-
-        # Получаем список релизов через jsDelivr
-        RELEASE_TAGS=$(curl_with_timeout -s "$mihomo_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
-
-        if [ -z "$RELEASE_TAGS" ]; then
-            echo
-            printf "  ${red}Нет доступа${reset} к ${yellow}jsDelivr${reset}\n"
-            echo
-            printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n  Проверьте соединение с интернетом или повторите позже\n  Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n  https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md\n"
-            echo
-            exit 1
-        fi
-        echo
-        printf "  Список релизов получен с использованием ${yellow}jsDelivr${reset}:\n"
-        USE_JSDELIVR="true"
-    else
-        echo
-        printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
-    fi
-
     # Инициализация переменных для повторов загрузки
     local max_attempts=1
     if [ -n "$retries_download" ] && [ "$retries_download" -gt 1 ] 2>/dev/null; then
         max_attempts=$retries_download
     fi
     local delay=${retry_delay_download:-2}
+
+    # Получаем список релизов с retry через GitHub API + jsDelivr
+    local api_attempt=1
+    while [ "$api_attempt" -le "$max_attempts" ]; do
+        RELEASE_TAGS=$(curl_with_timeout -s "${mihomo_api_url}?per_page=20" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
+
+        if [ -z "$RELEASE_TAGS" ]; then
+            if [ "$api_attempt" -eq 1 ]; then
+                echo
+                printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
+            fi
+
+            # Получаем список релизов через jsDelivr
+            RELEASE_TAGS=$(curl_with_timeout -s "$mihomo_jsd_url" 2>/dev/null | jq -r '.versions[]' | head -n 8)
+
+            if [ -n "$RELEASE_TAGS" ]; then
+                USE_JSDELIVR="true"
+                break
+            fi
+        else
+            break
+        fi
+
+        if [ "$api_attempt" -lt "$max_attempts" ]; then
+            printf "  ${yellow}Повтор через %d сек${reset} (попытка %d из %d)...\n" "$delay" "$((api_attempt + 1))" "$max_attempts"
+            sleep "$delay"
+        fi
+
+        api_attempt=$((api_attempt + 1))
+    done
+
+    if [ -z "$RELEASE_TAGS" ]; then
+        echo
+        printf "  ${red}Нет доступа${reset} к ${yellow}jsDelivr${reset}\n"
+        echo
+        printf "  ${red}Ошибка${reset}: Не удалось получить список релизов ни через ${yellow}GitHub API${reset}, ни через ${yellow}jsDelivr${reset}\n  Проверьте соединение с интернетом или повторите позже\n  Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n  https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md\n"
+        echo
+        exit 1
+    fi
+
+    if [ "$USE_JSDELIVR" = "true" ]; then
+        echo
+        printf "  Список релизов получен с использованием ${yellow}jsDelivr${reset}:\n"
+    else
+        echo
+        printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
+    fi
 
     while true; do
         echo

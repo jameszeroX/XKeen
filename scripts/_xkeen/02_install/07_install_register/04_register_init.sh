@@ -499,7 +499,7 @@ load_user_ipset() {
         [ "$ip6tables_supported" = "true" ] && load_user_ipset_family geo_override6 inet6 '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' "$ru_override"
     else
         # Если файла исключений нет, создаем пустые сеты, чтобы iptables не ругался на их отсутствие
-        [ "$iptables_supported" = "true" ] && ipset create geo_override hash:net -exist
+        [ "$iptables_supported" = "true" ] && ipset create geo_override hash:net family inet -exist
         [ "$ip6tables_supported" = "true" ] && ipset create geo_override6 hash:net family inet6 -exist
     fi
 }

@@ -12,6 +12,7 @@
 - Поддержка внешних файлов `ip_exclude.lst`, `port_proxying.lst` и `port_exclude.lst` в директории `/opt/etc/xkeen/` для указания IP и портов (проксирования/исключения из проксирования)
 - При недоступности GitHub API используется резервный источник релизов для XKeen, Xray и Mihomo 
 - Возможность загружать компоненты XKeen через [Self-Hosted прокси](https://github.com/jameszeroX/XKeen/wiki/Configuration#self-hosted-прокси-для-загрузки-компонентов) при недоступности GitHub. Пользовательский прокси задаётся в параметре `gh_proxy` конфигурационного файла `xkeen.json`
+- Параметры `retries_download` и `retry_delay_download` в `xkeen.json` для настройки числа повторных попыток и паузы между ними при загрузке с GitHub. Применяется к загрузке XKeen, Xray, Mihomo, Yq, GeoSite/GeoIP/GeoIPSET и получению списков релизов через GitHub API/jsDelivr. [Подробнее](https://github.com/jameszeroX/XKeen/wiki/Configuration#повторы-загрузки-с-github)
 - Возможность [OffLine установки](https://github.com/jameszeroX/XKeen/wiki/Configuration#offline-установка) (параметр запуска `-io`)
 - Возможность отключить резервное копирование XKeen при обновлении (параметр запуска `-cbr`)
 - Возможность установки GeoIP базы [zkeenip.dat](https://github.com/jameszeroX/zkeen-ip)
