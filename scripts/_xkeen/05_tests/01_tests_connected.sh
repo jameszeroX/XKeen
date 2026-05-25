@@ -20,6 +20,10 @@ download_with_check() {
     if [ -f "$output_file" ]; then
         size=$(wc -c < "$output_file" 2>/dev/null || echo 0)
         if [ "$size" -gt "$min_size" ]; then
+            if head -c 100 "$output_file" 2>/dev/null | grep -iqE '^(<!doctype|<html|<head|<body|404|error|not found)'; then
+                rm -f "$output_file" 2>/dev/null
+                return 1
+            fi
             return 0
         fi
     fi
