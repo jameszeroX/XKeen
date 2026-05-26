@@ -456,18 +456,10 @@ Xray — в `/opt/etc/xray/configs/03_inbounds.json` дополните масс
 
 ```json
 {
-  "listen": "0.0.0.0",
   "port": 1080,
-  "protocol": "socks",
-  "settings": {
-    "auth": "noauth",
-    "udp": true
-  },
-  "sniffing": {
-    "enabled": true,
-    "destOverride": ["http", "tls", "quic"]
-  },
-  "tag": "socks-in"
+  "protocol": "mixed",
+  "settings": {"udp": true},
+  "tag": "socks"
 }
 ```
 
@@ -486,7 +478,14 @@ listeners:
 
 **2. Маршрутизация inbound через нужный outbound.**
 
-В `routing.rules` (Xray) или `rules` (Mihomo) добавьте правило, привязывающее `inboundTag: ["socks-in"]` (Xray) / `IN-TYPE,SOCKS` (Mihomo) к нужному outbound. Без этого правила трафик пойдёт по дефолтной маршрутизации.
+```json
+{
+  "inboundTag": ["socks"],
+  "outboundTag": "vless-reality"
+}
+```
+
+Socks5-прокси будет доступен на 192.168.1.1:1080
 
 **3. Заведите подключение «Прокси-сервер» в Keenetic.**
 
