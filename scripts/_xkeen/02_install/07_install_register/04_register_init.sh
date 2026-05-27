@@ -1889,15 +1889,79 @@ info_health_binary() {
     fi
 }
 
+# Атомарный single-instance guard на cold_start. mkdir — POSIX-атомарен,
+# единственный надёжный lock в busybox-ash без flock. Закрывает гонку
+# повторного S05xkeen start от NDM (fs.d + init.d + reconnect-триггеры).
+# Flag-файл xkeen_coldstart.lock сохранён для совместимости с условиями
+# подавления логов в proxy_start/proxy_stop ("[ -f lock ] || log_info_router").
+_acquire_coldstart_guard() {
+    if mkdir "/tmp/xkeen_coldstart.lock.d" 2>/dev/null; then
+        echo $$ > "/tmp/xkeen_coldstart.lock.d/pid"
+        touch "/tmp/xkeen_coldstart.lock"
+        return 0
+    fi
+    _gpid=$(cat "/tmp/xkeen_coldstart.lock.d/pid" 2>/dev/null)
+    if [ -n "$_gpid" ] && kill -0 "$_gpid" 2>/dev/null; then
+        return 1
+    fi
+    rm -rf "/tmp/xkeen_coldstart.lock.d"
+    mkdir "/tmp/xkeen_coldstart.lock.d" 2>/dev/null || return 1
+    echo $$ > "/tmp/xkeen_coldstart.lock.d/pid"
+    touch "/tmp/xkeen_coldstart.lock"
+    return 0
+}
+
+_release_coldstart_guard() {
+    rm -rf "/tmp/xkeen_coldstart.lock.d"
+    rm -f "/tmp/xkeen_coldstart.lock"
+}
+
+# Защита от параллельного входа в proxy_start/proxy_stop из двух
+# триггеров (cold_start vs xkeen -restart, два S05xkeen start
+# подряд от NDM и т.п.). Второй конкурент тихо выходит.
+# rc=0  — захватили; rc=1 — реальный конкурент; rc=2 — re-entrant
+# (тот же процесс уже владеет mutex'ом, например proxy_start вложенно
+# вызывает proxy_stop при TProxy 443-конфликте — не релизим).
+_acquire_proxy_mutex() {
+    if mkdir "/tmp/xkeen_proxy.mutex.d" 2>/dev/null; then
+        echo $$ > "/tmp/xkeen_proxy.mutex.d/pid"
+        return 0
+    fi
+    _mpid=$(cat "/tmp/xkeen_proxy.mutex.d/pid" 2>/dev/null)
+    if [ "$_mpid" = "$$" ]; then
+        return 2
+    fi
+    if [ -n "$_mpid" ] && kill -0 "$_mpid" 2>/dev/null; then
+        return 1
+    fi
+    rm -rf "/tmp/xkeen_proxy.mutex.d"
+    mkdir "/tmp/xkeen_proxy.mutex.d" 2>/dev/null || return 1
+    echo $$ > "/tmp/xkeen_proxy.mutex.d/pid"
+    return 0
+}
+
+_release_proxy_mutex() {
+    rm -rf "/tmp/xkeen_proxy.mutex.d"
+}
+
 # Очистка при аварийной остановке прокси-клиента
 emergency_clear() {
     rm -f "/tmp/xkeen_ready"
+    _release_coldstart_guard
     cleanup_fd_monitor
     clean_firewall
 }
 
 # Запуск прокси-клиента
 proxy_start() {
+    _acquire_proxy_mutex
+    _ps_mutex_rc=$?
+    if [ "$_ps_mutex_rc" -eq 1 ]; then
+        return 0
+    fi
+    if [ "$_ps_mutex_rc" -eq 0 ]; then
+        trap '_release_proxy_mutex; trap - INT TERM HUP' INT TERM HUP
+    fi
     start_manual="$1"
     if [ "$start_manual" = "on" ] || [ "$start_auto" = "on" ]; then
         _invalidate_inbounds_cache
@@ -1973,7 +2037,7 @@ proxy_start() {
                 log_error_terminal "Не удалось запустить ${yellow}$name_client${reset}, так как он уже запущен"
             else
                 log_info_router "Прокси-клиент успешно запущен в режиме $mode_proxy"
-                rm -f "/tmp/xkeen_coldstart.lock"
+                _release_coldstart_guard
             fi
         else
             log_info_router "Инициирован запуск прокси-клиента"
@@ -2052,12 +2116,16 @@ proxy_start() {
                     fi
                     [ "$mode_proxy" = "Other" ] && echo -e "  Функция прозрачного прокси ${red}не активна${reset}. Направляйте соединения на ${yellow}${name_client}${reset} вручную"
                     log_info_router "Прокси-клиент успешно запущен в режиме $mode_proxy"
-                    rm -f "/tmp/xkeen_coldstart.lock"
+                    _release_coldstart_guard
                     if [ "$check_fd" = "on" ]; then
                         cleanup_fd_monitor
                         monitor_fd &
                         echo $! > "$file_pid_fd"
                         log_info_router "Запущен контроль файловых дескрипторов $name_client"
+                    fi
+                    if [ "$_ps_mutex_rc" -eq 0 ]; then
+                        _release_proxy_mutex
+                        trap - INT TERM HUP
                     fi
                     return 0
                 fi
@@ -2065,9 +2133,14 @@ proxy_start() {
             done
             echo -e "  ${red}Не удалось запустить${reset} прокси-клиент"
             log_error_terminal "Не удалось запустить прокси-клиент"
+            _release_coldstart_guard
         fi
     else
         clean_firewall
+    fi
+    if [ "$_ps_mutex_rc" -eq 0 ]; then
+        _release_proxy_mutex
+        trap - INT TERM HUP
     fi
 }
 
@@ -2104,6 +2177,14 @@ wait_for_ready() {
 
 # Остановка прокси-клиента
 proxy_stop() {
+    _acquire_proxy_mutex
+    _pstop_mutex_rc=$?
+    if [ "$_pstop_mutex_rc" -eq 1 ]; then
+        return 0
+    fi
+    if [ "$_pstop_mutex_rc" -eq 0 ]; then
+        trap '_release_proxy_mutex; trap - INT TERM HUP' INT TERM HUP
+    fi
     rm -f "/tmp/xkeen_ready"
     if ! proxy_status; then
         echo -e "  Прокси-клиент ${red}не запущен${reset}"
@@ -2129,13 +2210,21 @@ proxy_stop() {
             if ! proxy_status; then
                 echo -e "  Прокси-клиент ${red}остановлен${reset}"
                 [ -f "/tmp/xkeen_coldstart.lock" ] || log_info_router "Прокси-клиент успешно остановлен"
-                rm -f "/tmp/xkeen_coldstart.lock"
+                _release_coldstart_guard
+                if [ "$_pstop_mutex_rc" -eq 0 ]; then
+                    _release_proxy_mutex
+                    trap - INT TERM HUP
+                fi
                 return 0
             fi
             attempt=$((attempt + 1))
         done
         echo -e "  Прокси-клиент ${red}не удалось остановить${reset}"
         log_error_terminal "Не удалось остановить прокси-клиент"
+    fi
+    if [ "$_pstop_mutex_rc" -eq 0 ]; then
+        _release_proxy_mutex
+        trap - INT TERM HUP
     fi
 }
 
@@ -2146,9 +2235,11 @@ case "$1" in
         ipset create ext_exclude6 hash:ip family inet6 -exist
         if [ -z "$2" ]; then
             [ "$start_auto" != "on" ] && exit 0
+            # Атомарный guard ДО spawn — повторный S05xkeen start от
+            # NDM (fs.d / init.d / reconnect) увидит каталог и выйдет.
+            _acquire_coldstart_guard || exit 0
             log_info_router "Подготовка к запуску прокси-клиента"
             nohup "$0" cold_start >/dev/null 2>&1 &
-            touch "/tmp/xkeen_coldstart.lock"
             exit 0
         fi
         proxy_start "$2"
