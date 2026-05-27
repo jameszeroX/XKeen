@@ -87,7 +87,7 @@ gh_proxy2="https://ghfast.top"									# 2 прокси для загрузок 
 yq_use_workaround="false"									# включить при возникноверии пробелем, подобных issue 2609
 yq_workaround_issue_url="https://github.com/mikefarah/yq/issues/2609"				# issue с поломанным релизом Yq
 get_yq_dist_url() {
-    if [ "$yq_use_workaround" = "true" ]; then
+    if [ "$yq_use_workaround" = "true" ] || [ "$softfloat" = "true" ]; then
         printf '%s\n' "$yq_workaround_dist_url"
     else
         printf '%s\n' "$yq_upstream_dist_url"
