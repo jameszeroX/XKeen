@@ -1894,9 +1894,11 @@ info_health_binary() {
 # повторного S05xkeen start от NDM (fs.d + init.d + reconnect-триггеры).
 # Flag-файл xkeen_coldstart.lock сохранён для совместимости с условиями
 # подавления логов в proxy_start/proxy_stop ("[ -f lock ] || log_info_router").
+# PID владельца записывает _set_coldstart_pid после `nohup cold_start &` —
+# текущий $$ это caller (S05xkeen start), который завершается сразу;
+# проверка живости должна идти по PID фонового cold_start ($!).
 _acquire_coldstart_guard() {
     if mkdir "/tmp/xkeen_coldstart.lock.d" 2>/dev/null; then
-        echo $$ > "/tmp/xkeen_coldstart.lock.d/pid"
         touch "/tmp/xkeen_coldstart.lock"
         return 0
     fi
@@ -1904,11 +1906,19 @@ _acquire_coldstart_guard() {
     if [ -n "$_gpid" ] && kill -0 "$_gpid" 2>/dev/null; then
         return 1
     fi
+    # Без PID файла — guard свежий (caller ещё не дошёл до _set_coldstart_pid).
+    # Не сбрасываем: иначе теряем защиту в окне между mkdir и записью PID.
+    [ -z "$_gpid" ] && return 1
+    # PID есть, но процесс мёртв → stale, перехват
     rm -rf "/tmp/xkeen_coldstart.lock.d"
     mkdir "/tmp/xkeen_coldstart.lock.d" 2>/dev/null || return 1
-    echo $$ > "/tmp/xkeen_coldstart.lock.d/pid"
     touch "/tmp/xkeen_coldstart.lock"
     return 0
+}
+
+_set_coldstart_pid() {
+    [ -d "/tmp/xkeen_coldstart.lock.d" ] || return 0
+    echo "$1" > "/tmp/xkeen_coldstart.lock.d/pid"
 }
 
 _release_coldstart_guard() {
@@ -2240,6 +2250,9 @@ case "$1" in
             _acquire_coldstart_guard || exit 0
             log_info_router "Подготовка к запуску прокси-клиента"
             nohup "$0" cold_start >/dev/null 2>&1 &
+            # PID фонового cold_start — caller ($$) умрёт через exit 0,
+            # а живость guard'а проверяется именно по этому PID.
+            _set_coldstart_pid "$!"
             exit 0
         fi
         proxy_start "$2"
@@ -2259,6 +2272,9 @@ case "$1" in
         ;;
     restart) proxy_stop; proxy_start "$2" ;;
     cold_start)
+        # Подстраховка: переписываем PID guard'а на свой ($$) на случай,
+        # если caller-S05xkeen умер до того, как успел _set_coldstart_pid "$!".
+        _set_coldstart_pid "$$"
         # Гарантированная задержка перед попыткой запуска прокси-клиента
         if [ -n "$init_delay" ] && [ "$init_delay" -gt 0 ] 2>/dev/null; then
             log_info_router "Ожидание перед проверкой готовности к запуску XKeen (${init_delay} сек...)"
