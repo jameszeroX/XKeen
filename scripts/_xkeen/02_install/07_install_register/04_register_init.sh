@@ -1220,9 +1220,9 @@ if pidof "$name_client" >/dev/null; then
             printf '%s' "$_rules"
             printf 'COMMIT\n'
         } | if [ "$_family" = "iptables" ]; then
-            iptables-restore --noflush
+            iptables-restore --noflush 2>/dev/null
         else
-            ip6tables-restore --noflush
+            ip6tables-restore --noflush 2>/dev/null
         fi
     }
 
