@@ -572,15 +572,29 @@ process_user_ports() {
 
 # Функция нормализации сторонних политик
 process_custom_mark() {
-    [ -z "$custom_mark" ] && return
+    [ -n "$custom_mark" ] || return
 
-    clean_mark=""
-    for mark in $(echo "$custom_mark" | tr ',' ' '); do
-        val="${mark#0x}"
-        echo "$val" | grep -Eq '^[0-9a-fA-F]+$' && clean_mark="$clean_mark 0x$val"
+    local clean_mark=""
+    local val
+    local mark
+    local IFS=', '
+
+    for mark in $custom_mark; do
+        [ -n "$mark" ] || continue
+
+        val=${mark#0x}
+        val=${val#0X}
+
+        case "$val" in
+            ''|*[!0-9a-fA-F]*)
+                ;;
+            *)
+                clean_mark="$clean_mark 0x$val"
+                ;;
+        esac
     done
 
-    custom_mark="${clean_mark# }"
+    custom_mark=${clean_mark# }
 }
 
 # Проверка статуса прокси-клиента
@@ -791,7 +805,7 @@ get_port_redirect() {
         fi
         [ -n "$port" ] && echo "$port" && return 0
     else
-	return 1
+        return 1
     fi
 }
 
@@ -807,7 +821,7 @@ get_port_tproxy() {
         fi
         [ -n "$port" ] && echo "$port" && return 0
     else
-	return 1
+        return 1
     fi
 }
 
@@ -820,7 +834,7 @@ get_network_redirect() {
         [ -n "$port_redirect" ] && echo "tcp" && return 0
         echo "" && return 0
     else
-	return 1
+        return 1
     fi
 }
 
@@ -839,7 +853,7 @@ get_network_tproxy() {
         fi
         return 0
     else
-	return 1
+        return 1
     fi
 }
 
