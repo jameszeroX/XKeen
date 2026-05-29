@@ -53,7 +53,6 @@
 cd /opt/sbin
 tar -xvzf xkeen.tar.gz && rm xkeen.tar.gz
 xkeen -io
-#
 ```
 
 Копирование файлов конфигурации xray, mihomo и необходимых геофайлов в директории /opt/etc/xray/configs, /opt/etc/mihomo, /opt/etc/xray/dat выполните вручную, после чего можете запустить проксирование командой `xkeen -start`

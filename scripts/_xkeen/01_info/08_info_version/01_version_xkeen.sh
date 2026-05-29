@@ -39,7 +39,7 @@ info_version_xkeen() {
         printf "${red}Ошибка${reset}: Не удалось получить версию ни с ${yellow}GitHub${reset}, ни с ${yellow}jsDelivr${reset}\n
   Проверьте соединение с интернетом или повторите позже\n
   Если ошибка сохраняется, воспользуйтесь возможностью OffLine установки:\n
-  https://github.com/jameszeroX/XKeen/blob/main/OffLine_install.md\n"
+  https://github.com/jameszeroX/XKeen/wiki/Configuration#offline-установка\n"
         echo
         exit 1
     fi
