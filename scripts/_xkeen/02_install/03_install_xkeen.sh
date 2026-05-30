@@ -1,6 +1,6 @@
 # Функция для установки XKeen
 install_xkeen() {
-    xkeen_archive="$ktmp_dir/xkeen.tar.gz"
+    xkeen_archive="$tmp_ram/xkeen.tar.gz"
 
     # Проверка наличия архива XKeen
     if [ -f "$xkeen_archive" ]; then

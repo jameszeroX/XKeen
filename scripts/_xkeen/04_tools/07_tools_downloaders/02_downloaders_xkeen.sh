@@ -1,6 +1,6 @@
 # Загрузка XKeen
 download_xkeen() {
-    mkdir -p "$ktmp_dir"
+    mkdir -p "$tmp_ram"
 
     # Инициализация параметров повтора загрузки
     local max_attempts=1
@@ -19,7 +19,7 @@ download_xkeen() {
             printf "  ${yellow}Выполняется загрузка${reset} XKeen\n"
         fi
 
-        if fetch_with_mirrors "$xkeen_tar_url" "$ktmp_dir/xkeen.tar.gz" 1024; then
+        if fetch_with_mirrors "$xkeen_tar_url" "$tmp_ram/xkeen.tar.gz" 1024; then
             success=0
             break
         fi

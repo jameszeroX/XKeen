@@ -91,7 +91,7 @@ download_mihomo() {
 
         filename=$(basename "$download_url")
         extension="${filename##*.}"
-        mkdir -p "$mtmp_dir"
+        mkdir -p "$tmp_ram"
         yq_available="false"
 
         printf "  ${yellow}Проверка${reset} доступности версии $version_selected...\n"
@@ -179,7 +179,7 @@ download_mihomo() {
                 printf "  Загрузка Mihomo (Попытка %d из %d)...\n" "$mihomo_attempt" "$max_attempts"
             fi
 
-            if fetch_with_mirrors "$download_url" "$mtmp_dir/mihomo.$extension" 1024; then
+            if fetch_with_mirrors "$download_url" "$tmp_ram/mihomo.$extension" 1024; then
                 mihomo_success=0
                 break
             fi

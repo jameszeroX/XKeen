@@ -3,6 +3,7 @@ delete_tmp() {
     [ -d "$ktmp_dir" ] && rm -rf "$ktmp_dir"
     [ -d "$xtmp_dir" ] && rm -rf "$xtmp_dir"
     [ -d "$mtmp_dir" ] && rm -rf "$mtmp_dir"
+    [ -d "$tmp_ram" ] && rm -rf "$tmp_ram"
     [ -f "$cron_dir/root.tmp" ] && rm -f "$cron_dir/root.tmp"
     [ -f "$register_dir/new_entry.txt" ] && rm -f "$register_dir/new_entry.txt"
     [ -f "$install_dir/xray_bak" ] && rm -f "$install_dir/xray_bak"

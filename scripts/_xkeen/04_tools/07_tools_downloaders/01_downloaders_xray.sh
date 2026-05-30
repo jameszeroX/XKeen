@@ -32,7 +32,7 @@ download_xray() {
             printf "  ${red}Ошибка${reset}: Не удалось получить URL для загрузки Xray\n"
             exit 1
         fi
-        mkdir -p "$xtmp_dir"
+        mkdir -p "$tmp_ram"
 
         printf "  ${yellow}Проверка${reset} доступности версии %s...\n" "$version_selected"
 
@@ -76,7 +76,7 @@ download_xray() {
                 printf "  Загрузка Xray (Попытка %d из %d)...\n" "$auto_attempt" "$max_attempts"
             fi
 
-            if fetch_with_mirrors "$download_url" "$xtmp_dir/xray.$extension" 1024; then
+            if fetch_with_mirrors "$download_url" "$tmp_ram/xray.$extension" 1024; then
                 auto_success=0
                 break
             fi
@@ -155,7 +155,7 @@ download_xray() {
             printf "  ${red}Ошибка${reset}: Не удалось получить URL для загрузки Xray\n"
             exit 1
         fi
-        mkdir -p "$xtmp_dir"
+        mkdir -p "$tmp_ram"
 
         printf "  ${yellow}Проверка${reset} доступности версии $version_selected...\n"
 
@@ -199,7 +199,7 @@ download_xray() {
                 printf "  Загрузка Xray (Попытка %d из %d)...\n" "$menu_attempt" "$max_attempts"
             fi
 
-            if fetch_with_mirrors "$download_url" "$xtmp_dir/xray.$extension" 1024; then
+            if fetch_with_mirrors "$download_url" "$tmp_ram/xray.$extension" 1024; then
                 menu_success=0
                 break
             fi

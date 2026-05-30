@@ -80,7 +80,7 @@ get_state_arg() {
 
 # Маркер /tmp/toff отключает таймаут curl — снимаем при прерывании
 trap 'rm -f /tmp/toff; exit 1' INT TERM
-	
+
 xkeen_info() {
     # Проверяем версию XKeen
     info_version_xkeen

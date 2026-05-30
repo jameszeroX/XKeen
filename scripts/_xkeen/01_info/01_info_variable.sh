@@ -23,6 +23,7 @@ tmp_dir="/opt/tmp"			 # Временная директория
 ktmp_dir="$tmp_dir/xkeen"		 # Временная директория XKeen
 xtmp_dir="$tmp_dir/xray"		 # Временная директория Xray
 mtmp_dir="$tmp_dir/mihomo"		 # Временная директория Mihomo
+tmp_ram="/tmp/xkeen"			 # Временная директория в RAM
 install_dir="/opt/sbin"			 # Директория установки
 xkeen_dir="$install_dir/.xkeen"		 # Директория скриптов XKeen
 xkeen_cfg="/opt/etc/xkeen"		 # Директория конфигурации XKeen
@@ -69,8 +70,8 @@ conn_IP2="77.88.44.55"
 # -------------------------------------
 # Требования к свободному месту на накопителе
 # -------------------------------------
-xray_free_space=64
-mihomo_free_space=80
+xray_free_space=40
+mihomo_free_space=52
 target_dir="/opt"
 
 # -------------------------------------
