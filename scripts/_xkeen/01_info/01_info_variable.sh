@@ -67,6 +67,13 @@ conn_IP1="195.208.4.1"
 conn_IP2="77.88.44.55"
 
 # -------------------------------------
+# Требования к свободному месту на накопителе
+# -------------------------------------
+xray_free_space=64
+mihomo_free_space=80
+target_dir="/opt"
+
+# -------------------------------------
 # URL
 # -------------------------------------
 xkeen_api_url="https://api.github.com/repos/jameszeroX/xkeen/releases/latest"			# url api для XKeen

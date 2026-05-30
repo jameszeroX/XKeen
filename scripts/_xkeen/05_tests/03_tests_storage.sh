@@ -25,23 +25,70 @@ preinstall_warn() {
         echo "  2. Выйти из установщика"
         echo
 
-    while true; do
-        read -p "  Выберите действие: " choice
+        while true; do
+            read -p "  Выберите действие: " choice
 
-        case $choice in
+            case $choice in
+                1)
+                    clear
+                    break
+                    ;;
+                2)
+                    echo
+                    echo -e "  ${red}Установка отменена${reset}"
+                    exit 0
+                    ;;
+                *)
+                    echo -e "  ${red}Некорректный ввод.${reset} Выберите один из предложенных вариантов"
+                    ;;
+            esac
+        done
+    fi
+}
+
+# Проверка свободного места для установки ядер проксирования
+check_free_space() {
+    local client_name="$1"
+    local required_space=0
+
+    case "$client_name" in
+        xray)   required_space=$xray_free_space ;;
+        mihomo) required_space=$mihomo_free_space ;;
+        *)      return 0 ;;
+    esac
+
+    local free_space
+    free_space=$(df -m "$target_dir" | awk 'NR==2 {print $4}')
+
+    [ -z "$free_space" ] && return 0
+
+    if [ "$free_space" -lt "$required_space" ]; then
+        smart_clear
+        echo
+        echo -e "  ${red}Внимание: Недостаточно свободного места для установки $client_name${reset}"
+        echo -e "  Требуется: ${light_blue}${required_space} MB${reset}, доступно: ${light_blue}${free_space} MB${reset}"
+        echo
+
+        echo -e "  1) Продолжить установку ${yellow}$client_name${reset} ${red}на свой страх и риск${reset}"
+        echo -e "  0) Отменить установку ${yellow}$client_name${reset} (${green}Рекомендуется${reset})"
+        echo
+        printf "  Выберите вариант: "
+        read -r response
+
+        case "$response" in
             1)
-                clear
-                break
+                echo "  Предупреждение проигнорировано. Продолжаем..."
+                return 0
                 ;;
-            2)
-                echo
-                echo -e "  ${red}Установка отменена${reset}"
-                exit 0
+            0|"")
+                echo -e "  Установка ${yellow}$client_name${reset} отменена пользователем"
+                return 1
                 ;;
             *)
-                echo -e "  ${red}Некорректный ввод.${reset} Выберите один из предложенных вариантов"
+                echo -e "  Неверный ввод. В целях безопасности установка ${yellow}$client_name${reset} отменена"
+                return 1
                 ;;
         esac
-    done
     fi
+    return 0
 }
