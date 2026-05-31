@@ -1,9 +1,7 @@
 # Удаление регистрации Xray
 delete_register_xray() {
-    # Удаляем соответствующие записи из файла статуса opkg
     sed -i -e '/Package: xray_s/,/Installed-Time:/d' "$status_file"
-    
-    # Удаляем файлы регистрации, если они существуют
+
     if [ -f "$register_dir/xray_s.control" ] || [ -f "$register_dir/xray_s.list" ]; then
         rm -f "$register_dir/xray_s.control" "$register_dir/xray_s.list"
     fi
@@ -11,10 +9,8 @@ delete_register_xray() {
 
 # Удаление регистрации Mihomo
 delete_register_mihomo() {
-    # Удаляем соответствующие записи из файла статуса opkg
     sed -i -e '/Package: mihomo_s/,/Installed-Time:/d' "$status_file"
-    
-    # Удаляем файлы регистрации, если они существуют
+
     if [ -f "$register_dir/mihomo_s.control" ] || [ -f "$register_dir/mihomo_s.list" ]; then
         rm -f "$register_dir/mihomo_s.control" "$register_dir/mihomo_s.list"
     fi
@@ -22,10 +18,8 @@ delete_register_mihomo() {
 
 # Удаление регистрации Yq
 delete_register_yq() {
-    # Удаляем соответствующие записи из файла статуса opkg
     sed -i -e '/Package: yq_s/,/Installed-Time:/d' "$status_file"
-    
-    # Удаляем файлы регистрации, если они существуют
+
     if [ -f "$register_dir/yq_s.control" ] || [ -f "$register_dir/yq_s.list" ]; then
         rm -f "$register_dir/yq_s.control" "$register_dir/yq_s.list"
     fi
@@ -33,10 +27,8 @@ delete_register_yq() {
 
 # Удаление регистрации XKeen
 delete_register_xkeen() {
-    # Удаляем соответствующие записи из файла статуса opkg
     sed -i -e '/Package: xkeen/,/Installed-Time:/d' "$status_file"
-    
-    # Удаляем файлы регистрации, если они существуют
+
     if [ -f "$register_dir/xkeen.control" ] || [ -f "$register_dir/xkeen.list" ]; then
         rm -f "$register_dir/xkeen.control" "$register_dir/xkeen.list"
     fi
