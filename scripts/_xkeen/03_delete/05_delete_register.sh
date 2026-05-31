@@ -13,12 +13,19 @@ delete_register_xray() {
 delete_register_mihomo() {
     # Удаляем соответствующие записи из файла статуса opkg
     sed -i -e '/Package: mihomo_s/,/Installed-Time:/d' "$status_file"
-    sed -i -e '/Package: yq_s/,/Installed-Time:/d' "$status_file"
     
     # Удаляем файлы регистрации, если они существуют
     if [ -f "$register_dir/mihomo_s.control" ] || [ -f "$register_dir/mihomo_s.list" ]; then
         rm -f "$register_dir/mihomo_s.control" "$register_dir/mihomo_s.list"
     fi
+}
+
+# Удаление регистрации Yq
+delete_register_yq() {
+    # Удаляем соответствующие записи из файла статуса opkg
+    sed -i -e '/Package: yq_s/,/Installed-Time:/d' "$status_file"
+    
+    # Удаляем файлы регистрации, если они существуют
     if [ -f "$register_dir/yq_s.control" ] || [ -f "$register_dir/yq_s.list" ]; then
         rm -f "$register_dir/yq_s.control" "$register_dir/yq_s.list"
     fi

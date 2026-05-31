@@ -151,6 +151,7 @@ help_xkeen() {
         echo -e "	-ug	${italic}	GeoFile/GeoIPSET${reset}"
         echo -e "	-ux	${italic}	Xray (повышение/понижение версии)${reset}"
         echo -e "	-um	${italic}	Mihomo (повышение/понижение версии)${reset}"
+        echo -e "	-uy	${italic}	Yq (повышение/понижение версии)${reset}"
         echo
         echo -e "${yellow}Запланированная здача автообновления GeoFile/GeoIPSET${reset}"
         echo -e "	-ugc	${italic}	Создание${reset}"

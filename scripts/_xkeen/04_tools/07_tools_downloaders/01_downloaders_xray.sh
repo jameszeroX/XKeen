@@ -16,91 +16,49 @@ _xray_build_url() {
     return 0
 }
 
+# Функция для проверки и загрузки выбранной версии Xray
+# $1 = version_selected
+_xray_perform_install() {
+    local version="$1"
+    if ! _xray_build_url "$version"; then
+        printf "  ${red}Ошибка${reset}: Не удалось получить URL для загрузки Xray\n"
+        return 1
+    fi
+    mkdir -p "$tmp_ram"
+
+    if ! _network_probe "$download_url" "версии $version"; then
+        return 1
+    fi
+
+    printf "  ${yellow}Выполняется загрузка${reset} Xray %s\n" "$version"
+    if ! _network_download "$download_url" "$tmp_ram/xray.$extension" "Xray" "$max_attempts" "$delay"; then
+        return 1
+    fi
+
+    printf "  Xray ${green}успешно загружен${reset}\n"
+    return 0
+}
+
 # Загрузка Xray
 download_xray() {
     USE_JSDELIVR=""
     printf "\n  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
-
     fetch_release_tags "$xray_api_url" "$xray_jsd_url" "50"
 
+    # --- АВТОМАТИЧЕСКИЙ РЕЖИМ ---
     if [ "$autoinstall_mode" = "true" ]; then
         version_selected=$(echo "$RELEASE_TAGS" | head -1)
         [ "$USE_JSDELIVR" = "true" ] && version_selected="v$version_selected"
         printf "  ${green}Авто-режим${reset}: выбрана последняя версия ${yellow}%s${reset}\n" "$version_selected"
 
-        if ! _xray_build_url "$version_selected"; then
-            printf "  ${red}Ошибка${reset}: Не удалось получить URL для загрузки Xray\n"
+        if _xray_perform_install "$version_selected"; then
+            return 0
+        else
             exit 1
         fi
-        mkdir -p "$tmp_ram"
-
-        printf "  ${yellow}Проверка${reset} доступности версии %s...\n" "$version_selected"
-
-        probe_with_mirrors "$download_url"
-        _rc=$?
-        case "$_rc" in
-            0)
-                printf "  Файл ${green}доступен${reset}\n"
-                ;;
-            2)
-                case "$_last_http" in
-                    403) printf "  ${red}Доступ запрещен${reset} (403)\n" ;;
-                    404) printf "  Файл ${red}не найден${reset} (404)\n" ;;
-                    *)   printf "  ${yellow}Проблема с доступом${reset} (HTTP: %s)\n" "$_last_http" ;;
-                esac
-                printf "  ${red}Ошибка${reset}: Версия %s недоступна\n" "$version_selected"
-                exit 1
-                ;;
-            *)
-                if [ "$_last_curl_rc" = "28" ]; then  # curl OPERATION_TIMEDOUT
-                    printf "  ${red}Таймаут${reset} при проверке\n"
-                elif [ "$_last_curl_rc" != "0" ]; then
-                    printf "  ${red}Ошибка curl (%s)${reset} при проверке\n" "$_last_curl_rc"
-                elif [ -n "$_last_http" ] && [ "$_last_http" != "000" ]; then
-                    printf "  ${yellow}Проблема с доступом${reset} (HTTP: %s)\n" "$_last_http"
-                else
-                    printf "  ${red}Нет соединения${reset}\n"
-                fi
-                printf "  ${red}Ошибка${reset}: Версия %s недоступна\n" "$version_selected"
-                exit 1
-                ;;
-        esac
-
-        printf "  ${yellow}Выполняется загрузка${reset} последней версии Xray\n"
-
-        local auto_attempt=1
-        local auto_success=1
-
-        while [ "$auto_attempt" -le "$max_attempts" ]; do
-            if [ "$max_attempts" -gt 1 ]; then
-                printf "  Загрузка Xray (Попытка %d из %d)...\n" "$auto_attempt" "$max_attempts"
-            fi
-
-            if fetch_with_mirrors "$download_url" "$tmp_ram/xray.$extension" 1024; then
-                auto_success=0
-                break
-            fi
-
-            if [ "$auto_attempt" -lt "$max_attempts" ]; then
-                printf "  ${yellow}Предупреждение${reset}: Не удалось загрузить Xray. Повтор через %d сек...\n" "$delay"
-                sleep "$delay"
-            fi
-            auto_attempt=$((auto_attempt + 1))
-        done
-
-        if [ "$auto_success" -ne 0 ]; then
-            if [ "$max_attempts" -gt 1 ]; then
-                printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray %s после %d попыток\n" "$version_selected" "$max_attempts"
-            else
-                printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray %s\n" "$version_selected"
-            fi
-            exit 1
-        fi
-
-        printf "  Xray ${green}успешно загружен${reset}\n"
-        return 0
     fi
 
+    # --- ИНТЕРАКТИВНЫЙ РЕЖИМ ---
     while true; do
         echo
         echo "$RELEASE_TAGS" | awk '{printf "    %2d. %s\n", NR, $0}'
@@ -135,10 +93,8 @@ download_xray() {
                 sleep 1
                 continue
             fi
-
             version_selected=$(echo "$version_selected" | sed 's/^v//')
             version_selected="v$version_selected"
-
         else
             version_selected=$(echo "$RELEASE_TAGS" | awk -v line="$choice" 'NR == line {print $0; exit}')
             if [ -z "$version_selected" ]; then
@@ -146,81 +102,11 @@ download_xray() {
                 sleep 1
                 continue
             fi
-            if [ "$USE_JSDELIVR" = "true" ]; then
-                version_selected="v$version_selected"
-            fi
+            [ "$USE_JSDELIVR" = "true" ] && version_selected="v$version_selected"
         fi
 
-        if ! _xray_build_url "$version_selected"; then
-            printf "  ${red}Ошибка${reset}: Не удалось получить URL для загрузки Xray\n"
-            exit 1
+        if _xray_perform_install "$version_selected"; then
+            return 0
         fi
-        mkdir -p "$tmp_ram"
-
-        printf "  ${yellow}Проверка${reset} доступности версии $version_selected...\n"
-
-        probe_with_mirrors "$download_url"
-        _rc=$?
-        case "$_rc" in
-            0)
-                printf "  Файл ${green}доступен${reset}\n"
-                ;;
-            2)
-                case "$_last_http" in
-                    403) printf "  ${red}Доступ запрещен${reset} (403)\n" ;;
-                    404) printf "  Файл ${red}не найден${reset} (404)\n" ;;
-                    *)   printf "  ${yellow}Проблема с доступом${reset} (HTTP: %s)\n" "$_last_http" ;;
-                esac
-                printf "  ${red}Ошибка${reset}: Версия $version_selected недоступна\n"
-                continue
-                ;;
-            *)
-                if [ "$_last_curl_rc" = "28" ]; then  # curl OPERATION_TIMEDOUT
-                    printf "  ${red}Таймаут${reset} при проверке\n"
-                elif [ "$_last_curl_rc" != "0" ]; then
-                    printf "  ${red}Ошибка curl (%s)${reset} при проверке\n" "$_last_curl_rc"
-                elif [ -n "$_last_http" ] && [ "$_last_http" != "000" ]; then
-                    printf "  ${yellow}Проблема с доступом${reset} (HTTP: %s)\n" "$_last_http"
-                else
-                    printf "  ${red}Нет соединения${reset}\n"
-                fi
-                printf "  ${red}Ошибка${reset}: Версия $version_selected недоступна\n"
-                continue
-                ;;
-        esac
-
-        printf "  ${yellow}Выполняется загрузка${reset} выбранной версии Xray\n"
-
-        local menu_attempt=1
-        local menu_success=1
-
-        while [ "$menu_attempt" -le "$max_attempts" ]; do
-            if [ "$max_attempts" -gt 1 ]; then
-                printf "  Загрузка Xray (Попытка %d из %d)...\n" "$menu_attempt" "$max_attempts"
-            fi
-
-            if fetch_with_mirrors "$download_url" "$tmp_ram/xray.$extension" 1024; then
-                menu_success=0
-                break
-            fi
-
-            if [ "$menu_attempt" -lt "$max_attempts" ]; then
-                printf "  ${yellow}Предупреждение${reset}: Не удалось загрузить Xray. Повтор через %d сек...\n" "$delay"
-                sleep "$delay"
-            fi
-            menu_attempt=$((menu_attempt + 1))
-        done
-
-        if [ "$menu_success" -ne 0 ]; then
-            if [ "$max_attempts" -gt 1 ]; then
-                printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray $version_selected после %d попыток\n" "$max_attempts"
-            else
-                printf "  ${red}Ошибка${reset}: Не удалось загрузить Xray $version_selected\n"
-            fi
-            continue
-        fi
-
-        printf "  Xray ${green}успешно загружен${reset}\n"
-        return 0
     done
 }

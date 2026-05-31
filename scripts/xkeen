@@ -268,6 +268,7 @@ while [ $# -gt 0 ]; do
                 info_version_yq
 
                 delete_register_mihomo
+                delete_register_yq
                 echo
                 echo -e "  Выполняется регистрация ${yellow}Mihomo${reset}"
                 register_mihomo_list
@@ -436,6 +437,7 @@ while [ $# -gt 0 ]; do
             if [ -f "$install_dir/mihomo" ]; then
                 add_mihomo_config
                 delete_register_mihomo
+                delete_register_yq
                 info_mihomo
                 info_version_mihomo
                 info_version_yq
@@ -617,9 +619,8 @@ while [ $# -gt 0 ]; do
             check_free_space xray || exit 1
             test_connection
             test_github
-            sleep 2
-
             info_cpu
+            sleep 2
             smart_clear
             info_xray
             info_version_xray
@@ -692,9 +693,8 @@ while [ $# -gt 0 ]; do
             check_free_space mihomo || exit 1
             test_connection
             test_github
-            sleep 2
-
             info_cpu
+            sleep 2
             smart_clear
             info_mihomo
             info_version_mihomo
@@ -721,6 +721,7 @@ while [ $# -gt 0 ]; do
                 elif [ "$mihomo_was_installed" = "installed" ]; then
                     echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}Mihomo${reset}"
                     delete_register_mihomo
+                    delete_register_yq
                     logs_delete_register_mihomo_info_console
                     logs_delete_register_yq_info_console
 
@@ -750,6 +751,7 @@ while [ $# -gt 0 ]; do
                     info_version_yq
                     add_mihomo_config
                     delete_register_mihomo
+                    delete_register_yq
                     echo
                     echo -e "  Выполняется регистрация ${yellow}Mihomo${reset}"
                     register_mihomo_list
@@ -770,6 +772,34 @@ while [ $# -gt 0 ]; do
                     echo -e "  Установка ядра ${yellow}Mihomo${reset} ${green}выполнена${reset}"
                 fi
             fi
+
+            fixed_register_packages
+            delete_tmp
+        ;;
+
+
+        -uy)    # Обновление или установка Yq
+            test_connection
+            test_github
+            info_cpu
+            sleep 2
+            smart_clear
+            download_yq
+            info_version_yq
+
+            delete_register_yq
+            logs_delete_register_yq_info_console
+            info_version_yq
+            echo -e "  Выполняется регистрация новой версии ${yellow}Yq${reset}"
+            register_yq_list
+            logs_register_yq_list_info_console
+            register_yq_control
+            logs_register_yq_control_info_console
+            register_yq_status
+            logs_register_yq_status_info_console
+            sleep 2
+            echo
+            echo -e "  Установка ${yellow}Yq${reset} ${green}выполнена${reset}"
 
             fixed_register_packages
             delete_tmp

@@ -256,3 +256,86 @@ fetch_release_tags() {
         printf "  Список релизов получен с использованием ${yellow}GitHub API${reset}:\n"
     fi
 }
+
+# Универсальная проверка доступности URL
+# Аргументы: $1 - URL для проверки, $2 - Имя компонента (для вывода ошибок)
+# Возвращает: 0 - доступен, 1 - недоступен
+_network_probe() {
+    url="$1"
+    component="$2"
+    
+    printf "\n  ${yellow}Проверка${reset} доступности %s...\n" "$component"
+    probe_with_mirrors "$url"
+    _rc=$?
+    
+    case "$_rc" in
+        0)
+            printf "  Файл ${green}доступен${reset}\n"
+            return 0
+            ;;
+        2)
+            case "$_last_http" in
+                403) printf "  ${red}Доступ запрещен${reset} (403)\n" ;;
+                404) printf "  Файл ${red}не найден${reset} (404)\n" ;;
+                *)   printf "  ${yellow}Проблема с доступом${reset} (HTTP: %s)\n" "$_last_http" ;;
+            esac
+            printf "  ${red}Ошибка${reset}: %s недоступен\n" "$component"
+            return 1
+            ;;
+        *)
+            if [ "$_last_curl_rc" = "28" ]; then
+                printf "  ${red}Таймаут${reset} при проверке\n"
+            elif [ "$_last_curl_rc" != "0" ]; then
+                printf "  ${red}Ошибка curl (%s)${reset} при проверке\n" "$_last_curl_rc"
+            elif [ -n "$_last_http" ] && [ "$_last_http" != "000" ]; then
+                printf "  ${yellow}Проблема с доступом${reset} (HTTP: %s)\n" "$_last_http"
+            else
+                printf "  ${red}Нет соединения${reset}\n"
+            fi
+            printf "  ${red}Ошибка${reset}: %s недоступен\n" "$component"
+            return 1
+            ;;
+    esac
+}
+
+# Универсальный загрузчик файлов с повторными попытками
+# Аргументы: $1 - URL, $2 - Путь сохранения, $3 - Имя компонента, $4 - max_attempts, $5 - delay
+# Возвращает: 0 - успешно, 1 - ошибка
+_network_download() {
+    url="$1"
+    target="$2"
+    component="$3"
+    max_attempts="${4:-1}"
+    delay="${5:-2}"
+    
+    attempt=1
+    success=1
+
+    while [ "$attempt" -le "$max_attempts" ]; do
+        if [ "$max_attempts" -gt 1 ]; then
+            printf "  Загрузка %s (Попытка %d из %d)...\n" "$component" "$attempt" "$max_attempts"
+        fi
+
+        if fetch_with_mirrors "$url" "$target" 1024; then
+            success=0
+            break
+        fi
+
+        if [ "$attempt" -lt "$max_attempts" ]; then
+            printf "  ${yellow}Предупреждение${reset}: Не удалось загрузить %s. Повтор через %d сек...\n" "$component" "$delay"
+            sleep "$delay"
+        fi
+        attempt=$((attempt + 1))
+    done
+
+    if [ "$success" -eq 0 ]; then
+        return 0
+    else
+        if [ "$max_attempts" -gt 1 ]; then
+            printf "  ${red}Ошибка${reset}: Не удалось загрузить %s после %d попыток\n" "$component" "$max_attempts"
+        else
+            printf "  ${red}Ошибка${reset}: Не удалось загрузить %s\n" "$component"
+        fi
+        return 1
+    fi
+}

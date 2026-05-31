@@ -2,7 +2,6 @@
 download_mihomo() {
     USE_JSDELIVR=""
     printf "\n  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"
-
     fetch_release_tags "$mihomo_api_url" "$mihomo_jsd_url" "20"
 
     while true; do
@@ -28,7 +27,7 @@ download_mihomo() {
         if [ "$choice" = "0" ]; then
             bypass_mihomo="true"
             printf "  Загрузка Mihomo ${yellow}пропущена${reset}\n"
-            return
+            return 0
         fi
 
         if [ "$choice" = "9" ]; then
@@ -39,10 +38,8 @@ download_mihomo() {
                 sleep 1
                 continue
             fi
-
             version_selected=$(echo "$version_selected" | sed 's/^v//')
             version_selected="v$version_selected"
-
         else
             version_selected=$(echo "$RELEASE_TAGS" | awk -v line="$choice" 'NR == line {print $0; exit}')
             if [ -z "$version_selected" ]; then
@@ -50,18 +47,14 @@ download_mihomo() {
                 sleep 1
                 continue
             fi
-            if [ "$USE_JSDELIVR" = "true" ]; then
-                version_selected="v$version_selected"
-            fi
+            [ "$USE_JSDELIVR" = "true" ] && version_selected="v$version_selected"
         fi
 
         VERSION_ARG="$version_selected"
-
         URL_BASE="${mihomo_gz_url}/$VERSION_ARG"
-
         yq_download_base_url="$(get_yq_dist_url)"
 
-        case $architecture in
+        case "$architecture" in
             "arm64-v8a")
                 download_url="$URL_BASE/mihomo-linux-arm64-$VERSION_ARG.gz"
                 download_yq="$yq_download_base_url/yq_linux_arm64"
@@ -79,8 +72,8 @@ download_mihomo() {
                 download_yq="$yq_download_base_url/yq_linux_mips"
             ;;
             *)
-                download_url=
-                download_yq=
+                download_url=""
+                download_yq=""
             ;;
         esac
 
@@ -94,76 +87,22 @@ download_mihomo() {
         mkdir -p "$tmp_ram"
         yq_available="false"
 
-        printf "  ${yellow}Проверка${reset} доступности версии $version_selected...\n"
-
-        probe_with_mirrors "$download_url"
-        _rc=$?
-        case "$_rc" in
-            0)
-                printf "  Файл ${green}доступен${reset}\n"
-                ;;
-            2)
-                case "$_last_http" in
-                    403) printf "  ${red}Доступ запрещен${reset} (403)\n" ;;
-                    404) printf "  Файл ${red}не найден${reset} (404)\n" ;;
-                    *)   printf "  ${yellow}Проблема с доступом${reset} (HTTP: %s)\n" "$_last_http" ;;
-                esac
-                printf "  ${red}Ошибка${reset}: Версия Mihomo $version_selected недоступна\n"
-                continue
-                ;;
-            *)
-                if [ "$_last_curl_rc" = "28" ]; then  # curl OPERATION_TIMEDOUT
-                    printf "  ${red}Таймаут${reset} при проверке\n"
-                elif [ "$_last_curl_rc" != "0" ]; then
-                    printf "  ${red}Ошибка curl (%s)${reset} при проверке\n" "$_last_curl_rc"
-                elif [ -n "$_last_http" ] && [ "$_last_http" != "000" ]; then
-                    printf "  ${yellow}Проблема с доступом${reset} (HTTP: %s)\n" "$_last_http"
-                else
-                    printf "  ${red}Нет соединения${reset}\n"
-                fi
-                printf "  ${red}Ошибка${reset}: Версия Mihomo $version_selected недоступна\n"
-                continue
-                ;;
-        esac
-
-        printf "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - Yq\n"
-
-        if probe_with_mirrors "$download_yq"; then
-            local yq_attempt=1
-            local yq_success=1
-
-            while [ "$yq_attempt" -le "$max_attempts" ]; do
-                if [ "$max_attempts" -gt 1 ]; then
-                    printf "  Загрузка Yq (Попытка %d из %d)...\n" "$yq_attempt" "$max_attempts"
-                fi
-
-                if fetch_with_mirrors "$download_yq" "$install_dir/yq" 1024; then
-                    chmod +x "$install_dir/yq"
-                    yq_available="true"
-                    yq_success=0
-                    printf "  Yq ${green}успешно загружен и установлен${reset}\n"
-                    break
-                fi
-
-                if [ "$yq_attempt" -lt "$max_attempts" ]; then
-                    printf "  ${yellow}Предупреждение${reset}: Не удалось загрузить Yq. Повтор через %d сек...\n" "$delay"
-                    sleep "$delay"
-                fi
-                yq_attempt=$((yq_attempt + 1))
-            done
-
-            if [ "$yq_success" -ne 0 ]; then
-                printf "  ${red}Ошибка${reset}: Не удалось загрузить Yq после %d попыток\n" "$max_attempts"
-            fi
-        else
-            printf "  ${yellow}Предупреждение${reset}: Yq недоступен для загрузки, продолжение без него\n"
+        if ! _network_probe "$download_url" "версии Mihomo $version_selected"; then
+            continue
         fi
 
-        printf "  ${yellow}Выполняется загрузка${reset} выбранной версии Mihomo\n"
-
-        if [ "$yq_available" != "true" ] && [ -x "$install_dir/yq" ]; then
+        if "$install_dir/yq" --version >/dev/null 2>&1; then
             yq_available="true"
-            printf "  ${yellow}Используется${reset} уже установленный Yq\n"
+            printf "  ${yellow}Используется${reset} установленный парсер конфигурационных файлов Mihomo - Yq\n"
+        else
+            printf "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - Yq"
+            if _network_probe "$download_yq" "Yq"; then
+                if _network_download "$download_yq" "$install_dir/yq" "Yq" "$max_attempts" "$delay"; then
+                    chmod +x "$install_dir/yq"
+                    yq_available="true"
+                    printf "  Yq ${green}успешно загружен и установлен${reset}\n"
+                fi
+            fi
         fi
 
         if [ "$yq_available" != "true" ]; then
@@ -171,36 +110,49 @@ download_mihomo() {
             return 1
         fi
 
-        local mihomo_attempt=1
-        local mihomo_success=1
+        printf "  ${yellow}Выполняется загрузка${reset} Mihomo %s\n" "$version_selected"
 
-        while [ "$mihomo_attempt" -le "$max_attempts" ]; do
-            if [ "$max_attempts" -gt 1 ]; then
-                printf "  Загрузка Mihomo (Попытка %d из %d)...\n" "$mihomo_attempt" "$max_attempts"
-            fi
-
-            if fetch_with_mirrors "$download_url" "$tmp_ram/mihomo.$extension" 1024; then
-                mihomo_success=0
-                break
-            fi
-
-            if [ "$mihomo_attempt" -lt "$max_attempts" ]; then
-                printf "  ${yellow}Предупреждение${reset}: Не удалось загрузить Mihomo. Повтор через %d сек...\n" "$delay"
-                sleep "$delay"
-            fi
-            mihomo_attempt=$((mihomo_attempt + 1))
-        done
-
-        if [ "$mihomo_success" -ne 0 ]; then
-            if [ "$max_attempts" -gt 1 ]; then
-                printf "  ${red}Ошибка${reset}: Не удалось загрузить Mihomo $version_selected после %d попыток\n" "$max_attempts"
-            else
-                printf "  ${red}Ошибка${reset}: Не удалось загрузить Mihomo $version_selected\n"
-            fi
+        if ! _network_download "$download_url" "$tmp_ram/mihomo.$extension" "Mihomo" "$max_attempts" "$delay"; then
             continue
         fi
 
         printf "  Mihomo ${green}успешно загружен${reset}\n"
         return 0
     done
+}
+
+# Загрузка и обновление Yq
+download_yq() {
+    local yq_base_url
+    yq_base_url="$(get_yq_dist_url)"
+    local download_url=""
+    local yq_max_attempts=1
+    local yq_delay=2
+
+    if [ -n "$retries_download" ] && [ "$retries_download" -gt 1 ] 2>/dev/null; then
+        yq_max_attempts=$retries_download
+    fi
+    yq_delay=${retry_delay_download:-2}
+
+    case "$architecture" in
+        "arm64-v8a") download_url="$yq_base_url/yq_linux_arm64" ;;
+        "mips32le")  download_url="$yq_base_url/yq_linux_mipsle" ;;
+        "mips32")    download_url="$yq_base_url/yq_linux_mips" ;;
+        *)
+            printf "  ${red}Ошибка${reset}: Архитектура %s не поддерживается для Yq\n" "$architecture"
+            return 1
+            ;;
+    esac
+
+    if ! _network_probe "$download_url" "Yq"; then
+        return 1
+    fi
+
+    if _network_download "$download_url" "$install_dir/yq" "Yq" "$yq_max_attempts" "$yq_delay"; then
+        chmod +x "$install_dir/yq"
+        printf "  Yq ${green}успешно обновлен/установлен${reset}\n"
+        return 0
+    else
+        return 1
+    fi
 }
