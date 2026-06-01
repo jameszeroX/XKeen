@@ -42,8 +42,8 @@ file_port_proxying="$xkeen_cfg/port_proxying.lst"
 file_port_exclude="$xkeen_cfg/port_exclude.lst"
 file_ip_exclude="$xkeen_cfg/ip_exclude.lst"
 xkeen_config="$xkeen_cfg/xkeen.json"
+status_file="/opt/lib/opkg/status"
 file_pid_fd="/var/run/xkeen_fd.pid"
-file_status="/opt/lib/opkg/status"
 file_cpu="/opt/sbin/.xkeen/01_info/03_info_router.sh"
 file_ca="/opt/etc/ssl/certs/ca-certificates.crt"
 ru_exclude_ipv4="$ipset_cfg/ru_exclude_ipv4.lst"
@@ -1099,8 +1099,8 @@ EOL
     inject_var table_tproxy "$table_tproxy"
     inject_var table_mark "$table_mark"
     inject_var table_id "$table_id"
+    inject_var status_file "$status_file"
     inject_var file_dns "$file_dns"
-    inject_var file_status "$file_status"
     inject_var file_cpu "$file_cpu"
     inject_var file_ca "$file_ca"
     inject_var proxy_dns "$proxy_dns"
@@ -1673,7 +1673,6 @@ else
     [ -f "/tmp/xkeen_starting.lock" ] && exit 0
     touch "/tmp/xkeen_starting.lock"
     . "$file_cpu"
-    status_file="$file_status"
     info_cpu
 
     fd_limit="$other_fd"
@@ -2074,7 +2073,6 @@ proxy_start() {
             log_info_router "Инициирован запуск прокси-клиента"
             attempt=1
             . "$file_cpu"
-            status_file="$file_status"
             info_cpu
             export SSL_CERT_FILE="$file_ca"
             while [ "$attempt" -le "$start_attempts" ]; do
