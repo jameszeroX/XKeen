@@ -123,6 +123,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
 
         -i|-install)    # Запуск полного цикла установки
+            info_firmware
             test_connection
             test_entware
             test_github
@@ -370,6 +371,7 @@ while [ $# -gt 0 ]; do
 
 
         -io)    # Установка XKeen OffLine
+            info_firmware
             smart_clear
             echo
             check_keen_mode
