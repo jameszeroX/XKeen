@@ -24,6 +24,11 @@
       "streamSettings": {
         "sockopt": {"tproxy": "tproxy"}
       },
+      "sniffing": {
+        "enabled": true,
+        "routeOnly": true,
+        "destOverride": ["quic"]
+      },
       "tag": "tproxy"
     }
   ]
