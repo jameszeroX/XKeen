@@ -1668,7 +1668,7 @@ USER_POLICIES_EOF
 else
     [ -f "/tmp/xkeen_starting.lock" ] && exit 0
     touch "/tmp/xkeen_starting.lock"
-    . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
+    . "/opt/sbin/.xkeen/01_info/03_info_router.sh"
     status_file="/opt/lib/opkg/status"
     info_cpu
 
@@ -2069,7 +2069,7 @@ proxy_start() {
         else
             log_info_router "Инициирован запуск прокси-клиента"
             attempt=1
-            . "/opt/sbin/.xkeen/01_info/03_info_cpu.sh"
+            . "/opt/sbin/.xkeen/01_info/03_info_router.sh"
             status_file="/opt/lib/opkg/status"
             info_cpu
             export SSL_CERT_FILE="$file_ca"
