@@ -213,7 +213,7 @@ fetch_release_tags() {
 
     api_attempt=1
     while [ "$api_attempt" -le "$max_attempts" ]; do
-        RELEASE_TAGS=$(curl_with_timeout -s "${api_url}?per_page=${per_page}" 2>/dev/null | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 8)
+        RELEASE_TAGS=$(curl_with_timeout -s "${api_url}?per_page=${per_page}" 2>/dev/null | jq -r '.[] | .tag_name' | head -n 8)
 
         if [ -z "$RELEASE_TAGS" ]; then
             if [ "$api_attempt" -eq 1 ]; then

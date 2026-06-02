@@ -43,7 +43,7 @@ _xray_perform_install() {
 download_xray() {
     USE_JSDELIVR=""
     printf "\n  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
-    fetch_release_tags "$xray_api_url" "$xray_jsd_url" "50"
+    fetch_release_tags "$xray_api_url" "$xray_jsd_url" "10"
 
     # --- АВТОМАТИЧЕСКИЙ РЕЖИМ ---
     if [ "$autoinstall_mode" = "true" ]; then
@@ -86,7 +86,7 @@ download_xray() {
         fi
 
         if [ "$choice" = "9" ]; then
-            printf "  Введите версию Xray для загрузки (например: v25.4.30): "
+            printf "  Введите версию Xray для загрузки (например: v26.6.1): "
             read -r version_selected
             if [ -z "$version_selected" ]; then
                 printf "  ${red}Ошибка${reset}: Версия не может быть пустой\n"

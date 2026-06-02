@@ -2,7 +2,7 @@
 download_mihomo() {
     USE_JSDELIVR=""
     printf "\n  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"
-    fetch_release_tags "$mihomo_api_url" "$mihomo_jsd_url" "20"
+    fetch_release_tags "$mihomo_api_url" "$mihomo_jsd_url" "10"
 
     while true; do
         echo
@@ -31,7 +31,7 @@ download_mihomo() {
         fi
 
         if [ "$choice" = "9" ]; then
-            printf "  Введите версию Mihomo для загрузки (например: v1.19.6): "
+            printf "  Введите версию Mihomo для загрузки (например: v1.19.26): "
             read -r version_selected
             if [ -z "$version_selected" ]; then
                 printf "  ${red}Ошибка${reset}: Версия не может быть пустой\n"
