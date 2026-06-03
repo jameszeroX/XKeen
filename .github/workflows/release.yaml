@@ -38,7 +38,6 @@ jobs:
         run: |
           echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
           echo "ARCHIVE_NAME=xkeen.tar.gz" >> $GITHUB_ENV
-          echo "ARCHIVE_NAME_TAR=xkeen.tar" >> $GITHUB_ENV
 
       - name: Prepare scripts with build timestamp
         run: |
@@ -57,7 +56,6 @@ jobs:
           chmod +x xkeen
 
           find . -type f -o -type l | sed 's|^\./||' | tar -czf "../dist/${ARCHIVE_NAME}" -T -
-          find . -type f -o -type l | sed 's|^\./||' | tar -cf "../dist/${ARCHIVE_NAME_TAR}" -T -
 
       - name: Clean up temporary files
         run: rm -rf scripts_for_release
@@ -65,7 +63,7 @@ jobs:
       - name: Generate release notes with downloads badge
         run: |
           cat > /tmp/release_notes.md << EOF
-          ![downloads](https://img.shields.io/github/downloads/jameszeroX/Xkeen/${{ env.VERSION }}/total?label=downloads)
+          ![downloads](https://img.shields.io/github/downloads/jameszeroX/Xkeen/${{ env.VERSION }}/xkeen.tar.gz?label=downloads)
           EOF
 
       - name: Create signed tag and release
@@ -85,7 +83,6 @@ jobs:
           # Создаем релиз
           gh release create "$TAG_NAME" \
             dist/*.tar.gz \
-            dist/*.tar \
             --title "${{ env.VERSION }}" \
             --notes-file /tmp/release_notes.md \
             ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }} \
