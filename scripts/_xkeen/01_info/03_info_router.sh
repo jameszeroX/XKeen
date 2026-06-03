@@ -24,7 +24,7 @@ info_cpu() {
     esac
 }
 
-# Функция для получения информации о прошивке
+# Функция для получения информации о версии Keenetic OS
 info_firmware() {
     json_data=""
     json_data="$(curl_api "localhost:79/rci/show/version" 2>/dev/null)"
@@ -35,6 +35,7 @@ info_firmware() {
         exit 1
     fi
 
+    # Получение мажорной версии Keenetic OS с помощью jq и фоллбеком на sed
     if command -v jq >/dev/null 2>&1; then
         major_version="$(echo "$json_data" | jq -r '.release // empty' | cut -d'.' -f1)"
     else
@@ -48,6 +49,7 @@ info_firmware() {
         major_version=0
     fi
 
+    # Вывод варнинга для старых версий Keenetic OS с возможностью продолжить установку
     if [ "$major_version" -lt 4 ]; then
         [ "$major_version" = 0 ] || clear
         echo

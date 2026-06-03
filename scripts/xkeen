@@ -884,7 +884,7 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -dm)    # Удалить Mihomo
+        -dm)    # Удалить Mihomo и Yq
             smart_clear
             echo
             choice_for_remove="Mihomo"

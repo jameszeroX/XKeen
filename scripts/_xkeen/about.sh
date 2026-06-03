@@ -144,16 +144,16 @@ help_xkeen() {
         echo -e "	-k	${italic}	XKeen${reset}"
         echo -e "	-g	${italic}	GeoFile${reset}"
         echo -e "	-gips	${italic}	GeoIPSET${reset}"
-        echo -e "	-ri	${italic}	Пересоздать файл автозапуска init.d${reset}"
+        echo -e "	-ri	${italic}	Пересоздать файл автозапуска XKeen в init.d${reset}"
         echo
         echo -e "${yellow}Обновление${reset}"
         echo -e "	-uk	${italic}	XKeen${reset}"
         echo -e "	-ug	${italic}	GeoFile/GeoIPSET${reset}"
-        echo -e "	-ux	${italic}	Xray (повышение/понижение версии)${reset}"
-        echo -e "	-um	${italic}	Mihomo (повышение/понижение версии)${reset}"
-        echo -e "	-uy	${italic}	Yq (повышение/понижение версии)${reset}"
+        echo -e "	-ux	${italic}	Xray (установка, повышение/понижение версии)${reset}"
+        echo -e "	-um	${italic}	Mihomo (установка, повышение/понижение версии)${reset}"
+        echo -e "	-uy	${italic}	Yq (установка, повышение/понижение версии)${reset}"
         echo
-        echo -e "${yellow}Запланированная здача автообновления GeoFile/GeoIPSET${reset}"
+        echo -e "${yellow}Запланированная задача автообновления GeoFile/GeoIPSET${reset}"
         echo -e "	-ugc	${italic}	Создание${reset}"
         echo -e "	-dgc	${italic}	Удаление${reset}"
         echo
@@ -175,7 +175,7 @@ help_xkeen() {
         echo -e "	-dgi	${italic}	GeoIP${reset}"
         echo -e "	-dgips	${italic}	GeoIPSET${reset}"
         echo -e "	-dx	${italic}	Xray${reset}"
-        echo -e "	-dm	${italic}	Mihomo${reset}"
+        echo -e "	-dm	${italic}	Mihomo + Yq${reset}"
         echo -e "	-dk	${italic}	XKeen${reset}"
         echo
         echo -e "${green}Порты проксирования${reset}"
