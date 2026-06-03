@@ -1,3 +1,4 @@
+# Функция чтения портов из файлов
 read_ports_file() {
     file="$1"
 
@@ -13,6 +14,7 @@ read_ports_file() {
     sed 's/,$//'
 }
 
+# Функция записи портов в файлы
 write_ports_file() {
     file="$1"
     ports="$2"
@@ -25,6 +27,7 @@ write_ports_file() {
     mv "$tmpfile" "$file"
 }
 
+# Функция проверки конфликта портов
 ports_conflict_check() {
     file1="$1"
     file2="$2"
@@ -39,6 +42,7 @@ ports_conflict_check() {
     return 1
 }
 
+# Функция нормализации портов
 normalize_ports() {
     echo "$1" | tr ',' '\n' | awk '
     function valid(p) {
@@ -80,6 +84,7 @@ normalize_ports() {
     ' | sort -n | tr '\n' ',' | sed 's/,$//'
 }
 
+# Функция добавления обязательных портов проксирования
 ensure_web_ports() {
     ports="$1"
 
@@ -89,6 +94,7 @@ ensure_web_ports() {
     normalize_ports "$ports"
 }
 
+# Функция добавления портов проксирования
 add_ports_donor() {
     [ -z "$1" ] && {
         echo -e "  ${red}Ошибка${reset}: список портов не может быть пустым"
@@ -117,7 +123,8 @@ add_ports_donor() {
     echo -e "  ${green}Порты проксирования обновлены${reset}"
 }
 
-dell_ports_donor() {
+# Функция удаления портов проксирования
+del_ports_donor() {
     ports_to_del=$(normalize_ports "$(printf '%s,' "$@" | sed 's/,$//')")
     current_ports=$(read_ports_file "$file_port_proxying")
 
@@ -143,6 +150,7 @@ dell_ports_donor() {
     echo -e "  ${green}Порты удалены${reset}"
 }
 
+# Функция добавления портов, исключаемых из проксирования
 add_ports_exclude() {
     [ -z "$1" ] && {
         echo -e "  ${red}Ошибка${reset}: список портов не может быть пустым"
@@ -169,7 +177,8 @@ add_ports_exclude() {
     echo -e "  ${green}Порты исключения обновлены${reset}"
 }
 
-dell_ports_exclude() {
+# Функция удаления портов, исключённых из проксирования
+del_ports_exclude() {
     ports_to_del=$(normalize_ports "$(printf '%s,' "$@" | sed 's/,$//')")
     current_ports=$(read_ports_file "$file_port_exclude")
 
@@ -217,6 +226,7 @@ get_ports_exclude() {
     fi
 }
 
+# Функция переноса пользовательских портов из переменных стартового скрипта в файловую модель
 migrate_ports_from_initd() {
     legacy_initd=""
 

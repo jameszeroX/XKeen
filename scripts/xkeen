@@ -1346,7 +1346,7 @@ while [ $# -gt 0 ]; do
 
         -dp)    # Удалить порт проксирования
             shift
-            dell_ports_donor "$@"
+            del_ports_donor "$@"
             shift $#
             sleep 2
             add_chmod_init
@@ -1375,7 +1375,7 @@ while [ $# -gt 0 ]; do
 
         -dpe)    # Удалить порт-исключение проксирования
             shift
-            dell_ports_exclude "$@"
+            del_ports_exclude "$@"
             shift $#
             sleep 2
             add_chmod_init

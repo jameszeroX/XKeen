@@ -1,3 +1,4 @@
+# Вспомогательная функция статуса регистрации пакетов
 print_log_status() {
     local status_code=$1
     local success_msg=$2
@@ -69,7 +70,6 @@ logs_delete_geoipset_info_console() {
 }
 
 # Проверки регистрации XKeen
-
 logs_register_xkeen_status_info_console() {
     grep -q "Package: xkeen" "$status_file"
     print_log_status $? "Запись XKeen найдена в '$status_file'" "Запись XKeen не найдена в '$status_file'"
@@ -102,7 +102,6 @@ logs_delete_register_xkeen_info_console() {
 }
 
 # Проверки регистрации Xray
-
 logs_register_xray_status_info_console() {
     grep -q "Package: xray_s" "$status_file"
     print_log_status $? "Запись Xray найдена в '$status_file'" "Запись Xray не найдена в '$status_file'"
@@ -130,7 +129,6 @@ logs_delete_register_xray_info_console() {
 }
 
 # Проверки регистрации Mihomo
-
 logs_register_mihomo_status_info_console() {
     grep -q "Package: mihomo" "$status_file"
     print_log_status $? "Запись mihomo найдена в '$status_file'" "Запись mihomo не найдена в '$status_file'"
@@ -158,7 +156,6 @@ logs_delete_register_mihomo_info_console() {
 }
 
 # Проверки регистрации YQ
-
 logs_register_yq_status_info_console() {
     grep -q "Package: yq" "$status_file"
     print_log_status $? "Запись yq найдена в '$status_file'" "Запись yq не найдена в '$status_file'"
@@ -186,7 +183,6 @@ logs_delete_register_yq_info_console() {
 }
 
 # Остальные проверки
-
 logs_delete_cron_geofile_info_console() {
     if [ -f "$cron_dir/$cron_file" ]; then
         ! grep -q "ug" "$cron_dir/$cron_file"

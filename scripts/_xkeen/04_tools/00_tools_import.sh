@@ -1,4 +1,3 @@
-
 # Дополнительные инструменты
 . "$xtools_dir/01_tools_ports.sh"
 . "$xtools_dir/02_tools_modules.sh"

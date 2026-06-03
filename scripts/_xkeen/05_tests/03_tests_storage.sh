@@ -13,6 +13,7 @@ location_entware_storage() {
     fi
 }
 
+# Информационный варнинг при установке во внутреннюю память
 preinstall_warn() {
     if [ -n "$preinstall_warn" ]; then
         echo

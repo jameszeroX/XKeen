@@ -1,3 +1,4 @@
+# Создание резервной копии конфигурации Xray
 backup_configs_xray() {
     backup_filename="${current_datetime}_configs_xray"
     backup_configs_dir="$backups_dir/$backup_filename"
@@ -10,6 +11,7 @@ backup_configs_xray() {
     fi
 }
 
+# Восстановление конфигурации Xray из резервной копии
 restore_backup_configs_xray() {
     latest_backup=""
 

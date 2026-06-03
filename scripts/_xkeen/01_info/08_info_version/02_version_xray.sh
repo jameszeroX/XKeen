@@ -1,6 +1,5 @@
 # Функция для получения информации о версии Xray
 info_version_xray() {
-
     # Проверяем, установлен ли Xray
     if [ "$xray_installed" = "installed" ]; then
         # Если Xray установлен, получаем текущую версию

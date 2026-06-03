@@ -1,3 +1,4 @@
+# Функция создания диагностического отчёта
 diagnostic() {
     # Установка пути к файлу diagnostic
     diagnostic="/opt/diagnostic.txt"

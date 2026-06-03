@@ -1,3 +1,4 @@
+# Создание резервной копии конфигурации Mihomo
 backup_configs_mihomo() {
     backup_filename="${current_datetime}_configs_mihomo"
     backup_configs_dir="$backups_dir/$backup_filename"
@@ -10,6 +11,7 @@ backup_configs_mihomo() {
     fi
 }
 
+# Восстановление конфигурации Mihomo из резервной копии
 restore_backup_configs_mihomo() {
     latest_backup=""
 
