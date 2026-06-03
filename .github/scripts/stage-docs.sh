@@ -100,6 +100,13 @@ for src in "$ROOT"/wiki/*.md; do
     esac
 done
 
+# Картинки гайдов (wiki/images/*) → site_src/guides/images/.
+# Без этого <img src="images/..."> на страницах guides отдаёт 404.
+if [ -d "$ROOT/wiki/images" ]; then
+    mkdir -p "$SRC/guides/images"
+    cp "$ROOT"/wiki/images/* "$SRC/guides/images/"
+fi
+
 # docs/*.md → авто-цикл. Исключения те же (_*.md, .gitignore — release-notes/ авто-скип).
 # Спецслучаи:
 #   README.md   → site_src/dev/index.md (раздел «Для разработчиков»)
@@ -169,6 +176,10 @@ for f in "$SRC"/guides/*.md; do
         -e 's|](DNS-over-VLESS)|](DNS-over-VLESS.md)|g' \
         -e 's|](Маршрутизация-по-DSCP)|](Маршрутизация-по-DSCP.md)|g' \
         "$f"
+    # Сырые <img src="images/..."> → markdown ![alt](images/...): mkdocs сам
+    # перепишет относительный путь под use_directory_urls и провалидирует файл
+    # (--strict). Сырой HTML mkdocs не трогает, поэтому путь оставался бы битым.
+    sed -i 's|<img src="\(images/[^"]*\)" alt="\([^"]*\)">|![\2](\1)|g' "$f"
 done
 
 # (4) Относительные ссылки docs/* → ../scripts/, ../.github/, ../test/, ../install.sh, ../wiki/

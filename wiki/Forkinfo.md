@@ -1,6 +1,7 @@
 ## Подробное описание изменений форка по сравнению с оригинальным XKeen
 
 Добавлено:
+
 - Совместимость с прошивкой KeeneticOS 5+
 - Поддержка ядра Mihomo и смена ядра проксирования (Xray/Mihomo) параметрами запуска `-xray` и `-mihomo`
 - Реализована работа с пользовательскими политиками [подробнее](https://github.com/jameszeroX/XKeen/wiki/Configuration#пользовательские-политики)
@@ -35,7 +36,8 @@
 - Параметр запуска `-fd` для контроля открытых файловых дескрипторов [подробнее](https://github.com/jameszeroX/XKeen/wiki/Configuration#контроль-файловых-дескрипторов)
 - Параметр запуска `-extmsg` для вывода расширенной информации при запуске прокси-клиента
 
-Измененено:
+Изменено:
+
 - Исправлено добавление портов в исключения (ранее команду `xkeen -ape` нужно было прерывать по ctrl+c)
 - Исправлена совместная работа режима TProxy и socks5 (ранее Xkeen запускался в Mixed режиме, что приводило к неработоспособности прозрачного проксирования)
 - Исправлен автозапуск XKeen при старте роутера (ранее XKeen в некоторых случаях не запускался или запускался для всего устройства, а не только для своей политики - [FAQ п.12](https://github.com/jameszeroX/XKeen/wiki/FAQ#12))
@@ -67,6 +69,7 @@
 - Доработки согласно PR [#33](https://github.com/jameszeroX/XKeen/pull/33), [#34](https://github.com/jameszeroX/XKeen/pull/34), [#35](https://github.com/jameszeroX/XKeen/pull/35), [#36](https://github.com/jameszeroX/XKeen/pull/36), [#37](https://github.com/jameszeroX/XKeen/pull/37), [#38](https://github.com/jameszeroX/XKeen/pull/38), [#39](https://github.com/jameszeroX/XKeen/pull/39), [#40](https://github.com/jameszeroX/XKeen/pull/40), [#41](https://github.com/jameszeroX/XKeen/pull/41), [#42](https://github.com/jameszeroX/XKeen/pull/42), [#43](https://github.com/jameszeroX/XKeen/pull/43), [#44](https://github.com/jameszeroX/XKeen/pull/44), [#45](https://github.com/jameszeroX/XKeen/pull/45), [#46](https://github.com/jameszeroX/XKeen/pull/46), [#47](https://github.com/jameszeroX/XKeen/pull/47), [#48](https://github.com/jameszeroX/XKeen/pull/48), [#49](https://github.com/jameszeroX/XKeen/pull/49), [#50](https://github.com/jameszeroX/XKeen/pull/50), [#51](https://github.com/jameszeroX/XKeen/pull/51), [#52](https://github.com/jameszeroX/XKeen/pull/52) - [@oviron](https://github.com/oviron)
 
 Удалено:
+
 - Поддержка внешнего файла `/opt/etc/xkeen_exclude.lst` c IP-адресами и подсетями для исключения из проксирования
 - Возможность установки GeoSite Antizapret (база повреждена в репозитории)
 - Конфигурационный файл `02_transport.json` (не используется новыми ядрами xray-core)
