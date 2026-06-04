@@ -1,20 +1,20 @@
-# Функция для выбора пользователя между "Да" и "Нет" с номерами 0 и 1
+# Функция для выбора пользователя между "Да" и "Нет" с номерами 1 и 0
 input_concordance_list() {
     prompt_message="  $1"
-    error_message="  ${yellow}Пожалуйста, выберите вариант, введя номер 0 (Нет) или 1 (Да)${reset}"
+    error_message="  ${yellow}Пожалуйста, выберите вариант, введя номер 1 (Да) или 0 (Нет)${reset}"
 
     echo
     echo -e "$prompt_message"
-    echo "     0. Нет"
     echo "     1. Да"
+    echo "     0. Нет"
 
     while true; do
         echo
         read -r -p "  Введите номер: " user_input
 
         case "$user_input" in
-            0) return 1 ;;
             1) return 0 ;;
+            0) return 1 ;;
             *)
                 echo
                 echo -e "  $error_message"

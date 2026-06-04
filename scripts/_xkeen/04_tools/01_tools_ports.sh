@@ -84,6 +84,78 @@ normalize_ports() {
     ' | sort -n | tr '\n' ',' | sed 's/,$//'
 }
 
+ports_exist_in_list() {
+    ports_to_check="$1"
+    current_ports="$2"
+
+    for port in $(echo "$ports_to_check" | tr ',' '\n'); do
+        echo "$current_ports" | tr ',' '\n' | grep -qx "$port" && return 0
+    done
+
+    return 1
+}
+
+remove_ports_from_list() {
+    current_ports="$1"
+    ports_to_del="$2"
+
+    result="$current_ports"
+
+    for port in $(echo "$ports_to_del" | tr ',' '\n'); do
+        result=$(echo "$result" | tr ',' '\n' |
+            grep -vFx "$port" |
+            tr '\n' ',' |
+            sed 's/,$//')
+    done
+
+    echo "$result"
+}
+
+merge_ports_lists() {
+    normalize_ports "$1,$2"
+}
+
+# Функция запроса подтверждения удаления
+confirm_deletion() {
+    type="$1"
+    ports_list="$2"
+    message=""
+
+    if [ -n "$ports_list" ]; then
+        # Удаление конкретных портов
+        message="Вы действительно хотите удалить следующие порты "
+        if [ "$type" = "proxying" ]; then
+            message="${message}проксирования"
+        else
+            message="${message}исключённые из проксирования"
+        fi
+        message="${message}: ${light_blue}${ports_list}${reset}?"
+    else
+        # Очистка всего списка
+        if [ "$type" = "proxying" ]; then
+            message="Вы действительно хотите ${red}очистить список портов${reset} проксирования?"
+        else
+            message="Вы действительно хотите ${red}очистить список портов${reset}, исключённых из проксирования?"
+        fi
+    fi
+
+    echo
+    echo -e "  ${message}"
+    echo
+    echo "     1. Да"
+    echo "     0. Оставить без изменений"
+
+    echo
+    while true; do
+        read -r -p "  Ваш выбор: " choice
+            case "$choice" in
+                1) return 0 ;;
+                0) echo && echo "  Отменено пользователем"; return 1 ;;
+                *) echo -e "  ${red}Некорректный ввод${reset}" ;;
+            esac
+    done
+}
+
 # Функция добавления обязательных портов проксирования
 ensure_web_ports() {
     ports="$1"
@@ -109,15 +181,8 @@ add_ports_donor() {
     new_ports=$(normalize_ports "$(printf '%s,' "$@" | sed 's/,$//')")
     current_ports=$(read_ports_file "$file_port_proxying")
     current_ports=$(normalize_ports "$current_ports")
-
-    if [ -n "$current_ports" ]; then
-        all_ports=$(echo "$current_ports,$new_ports" | tr ',' '\n' | sort -n -u | tr '\n' ',' | sed 's/,$//')
-    else
-        all_ports="$new_ports"
-    fi
-
+    all_ports=$(merge_ports_lists "$current_ports" "$new_ports")
     all_ports=$(ensure_web_ports "$all_ports")
-
     write_ports_file "$file_port_proxying" "$all_ports"
 
     echo -e "  ${green}Порты проксирования обновлены${reset}"
@@ -129,25 +194,30 @@ del_ports_donor() {
     current_ports=$(read_ports_file "$file_port_proxying")
 
     [ -z "$current_ports" ] && {
-        echo -e "  ${yellow}Файл пуст${reset}"
+        echo -e "  ${yellow}Список портов пуст${reset}"
         return
     }
 
     if [ -z "$ports_to_del" ]; then
-        > "$file_port_proxying"
-        echo -e "  ${green}Все порты удалены${reset}"
+        # Очистка всего списка
+        if confirm_deletion "proxying"; then
+            > "$file_port_proxying"
+            echo -e "  ${green}Все порты удалены${reset}"
+        fi
         return
     fi
 
-    new_ports="$current_ports"
+    ports_exist_in_list "$ports_to_del" "$current_ports" || {
+        echo -e "  ${yellow}Указанные порты отсутствуют в списке${reset}"
+        return
+    }
 
-    for port in $(echo "$ports_to_del" | tr ',' '\n'); do
-        new_ports=$(echo "$new_ports" | tr ',' '\n' | grep -vFx "$port" | tr '\n' ',' | sed 's/,$//')
-    done
-
-    write_ports_file "$file_port_proxying" "$new_ports"
-
-    echo -e "  ${green}Порты удалены${reset}"
+    # Запрос подтверждения перед удалением указанных портов
+    if confirm_deletion "proxying" "$ports_to_del"; then
+        new_ports=$(remove_ports_from_list "$current_ports" "$ports_to_del")
+        write_ports_file "$file_port_proxying" "$new_ports"
+        echo -e "  ${green}Порты удалены${reset}"
+    fi
 }
 
 # Функция добавления портов, исключаемых из проксирования
@@ -165,13 +235,7 @@ add_ports_exclude() {
     new_ports=$(normalize_ports "$(printf '%s,' "$@" | sed 's/,$//')")
     current_ports=$(read_ports_file "$file_port_exclude")
     current_ports=$(normalize_ports "$current_ports")
-
-    if [ -n "$current_ports" ]; then
-        all_ports=$(echo "$current_ports,$new_ports" | tr ',' '\n' | sort -n -u | tr '\n' ',' | sed 's/,$//')
-    else
-        all_ports="$new_ports"
-    fi
-
+    all_ports=$(merge_ports_lists "$current_ports" "$new_ports")
     write_ports_file "$file_port_exclude" "$all_ports"
 
     echo -e "  ${green}Порты исключения обновлены${reset}"
@@ -183,25 +247,30 @@ del_ports_exclude() {
     current_ports=$(read_ports_file "$file_port_exclude")
 
     [ -z "$current_ports" ] && {
-        echo -e "  ${yellow}Файл пуст${reset}"
+        echo -e "  ${yellow}Список портов пуст${reset}"
         return
     }
 
     if [ -z "$ports_to_del" ]; then
-        > "$file_port_exclude"
-        echo -e "  ${green}Все исключения удалены${reset}"
+        # Очистка всего списка
+        if confirm_deletion "exclude"; then
+            > "$file_port_exclude"
+            echo -e "  ${green}Все исключения удалены${reset}"
+        fi
         return
     fi
 
-    new_ports="$current_ports"
+    ports_exist_in_list "$ports_to_del" "$current_ports" || {
+        echo -e "  ${yellow}Указанные порты отсутствуют в списке${reset}"
+        return
+    }
 
-    for port in $(echo "$ports_to_del" | tr ',' '\n'); do
-        new_ports=$(echo "$new_ports" | tr ',' '\n' | grep -vFx "$port" | tr '\n' ',' | sed 's/,$//')
-    done
-
-    write_ports_file "$file_port_exclude" "$new_ports"
-
-    echo -e "  ${green}Порты исключения удалены${reset}"
+    # Запрос подтверждения перед удалением указанных портов
+    if confirm_deletion "exclude" "$ports_to_del"; then
+        new_ports=$(remove_ports_from_list "$current_ports" "$ports_to_del")
+        write_ports_file "$file_port_exclude" "$new_ports"
+        echo -e "  ${green}Порты исключения удалены${reset}"
+    fi
 }
 
 # Получить список портов проксирования
