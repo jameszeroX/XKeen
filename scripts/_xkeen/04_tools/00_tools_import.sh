@@ -1,7 +1,7 @@
 # Дополнительные инструменты
 . "$xtools_dir/01_tools_ports.sh"
+. "$xtools_dir/02_tools_delay.sh"
 . "$xtools_dir/03_tools_diagnostic.sh"
-. "$xtools_dir/04_tools_delay.sh"
 
 # Модуль выбора
 . "$xtools_dir/05_tools_choice/00_choice_import.sh"
