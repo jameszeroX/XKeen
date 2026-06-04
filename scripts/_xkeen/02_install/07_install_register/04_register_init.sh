@@ -1105,8 +1105,6 @@ EOL
     inject_var file_ca "$file_ca"
     inject_var proxy_dns "$proxy_dns"
     inject_var proxy_router "$proxy_router"
-    inject_var directory_os_modules "$directory_os_modules"
-    inject_var directory_user_modules "$directory_user_modules"
     inject_var directory_configs_app "$directory_configs_app"
     inject_var directory_xray_config "$directory_xray_config"
     inject_var directory_xray_asset "$directory_xray_asset"

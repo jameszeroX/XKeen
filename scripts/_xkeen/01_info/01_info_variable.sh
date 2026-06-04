@@ -38,8 +38,6 @@ mihomo_conf_dir="/opt/etc/mihomo"	 # Директория конфигураци
 xray_conf_dir="/opt/etc/xray/configs"	 # Директория конфигурации Xray
 xray_conf_smpl="$xkeen_dir/02_install/08_install_configs/02_configs_xray"
 register_dir="/opt/lib/opkg/info"
-os_modules="/lib/modules/$(uname -r)"
-user_modules="/opt/lib/modules"
 
 # -------------------------------------
 # Файлы

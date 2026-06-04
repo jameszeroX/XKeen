@@ -1390,20 +1390,6 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -modules)    # Obsolete
-            smart_clear
-            echo
-            migration_modules
-        ;;
-
-
-        -delmodules)    # Obsolete
-            smart_clear
-            echo
-            remove_modules
-        ;;
-
-
         -di)    # Время ожидания инициализации роутера
             shift
             delay_init "$1"
