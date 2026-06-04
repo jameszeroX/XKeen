@@ -1,8 +1,97 @@
+# Информация об XKeen
 about_xkeen() {
     echo
     printf "  Утилита ${green}XKeen${reset} предназначена для управления межсетевым\n  экраном роутера ${yellow}Keenetic${reset}, защищающим домашнюю сеть.\n  Разработчики ${red}не несут ответственности${reset} за использование\n  ${green}XKeen${reset} вне прямого назначения. Перед использованием убедитесь,\n  что ваши действия соответствуют законодательству вашей страны.\n  Использование ${green}XKeen${reset} в противоправных целях ${red}строго запрещено${reset}.\n"
 }
 
+# Справочная информация о параметрах запуска
+help_xkeen() {
+        echo
+        echo -e "${yellow}Установка${reset}"
+        echo -e "	-i	${italic}	Основной режим установки XKeen + Xray + GeoFile/GeoIPSET + Mihomo${reset}"
+        echo -e "	-io	${italic}	OffLine установка XKeen${reset}"
+        echo -e "	-toff	${italic}	Отключение таймаута при меделенной загрузке с GitHub (xkeen -i -toff)${reset}"
+        echo
+        echo -e "${green}Переустановка${reset}"
+        echo -e "	-k	${italic}	XKeen${reset}"
+        echo -e "	-g	${italic}	GeoFile${reset}"
+        echo -e "	-gips	${italic}	GeoIPSET${reset}"
+        echo -e "	-ri	${italic}	Пересоздать файл автозапуска XKeen в init.d${reset}"
+        echo
+        echo -e "${yellow}Обновление${reset}"
+        echo -e "	-uk	${italic}	XKeen${reset}"
+        echo -e "	-ug	${italic}	GeoFile/GeoIPSET${reset}"
+        echo -e "	-ux	${italic}	Xray (установка, повышение/понижение версии)${reset}"
+        echo -e "	-um	${italic}	Mihomo (установка, повышение/понижение версии)${reset}"
+        echo -e "	-uy	${italic}	Yq (установка, повышение/понижение версии)${reset}"
+        echo
+        echo -e "${yellow}Запланированная задача автообновления GeoFile/GeoIPSET${reset}"
+        echo -e "	-ugc	${italic}	Создание${reset}"
+        echo -e "	-dgc	${italic}	Удаление${reset}"
+        echo
+        echo -e "${green}Резервная копия XKeen${reset}"
+        echo -e "	-kb	${italic}	Создание${reset}"
+        echo -e "	-kbr	${italic}	Восстановление${reset}"
+        echo
+        echo -e "${green}Резервная копия конфигурации Xray${reset}"
+        echo -e "	-xb	${italic}	Создание${reset}"
+        echo -e "	-xbr	${italic}	Восстановление${reset}"
+        echo
+        echo -e "${green}Резервная копия конфигурации Mihomo${reset}"
+        echo -e "	-mb	${italic}	Создание${reset}"
+        echo -e "	-mbr	${italic}	Восстановление${reset}"
+        echo
+        echo -e "${red}Удаление${reset}"
+        echo -e "	-remove	${italic}	Полная деинсталляция XKeen${reset}"
+        echo -e "	-dgs	${italic}	GeoSite${reset}"
+        echo -e "	-dgi	${italic}	GeoIP${reset}"
+        echo -e "	-dgips	${italic}	GeoIPSET${reset}"
+        echo -e "	-dx	${italic}	Xray${reset}"
+        echo -e "	-dm	${italic}	Mihomo + Yq${reset}"
+        echo -e "	-dk	${italic}	XKeen${reset}"
+        echo
+        echo -e "${green}Порты проксирования${reset}"
+        echo -e "	-ap	${italic}	Добавить${reset}"
+        echo -e "	-dp	${italic}	Удалить${reset}"
+        echo -e "	-cp	${italic}	Посмотреть${reset}"
+        echo
+        echo -e "${green}Порты, исключённые из проксирования${reset}"
+        echo -e "	-ape	${italic}	Добавить${reset}"
+        echo -e "	-dpe	${italic}	Удалить${reset}"
+        echo -e "	-cpe	${italic}	Посмотреть${reset}"
+        echo
+        echo -e "${light_blue}Управление прокси-клиентом${reset}"
+        echo -e "	-start	${italic}	Запуск${reset}"
+        echo -e "	-stop	${italic}	Остановка${reset}"
+        echo -e "	-restart${italic}	Перезапуск${reset}"
+        echo -e "	-status	${italic}	Статус работы${reset}"
+        echo -e "	-tp	${italic}	Порты, шлюз и протокол прокси-клиента${reset}"
+        echo -e "	-auto	${italic}	Включить | Отключить автозапуск прокси-клиента${reset}"
+        echo -e "	-di	${italic}	Время ожидания инициализации роутера перед началом запуска прокси-клиента${reset}"
+        echo -e "	-d	${italic}	Время ожидания успешного запуска прокси-клиента${reset}"
+        echo -e "	-fd	${italic}	Включить | Отключить контроль файловых дескрипторов прокси-клиента${reset}"
+        echo -e "	-cfd	${italic}	Проверить количество файловых дескрипторов открытых прокси-клиентом${reset}"
+        echo -e "	-diag	${italic}	Выполнить диагностику Xkeen${reset}"
+        echo -e "	-channel${italic}	Переключить канал получения обновлений XKeen (Stable/Dev версия)${reset}"
+        echo -e "	-xtest	${italic}	Проверить конфигурацию Xray на ошибки${reset}"
+        echo -e "	-mtest	${italic}	Проверить конфигурацию Mihomo на ошибки${reset}"
+        echo -e "	-xray	${italic}	Переключить XKeen на ядро Xray${reset}"
+        echo -e "	-mihomo	${italic}	Переключить XKeen на ядро Mihomo${reset}"
+        echo -e "	-ipv6	${italic}	Включить | Отключить протокол IPv6 в KeeneticOS${reset}"
+        echo -e "	-dns	${italic}	Включить | Отключить перенаправление DNS в прокси${reset}"
+        echo -e "	-pr	${italic}	Включить | Отключить проксирование трафика Entware${reset}"
+        echo -e "	-extmsg	${italic}	Включить | Отключить расширенные сообщения при запуске XKeen${reset}"
+        echo -e "	-cbk	${italic}	Включить | Отключить резервное копирование XKeen при обновлении${reset}"
+        echo -e "	-aghfix	${italic}	Включить | Отключить отображение клиентов XKeen под своими IP в журнале AdGuard Home${reset}"
+        echo
+        echo -e "${light_blue}Информация${reset}"
+        echo -e "	-about	${italic}	О программе${reset}"
+        echo -e "	-ad	${italic}	Поддержать разработчиков${reset}"
+        echo -e "	-af	${italic}	Обратная связь${reset}"
+        echo -e "	-v	${italic}	Версия XKeen${reset}"
+}
+
+# Информация о способах угостить разработчиков вкусным кофе
 author_donate() {
     echo
     echo "  Выберите удобный для Вас способ:"
@@ -103,6 +192,7 @@ author_donate() {
     done
 }
 
+# Обратная связь с разработчиками
 author_feedback() {
     echo
     echo -e "  ${green}Контакты разработчиков${reset}"
@@ -131,90 +221,4 @@ author_feedback() {
     echo
     echo -e "  Предоставленные выше контакты предназначены ${green}для личной переписки${reset}, а ${red}не для консультаций${reset}"
     echo "  Возникающие вопросы по XKeen, задавайте в телеграм-чате https://t.me/+8Cvh7oVf6cE0MWRi"
-}
-
-help_xkeen() {
-        echo
-        echo -e "${yellow}Установка${reset}"
-        echo -e "	-i	${italic}	Основной режим установки XKeen + Xray + GeoFile/GeoIPSET + Mihomo${reset}"
-        echo -e "	-io	${italic}	OffLine установка XKeen${reset}"
-        echo -e "	-toff	${italic}	Отключение таймаута при меделенной загрузке с GitHub (xkeen -i -toff)${reset}"
-        echo
-        echo -e "${green}Переустановка${reset}"
-        echo -e "	-k	${italic}	XKeen${reset}"
-        echo -e "	-g	${italic}	GeoFile${reset}"
-        echo -e "	-gips	${italic}	GeoIPSET${reset}"
-        echo -e "	-ri	${italic}	Пересоздать файл автозапуска XKeen в init.d${reset}"
-        echo
-        echo -e "${yellow}Обновление${reset}"
-        echo -e "	-uk	${italic}	XKeen${reset}"
-        echo -e "	-ug	${italic}	GeoFile/GeoIPSET${reset}"
-        echo -e "	-ux	${italic}	Xray (установка, повышение/понижение версии)${reset}"
-        echo -e "	-um	${italic}	Mihomo (установка, повышение/понижение версии)${reset}"
-        echo -e "	-uy	${italic}	Yq (установка, повышение/понижение версии)${reset}"
-        echo
-        echo -e "${yellow}Запланированная задача автообновления GeoFile/GeoIPSET${reset}"
-        echo -e "	-ugc	${italic}	Создание${reset}"
-        echo -e "	-dgc	${italic}	Удаление${reset}"
-        echo
-        echo -e "${green}Резервная копия XKeen${reset}"
-        echo -e "	-kb	${italic}	Создание${reset}"
-        echo -e "	-kbr	${italic}	Восстановление${reset}"
-        echo
-        echo -e "${green}Резервная копия конфигурации Xray${reset}"
-        echo -e "	-xb	${italic}	Создание${reset}"
-        echo -e "	-xbr	${italic}	Восстановление${reset}"
-        echo
-        echo -e "${green}Резервная копия конфигурации Mihomo${reset}"
-        echo -e "	-mb	${italic}	Создание${reset}"
-        echo -e "	-mbr	${italic}	Восстановление${reset}"
-        echo
-        echo -e "${red}Удаление${reset}"
-        echo -e "	-remove	${italic}	Полная деинсталляция XKeen${reset}"
-        echo -e "	-dgs	${italic}	GeoSite${reset}"
-        echo -e "	-dgi	${italic}	GeoIP${reset}"
-        echo -e "	-dgips	${italic}	GeoIPSET${reset}"
-        echo -e "	-dx	${italic}	Xray${reset}"
-        echo -e "	-dm	${italic}	Mihomo + Yq${reset}"
-        echo -e "	-dk	${italic}	XKeen${reset}"
-        echo
-        echo -e "${green}Порты проксирования${reset}"
-        echo -e "	-ap	${italic}	Добавить${reset}"
-        echo -e "	-dp	${italic}	Удалить${reset}"
-        echo -e "	-cp	${italic}	Посмотреть${reset}"
-        echo
-        echo -e "${green}Порты, исключённые из проксирования${reset}"
-        echo -e "	-ape	${italic}	Добавить${reset}"
-        echo -e "	-dpe	${italic}	Удалить${reset}"
-        echo -e "	-cpe	${italic}	Посмотреть${reset}"
-        echo
-        echo -e "${light_blue}Управление прокси-клиентом${reset}"
-        echo -e "	-start	${italic}	Запуск${reset}"
-        echo -e "	-stop	${italic}	Остановка${reset}"
-        echo -e "	-restart${italic}	Перезапуск${reset}"
-        echo -e "	-status	${italic}	Статус работы${reset}"
-        echo -e "	-tp	${italic}	Порты, шлюз и протокол прокси-клиента${reset}"
-        echo -e "	-auto	${italic}	Включить | Отключить автозапуск прокси-клиента${reset}"
-        echo -e "	-di	${italic}	Время ожидания инициализации роутера перед началом запуска прокси-клиента${reset}"
-        echo -e "	-d	${italic}	Время ожидания успешного запуска прокси-клиента${reset}"
-        echo -e "	-fd	${italic}	Включить | Отключить контроль файловых дескрипторов прокси-клиента${reset}"
-        echo -e "	-cfd	${italic}	Проверить количество файловых дескрипторов открытых прокси-клиентом${reset}"
-        echo -e "	-diag	${italic}	Выполнить диагностику Xkeen${reset}"
-        echo -e "	-channel${italic}	Переключить канал получения обновлений XKeen (Stable/Dev версия)${reset}"
-        echo -e "	-xtest	${italic}	Проверить конфигурацию Xray на ошибки${reset}"
-        echo -e "	-mtest	${italic}	Проверить конфигурацию Mihomo на ошибки${reset}"
-        echo -e "	-xray	${italic}	Переключить XKeen на ядро Xray${reset}"
-        echo -e "	-mihomo	${italic}	Переключить XKeen на ядро Mihomo${reset}"
-        echo -e "	-ipv6	${italic}	Включить | Отключить протокол IPv6 в KeeneticOS${reset}"
-        echo -e "	-dns	${italic}	Включить | Отключить перенаправление DNS в прокси${reset}"
-        echo -e "	-pr	${italic}	Включить | Отключить проксирование трафика Entware${reset}"
-        echo -e "	-extmsg	${italic}	Включить | Отключить расширенные сообщения при запуске XKeen${reset}"
-        echo -e "	-cbk	${italic}	Включить | Отключить резервное копирование XKeen при обновлении${reset}"
-        echo -e "	-aghfix	${italic}	Включить | Отключить отображение клиентов XKeen под своими IP в журнале AdGuard Home${reset}"
-        echo
-        echo -e "${light_blue}Информация${reset}"
-        echo -e "	-about	${italic}	О программе${reset}"
-        echo -e "	-ad	${italic}	Поддержать разработчиков${reset}"
-        echo -e "	-af	${italic}	Обратная связь${reset}"
-        echo -e "	-v	${italic}	Версия XKeen${reset}"
 }
