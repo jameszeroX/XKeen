@@ -22,8 +22,8 @@ nav:
   - FAQ: faq.md
   - Конфигурация: configuration.md
   - Изменения форка:
-    - Описание изменений: fork-info.md
-    - Известные проблемы: known-issues.md
+    - Описание изменений: forkinfo.md
+    - Известные проблемы: knownissues.md
   - Команды: commands.md
   - guides
   - dev
@@ -65,15 +65,15 @@ inject_fm "$SRC/index.md"          "README.md"
 cp "$ROOT/wiki/Configuration.md"   "$SRC/configuration.md"
 inject_fm "$SRC/configuration.md"  "wiki/Configuration.md"
 
-cp "$ROOT/wiki/Fork-info.md"        "$SRC/fork-info.md"
-inject_fm "$SRC/fork-info.md"       "wiki/Fork-info.md"
+cp "$ROOT/wiki/Forkinfo.md"        "$SRC/forkinfo.md"
+inject_fm "$SRC/forkinfo.md"       "wiki/Forkinfo.md"
 
-cp "$ROOT/wiki/Known-issues.md"     "$SRC/known-issues.md"
-inject_fm "$SRC/known-issues.md"    "wiki/Known-issues.md"
+cp "$ROOT/wiki/Knownissues.md"     "$SRC/knownissues.md"
+inject_fm "$SRC/knownissues.md"    "wiki/Knownissues.md"
 
 # wiki/*.md → авто-цикл. Исключения:
 #   - _*.md                                          — GH Wiki scaffolding (_Sidebar.md, _Footer.md, _Header.md)
-#   - Configuration.md / Fork-info.md / Known-issues.md — стейджатся выше как top-level страницы
+#   - Configuration.md / Forkinfo.md / Knownissues.md — стейджатся выше как top-level страницы
 #   - .gitignore                                      — через `git check-ignore`
 # Спецслучай: FAQ.md → site_src/faq.md (top-level URL /faq/).
 # Остальные → site_src/guides/<имя>.md (имя файла сохраняется как есть).
@@ -82,7 +82,7 @@ for src in "$ROOT"/wiki/*.md; do
     name=$(basename "$src")
     case "$name" in
         _*) continue ;;
-        Configuration.md|Fork-info.md|Known-issues.md) continue ;;
+        Configuration.md|Forkinfo.md|Knownissues.md) continue ;;
     esac
     rel="wiki/$name"
     if git -C "$ROOT" check-ignore -q "$rel" 2>/dev/null; then
@@ -151,11 +151,11 @@ sed -i \
     -e 's/^> /    /' \
     "$SRC/index.md"
 
-# (2) Абсолютные jameszeroX/* ссылки в README.md и fork-info.md → site-relative
+# (2) Абсолютные jameszeroX/* ссылки в README.md и forkinfo.md → site-relative
 sed -i \
     -e 's|https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration\.md|./configuration.md|g' \
-    -e 's|https://github.com/jameszeroX/XKeen/blob/main/wiki/Fork-info\.md|./fork-info.md|g' \
-    "$SRC/index.md" "$SRC/fork-info.md"
+    -e 's|https://github.com/jameszeroX/XKeen/blob/main/wiki/Forkinfo\.md|./forkinfo.md|g' \
+    "$SRC/index.md" "$SRC/forkinfo.md"
 
 # (3a) Wiki extensionless wikilinks из dev/index.md и faq.md (на уровень выше guides/)
 for f in "$SRC/dev/index.md" "$SRC/faq.md"; do
@@ -163,7 +163,7 @@ for f in "$SRC/dev/index.md" "$SRC/faq.md"; do
         -e 's|](FAQ)|](../faq.md)|g' \
         -e 's|](Home)|](../guides/Home.md)|g' \
         -e 's|](DNS-over-VLESS)|](../guides/DNS-over-VLESS.md)|g' \
-        -e 's|](Маршрутизация-по-DSCP)|](../guides/Routing-by-DSCP.md)|g' \
+        -e 's|](Маршрутизация-по-DSCP)|](../guides/Маршрутизация-по-DSCP.md)|g' \
         "$f"
 done
 
@@ -174,7 +174,7 @@ for f in "$SRC"/guides/*.md; do
         -e 's|](FAQ)|](../faq.md)|g' \
         -e 's|](Home)|](Home.md)|g' \
         -e 's|](DNS-over-VLESS)|](DNS-over-VLESS.md)|g' \
-        -e 's|](Маршрутизация-по-DSCP)|](Routing-by-DSCP.md)|g' \
+        -e 's|](Маршрутизация-по-DSCP)|](Маршрутизация-по-DSCP.md)|g' \
         "$f"
     # Сырые <img src="images/..."> → markdown ![alt](images/...): mkdocs сам
     # перепишет относительный путь под use_directory_urls и провалидирует файл
@@ -191,8 +191,8 @@ find "$SRC/dev" -type f -name '*.md' -exec sed -i \
     -e "s|\.\./test/README\.md|beta-notes.md|g" \
     -e "s|\.\./wiki/FAQ\.md|../faq.md|g" \
     -e "s|\.\./wiki/Configuration\.md|../configuration.md|g" \
-    -e "s|\.\./wiki/Fork-info\.md|../fork-info.md|g" \
-    -e "s|\.\./wiki/Known-issues\.md|../known-issues.md|g" \
+    -e "s|\.\./wiki/Forkinfo\.md|../forkinfo.md|g" \
+    -e "s|\.\./wiki/Knownissues\.md|../knownissues.md|g" \
     -e "s|\.\./wiki/\([^/)]*\)\.md|../guides/\1.md|g" \
     -e "s|\.\./wiki/|$REPO_BLOB/wiki/|g" \
     -e "s|](\.\./wiki)|]($REPO/wiki)|g" \
@@ -211,10 +211,10 @@ sed -i \
 sed -i 's|](commands.md)|](../commands.md)|g' "$SRC/dev/index.md"
 
 # (7) Чистка INFO-несоответствий якорей в исходниках:
-#     - устаревший якорь в fork-info.md (исходный текст ссылается на несуществующий раздел)
+#     - устаревший якорь в forkinfo.md (исходный текст ссылается на несуществующий раздел)
 #     - кривой якорь "workflow-wiki-syncyaml" в docs/README.md (заголовок без префикса "Workflow")
 #     - "[docs/](.)" в contributing.md → "./index.md" (явная ссылка на dev-index)
-sed -i 's|#self-hosted-прокси-для-загрузки-компонентов|#self-hosted-прокси-для-загрузки|g' "$SRC/fork-info.md"
+sed -i 's|#self-hosted-прокси-для-загрузки-компонентов|#self-hosted-прокси-для-загрузки|g' "$SRC/forkinfo.md"
 sed -i 's|#workflow-wiki-syncyaml|#wiki-syncyaml|g' "$SRC/dev/index.md"
 sed -i 's|\[`docs/`\](\.)|[`docs/`](./index.md)|g' "$SRC/dev/contributing.md"
 
