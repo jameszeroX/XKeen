@@ -73,7 +73,7 @@ inject_fm "$SRC/known-issues.md"    "wiki/Known-issues.md"
 
 # wiki/*.md → авто-цикл. Исключения:
 #   - _*.md                                          — GH Wiki scaffolding (_Sidebar.md, _Footer.md, _Header.md)
-#   - Configuration.md / Forkinfo.md / Knownissues.md — стейджатся выше как top-level страницы
+#   - Configuration.md / Fork-info.md / Known-issues.md — стейджатся выше как top-level страницы
 #   - .gitignore                                      — через `git check-ignore`
 # Спецслучай: FAQ.md → site_src/faq.md (top-level URL /faq/).
 # Остальные → site_src/guides/<имя>.md (имя файла сохраняется как есть).
@@ -151,7 +151,7 @@ sed -i \
     -e 's/^> /    /' \
     "$SRC/index.md"
 
-# (2) Абсолютные jameszeroX/* ссылки в README.md и forkinfo.md → site-relative
+# (2) Абсолютные jameszeroX/* ссылки в README.md и fork-info.md → site-relative
 sed -i \
     -e 's|https://github.com/jameszeroX/XKeen/blob/main/wiki/Configuration\.md|./configuration.md|g' \
     -e 's|https://github.com/jameszeroX/XKeen/blob/main/wiki/Fork-info\.md|./fork-info.md|g' \
@@ -211,10 +211,10 @@ sed -i \
 sed -i 's|](commands.md)|](../commands.md)|g' "$SRC/dev/index.md"
 
 # (7) Чистка INFO-несоответствий якорей в исходниках:
-#     - устаревший якорь в forkinfo.md (исходный текст ссылается на несуществующий раздел)
+#     - устаревший якорь в fork-info.md (исходный текст ссылается на несуществующий раздел)
 #     - кривой якорь "workflow-wiki-syncyaml" в docs/README.md (заголовок без префикса "Workflow")
 #     - "[docs/](.)" в contributing.md → "./index.md" (явная ссылка на dev-index)
-sed -i 's|#self-hosted-прокси-для-загрузки-компонентов|#self-hosted-прокси-для-загрузки|g' "$SRC/forkinfo.md"
+sed -i 's|#self-hosted-прокси-для-загрузки-компонентов|#self-hosted-прокси-для-загрузки|g' "$SRC/fork-info.md"
 sed -i 's|#workflow-wiki-syncyaml|#wiki-syncyaml|g' "$SRC/dev/index.md"
 sed -i 's|\[`docs/`\](\.)|[`docs/`](./index.md)|g' "$SRC/dev/contributing.md"
 
