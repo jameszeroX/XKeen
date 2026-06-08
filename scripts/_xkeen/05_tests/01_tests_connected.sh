@@ -9,6 +9,22 @@ test_connection() {
     exit 1
 }
 
+# Функция проверки curl
+check_curl_binary() {
+    local curl_err
+    # Запускаем curl и перенаправляем stderr в переменную, а stdout глушим
+    curl_err=$(curl -V 2>&1 >/dev/null)
+    
+    # Проверяем, содержит ли вывод характерные для поломки линковки строки
+    if echo "$curl_err" | grep -iqE '(shared libraries|not found|error while loading)'; then
+        printf "  ${red}Критическая ошибка${reset}: Окружение Entware повреждено!\n"
+        printf "  Вызов curl падает с ошибкой:\n"
+        printf "  ${yellow}%s${reset}\n" "$curl_err"
+        printf "  Рекомендуется переустановить Entware или исправить ошибку локально\n"
+        exit 1
+    fi
+}
+
 # Функция загрузки
 download_with_check() {
     url="$1"

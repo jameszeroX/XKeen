@@ -12,8 +12,8 @@ reset="\033[0m"		# Сброс цветов
 # Информация
 # -------------------------------------
 current_datetime=$(date +"%Y-%m-%d_%H-%M")
-xkeen_current_version="2.0"
-xkeen_build="Stable"
+xkeen_current_version="2.0.1"
+xkeen_build="Beta"
 build_timestamp=""
 
 # -------------------------------------

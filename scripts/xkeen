@@ -124,6 +124,7 @@ while [ $# -gt 0 ]; do
 
         -i|-install)    # Запуск полного цикла установки
             info_firmware
+            check_curl_binary
             test_connection
             test_entware
             test_github
@@ -512,6 +513,7 @@ while [ $# -gt 0 ]; do
 
 
         -ug)    # Обновление баз GeoFile/GeoIPSET
+            check_curl_binary
             test_connection
             test_github
             sleep 2
@@ -546,6 +548,7 @@ while [ $# -gt 0 ]; do
 
 
         -uk)    # Обновление XKeen
+            check_curl_binary
             test_connection
             test_github
             sleep 2
@@ -580,6 +583,7 @@ while [ $# -gt 0 ]; do
         -uk_post_update)
             . "$xkeen_dir/import.sh"
             init_directories
+            check_curl_binary
             test_connection
             test_entware
             xkeen_info
@@ -619,6 +623,7 @@ while [ $# -gt 0 ]; do
 
         -ux)    # Обновление или установка ядра Xray
             check_free_space xray || exit 1
+            check_curl_binary
             test_connection
             test_github
             info_cpu
@@ -693,6 +698,7 @@ while [ $# -gt 0 ]; do
 
         -um)    # Обновление или установка ядра Mihomo
             check_free_space mihomo || exit 1
+            check_curl_binary
             test_connection
             test_github
             info_cpu
@@ -781,6 +787,7 @@ while [ $# -gt 0 ]; do
 
 
         -uy)    # Обновление или установка Yq
+            check_curl_binary
             test_connection
             test_github
             info_cpu
@@ -1094,6 +1101,7 @@ while [ $# -gt 0 ]; do
                 else
                     download_func="download_xkeen_dev"
                 fi
+                check_curl_binary
                 test_connection
                 test_entware
                 test_github
@@ -1112,6 +1120,7 @@ while [ $# -gt 0 ]; do
         -k_post_install)
             . "$xkeen_dir/import.sh"
             init_directories
+            check_curl_binary
             test_connection
             test_entware
             xkeen_info
@@ -1152,6 +1161,7 @@ while [ $# -gt 0 ]; do
 
         -g)    # Установка баз GeoFile
             command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
+            check_curl_binary
             test_connection
             test_github
             sleep 2
@@ -1178,6 +1188,7 @@ while [ $# -gt 0 ]; do
 
 
         -gips)    # Установка GeoIPSET
+            check_curl_binary
             test_connection
             test_github
 
