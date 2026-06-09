@@ -1,28 +1,44 @@
+# Функция предварительной проверки исправности системы
+test_health_pre() {
+    local curl_err
+    local exit_code
+
+    # Делаем быстрый HTTPS запрос
+    curl_err=$(curl --connect-timeout 3 -IsS "https://$conn_URL" 2>&1 >/dev/null)
+    exit_code=$?
+
+    # Если успешно, сразу выходим из функции
+    [ "$exit_code" -eq 0 ] && return 0
+
+    # Проверка на сломанные библиотеки
+    if [ "$exit_code" -eq 127 ] || echo "$curl_err" | grep -iqE '(shared libraries|not found|error while loading)'; then
+        printf "  ${red}Критическая ошибка${reset}: Окружение Entware повреждено!\n"
+        printf "  Вызов curl падает из-за нехватки системных библиотек:\n"
+        [ -n "$curl_err" ] && printf "  ${yellow}%s${reset}\n" "$curl_err"
+        printf "  Исправьте ошибку локально или ${green}переустановите Entware${reset}\n\n"
+        exit 1
+    fi
+
+    # Проверка на сломанные SSL-сертификаты
+    if [ "$exit_code" -eq 60 ] || [ "$exit_code" -eq 77 ] || echo "$curl_err" | grep -iqE '(certificate|ssl|ca-bundle)'; then
+        printf "  ${red}Критическая ошибка${reset}: Нарушена целостность SSL-сертификатов в Entware!\n"
+        printf "  Интернет доступен, но curl не может проверить безопасность HTTPS-соединения\n"
+        [ -n "$curl_err" ] && printf "  ${yellow}%s${reset}\n" "$curl_err"
+        printf "  Исправьте ошибку локально или ${green}переустановите Entware${reset}\n\n"
+        exit 1
+    fi
+
+    return 0
+}
+
 # Функция проверки доступности интернета
 test_connection() {
     nslookup "$conn_URL" >/dev/null 2>&1 && return 0
-    curl -Is --connect-timeout 1 "$conn_URL" >/dev/null && return 0
     ping -c 1 -W 1 "$conn_IP1" >/dev/null 2>&1 && return 0
     ping -c 1 -W 1 "$conn_IP2" >/dev/null 2>&1 && return 0
 
     printf "  ${red}Отсутствует${reset} интернет-соединение\n"
     exit 1
-}
-
-# Функция проверки curl
-check_curl_binary() {
-    local curl_err
-    # Запускаем curl и перенаправляем stderr в переменную, а stdout глушим
-    curl_err=$(curl -V 2>&1 >/dev/null)
-    
-    # Проверяем, содержит ли вывод характерные для поломки линковки строки
-    if echo "$curl_err" | grep -iqE '(shared libraries|not found|error while loading)'; then
-        printf "  ${red}Критическая ошибка${reset}: Окружение Entware повреждено!\n"
-        printf "  Вызов curl падает с ошибкой:\n"
-        printf "  ${yellow}%s${reset}\n" "$curl_err"
-        printf "  Рекомендуется переустановить Entware или исправить ошибку локально\n"
-        exit 1
-    fi
 }
 
 # Функция загрузки
