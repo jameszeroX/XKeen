@@ -19,7 +19,7 @@ help_xkeen() {
     echo -e "	-ri		${italic}Пересоздать файл автозапуска XKeen в init.d${reset}"
     echo
     echo -e "  ${yellow}Обновление${reset}"
-    echo -e "	-uk		${italic}XKeen${reset}"
+    echo -e "	-uk		${italic}XKeen${reset} (только канал разработки)"
     echo -e "	-ug		${italic}GeoFile/GeoIPSET${reset}"
     echo -e "	-ux		${italic}Xray (установка, повышение/понижение версии)${reset}"
     echo -e "	-um		${italic}Mihomo (установка, повышение/понижение версии)${reset}"
