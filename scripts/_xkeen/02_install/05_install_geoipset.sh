@@ -20,8 +20,6 @@ _validate_geoipset_v6() {
 
 # Функция для установки и обновления GeoIPSET
 install_geoipset_lst() {
-    mkdir -p "$ipset_cfg" || { echo "Ошибка: Не удалось создать директорию $ipset_cfg"; exit 1; }
-
     url="$1"
     dest_file="$2"
     display_name="$3"
@@ -115,6 +113,7 @@ install_geoipset() {
     action="$1"
 
     if [ "$action" = "init" ]; then
+        mkdir -p "$ipset_cfg" || { echo "Ошибка: Не удалось создать директорию $ipset_cfg"; exit 1; }
         # Без TTY (cron, ssh -T) read получает EOF, default-case крутит while true
         # бесконечно: процесс висит в R-state с CPU-spin. Дефолтим выбор на "1"
         # (установить), потому что xkeen -gips из cron это типичный
@@ -151,28 +150,30 @@ install_geoipset() {
         fi
     fi
 
-    local do_v4=0 do_v6=0
-    if ip -4 addr show 2>/dev/null | grep -q "inet " && command -v iptables >/dev/null 2>&1; then
-        if [ "$action" = "init" ] || [ -f "$ru_exclude_ipv4" ]; then
-            do_v4=1
+    if [ -d "$ipset_cfg" ]; then
+        local do_v4=0 do_v6=0
+        if ip -4 addr show 2>/dev/null | grep -q "inet " && command -v iptables >/dev/null 2>&1; then
+            if [ "$action" = "init" ] || [ -f "$ru_exclude_ipv4" ]; then
+                do_v4=1
+            fi
         fi
-    fi
-    if ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::" && command -v ip6tables >/dev/null 2>&1; then
-        if [ "$action" = "init" ] || [ -f "$ru_exclude_ipv6" ]; then
-            do_v6=1
+        if ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::" && command -v ip6tables >/dev/null 2>&1; then
+            if [ "$action" = "init" ] || [ -f "$ru_exclude_ipv6" ]; then
+                do_v6=1
+            fi
         fi
-    fi
-
-    # Последовательная загрузка списков вместо параллельной для совместимости с прогресс-баром
-    [ "$do_v4" = "1" ] && install_geoipset_lst "$geoipv4_url" "$ru_exclude_ipv4" "IPv4 (IPSet)" "ipv4"
-    [ "$do_v6" = "1" ] && install_geoipset_lst "$geoipv6_url" "$ru_exclude_ipv6" "IPv6 (IPSet)" "ipv6"
-    [ "$do_v4" = "1" ] && load_geoipset geo_exclude "$ru_exclude_ipv4" inet
-    [ "$do_v6" = "1" ] && load_geoipset geo_exclude6 "$ru_exclude_ipv6" inet6
-
-    if [ ! -f "$ru_override" ]; then
-        cat << EOF > "$ru_override"
+    
+        # Последовательная загрузка списков вместо параллельной для совместимости с прогресс-баром
+        [ "$do_v4" = "1" ] && install_geoipset_lst "$geoipv4_url" "$ru_exclude_ipv4" "IPv4 (IPSet)" "ipv4"
+        [ "$do_v6" = "1" ] && install_geoipset_lst "$geoipv6_url" "$ru_exclude_ipv6" "IPv6 (IPSet)" "ipv6"
+        [ "$do_v4" = "1" ] && load_geoipset geo_exclude "$ru_exclude_ipv4" inet
+        [ "$do_v6" = "1" ] && load_geoipset geo_exclude6 "$ru_exclude_ipv6" inet6
+    
+        if [ ! -f "$ru_override" ]; then
+            cat << EOF > "$ru_override"
 
 # Добавьте IP и подсети, которые нужно исключить из IPSET ru_exclude
 EOF
+        fi
     fi
 }
