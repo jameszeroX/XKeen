@@ -81,6 +81,14 @@ get_state_arg() {
 # Маркер /tmp/toff отключает таймаут curl — снимаем при прерывании
 trap 'rm -f /tmp/toff; exit 1' INT TERM
 
+xkeen_info() {
+    # Проверяем версию XKeen
+    info_version_xkeen
+
+    # Проверяем актуальность XKeen
+    info_compare_xkeen
+}
+
 xkeen_set_info() {
     # Определяем архитектуру процессора
     info_cpu
@@ -99,13 +107,6 @@ xkeen_set_info() {
 
     # Проверяем статус автообновления
     info_cron
-
-    # Проверяем версию Xray
-    info_version_xray
-
-    # Проверяем версию Mihomo и Yq
-    info_version_mihomo
-    info_version_yq
 }
 
 # Проверяем запущен ли прокси-клиент
@@ -242,8 +243,6 @@ while [ $# -gt 0 ]; do
             "$initd_dir/S05crond" start >/dev/null 2>&1
 
             if [ -z "$bypass_xray" ]; then
-                info_version_xray
-
                 delete_register_xray
                 echo
                 echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
@@ -257,9 +256,6 @@ while [ $# -gt 0 ]; do
             fi
 
             if [ -z "$bypass_mihomo" ]; then
-                info_version_mihomo
-                info_version_yq
-
                 delete_register_mihomo
                 delete_register_yq
                 echo
@@ -417,7 +413,6 @@ while [ $# -gt 0 ]; do
                 smart_clear
                 delete_register_xray
                 info_xray
-                info_version_xray
                 echo
                 echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
                 register_xray_list
@@ -433,8 +428,6 @@ while [ $# -gt 0 ]; do
                 delete_register_mihomo
                 delete_register_yq
                 info_mihomo
-                info_version_mihomo
-                info_version_yq
                 echo
                 echo -e "  Выполняется регистрация ${yellow}Mihomo${reset}"
                 register_mihomo_list
@@ -538,23 +531,30 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -uk)    # Обновление XKeen (только dev канал)
-            if [ "$xkeen_build" = "Stable" ]; then
-                echo
-                echo -e "  Параметр ${light_blue}-uk${reset} не работает в Stable канале обновлений"
-                echo -e "  Выполните установку новой версии ${yellow}XKeen${reset} поверх существующей"
-                exit 0
-            else
-                download_func="download_xkeen_dev"
-            fi
-
-            test_health_pre
+        -uk)    # Обновление XKeen
+            test_health_pre	
             test_connection
             test_github
-            xkeen_set_info
+            sleep 2
 
             smart_clear
             echo
+            echo "  Проверка обновлений XKeen"
+            xkeen_info
+            xkeen_set_info
+
+            if [ "$xkeen_build" != "Stable" ]; then
+                download_func="download_xkeen_dev"
+            else
+                if [ "$info_compare_xkeen" = "actual" ]; then
+                    echo "  Нет доступных обновлений XKeen"
+                    exit 0
+                else
+                    echo -e "  Найдена новая версия ${yellow}XKeen${reset}"
+                    download_func="download_xkeen"
+                fi
+            fi
+
             backup_xkeen
             "$download_func"
             install_xkeen
@@ -567,10 +567,14 @@ while [ $# -gt 0 ]; do
         -uk_post_update)
             . "$xkeen_dir/import.sh"
             init_directories
-            test_health_pre
-            test_connection
-            test_entware
             xkeen_set_info
+            new_features
+            register_cron_initd
+            migrate_ports_from_initd
+            register_xkeen_initd
+            create_xkeen_cfg
+            choice_cancel_cron_select=true
+            update_cron_geofile_task
 
             echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
             delete_register_xkeen
@@ -586,18 +590,11 @@ while [ $# -gt 0 ]; do
             register_xkeen_status
             logs_register_xkeen_status_info_console
 
-            register_cron_initd
-            migrate_ports_from_initd
-            register_xkeen_initd
-            create_xkeen_cfg
-            choice_cancel_cron_select=true
-            update_cron_geofile_task
-            fixed_register_packages
-
             if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
 
+            fixed_register_packages
             delete_tmp
 
             echo -e "  Обновление XKeen ${green}выполнено${reset}"
@@ -613,7 +610,6 @@ while [ $# -gt 0 ]; do
             sleep 2
             smart_clear
             info_xray
-            info_version_xray
 
             [ "$xray_installed" = "installed" ] && echo && echo -e "  В роутере установлен Xray версии ${yellow}$xray_current_version${reset}"
             download_xray
@@ -621,7 +617,7 @@ while [ $# -gt 0 ]; do
             if [ -z "$bypass_xray" ]; then
                 if ! install_xray; then
                     delete_tmp
-                    echo -e "  ${red}Ошибка${reset}: Установка Xray не выполнена. См. сообщения выше"
+                    echo -e "  ${red}Ошибка${reset}: Установка Xray не выполнена"
                     exit 1
                 fi
 
@@ -630,7 +626,7 @@ while [ $# -gt 0 ]; do
                     delete_register_xray
                     logs_delete_register_xray_info_console
 
-                    info_version_xray
+                    info_xray
                     echo -e "  Выполняется регистрация новой версии ${yellow}Xray${reset}"
                     register_xray_list
                     logs_register_xray_list_info_console
@@ -648,7 +644,7 @@ while [ $# -gt 0 ]; do
                     echo -e "  Обновление ядра Xray ${green}выполнено${reset}"
                 else
                     xray_installed="installed"
-                    info_version_xray
+                    info_xray
 
                     if [ -f "$install_dir/xray" ]; then
                         xray_conf_install
@@ -688,7 +684,6 @@ while [ $# -gt 0 ]; do
             sleep 2
             smart_clear
             info_mihomo
-            info_version_mihomo
             mihomo_was_installed="$mihomo_installed"
 
             [ "$mihomo_installed" = "installed" ] && echo && echo -e "  В роутере установлен Mihomo версии ${yellow}$mihomo_current_version${reset}"
@@ -716,8 +711,7 @@ while [ $# -gt 0 ]; do
                     logs_delete_register_mihomo_info_console
                     logs_delete_register_yq_info_console
 
-                    info_version_mihomo
-                    info_version_yq
+                    info_mihomo
                     echo -e "  Выполняется регистрация новой версии ${yellow}Mihomo${reset}"
                     register_mihomo_list
                     logs_register_mihomo_list_info_console
@@ -738,8 +732,7 @@ while [ $# -gt 0 ]; do
                     echo
                     echo -e "  Обновление ядра ${yellow}Mihomo${reset} ${green}выполнено${reset}"
                 else
-                    info_version_mihomo
-                    info_version_yq
+                    info_mihomo
                     add_mihomo_config
                     delete_register_mihomo
                     delete_register_yq
@@ -1091,7 +1084,6 @@ while [ $# -gt 0 ]; do
                 "$download_func"
             fi
 
-            echo
             install_xkeen
 
             # Перезапуск скрипта
@@ -1102,10 +1094,14 @@ while [ $# -gt 0 ]; do
         -k_post_install)
             . "$xkeen_dir/import.sh"
             init_directories
-            test_health_pre
-            test_connection
-            test_entware
             xkeen_set_info
+            new_features
+            register_cron_initd
+            migrate_ports_from_initd
+            register_xkeen_initd
+            create_xkeen_cfg
+            choice_cancel_cron_select=true
+            update_cron_geofile_task
 
             echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
             delete_register_xkeen
@@ -1121,18 +1117,11 @@ while [ $# -gt 0 ]; do
             register_xkeen_status
             logs_register_xkeen_status_info_console
 
-            register_cron_initd
-            migrate_ports_from_initd
-            register_xkeen_initd
-            create_xkeen_cfg
-            choice_cancel_cron_select=true
-            update_cron_geofile_task
-            fixed_register_packages
-
             if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
 
+            fixed_register_packages
             delete_tmp
 
             echo
@@ -1233,12 +1222,8 @@ while [ $# -gt 0 ]; do
 
         -v|-version)    # Показать версию XKeen
             echo -e "  Версия ${yellow}XKeen $xkeen_current_version $xkeen_build${reset} (время сборки: ${light_blue}$build_timestamp${reset})"
-
             info_xray
-            info_version_xray
             info_mihomo
-            info_version_mihomo
-            info_version_yq
 
             if [ -f "$install_dir/xray" ] && grep -q 'name_client="xray"' "$initd_file"; then
                 echo -e "  Ядро проксирования Xray версии ${yellow}$xray_current_version${reset}"

@@ -34,3 +34,11 @@ check_keen_mode() {
     [ "$(sysctl -n net.ipv4.ip_forward 2>/dev/null)" = "1" ] && return 0
     keen_mode="unsupported"
 }
+
+new_features() {
+    if [ ! -d "$ipset_cfg" ]; then
+        test_github
+        smart_clear
+        install_geoipset init
+    fi
+}

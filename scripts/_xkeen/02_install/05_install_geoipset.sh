@@ -113,7 +113,6 @@ install_geoipset() {
     action="$1"
 
     if [ "$action" = "init" ]; then
-        mkdir -p "$ipset_cfg" || { echo "Ошибка: Не удалось создать директорию $ipset_cfg"; exit 1; }
         # Без TTY (cron, ssh -T) read получает EOF, default-case крутит while true
         # бесконечно: процесс висит в R-state с CPU-spin. Дефолтим выбор на "1"
         # (установить), потому что xkeen -gips из cron это типичный
@@ -139,6 +138,7 @@ install_geoipset() {
                         return 0
                         ;;
                     1)
+                        mkdir -p "$ipset_cfg" || { echo "Ошибка: Не удалось создать директорию $ipset_cfg"; exit 1; }
                         bypass_cron_geoipset=false
                         break
                         ;;
