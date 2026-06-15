@@ -513,7 +513,8 @@ while [ $# -gt 0 ]; do
                 [ "$update_zkeen_geosite" = "true" ] || \
                 [ "$update_refilter_geoip" = "true" ] || \
                 [ "$update_v2fly_geoip" = "true" ] || \
-                [ "$update_zkeenip_geoip" = "true" ]; then
+                [ "$update_zkeenip_geoip" = "true" ] || \
+                [ -f "$ru_exclude_ipv4" ]; then
 
                 echo
                 install_geosite
