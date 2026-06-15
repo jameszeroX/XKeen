@@ -62,7 +62,6 @@ Windows Registry Editor Version 5.00
 {
   "tag": "dscp-force-proxy",
   "port": 16826,
-  "listen": "127.0.0.1",
   "protocol": "dokodemo-door",
   "settings": {
     "network": "tcp,udp",
@@ -72,11 +71,16 @@ Windows Registry Editor Version 5.00
     "sockopt": {
       "tproxy": "tproxy"
     }
+  },
+  "sniffing": {
+    "enabled": true,
+    "routeOnly": true,
+    "destOverride": ["http","tls"]
   }
 }
 ```
 
-`16826` приведён только как пример. XKeen не использует хардкод порта и определяет его автоматически по inbound с тегом `dscp-force-proxy`.
+`16826` приведён только как пример. XKeen не использует хардкод порта и определяет его автоматически по inbound с тегом `dscp-force-proxy`. Пример выше специально оформлен в том же стиле, что и текущие inbound-конфигурации XKeen для Xray.
 
 ### Пример routing rule Xray
 
