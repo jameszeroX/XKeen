@@ -957,57 +957,100 @@ normalize_network_list() {
     '
 }
 
-configure_dscp_force_proxy() {
+resolve_dscp_force_proxy() {
+    dscp_force_proxy_status="inactive"
+    dscp_force_proxy_reason=""
     port_dscp_force_proxy=""
     mode_dscp_force_proxy=""
     network_dscp_force_proxy=""
 
-    [ "$name_client" = "xray" ] || return 0
-    [ -n "$dscp_force_proxy" ] || return 0
-    [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Hybrid" ] || return 0
+    [ -n "$dscp_force_proxy" ] || {
+        dscp_force_proxy_status="disabled"
+        dscp_force_proxy_reason="метка отключена в конфиге XKeen"
+        return 1
+    }
+
+    if [ "$name_client" != "xray" ]; then
+        dscp_force_proxy_reason="функция поддерживается только для Xray"
+        return 1
+    fi
+
+    if [ "$mode_proxy" != "TProxy" ] && [ "$mode_proxy" != "Hybrid" ]; then
+        dscp_force_proxy_reason="текущий режим ${mode_proxy:-Other} не поддерживается"
+        return 1
+    fi
+
+    _refresh_modules_cache
+    if ! is_module_loaded xt_dscp; then
+        dscp_force_proxy_reason="не загружен модуль xt_dscp"
+        return 1
+    fi
 
     port_candidate=$(get_xray_port_by_tag "$dscp_force_proxy_tag")
     mode_candidate=$(get_xray_mode_by_tag "$dscp_force_proxy_tag")
     network_candidate=$(normalize_network_list "$(get_xray_network_by_tag "$dscp_force_proxy_tag")")
 
-    [ -n "$port_candidate" ] || [ -n "$mode_candidate" ] || [ -n "$network_candidate" ] || return 0
+    if [ -z "$port_candidate" ] && [ -z "$mode_candidate" ] && [ -z "$network_candidate" ]; then
+        dscp_force_proxy_reason="не найден inbound с tag '${dscp_force_proxy_tag}'"
+        return 1
+    fi
 
     if [ "$mode_candidate" != "tproxy" ]; then
-        log_warning_router "Inbound ${dscp_force_proxy_tag} должен использовать tproxy"
-        log_warning_terminal "
-  Inbound '${yellow}${dscp_force_proxy_tag}${reset}' найден, но настроен неверно
-  Для DSCP ${green}${dscp_force_proxy}${reset} требуется ${light_blue}sockopt.tproxy = tproxy${reset}
-
-  Маршрутизация по DSCP ${green}${dscp_force_proxy}${reset} ${red}отключена${reset}
-"
-        return 0
+        dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' должен использовать sockopt.tproxy=tproxy"
+        return 2
     fi
 
     if ! is_valid_single_port "$port_candidate"; then
-        log_warning_router "Inbound ${dscp_force_proxy_tag} использует некорректный порт"
-        log_warning_terminal "
-  Inbound '${yellow}${dscp_force_proxy_tag}${reset}' найден, но содержит некорректный порт
-  Для DSCP ${green}${dscp_force_proxy}${reset} требуется корректный inbound-порт Xray
-
-  Маршрутизация по DSCP ${green}${dscp_force_proxy}${reset} ${red}отключена${reset}
-"
-        return 0
+        dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' содержит некорректный порт"
+        return 2
     fi
 
     if [ -z "$network_candidate" ]; then
-        log_warning_router "Inbound ${dscp_force_proxy_tag} не содержит tcp или udp"
-        log_warning_terminal "
-  Inbound '${yellow}${dscp_force_proxy_tag}${reset}' найден, но не поддерживает ${light_blue}tcp${reset} или ${light_blue}udp${reset}
-  Для DSCP ${green}${dscp_force_proxy}${reset} требуется inbound с network: ${green}tcp${reset}, ${green}udp${reset} или ${green}tcp,udp${reset}
-
-  Маршрутизация по DSCP ${green}${dscp_force_proxy}${reset} ${red}отключена${reset}
-"
-        return 0
+        dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' не поддерживает tcp или udp"
+        return 2
     fi
 
     port_dscp_force_proxy="$port_candidate"
     mode_dscp_force_proxy="$mode_candidate"
     network_dscp_force_proxy="$network_candidate"
+    dscp_force_proxy_status="active"
+    dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' найден: порт ${port_dscp_force_proxy}, network ${network_dscp_force_proxy}"
+    return 0
+}
+
+configure_dscp_force_proxy() {
+    resolve_dscp_force_proxy
+    status_code=$?
+
+    if [ "$status_code" -eq 2 ]; then
+        log_warning_router "$dscp_force_proxy_reason"
+        log_warning_terminal "
+  Inbound '${yellow}${dscp_force_proxy_tag}${reset}' найден, но настроен неверно
+  ${light_blue}${dscp_force_proxy_reason}${reset}
+
+  Маршрутизация по DSCP ${green}${dscp_force_proxy}${reset} ${red}отключена${reset}
+"
+    fi
+
+    return 0
+}
+
+print_dscp_force_proxy_status() {
+    port_redirect=$(get_port_redirect)
+    network_redirect=$(get_network_redirect)
+    port_tproxy=$(get_port_tproxy)
+    network_tproxy=$(get_network_tproxy)
+    mode_proxy=$(get_mode_proxy)
+
+    resolve_dscp_force_proxy >/dev/null 2>&1
+
+    if [ "$dscp_force_proxy_status" = "active" ]; then
+        echo -e "  DSCP ${green}${dscp_force_proxy}${reset}: ${green}активен${reset} (${light_blue}${dscp_force_proxy_reason}${reset})"
+    elif [ "$dscp_force_proxy_status" = "disabled" ]; then
+        echo -e "  DSCP 61 force proxy: ${yellow}отключен${reset} (${light_blue}${dscp_force_proxy_reason}${reset})"
+    else
+        echo -e "  DSCP ${green}${dscp_force_proxy}${reset}: ${red}не активен${reset} (${light_blue}${dscp_force_proxy_reason}${reset})"
+    fi
 }
 
 # Получение портов исключения из статических пробросов
@@ -1468,6 +1511,13 @@ if pidof "$name_client" >/dev/null; then
         ipt -I "$chain" 1 -m set --match-set "$geo_set" dst -m set ! --match-set "$override_set" dst $comment -j RETURN >/dev/null 2>&1
     }
 
+    add_force_exclude_rules() {
+        chain="$1"
+        for exclude in $exclude_list; do
+            ipt -A "$chain" -d "$exclude" $comment -j RETURN >/dev/null 2>&1
+        done
+    }
+
     # Добавление правил iptables
     add_ipt_rule() {
         family="$1"
@@ -1549,7 +1599,7 @@ if pidof "$name_client" >/dev/null; then
         [ "$family" = "iptables" ] && [ "$iptables_supported" = "false" ] && return
         [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" = "false" ] && return
 
-        add_exclude_rules "$chain"
+        add_force_exclude_rules "$chain"
 
         ipt -I "$chain" 1 -m conntrack --ctstate ESTABLISHED,RELATED $comment -j CONNMARK --restore-mark >/dev/null 2>&1
         ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
@@ -2485,6 +2535,7 @@ case "$1" in
         else
             echo -e "  Прокси-клиент ${red}не запущен${reset}"
         fi
+        print_dscp_force_proxy_status
         ;;
     restart) proxy_stop; proxy_start "$2" ;;
     cold_start)
