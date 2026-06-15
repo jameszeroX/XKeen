@@ -67,6 +67,8 @@ comment="-m comment --comment $comment_tag"
 custom_mark=""
 
 # DSCP-метки
+dscp_force_proxy="61"
+dscp_force_proxy_tag="dscp-force-proxy"
 dscp_exclude="62"
 dscp_proxy="63"
 
@@ -689,7 +691,7 @@ get_modules() {
         fi
     fi
 
-    if [ -n "$dscp_exclude" ] || [ -n "$dscp_proxy" ]; then
+    if [ -n "$dscp_force_proxy" ] || [ -n "$dscp_exclude" ] || [ -n "$dscp_proxy" ]; then
         if ! is_module_loaded xt_dscp; then
             log_warning_router "Модуль xt_dscp не загружен"
             log_warning_terminal "
@@ -697,8 +699,12 @@ get_modules() {
   Работа с DSCP-метками невозможна
   Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
 "
+            dscp_force_proxy=""
             dscp_exclude=""
             dscp_proxy=""
+            port_dscp_force_proxy=""
+            mode_dscp_force_proxy=""
+            network_dscp_force_proxy=""
         fi
     fi
 }
@@ -747,10 +753,11 @@ get_xray_transparent_inbounds() {
 
 get_xray_port_by_mode() {
     mode="$1"
+    ignore_tag="$dscp_force_proxy_tag"
     port=$(
         get_xray_transparent_inbounds |
-        awk -F '\t' -v mode="$mode" '
-            $1 == mode && $2 != "" {
+        awk -F '\t' -v mode="$mode" -v ignore_tag="$ignore_tag" '
+            $1 == mode && $4 != ignore_tag && $2 != "" {
                 print $2
                 exit
             }
@@ -762,9 +769,10 @@ get_xray_port_by_mode() {
 
 get_xray_network_by_mode() {
     mode="$1"
+    ignore_tag="$dscp_force_proxy_tag"
     network=$(
         get_xray_transparent_inbounds |
-        awk -F '\t' -v mode="$mode" '
+        awk -F '\t' -v mode="$mode" -v ignore_tag="$ignore_tag" '
             function add_networks(value, count, i, item) {
                 gsub(/,/, " ", value)
                 gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
@@ -781,7 +789,73 @@ get_xray_network_by_mode() {
                 }
             }
 
-            $1 == mode {
+            $1 == mode && $4 != ignore_tag {
+                add_networks($3)
+            }
+
+            END {
+                for (i = 1; i <= order_count; i++) {
+                    printf "%s%s", order[i], (i < order_count ? " " : "")
+                }
+            }
+        '
+    )
+
+    echo "$network"
+}
+
+get_xray_port_by_tag() {
+    tag="$1"
+    port=$(
+        get_xray_transparent_inbounds |
+        awk -F '\t' -v tag="$tag" '
+            $4 == tag && $2 != "" {
+                print $2
+                exit
+            }
+        '
+    )
+
+    echo "$port"
+}
+
+get_xray_mode_by_tag() {
+    tag="$1"
+    mode=$(
+        get_xray_transparent_inbounds |
+        awk -F '\t' -v tag="$tag" '
+            $4 == tag && $1 != "" {
+                print $1
+                exit
+            }
+        '
+    )
+
+    echo "$mode"
+}
+
+get_xray_network_by_tag() {
+    tag="$1"
+    network=$(
+        get_xray_transparent_inbounds |
+        awk -F '\t' -v tag="$tag" '
+            function add_networks(value, count, i, item) {
+                gsub(/,/, " ", value)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+                if (value == "") {
+                    return
+                }
+
+                count = split(value, items, /[[:space:]]+/)
+                for (i = 1; i <= count; i++) {
+                    item = items[i]
+                    if (item != "" && !seen[item]++) {
+                        order[++order_count] = item
+                    }
+                }
+            }
+
+            $4 == tag {
                 add_networks($3)
             }
 
@@ -858,6 +932,82 @@ get_network_tproxy() {
     else
         return 1
     fi
+}
+
+is_valid_single_port() {
+    case "$1" in
+        ''|*[!0-9]*) return 1 ;;
+    esac
+
+    [ "$1" -ge 1 ] && [ "$1" -le 65535 ]
+}
+
+normalize_network_list() {
+    printf '%s\n' "$1" | tr ',' ' ' | tr -s ' ' '\n' | awk '
+        $0 == "tcp" || $0 == "udp" {
+            if (!seen[$0]++) {
+                order[++count] = $0
+            }
+        }
+        END {
+            for (i = 1; i <= count; i++) {
+                printf "%s%s", order[i], (i < count ? " " : "")
+            }
+        }
+    '
+}
+
+configure_dscp_force_proxy() {
+    port_dscp_force_proxy=""
+    mode_dscp_force_proxy=""
+    network_dscp_force_proxy=""
+
+    [ "$name_client" = "xray" ] || return 0
+    [ -n "$dscp_force_proxy" ] || return 0
+    [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Hybrid" ] || return 0
+
+    port_candidate=$(get_xray_port_by_tag "$dscp_force_proxy_tag")
+    mode_candidate=$(get_xray_mode_by_tag "$dscp_force_proxy_tag")
+    network_candidate=$(normalize_network_list "$(get_xray_network_by_tag "$dscp_force_proxy_tag")")
+
+    [ -n "$port_candidate" ] || [ -n "$mode_candidate" ] || [ -n "$network_candidate" ] || return 0
+
+    if [ "$mode_candidate" != "tproxy" ]; then
+        log_warning_router "Inbound ${dscp_force_proxy_tag} должен использовать tproxy"
+        log_warning_terminal "
+  Inbound '${yellow}${dscp_force_proxy_tag}${reset}' найден, но настроен неверно
+  Для DSCP ${green}${dscp_force_proxy}${reset} требуется ${light_blue}sockopt.tproxy = tproxy${reset}
+
+  Маршрутизация по DSCP ${green}${dscp_force_proxy}${reset} ${red}отключена${reset}
+"
+        return 0
+    fi
+
+    if ! is_valid_single_port "$port_candidate"; then
+        log_warning_router "Inbound ${dscp_force_proxy_tag} использует некорректный порт"
+        log_warning_terminal "
+  Inbound '${yellow}${dscp_force_proxy_tag}${reset}' найден, но содержит некорректный порт
+  Для DSCP ${green}${dscp_force_proxy}${reset} требуется корректный inbound-порт Xray
+
+  Маршрутизация по DSCP ${green}${dscp_force_proxy}${reset} ${red}отключена${reset}
+"
+        return 0
+    fi
+
+    if [ -z "$network_candidate" ]; then
+        log_warning_router "Inbound ${dscp_force_proxy_tag} не содержит tcp или udp"
+        log_warning_terminal "
+  Inbound '${yellow}${dscp_force_proxy_tag}${reset}' найден, но не поддерживает ${light_blue}tcp${reset} или ${light_blue}udp${reset}
+  Для DSCP ${green}${dscp_force_proxy}${reset} требуется inbound с network: ${green}tcp${reset}, ${green}udp${reset} или ${green}tcp,udp${reset}
+
+  Маршрутизация по DSCP ${green}${dscp_force_proxy}${reset} ${red}отключена${reset}
+"
+        return 0
+    fi
+
+    port_dscp_force_proxy="$port_candidate"
+    mode_dscp_force_proxy="$mode_candidate"
+    network_dscp_force_proxy="$network_candidate"
 }
 
 # Получение портов исключения из статических пробросов
@@ -1086,6 +1236,7 @@ EOL
     inject_var name_chain "$name_chain"
     inject_var port_redirect "$port_redirect"
     inject_var port_tproxy "$port_tproxy"
+    inject_var port_dscp_force_proxy "$port_dscp_force_proxy"
     inject_var port_donor "$port_donor"
     inject_var port_exclude "$port_exclude"
     inject_var policy_mark "$policy_mark"
@@ -1094,6 +1245,10 @@ EOL
     inject_var custom_mark "$custom_mark"
     inject_var dscp_exclude "$dscp_exclude"
     inject_var dscp_proxy "$dscp_proxy"
+    inject_var dscp_force_proxy "$dscp_force_proxy"
+    inject_var dscp_force_proxy_tag "$dscp_force_proxy_tag"
+    inject_var mode_dscp_force_proxy "$mode_dscp_force_proxy"
+    inject_var network_dscp_force_proxy "$network_dscp_force_proxy"
     inject_var user_policies "$user_policies"
     inject_var table_redirect "$table_redirect"
     inject_var table_tproxy "$table_tproxy"
@@ -1220,11 +1375,13 @@ if pidof "$name_client" >/dev/null; then
         _deletes=$($save_cmd -t "$_table" 2>/dev/null | awk \
             -v tag="$comment_tag" \
             -v c1="$name_chain" \
-            -v c2="${name_chain}_out" '
+            -v c2="${name_chain}_out" \
+            -v c3="${name_chain}_force" '
             index($0, tag) &&
             $1 == "-A" &&
             $2 != c1 &&
-            $2 != c2 {
+            $2 != c2 &&
+            $2 != c3 {
                 sub(/^-A /, "-D ")
                 print
             }
@@ -1233,6 +1390,7 @@ if pidof "$name_client" >/dev/null; then
         {
             printf '*%s\n' "$_table"
             printf ':%s -\n' "$name_chain"
+            [ -n "$port_dscp_force_proxy" ] && printf ':%s_force -\n' "$name_chain"
             [ "$proxy_router" = "on" ] && printf ':%s_out -\n' "$name_chain"
             [ -n "$_deletes" ] && printf '%s\n' "$_deletes"
             printf '%s' "$_rules"
@@ -1380,6 +1538,30 @@ if pidof "$name_client" >/dev/null; then
         fi
     }
 
+    add_force_ipt_rule() {
+        family="$1"
+        table="$2"
+        chain="$3"
+
+        [ -n "$port_dscp_force_proxy" ] || return
+        [ "$table" = "$table_tproxy" ] || return
+        [ "$mode_dscp_force_proxy" = "tproxy" ] || return
+        [ "$family" = "iptables" ] && [ "$iptables_supported" = "false" ] && return
+        [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" = "false" ] && return
+
+        add_exclude_rules "$chain"
+
+        ipt -I "$chain" 1 -m conntrack --ctstate ESTABLISHED,RELATED $comment -j CONNMARK --restore-mark >/dev/null 2>&1
+        ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
+        ipt -I "$chain" 1 -m conntrack --ctstate INVALID $comment -j RETURN >/dev/null 2>&1
+
+        for net in $network_dscp_force_proxy; do
+            ipt -A "$chain" -p "$net" -m socket --transparent $comment -j MARK --set-mark "$table_mark" >/dev/null 2>&1
+            ipt -A "$chain" -p "$net" -m mark ! --mark 0 $comment -j CONNMARK --save-mark >/dev/null 2>&1
+            ipt -A "$chain" -p "$net" $comment -j TPROXY --on-ip "$proxy_ip" --on-port "$port_dscp_force_proxy" --tproxy-mark "$table_mark" >/dev/null 2>&1
+        done
+    }
+
     # Настройка таблицы маршрутов
     configure_route() {
         ip_version="$1"
@@ -1467,6 +1649,13 @@ if pidof "$name_client" >/dev/null; then
         # видит L2-MAC только для устройств в одном broadcast-домене с роутером
         # (LAN/Wi-Fi/guest-bridge); за L3-VLAN правило безвредно неактивно.
         ipt -I PREROUTING 1 -m set --match-set "$name_ipset_deny_mac" src $comment -j RETURN >/dev/null 2>&1
+
+        if [ "$table" = "$table_tproxy" ] && [ -n "$port_dscp_force_proxy" ]; then
+            for force_net in $network_dscp_force_proxy; do
+                set -- -m conntrack ! --ctstate INVALID -p "$force_net" -m dscp --dscp "$dscp_force_proxy" $comment -j "${name_chain}_force"
+                ipt -A PREROUTING "$@" >/dev/null 2>&1
+            done
+        fi
 
         for net in $networks; do
             if [ "$mode_proxy" = "Hybrid" ]; then
@@ -1646,12 +1835,14 @@ USER_POLICIES_EOF
         if [ -n "$port_redirect" ] && [ -n "$port_tproxy" ]; then
             for table in "$table_tproxy" "$table_redirect"; do
                 add_ipt_rule "$family" "$table" "$name_chain"
+                add_force_ipt_rule "$family" "$table" "${name_chain}_force"
                 add_prerouting "$family" "$table"
                 add_output "$family" "$table"
             done
         elif [ -z "$port_redirect" ] && [ -n "$port_tproxy" ]; then
             table="$table_tproxy"
             add_ipt_rule "$family" "$table" "$name_chain"
+            add_force_ipt_rule "$family" "$table" "${name_chain}_force"
             add_prerouting "$family" "$table"
             add_output "$family" "$table"
         elif [ -n "$port_redirect" ] && [ -z "$port_tproxy" ]; then
@@ -1759,6 +1950,12 @@ clean_firewall() {
         if "$family" -w -t "$table" -nL "$out_chain" >/dev/null 2>&1; then
             "$family" -w -t "$table" -F "$out_chain" >/dev/null 2>&1
             "$family" -w -t "$table" -X "$out_chain" >/dev/null 2>&1
+        fi
+
+        force_chain="${name_chain}_force"
+        if "$family" -w -t "$table" -nL "$force_chain" >/dev/null 2>&1; then
+            "$family" -w -t "$table" -F "$force_chain" >/dev/null 2>&1
+            "$family" -w -t "$table" -X "$force_chain" >/dev/null 2>&1
         fi
     }
 
@@ -2043,6 +2240,7 @@ proxy_start() {
             if ! proxy_status && { [ -n "$port_donor" ] || [ -n "$port_exclude" ] || [ "$mode_proxy" = "TProxy" ] || [ "$mode_proxy" = "Hybrid" ]; }; then
                 get_modules
             fi
+            configure_dscp_force_proxy
             if [ "$mode_proxy" = "TProxy" ]; then
                 keenetic_ssl="$(get_keenetic_port)" || {
                     proxy_stop
