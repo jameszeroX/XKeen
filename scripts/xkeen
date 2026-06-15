@@ -159,8 +159,12 @@ while [ $# -gt 0 ]; do
             fi
 
             if [ -z "$bypass_xray" ]; then
-                if ! install_xray; then
-                    bypass_xray="true"
+                if [ -f "$install_dir/xray" ]; then
+                    chmod +x "$install_dir/xray" 2>/dev/null
+                else
+                    if ! install_xray; then
+                        bypass_xray="true"
+                    fi
                 fi
                 info_xray
             fi
@@ -185,8 +189,12 @@ while [ $# -gt 0 ]; do
             fi
 
             if [ -z "$bypass_mihomo" ]; then
-                if ! install_mihomo; then
-                    bypass_mihomo="true"
+                if [ -f "$install_dir/mihomo" ]; then
+                    chmod +x "$install_dir/mihomo" 2>/dev/null
+                else
+                    if ! install_mihomo; then
+                        bypass_mihomo="true"
+                    fi
                 fi
                 info_mihomo
             fi
@@ -227,7 +235,6 @@ while [ $# -gt 0 ]; do
             if [ "$bypass_cron_geosite" = "false" ] || [ "$bypass_cron_geoip" = "false" ] || [ "$bypass_cron_geoipset" = "false" ]; then
                 smart_clear
                 # Настраиваем автоматические обновления
-                info_cron
                 choice_update_cron
                 update_cron_geofile_task
                 smart_clear
@@ -824,21 +831,17 @@ while [ $# -gt 0 ]; do
 
 
         -dgc)    # Удалить задачу автообновления баз GeoFile/GeoIPSET
+            info_cron
             smart_clear
             echo
             choice_for_remove="задачу автообновления баз GeoFile/GeoIPSET"
             choice_remove
-
-            info_cron
-
             smart_clear
             echo
             echo -e "  Удаление задачи автообновления баз ${yellow}GeoFile/GeoIPSET${reset}"
-
             delete_cron_geofile
             logs_delete_cron_geofile_info_console
             delete_tmp
-
             echo -e "  Удаление задачи автообновления баз GeoFile/GeoIPSET ${green}выполнено${reset}"
         ;;
 
