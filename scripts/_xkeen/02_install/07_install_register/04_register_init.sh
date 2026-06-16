@@ -753,6 +753,7 @@ get_xray_transparent_inbounds() {
 
 get_xray_port_by_mode() {
     mode="$1"
+    # Отдельный DSCP force-inbound не должен подменять штатный transparent inbound.
     ignore_tag="$dscp_force_proxy_tag"
     port=$(
         get_xray_transparent_inbounds |
@@ -990,6 +991,7 @@ resolve_dscp_force_proxy() {
     mode_candidate=$(get_xray_mode_by_tag "$dscp_force_proxy_tag")
     network_candidate=$(normalize_network_list "$(get_xray_network_by_tag "$dscp_force_proxy_tag")")
 
+    # Полное отсутствие полей означает, что пользователь force-inbound не настраивал.
     if [ -z "$port_candidate" ] && [ -z "$mode_candidate" ] && [ -z "$network_candidate" ]; then
         dscp_force_proxy_reason="не найден inbound с tag '${dscp_force_proxy_tag}'"
         return 1
