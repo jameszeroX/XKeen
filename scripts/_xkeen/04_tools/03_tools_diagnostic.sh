@@ -74,7 +74,7 @@ diagnostic() {
     dump_tables() {
         local cmd="$1"
         local ver="$2"
-        for chain in PREROUTING xkeen xkeen_out OUTPUT; do
+        for chain in PREROUTING xkeen xkeen_force xkeen_out OUTPUT; do
             $cmd -w -t nat -nvL "$chain" 2>&1 | log_block "Результат таблицы NAT цепи $chain $ver"
             $cmd -w -t mangle -nvL "$chain" 2>&1 | log_block "Результат таблицы MANGLE цепи $chain $ver"
         done

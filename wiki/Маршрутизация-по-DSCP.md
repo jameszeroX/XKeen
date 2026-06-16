@@ -62,36 +62,32 @@ Windows Registry Editor Version 5.00
 
 ```json
 {
-  "tag": "dscp-force-proxy",
-  "port": 16826,
-  "protocol": "dokodemo-door",
+  "port": 1191,
+  "protocol": "tunnel",
   "settings": {
     "network": "tcp,udp",
     "followRedirect": true
   },
   "streamSettings": {
-    "sockopt": {
-      "tproxy": "tproxy"
-    }
+    "sockopt": {"tproxy": "tproxy"}
   },
   "sniffing": {
     "enabled": true,
     "routeOnly": true,
     "destOverride": ["http","tls"]
-  }
+  },
+  "tag": "dscp-force-proxy"
 }
 ```
 
-`16826` приведён только как пример. XKeen не использует хардкод порта и определяет его автоматически по inbound с тегом `dscp-force-proxy`.
+`1191` приведён только как пример. XKeen не использует хардкод порта и определяет его автоматически по inbound с тегом `dscp-force-proxy`.
 
 ### Пример routing rule Xray
 
 ```json
 {
-  "type": "field",
   "inboundTag": ["dscp-force-proxy"],
-  "outboundTag": "vless-reality",
-  "network": "tcp,udp"
+  "outboundTag": "vless-reality"
 }
 ```
 

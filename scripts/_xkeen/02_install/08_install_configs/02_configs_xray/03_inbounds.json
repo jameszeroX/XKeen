@@ -30,6 +30,23 @@
         "destOverride": ["quic"]
       },
       "tag": "tproxy"
+    },
+    {
+      "port": 1191,
+      "protocol": "tunnel",
+      "settings": {
+        "network": "tcp,udp",
+        "followRedirect": true
+      },
+      "streamSettings": {
+        "sockopt": {"tproxy": "tproxy"}
+      },
+      "sniffing": {
+        "enabled": true,
+        "routeOnly": true,
+        "destOverride": ["http","tls"]
+      },
+      "tag": "dscp-force-proxy"
     }
   ]
 }
