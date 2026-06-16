@@ -1287,6 +1287,11 @@ while [ $# -gt 0 ]; do
         ;;
 
 
+        -dscp)    # Статус DSCP 61 force proxy
+            "$initd_file" dscp
+        ;;
+
+
         -auto)    # Смена режима запуска XKeen
             action=$(get_state_arg "$2")
             [ -n "$action" ] && shift
