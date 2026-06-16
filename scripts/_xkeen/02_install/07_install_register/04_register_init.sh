@@ -1588,6 +1588,16 @@ if pidof "$name_client" >/dev/null; then
                 ipt -I "$chain" -m dscp --dscp "$dscp" $comment -j RETURN >/dev/null 2>&1
             done
         fi
+
+        # DSCP force-proxy обрабатывается отдельной chain'ой xkeen_force в
+        # mangle/PREROUTING. Если не выйти здесь из обычной chain для тех же
+        # протоколов, пакет позже попадёт в штатный REDIRECT/TPROXY path и
+        # потеряет original dst.
+        if [ -n "$port_dscp_force_proxy" ] && [ "$mode_dscp_force_proxy" = "tproxy" ]; then
+            for net in $network_dscp_force_proxy; do
+                ipt -I "$chain" 1 -p "$net" -m dscp --dscp "$dscp_force_proxy" $comment -j RETURN >/dev/null 2>&1
+            done
+        fi
     }
 
     add_force_ipt_rule() {
