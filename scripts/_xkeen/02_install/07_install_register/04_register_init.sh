@@ -1828,11 +1828,7 @@ USER_POLICIES_EOF
                 [ "$table" = "mangle" ] && [ "$net" != "udp" ] && continue
             fi
 
-            if [ "$mode_proxy" = "TProxy" ]; then
-                proto_match=""
-            else
-                proto_match="-p $net"
-            fi
+            proto_match="-p $net"
 
             set -- -m conntrack ! --ctstate INVALID $proto_match $comment -j "$out_chain"
             ipt -A OUTPUT "$@" >/dev/null 2>&1
