@@ -1725,11 +1725,9 @@ if pidof "$name_client" >/dev/null; then
                 [ "$table" = "mangle" ] && [ "$net" != "udp" ] && continue
             fi
 
-            if [ "$mode_proxy" = "TProxy" ]; then
-                proto_match=""
-            else
-                proto_match="-p $net"
-            fi
+            proto_match="-p $net"
+            all_ports_proto_match=""
+            [ "$mode_proxy" = "TProxy" ] && all_ports_proto_match="$proto_match"
 
             for dscp in $dscp_proxy; do
                 set -- -m conntrack ! --ctstate INVALID $proto_match -m dscp --dscp "$dscp" $comment -j "$name_chain"
