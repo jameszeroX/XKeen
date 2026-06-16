@@ -2537,6 +2537,8 @@ case "$1" in
         else
             echo -e "  Прокси-клиент ${red}не запущен${reset}"
         fi
+        ;;
+    dscp)
         print_dscp_force_proxy_status
         ;;
     restart) proxy_stop; proxy_start "$2" ;;

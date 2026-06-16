@@ -65,6 +65,7 @@ help_xkeen() {
     echo -e "	-stop		${italic}Остановка${reset}"
     echo -e "	-restart	${italic}Перезапуск${reset}"
     echo -e "	-status		${italic}Статус работы${reset}"
+    echo -e "	-dscp		${italic}Статус DSCP 61 force proxy${reset}"
     echo -e "	-tp		${italic}Порты, шлюз и протокол прокси-клиента${reset}"
     echo -e "	-auto		${italic}Включить | Отключить автозапуск прокси-клиента${reset}"
     echo -e "	-di		${italic}Время ожидания инициализации роутера перед началом запуска прокси-клиента${reset}"
