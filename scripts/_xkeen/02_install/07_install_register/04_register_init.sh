@@ -871,6 +871,22 @@ get_xray_network_by_tag() {
     echo "$network"
 }
 
+get_mihomo_listener_field_by_name() {
+    listener_name="$1"
+    field_name="$2"
+
+    DSCP_FORCE_LISTENER="$listener_name" yq eval ".listeners[] | select(.name == strenv(DSCP_FORCE_LISTENER)) | .$field_name // \"\"" "$mihomo_config" 2>/dev/null | sed -n '1p'
+}
+
+get_mihomo_force_proxy_network() {
+    udp_enabled=$(get_mihomo_listener_field_by_name "$dscp_force_proxy_tag" "udp")
+    if [ "$udp_enabled" = "true" ]; then
+        echo "tcp udp"
+    else
+        echo "tcp"
+    fi
+}
+
 # Получение порта для Redirect
 get_port_redirect() {
     if [ "$name_client" = "xray" ]; then
@@ -895,7 +911,7 @@ get_port_tproxy() {
     elif [ "$name_client" = "mihomo" ]; then
         port=$(yq eval '.tproxy-port // ""' "$mihomo_config" 2>/dev/null)
         if [ -z "$port" ]; then
-            port=$(yq eval '.listeners[] | select(.type == "tproxy") | .port // ""' "$mihomo_config" 2>/dev/null)
+            port=$(DSCP_FORCE_TAG="$dscp_force_proxy_tag" yq eval '.listeners[] | select(.type == "tproxy" and (.name // "") != strenv(DSCP_FORCE_TAG)) | .port // ""' "$mihomo_config" 2>/dev/null | sed -n '1p')
         fi
         [ -n "$port" ] && echo "$port" && return 0
     else
@@ -971,11 +987,6 @@ resolve_dscp_force_proxy() {
         return 1
     }
 
-    if [ "$name_client" != "xray" ]; then
-        dscp_force_proxy_reason="функция поддерживается только для Xray"
-        return 1
-    fi
-
     if [ "$mode_proxy" != "TProxy" ] && [ "$mode_proxy" != "Hybrid" ]; then
         dscp_force_proxy_reason="текущий режим ${mode_proxy:-Other} не поддерживается"
         return 1
@@ -987,28 +998,64 @@ resolve_dscp_force_proxy() {
         return 1
     fi
 
-    port_candidate=$(get_xray_port_by_tag "$dscp_force_proxy_tag")
-    mode_candidate=$(get_xray_mode_by_tag "$dscp_force_proxy_tag")
-    network_candidate=$(normalize_network_list "$(get_xray_network_by_tag "$dscp_force_proxy_tag")")
+    case "$name_client" in
+        xray)
+            port_candidate=$(get_xray_port_by_tag "$dscp_force_proxy_tag")
+            mode_candidate=$(get_xray_mode_by_tag "$dscp_force_proxy_tag")
+            network_candidate=$(normalize_network_list "$(get_xray_network_by_tag "$dscp_force_proxy_tag")")
+            proxy_candidate=""
+            ;;
+        mihomo)
+            port_candidate=$(get_mihomo_listener_field_by_name "$dscp_force_proxy_tag" "port")
+            mode_candidate=$(get_mihomo_listener_field_by_name "$dscp_force_proxy_tag" "type")
+            network_candidate=$(normalize_network_list "$(get_mihomo_force_proxy_network)")
+            proxy_candidate=$(get_mihomo_listener_field_by_name "$dscp_force_proxy_tag" "proxy")
+            ;;
+        *)
+            dscp_force_proxy_reason="функция не поддерживается для ${name_client}"
+            return 1
+            ;;
+    esac
 
-    # Полное отсутствие полей означает, что пользователь force-inbound не настраивал.
-    if [ -z "$port_candidate" ] && [ -z "$mode_candidate" ] && [ -z "$network_candidate" ]; then
-        dscp_force_proxy_reason="не найден inbound с tag '${dscp_force_proxy_tag}'"
+    # Полное отсутствие полей означает, что пользователь force-listener не настраивал.
+    if [ -z "$port_candidate" ] && [ -z "$mode_candidate" ]; then
+        if [ "$name_client" = "mihomo" ]; then
+            dscp_force_proxy_reason="не найден listener с name '${dscp_force_proxy_tag}'"
+        else
+            dscp_force_proxy_reason="не найден inbound с tag '${dscp_force_proxy_tag}'"
+        fi
         return 1
     fi
 
     if [ "$mode_candidate" != "tproxy" ]; then
-        dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' должен использовать sockopt.tproxy=tproxy"
+        if [ "$name_client" = "mihomo" ]; then
+            dscp_force_proxy_reason="listener '${dscp_force_proxy_tag}' должен иметь type=tproxy"
+        else
+            dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' должен использовать sockopt.tproxy=tproxy"
+        fi
         return 2
     fi
 
     if ! is_valid_single_port "$port_candidate"; then
-        dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' содержит некорректный порт"
+        if [ "$name_client" = "mihomo" ]; then
+            dscp_force_proxy_reason="listener '${dscp_force_proxy_tag}' содержит некорректный порт"
+        else
+            dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' содержит некорректный порт"
+        fi
         return 2
     fi
 
     if [ -z "$network_candidate" ]; then
-        dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' не поддерживает tcp или udp"
+        if [ "$name_client" = "mihomo" ]; then
+            dscp_force_proxy_reason="listener '${dscp_force_proxy_tag}' не поддерживает tcp или udp"
+        else
+            dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' не поддерживает tcp или udp"
+        fi
+        return 2
+    fi
+
+    if [ "$name_client" = "mihomo" ] && [ -z "$proxy_candidate" ]; then
+        dscp_force_proxy_reason="listener '${dscp_force_proxy_tag}' должен явно задавать proxy"
         return 2
     fi
 
@@ -1016,7 +1063,11 @@ resolve_dscp_force_proxy() {
     mode_dscp_force_proxy="$mode_candidate"
     network_dscp_force_proxy="$network_candidate"
     dscp_force_proxy_status="active"
-    dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' найден: порт ${port_dscp_force_proxy}, network ${network_dscp_force_proxy}"
+    if [ "$name_client" = "mihomo" ]; then
+        dscp_force_proxy_reason="listener '${dscp_force_proxy_tag}' найден: порт ${port_dscp_force_proxy}, network ${network_dscp_force_proxy}, proxy ${proxy_candidate}"
+    else
+        dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' найден: порт ${port_dscp_force_proxy}, network ${network_dscp_force_proxy}"
+    fi
     return 0
 }
 
@@ -1027,7 +1078,7 @@ configure_dscp_force_proxy() {
     if [ "$status_code" -eq 2 ]; then
         log_warning_router "$dscp_force_proxy_reason"
         log_warning_terminal "
-  Inbound '${yellow}${dscp_force_proxy_tag}${reset}' найден, но настроен неверно
+  DSCP force-proxy '${yellow}${dscp_force_proxy_tag}${reset}' найден, но настроен неверно
   ${light_blue}${dscp_force_proxy_reason}${reset}
 
   Маршрутизация по DSCP ${green}${dscp_force_proxy}${reset} ${red}отключена${reset}
