@@ -1562,10 +1562,10 @@ if pidof "$name_client" >/dev/null; then
                 ;;
             TProxy)
                 ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
+                add_ipset_exclude ext_exclude hash:ip
+                add_ipset_exclude user_exclude hash:net
+                add_geo_exclude
                 for net in $network_tproxy; do
-                    add_ipset_exclude ext_exclude hash:ip
-                    add_ipset_exclude user_exclude hash:net
-                    add_geo_exclude
                     ipt -A "$chain" -p "$net" -m socket --transparent $comment -j MARK --set-mark "$table_mark" >/dev/null 2>&1
                     ipt -A "$chain" -p "$net" -m mark ! --mark 0 $comment -j CONNMARK --save-mark >/dev/null 2>&1
                     ipt -A "$chain" -p "$net" $comment -j TPROXY --on-ip "$proxy_ip" --on-port "$port_tproxy" --tproxy-mark "$table_mark" >/dev/null 2>&1
