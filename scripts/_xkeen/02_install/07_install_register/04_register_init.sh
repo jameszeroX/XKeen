@@ -1750,7 +1750,7 @@ if pidof "$name_client" >/dev/null; then
                 pports=$(echo "$pports" | tr -d ' \r\n')
 
                 if [ "$pmode" = "all" ]; then
-                    set -- -m connmark --mark 0x"$pmark" -m conntrack ! --ctstate INVALID $comment -j "$name_chain"
+                    set -- -m connmark --mark 0x"$pmark" -m conntrack ! --ctstate INVALID $all_ports_proto_match $comment -j "$name_chain"
                     ipt -A PREROUTING "$@" >/dev/null 2>&1
                 elif [ "$pmode" = "include" ]; then
                     add_multiport_rules "$family" "$table" "$net" "0x$pmark" "$pports" "$name_chain"
@@ -1775,7 +1775,7 @@ USER_POLICIES_EOF
                     ipt -A PREROUTING "$@" >/dev/null 2>&1
                 else
                     # Политика xkeen, когда порты не указаны (проксирование на всех портах)
-                    set -- -m connmark --mark "$policy_mark" -m conntrack ! --ctstate INVALID $comment -j "$name_chain"
+                    set -- -m connmark --mark "$policy_mark" -m conntrack ! --ctstate INVALID $all_ports_proto_match $comment -j "$name_chain"
                     ipt -A PREROUTING "$@" >/dev/null 2>&1
                 fi
             # НЕТ политики xkeen
@@ -1790,7 +1790,7 @@ USER_POLICIES_EOF
                     ipt -A PREROUTING "$@" >/dev/null 2>&1
                 # Если нет ни xkeen, ни пользовательских политик -> перехватываем всё
                 else
-                    set -- -m conntrack ! --ctstate INVALID $comment -j "$name_chain"
+                    set -- -m conntrack ! --ctstate INVALID $all_ports_proto_match $comment -j "$name_chain"
                     ipt -A PREROUTING "$@" >/dev/null 2>&1
                 fi
             fi
