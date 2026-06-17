@@ -369,7 +369,7 @@ ${light_blue}${bad_list}${reset}
     return 0
 }
 
-# Функция проверки наличия метки 255
+# Функция проверки наличия метки для проксирования Entware
 validate_routing_mark() {
     [ "$proxy_router" != "on" ] && return 0
 
@@ -378,6 +378,22 @@ validate_routing_mark() {
     bad_items=""
     has_items="false"
     all_marks_ok="true"
+    allowed_marks="255"
+    policy_hex_marks="$policy_mark"
+
+    if [ -n "$user_policies" ]; then
+        user_policy_hex_marks=$(printf '%s\n' "$user_policies" | awk -F'|' '$2 != "" {print "0x"$2}')
+        policy_hex_marks="$policy_hex_marks $user_policy_hex_marks"
+    fi
+
+    for policy_hex_mark in $policy_hex_marks; do
+        policy_mark_dec=$(hex_mark_to_decimal "$policy_hex_mark" 2>/dev/null)
+        [ -n "$policy_mark_dec" ] && allowed_marks="$allowed_marks $policy_mark_dec"
+    done
+
+    if [ -n "$allowed_marks" ]; then
+        allowed_marks=$(printf '%s\n' $allowed_marks | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/ $//')
+    fi
 
     if [ "$name_client" = "xray" ]; then
         mark_msg="mark"
@@ -388,10 +404,10 @@ validate_routing_mark() {
             if strip_json_comments "$file" | jq -e '.outbounds != null' >/dev/null 2>&1; then
                 has_items="true"
 
-                current_bad=$(strip_json_comments "$file" | jq -r '
+                current_bad=$(strip_json_comments "$file" | jq -r --arg allowed "$allowed_marks" '
                     .outbounds[]? |
                     select(.protocol != "blackhole" and .protocol != "dns") |
-                    select(.streamSettings.sockopt.mark != 255) |
+                    select(($allowed | split(" ") | index((.streamSettings.sockopt.mark // "") | tostring)) | not) |
                     (.tag // .protocol)
                 ')
 
@@ -407,22 +423,34 @@ validate_routing_mark() {
 
         if [ -f "$mihomo_config" ]; then
 
-            if yq -e '.["routing-mark"] == 255' "$mihomo_config" >/dev/null 2>&1; then
-                mark_valid="true"
-            elif yq -e '
-                .proxy-providers[]? |
-                select(.override."routing-mark" == 255)
-            ' "$mihomo_config" >/dev/null 2>&1; then
-                mark_valid="true"
-            else
+            for allowed_mark in $allowed_marks; do
+                if yq -e ".[\"routing-mark\"] == $allowed_mark" "$mihomo_config" >/dev/null 2>&1; then
+                    mark_valid="true"
+                    break
+                fi
+            done
 
+            if [ "$mark_valid" != "true" ]; then
+                for allowed_mark in $allowed_marks; do
+                    if yq -e ".proxy-providers[]? | select(.override.\"routing-mark\" == $allowed_mark)" "$mihomo_config" >/dev/null 2>&1; then
+                        mark_valid="true"
+                        break
+                    fi
+                done
+            fi
+
+            if [ "$mark_valid" != "true" ]; then
                 if yq -e '.proxies != null' "$mihomo_config" >/dev/null 2>&1; then
                     has_items="true"
-                    current_bad=$(yq -r '
+                    bad_mark_filter="true"
+                    for allowed_mark in $allowed_marks; do
+                        bad_mark_filter="$bad_mark_filter and .\"routing-mark\" != $allowed_mark"
+                    done
+                    current_bad=$(yq -r "
                         .proxies[]? |
-                        select(."routing-mark" != 255) |
+                        select($bad_mark_filter) |
                         .name
-                    ' "$mihomo_config")
+                    " "$mihomo_config")
 
                     if [ -n "$current_bad" ]; then
                         bad_items="${bad_items}${bad_items:+\n}$current_bad"
@@ -449,18 +477,18 @@ validate_routing_mark() {
                 error_details="
   Подключения без метки:
 ${light_blue}${bad_list}${reset}"
-                proxy_hint="  Добавьте маркировку во ВСЕ исходящие подключения (кроме blackhole и dns)"
+                proxy_hint="  Добавьте mark: 255 либо mark политики XKeen/пользовательской политики во ВСЕ исходящие подключения (кроме blackhole и dns)"
             else
                 error_details="
   Прокси без метки:
 ${light_blue}${bad_list}${reset}"
-                proxy_hint="  Добавьте в config.yaml маркировку трафика глобально либо в каждое исходящее подключение"
+                proxy_hint="  Добавьте в config.yaml mark 255 либо mark политики XKeen/пользовательской политики глобально или в каждое исходящее подключение"
             fi
         fi
 
         log_warning_terminal "
   Для проксирования трафика Entware требуется его маркировка
-  В конфигурации ${yellow}$name_client${reset} параметр ${green}$mark_msg: 255${reset} прописан не везде$error_details
+  В конфигурации ${yellow}$name_client${reset} параметр ${green}$mark_msg${reset} прописан не везде$error_details
 
 $proxy_hint
 
@@ -755,10 +783,12 @@ get_xray_port_by_mode() {
     mode="$1"
     # Отдельный DSCP force-inbound не должен подменять штатный transparent inbound.
     ignore_tag="$dscp_force_proxy_tag"
+    ignore_tag_redirect="${dscp_force_proxy_tag}-redirect"
+    ignore_tag_tproxy="${dscp_force_proxy_tag}-tproxy"
     port=$(
         get_xray_transparent_inbounds |
-        awk -F '\t' -v mode="$mode" -v ignore_tag="$ignore_tag" '
-            $1 == mode && $4 != ignore_tag && $2 != "" {
+        awk -F '\t' -v mode="$mode" -v ignore_tag="$ignore_tag" -v ignore_tag_redirect="$ignore_tag_redirect" -v ignore_tag_tproxy="$ignore_tag_tproxy" '
+            $1 == mode && $4 != ignore_tag && $4 != ignore_tag_redirect && $4 != ignore_tag_tproxy && $2 != "" {
                 print $2
                 exit
             }
@@ -771,9 +801,11 @@ get_xray_port_by_mode() {
 get_xray_network_by_mode() {
     mode="$1"
     ignore_tag="$dscp_force_proxy_tag"
+    ignore_tag_redirect="${dscp_force_proxy_tag}-redirect"
+    ignore_tag_tproxy="${dscp_force_proxy_tag}-tproxy"
     network=$(
         get_xray_transparent_inbounds |
-        awk -F '\t' -v mode="$mode" -v ignore_tag="$ignore_tag" '
+        awk -F '\t' -v mode="$mode" -v ignore_tag="$ignore_tag" -v ignore_tag_redirect="$ignore_tag_redirect" -v ignore_tag_tproxy="$ignore_tag_tproxy" '
             function add_networks(value, count, i, item) {
                 gsub(/,/, " ", value)
                 gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
@@ -790,7 +822,7 @@ get_xray_network_by_mode() {
                 }
             }
 
-            $1 == mode && $4 != ignore_tag {
+            $1 == mode && $4 != ignore_tag && $4 != ignore_tag_redirect && $4 != ignore_tag_tproxy {
                 add_networks($3)
             }
 
@@ -931,24 +963,39 @@ get_mihomo_listener_field_by_name() {
     DSCP_FORCE_LISTENER="$listener_name" yq eval ".listeners[] | select(.name == strenv(DSCP_FORCE_LISTENER)) | .$field_name // \"\"" "$mihomo_config" 2>/dev/null | sed -n '1p'
 }
 
-get_mihomo_force_proxy_rule_proxy() {
-    yq eval '.rules[] // ""' "$mihomo_config" 2>/dev/null | awk -F',' -v tag="$dscp_force_proxy_tag" '
+get_mihomo_listener_rule_proxy_by_name() {
+    listener_name="$1"
+
+    yq eval '.rules[] // ""' "$mihomo_config" 2>/dev/null | awk -F',' -v tag="$listener_name" '
         {
-            gsub(/^ +| +$/, "", $1)
-            gsub(/^ +| +$/, "", $2)
-            gsub(/^ +| +$/, "", $3)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", $1)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", $3)
         }
         $1 == "IN-NAME" && $2 == tag { print $3; exit }
     '
 }
 
-get_mihomo_force_proxy_network() {
-    udp_enabled=$(get_mihomo_listener_field_by_name "$dscp_force_proxy_tag" "udp")
-    if [ "$udp_enabled" = "true" ]; then
-        echo "tcp udp"
-    else
-        echo "tcp"
-    fi
+get_mihomo_listener_network_by_name() {
+    listener_name="$1"
+    listener_type=$(get_mihomo_listener_field_by_name "$listener_name" "type")
+
+    case "$listener_type" in
+        redir)
+            echo "tcp"
+            ;;
+        tproxy)
+            udp_enabled=$(get_mihomo_listener_field_by_name "$listener_name" "udp")
+            if [ "$udp_enabled" = "true" ]; then
+                echo "tcp udp"
+            else
+                echo "tcp"
+            fi
+            ;;
+        *)
+            echo ""
+            ;;
+    esac
 }
 
 # Получение порта для Redirect
@@ -959,7 +1006,7 @@ get_port_redirect() {
     elif [ "$name_client" = "mihomo" ]; then
         port=$(yq eval '.redir-port // ""' "$mihomo_config" 2>/dev/null)
         if [ -z "$port" ]; then
-            port=$(yq eval '.listeners[] | select(.type == "redir") | .port // ""' "$mihomo_config" 2>/dev/null)
+            port=$(DSCP_FORCE_TAG="$dscp_force_proxy_tag" DSCP_FORCE_TAG_REDIRECT="${dscp_force_proxy_tag}-redirect" DSCP_FORCE_TAG_TPROXY="${dscp_force_proxy_tag}-tproxy" yq eval '.listeners[] | select(.type == "redir" and (.name // "") != strenv(DSCP_FORCE_TAG) and (.name // "") != strenv(DSCP_FORCE_TAG_REDIRECT) and (.name // "") != strenv(DSCP_FORCE_TAG_TPROXY)) | .port // ""' "$mihomo_config" 2>/dev/null | sed -n '1p')
         fi
         [ -n "$port" ] && echo "$port" && return 0
     else
@@ -975,7 +1022,7 @@ get_port_tproxy() {
     elif [ "$name_client" = "mihomo" ]; then
         port=$(yq eval '.tproxy-port // ""' "$mihomo_config" 2>/dev/null)
         if [ -z "$port" ]; then
-            port=$(DSCP_FORCE_TAG="$dscp_force_proxy_tag" yq eval '.listeners[] | select(.type == "tproxy" and (.name // "") != strenv(DSCP_FORCE_TAG)) | .port // ""' "$mihomo_config" 2>/dev/null | sed -n '1p')
+            port=$(DSCP_FORCE_TAG="$dscp_force_proxy_tag" DSCP_FORCE_TAG_REDIRECT="${dscp_force_proxy_tag}-redirect" DSCP_FORCE_TAG_TPROXY="${dscp_force_proxy_tag}-tproxy" yq eval '.listeners[] | select(.type == "tproxy" and (.name // "") != strenv(DSCP_FORCE_TAG) and (.name // "") != strenv(DSCP_FORCE_TAG_REDIRECT) and (.name // "") != strenv(DSCP_FORCE_TAG_TPROXY)) | .port // ""' "$mihomo_config" 2>/dev/null | sed -n '1p')
         fi
         [ -n "$port" ] && echo "$port" && return 0
     else
@@ -1393,7 +1440,7 @@ get_exclude_ip6() {
 # Получение метки политики
 get_policy_mark() {
     if [ -n "$api_policy_json" ]; then
-        policy_mark=$(echo "$api_policy_json" | jq -r --arg pname "$name_policy" '.[] | select(.description | ascii_downcase == ($pname | ascii_downcase)) | .mark' 2>/dev/null)
+        policy_mark=$(echo "$api_policy_json" | jq -r --arg pname "$name_policy" '.[] | select(.description | ascii_downcase == ($pname | ascii_downcase)) | .mark // empty' 2>/dev/null)
     fi
 
     if [ -n "$policy_mark" ]; then
@@ -1401,6 +1448,33 @@ get_policy_mark() {
     else
         echo ""
     fi
+}
+
+hex_mark_to_decimal() {
+    mark="$1"
+    mark="${mark#0x}"
+    mark="${mark#0X}"
+
+    case "$mark" in
+        ''|*[!0-9a-fA-F]*) return 1 ;;
+    esac
+
+    printf '%s\n' "$mark" | awk '
+        BEGIN { digits = "0123456789abcdef" }
+        {
+            value = 0
+            mark = tolower($0)
+            for (i = 1; i <= length(mark); i++) {
+                digit = substr(mark, i, 1)
+                pos = index(digits, digit)
+                if (pos == 0) {
+                    exit 1
+                }
+                value = value * 16 + pos - 1
+            }
+            printf "%.0f\n", value
+        }
+    '
 }
 
 # Атомарная синхронизация ipset xkeen_deny_mac с текущим состоянием hotspot API.
@@ -2109,6 +2183,16 @@ USER_POLICIES_EOF
 
         ipt -A "$out_chain" -o lo $comment -j RETURN >/dev/null 2>&1
         ipt -A "$out_chain" -m mark --mark 255 $comment -j RETURN >/dev/null 2>&1
+        policy_bypass_marks="$policy_mark"
+
+        if [ -n "$user_policies" ]; then
+            user_policy_marks=$(printf '%s\n' "$user_policies" | awk -F'|' '$2 != "" {print "0x"$2}')
+            policy_bypass_marks="$policy_bypass_marks $user_policy_marks"
+        fi
+
+        for bypass_mark in $policy_bypass_marks; do
+            [ -n "$bypass_mark" ] && ipt -A "$out_chain" -m mark --mark "$bypass_mark" $comment -j RETURN >/dev/null 2>&1
+        done
 
         add_exclude_rules "$out_chain"
 
@@ -2548,9 +2632,15 @@ proxy_start() {
         validate_xkeen_json
         check_policy_name_conflict
         check_xray_backups
+        api_cache_init
+        policy_mark=$(get_policy_mark)
+        if [ -n "$policy_mark" ]; then
+            user_policies=$(resolve_user_policies)
+        else
+            user_policies=""
+        fi
         validate_routing_mark
         log_clean
-        api_cache_init
         sync_deny_mac_ipset
         process_user_ports
         process_custom_mark
@@ -2560,11 +2650,8 @@ proxy_start() {
         network_tproxy=$(get_network_tproxy)
         mode_proxy=$(get_mode_proxy)
         if [ "$mode_proxy" != "Other" ]; then
-            policy_mark=$(get_policy_mark)
 
             if [ -n "$policy_mark" ]; then
-                user_policies=$(resolve_user_policies)
-
                 if [ -n "$user_policies" ]; then
                     print_policy_info "yes" "yes"
                 else
