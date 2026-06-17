@@ -878,6 +878,17 @@ get_mihomo_listener_field_by_name() {
     DSCP_FORCE_LISTENER="$listener_name" yq eval ".listeners[] | select(.name == strenv(DSCP_FORCE_LISTENER)) | .$field_name // \"\"" "$mihomo_config" 2>/dev/null | sed -n '1p'
 }
 
+get_mihomo_force_proxy_rule_proxy() {
+    yq eval '.rules[] // ""' "$mihomo_config" 2>/dev/null | awk -F',' -v tag="$dscp_force_proxy_tag" '
+        {
+            gsub(/^ +| +$/, "", $1)
+            gsub(/^ +| +$/, "", $2)
+            gsub(/^ +| +$/, "", $3)
+        }
+        $1 == "IN-NAME" && $2 == tag { print $3; exit }
+    '
+}
+
 get_mihomo_force_proxy_network() {
     udp_enabled=$(get_mihomo_listener_field_by_name "$dscp_force_proxy_tag" "udp")
     if [ "$udp_enabled" = "true" ]; then
@@ -1055,8 +1066,12 @@ resolve_dscp_force_proxy() {
     fi
 
     if [ "$name_client" = "mihomo" ] && [ -z "$proxy_candidate" ]; then
-        dscp_force_proxy_reason="listener '${dscp_force_proxy_tag}' должен явно задавать proxy"
-        return 2
+        rule_proxy_candidate=$(get_mihomo_force_proxy_rule_proxy)
+        if [ -z "$rule_proxy_candidate" ]; then
+            dscp_force_proxy_reason="listener '${dscp_force_proxy_tag}' должен явно задавать proxy либо иметь правило IN-NAME,${dscp_force_proxy_tag} в rules"
+            return 2
+        fi
+        proxy_candidate="$rule_proxy_candidate"
     fi
 
     port_dscp_force_proxy="$port_candidate"
@@ -2615,3 +2630,4 @@ case "$1" in
 esac
 
 exit 0
+

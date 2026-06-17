@@ -100,12 +100,24 @@ listeners:
   - name: dscp-force-proxy
     type: tproxy
     port: 1191
-    listen: 0.0.0.0
     udp: true
     proxy: Proxy
 ```
 
-`Proxy` должен быть именем существующего исходящего прокси или proxy-group в конфигурации Mihomo. XKeen включает `DSCP 61` для Mihomo только если найден listener `dscp-force-proxy` с `type: tproxy`, валидным `port` и явно заданным `proxy`.
+или
+
+```yaml
+listeners:
+  - name: dscp-force-proxy
+    type: tproxy
+    port: 1191
+    udp: true
+
+rules:
+  - IN-NAME,dscp-force-proxy,Proxy
+```
+
+`Proxy` должен быть именем существующего исходящего прокси или proxy-group в конфигурации Mihomo. XKeen включает `DSCP 61` для Mihomo только если найден listener `dscp-force-proxy` с `type: tproxy`, валидным `port` и явно заданным `proxy` в listener или rules.
 
 ### Маркировка трафика в Windows
 
