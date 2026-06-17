@@ -160,5 +160,17 @@ log-level: silent
 routing-mark: 255
 ```
 
-либо к каждому proxies, proxy-providers и direct подключениям (см. документацию к Mihomo)
+Если нужно, чтобы исходящие подключения Mihomo следовали политике `XKeen`, вместо `255` можно указать decimal mark политики:
+
+```
+tproxy-port: 1181
+log-level: silent
+...
+routing-mark: 268434093
+```
+
+Число `268434093` здесь только пример. Получите актуальное значение на своём роутере командами `MARK_HEX`, `MARK_DEC` из раздела выше.
+
+Также `routing-mark` можно задавать к каждому `proxies`, `proxy-providers` и `direct` подключению (см. документацию к Mihomo). XKeen принимает для Mihomo оба варианта: `255` и decimal mark политики `XKeen`.
+
 После этого можете включить проксирование трафика Entware выполнив команду `xkeen -pr`

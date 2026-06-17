@@ -378,14 +378,15 @@ validate_routing_mark() {
     bad_items=""
     has_items="false"
     all_marks_ok="true"
+    allowed_marks="255"
+    policy_mark_dec=""
+    if [ -n "$policy_mark" ]; then
+        policy_mark_dec=$(hex_mark_to_decimal "$policy_mark" 2>/dev/null)
+        [ -n "$policy_mark_dec" ] && allowed_marks="$allowed_marks $policy_mark_dec"
+    fi
 
     if [ "$name_client" = "xray" ]; then
         mark_msg="mark"
-        allowed_marks="255"
-        if [ -n "$policy_mark" ]; then
-            policy_mark_dec=$(hex_mark_to_decimal "$policy_mark" 2>/dev/null)
-            [ -n "$policy_mark_dec" ] && allowed_marks="$allowed_marks $policy_mark_dec"
-        fi
 
         for file in "$directory_xray_config"/*.json; do
             [ -f "$file" ] || continue
@@ -412,21 +413,34 @@ validate_routing_mark() {
 
         if [ -f "$mihomo_config" ]; then
 
-            if yq -e '.["routing-mark"] == 255' "$mihomo_config" >/dev/null 2>&1; then
-                mark_valid="true"
-            elif yq -e '
-                .proxy-providers[]? |
-                select(.override."routing-mark" == 255)
-            ' "$mihomo_config" >/dev/null 2>&1; then
-                mark_valid="true"
-            else
+            for allowed_mark in $allowed_marks; do
+                if yq -e ".[\"routing-mark\"] == $allowed_mark" "$mihomo_config" >/dev/null 2>&1; then
+                    mark_valid="true"
+                    break
+                fi
+            done
+
+            if [ "$mark_valid" != "true" ]; then
+                for allowed_mark in $allowed_marks; do
+                    if yq -e ".proxy-providers[]? | select(.override.\"routing-mark\" == $allowed_mark)" "$mihomo_config" >/dev/null 2>&1; then
+                        mark_valid="true"
+                        break
+                    fi
+                done
+            fi
+
+            if [ "$mark_valid" != "true" ]; then
                 if yq -e '.proxies != null' "$mihomo_config" >/dev/null 2>&1; then
                     has_items="true"
-                    current_bad=$(yq -r '
+                    bad_mark_filter='."routing-mark" != 255'
+                    if [ -n "$policy_mark_dec" ]; then
+                        bad_mark_filter="$bad_mark_filter and .\"routing-mark\" != $policy_mark_dec"
+                    fi
+                    current_bad=$(yq -r "
                         .proxies[]? |
-                        select(."routing-mark" != 255) |
+                        select($bad_mark_filter) |
                         .name
-                    ' "$mihomo_config")
+                    " "$mihomo_config")
 
                     if [ -n "$current_bad" ]; then
                         bad_items="${bad_items}${bad_items:+\n}$current_bad"
@@ -458,7 +472,7 @@ ${light_blue}${bad_list}${reset}"
                 error_details="
   Прокси без метки:
 ${light_blue}${bad_list}${reset}"
-                proxy_hint="  Добавьте в config.yaml маркировку трафика глобально либо в каждое исходящее подключение"
+                proxy_hint="  Добавьте в config.yaml mark 255 либо mark политики XKeen глобально или в каждое исходящее подключение"
             fi
         fi
 
