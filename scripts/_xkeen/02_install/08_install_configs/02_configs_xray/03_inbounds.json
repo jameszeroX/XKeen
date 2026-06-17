@@ -35,7 +35,21 @@
       "port": 1191,
       "protocol": "tunnel",
       "settings": {
-        "network": "tcp,udp",
+        "network": "tcp",
+        "followRedirect": true
+      },
+      "sniffing": {
+        "enabled": true,
+        "routeOnly": true,
+        "destOverride": ["http","tls"]
+      },
+      "tag": "dscp-force-proxy"
+    },
+    {
+      "port": 1191,
+      "protocol": "tunnel",
+      "settings": {
+        "network": "udp",
         "followRedirect": true
       },
       "streamSettings": {
@@ -44,7 +58,7 @@
       "sniffing": {
         "enabled": true,
         "routeOnly": true,
-        "destOverride": ["http","tls"]
+        "destOverride": ["quic"]
       },
       "tag": "dscp-force-proxy"
     }

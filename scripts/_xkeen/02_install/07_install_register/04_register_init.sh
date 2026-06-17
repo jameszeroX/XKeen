@@ -820,6 +820,22 @@ get_xray_port_by_tag() {
     echo "$port"
 }
 
+get_xray_port_by_tag_mode() {
+    tag="$1"
+    mode="$2"
+    port=$(
+        get_xray_transparent_inbounds |
+        awk -F '\t' -v tag="$tag" -v mode="$mode" '
+            $4 == tag && $1 == mode && $2 != "" {
+                print $2
+                exit
+            }
+        '
+    )
+
+    echo "$port"
+}
+
 get_xray_mode_by_tag() {
     tag="$1"
     mode=$(
@@ -833,6 +849,43 @@ get_xray_mode_by_tag() {
     )
 
     echo "$mode"
+}
+
+get_xray_network_by_tag_mode() {
+    tag="$1"
+    mode="$2"
+    network=$(
+        get_xray_transparent_inbounds |
+        awk -F '\t' -v tag="$tag" -v mode="$mode" '
+            function add_networks(value, count, i, item) {
+                gsub(/,/, " ", value)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+                if (value == "") {
+                    return
+                }
+
+                count = split(value, items, /[[:space:]]+/)
+                for (i = 1; i <= count; i++) {
+                    item = items[i]
+                    if (item != "" && !seen[item]++) {
+                        order[++order_count] = item
+                    }
+                }
+            }
+
+            $4 == tag && $1 == mode {
+                add_networks($3)
+            }
+
+            END {
+                for (i = 1; i <= order_count; i++) {
+                    printf "%s%s", order[i], (i < order_count ? " " : "")
+                }
+            }
+        '
+    )
+
+    echo "$network"
 }
 
 get_xray_network_by_tag() {
@@ -991,6 +1044,10 @@ resolve_dscp_force_proxy() {
     port_dscp_force_proxy=""
     mode_dscp_force_proxy=""
     network_dscp_force_proxy=""
+    port_dscp_force_proxy_redirect=""
+    network_dscp_force_proxy_redirect=""
+    port_dscp_force_proxy_tproxy=""
+    network_dscp_force_proxy_tproxy=""
 
     [ -n "$dscp_force_proxy" ] || {
         dscp_force_proxy_status="disabled"
@@ -1009,81 +1066,226 @@ resolve_dscp_force_proxy() {
         return 1
     fi
 
+    find_dscp_force_listener() {
+        listener_names="$1"
+
+        dscp_force_found_tag=""
+        dscp_force_found_port=""
+        dscp_force_found_mode=""
+        dscp_force_found_network=""
+        dscp_force_found_proxy=""
+
+        for listener_name in $listener_names; do
+            port_lookup=$(get_mihomo_listener_field_by_name "$listener_name" "port")
+            mode_lookup=$(get_mihomo_listener_field_by_name "$listener_name" "type")
+            proxy_lookup=$(get_mihomo_listener_field_by_name "$listener_name" "proxy")
+            network_lookup=$(normalize_network_list "$(get_mihomo_listener_network_by_name "$listener_name")")
+            if [ -n "$port_lookup" ] || [ -n "$mode_lookup" ] || [ -n "$proxy_lookup" ]; then
+                dscp_force_found_tag="$listener_name"
+                dscp_force_found_port="$port_lookup"
+                dscp_force_found_mode="$mode_lookup"
+                dscp_force_found_network="$network_lookup"
+                dscp_force_found_proxy="$proxy_lookup"
+                return 0
+            fi
+        done
+
+        return 1
+    }
+
+    find_dscp_force_inbound() {
+        mode_lookup="$1"
+        tags_lookup="$2"
+
+        dscp_force_found_tag=""
+        dscp_force_found_port=""
+        dscp_force_found_network=""
+
+        for tag_lookup in $tags_lookup; do
+            port_lookup=$(get_xray_port_by_tag_mode "$tag_lookup" "$mode_lookup")
+            network_lookup=$(normalize_network_list "$(get_xray_network_by_tag_mode "$tag_lookup" "$mode_lookup")")
+            if [ -n "$port_lookup" ] || [ -n "$network_lookup" ]; then
+                dscp_force_found_tag="$tag_lookup"
+                dscp_force_found_port="$port_lookup"
+                dscp_force_found_network="$network_lookup"
+                return 0
+            fi
+        done
+
+        return 1
+    }
+
+    validate_dscp_force_listener() {
+        validate_mode="$1"
+        validate_required_network="$2"
+        validate_names="$3"
+        validate_label="$4"
+
+        if ! find_dscp_force_listener "$validate_names"; then
+            dscp_force_proxy_reason="не найден ${validate_label} listener для DSCP 61 (ожидается name '${dscp_force_proxy_tag}'"
+            case "$validate_mode" in
+                redir) dscp_force_proxy_reason="${dscp_force_proxy_reason} или '${dscp_force_proxy_tag}-redirect'" ;;
+                tproxy) dscp_force_proxy_reason="${dscp_force_proxy_reason} или '${dscp_force_proxy_tag}-tproxy'" ;;
+            esac
+            dscp_force_proxy_reason="${dscp_force_proxy_reason}, protocol ${validate_required_network})"
+            return 1
+        fi
+
+        if [ "$dscp_force_found_mode" != "$validate_mode" ]; then
+            dscp_force_proxy_reason="listener '${dscp_force_found_tag}' должен иметь type=${validate_mode}"
+            return 2
+        fi
+
+        if ! is_valid_single_port "$dscp_force_found_port"; then
+            dscp_force_proxy_reason="listener '${dscp_force_found_tag}' содержит некорректный порт"
+            return 2
+        fi
+
+        case " $dscp_force_found_network " in
+            *" $validate_required_network "*) ;;
+            *)
+                dscp_force_proxy_reason="listener '${dscp_force_found_tag}' не поддерживает ${validate_required_network}"
+                return 2
+                ;;
+        esac
+
+        if [ -z "$dscp_force_found_proxy" ]; then
+            rule_proxy_lookup=$(get_mihomo_listener_rule_proxy_by_name "$dscp_force_found_tag")
+            if [ -z "$rule_proxy_lookup" ]; then
+                dscp_force_proxy_reason="listener '${dscp_force_found_tag}' должен явно задавать proxy либо иметь правило IN-NAME,${dscp_force_found_tag} в rules"
+                return 2
+            fi
+            dscp_force_found_proxy="$rule_proxy_lookup"
+        fi
+
+        return 0
+    }
+
+    validate_dscp_force_inbound() {
+        validate_mode="$1"
+        validate_required_network="$2"
+        validate_tags="$3"
+        validate_label="$4"
+
+        if ! find_dscp_force_inbound "$validate_mode" "$validate_tags"; then
+            dscp_force_proxy_reason="не найден ${validate_label} inbound для DSCP 61 (ожидается tag '${dscp_force_proxy_tag}'"
+            case "$validate_mode" in
+                redirect) dscp_force_proxy_reason="${dscp_force_proxy_reason} или '${dscp_force_proxy_tag}-redirect'" ;;
+                tproxy) dscp_force_proxy_reason="${dscp_force_proxy_reason} или '${dscp_force_proxy_tag}-tproxy'" ;;
+            esac
+            dscp_force_proxy_reason="${dscp_force_proxy_reason}, protocol ${validate_required_network})"
+            return 1
+        fi
+
+        if ! is_valid_single_port "$dscp_force_found_port"; then
+            dscp_force_proxy_reason="inbound '${dscp_force_found_tag}' содержит некорректный порт"
+            return 2
+        fi
+
+        case " $dscp_force_found_network " in
+            *" $validate_required_network "*) ;;
+            *)
+                dscp_force_proxy_reason="inbound '${dscp_force_found_tag}' не поддерживает ${validate_required_network}"
+                return 2
+                ;;
+        esac
+
+        return 0
+    }
+
+    dscp_force_redirect_names="${dscp_force_proxy_tag}-redirect ${dscp_force_proxy_tag}"
+    dscp_force_tproxy_names="${dscp_force_proxy_tag}-tproxy ${dscp_force_proxy_tag}"
+
     case "$name_client" in
         xray)
-            port_candidate=$(get_xray_port_by_tag "$dscp_force_proxy_tag")
-            mode_candidate=$(get_xray_mode_by_tag "$dscp_force_proxy_tag")
-            network_candidate=$(normalize_network_list "$(get_xray_network_by_tag "$dscp_force_proxy_tag")")
-            proxy_candidate=""
+            if [ "$mode_proxy" = "Hybrid" ]; then
+                validate_dscp_force_inbound "redirect" "tcp" "$dscp_force_redirect_names" "redirect"
+                redirect_status=$?
+                [ "$redirect_status" -ne 0 ] && return "$redirect_status"
+
+                port_dscp_force_proxy_redirect="$dscp_force_found_port"
+                network_dscp_force_proxy_redirect="tcp"
+
+                validate_dscp_force_inbound "tproxy" "udp" "$dscp_force_tproxy_names" "tproxy"
+                tproxy_status=$?
+                [ "$tproxy_status" -ne 0 ] && return "$tproxy_status"
+
+                port_dscp_force_proxy_tproxy="$dscp_force_found_port"
+                network_dscp_force_proxy_tproxy="udp"
+
+                port_dscp_force_proxy="$port_dscp_force_proxy_tproxy"
+                mode_dscp_force_proxy="hybrid"
+                network_dscp_force_proxy=$(normalize_network_list "$network_dscp_force_proxy_redirect $network_dscp_force_proxy_tproxy")
+                dscp_force_proxy_status="active"
+                dscp_force_proxy_reason="Hybrid DSCP 61: tcp -> redirect:${port_dscp_force_proxy_redirect}, udp -> tproxy:${port_dscp_force_proxy_tproxy}"
+                return 0
+            fi
+
+            validate_dscp_force_inbound "tproxy" "tcp" "$dscp_force_tproxy_names" "tproxy"
+            tproxy_tcp_status=$?
+            if [ "$tproxy_tcp_status" -ne 0 ]; then
+                validate_dscp_force_inbound "tproxy" "udp" "$dscp_force_tproxy_names" "tproxy"
+                tproxy_udp_status=$?
+                [ "$tproxy_udp_status" -ne 0 ] && return "$tproxy_udp_status"
+            fi
+
+            port_dscp_force_proxy="$dscp_force_found_port"
+            mode_dscp_force_proxy="tproxy"
+            network_dscp_force_proxy="$dscp_force_found_network"
+            port_dscp_force_proxy_tproxy="$dscp_force_found_port"
+            network_dscp_force_proxy_tproxy="$dscp_force_found_network"
+            dscp_force_proxy_status="active"
+            dscp_force_proxy_reason="inbound '${dscp_force_found_tag}' найден: порт ${port_dscp_force_proxy}, network ${network_dscp_force_proxy}"
+            return 0
             ;;
         mihomo)
-            port_candidate=$(get_mihomo_listener_field_by_name "$dscp_force_proxy_tag" "port")
-            mode_candidate=$(get_mihomo_listener_field_by_name "$dscp_force_proxy_tag" "type")
-            network_candidate=$(normalize_network_list "$(get_mihomo_force_proxy_network)")
-            proxy_candidate=$(get_mihomo_listener_field_by_name "$dscp_force_proxy_tag" "proxy")
+            if [ "$mode_proxy" = "Hybrid" ]; then
+                validate_dscp_force_listener "redir" "tcp" "$dscp_force_redirect_names" "redirect"
+                redirect_status=$?
+                [ "$redirect_status" -ne 0 ] && return "$redirect_status"
+
+                port_dscp_force_proxy_redirect="$dscp_force_found_port"
+                network_dscp_force_proxy_redirect="tcp"
+                proxy_dscp_force_proxy_redirect="$dscp_force_found_proxy"
+
+                validate_dscp_force_listener "tproxy" "udp" "$dscp_force_tproxy_names" "tproxy"
+                tproxy_status=$?
+                [ "$tproxy_status" -ne 0 ] && return "$tproxy_status"
+
+                port_dscp_force_proxy_tproxy="$dscp_force_found_port"
+                network_dscp_force_proxy_tproxy="udp"
+                proxy_dscp_force_proxy_tproxy="$dscp_force_found_proxy"
+
+                port_dscp_force_proxy="$port_dscp_force_proxy_tproxy"
+                mode_dscp_force_proxy="hybrid"
+                network_dscp_force_proxy=$(normalize_network_list "$network_dscp_force_proxy_redirect $network_dscp_force_proxy_tproxy")
+                dscp_force_proxy_status="active"
+                dscp_force_proxy_reason="Hybrid DSCP 61: tcp -> redir:${port_dscp_force_proxy_redirect} (${proxy_dscp_force_proxy_redirect}), udp -> tproxy:${port_dscp_force_proxy_tproxy} (${proxy_dscp_force_proxy_tproxy})"
+                return 0
+            fi
+
+            validate_dscp_force_listener "tproxy" "tcp" "$dscp_force_tproxy_names" "tproxy"
+            tproxy_tcp_status=$?
+            if [ "$tproxy_tcp_status" -ne 0 ]; then
+                validate_dscp_force_listener "tproxy" "udp" "$dscp_force_tproxy_names" "tproxy"
+                tproxy_udp_status=$?
+                [ "$tproxy_udp_status" -ne 0 ] && return "$tproxy_udp_status"
+            fi
+
+            port_dscp_force_proxy="$dscp_force_found_port"
+            mode_dscp_force_proxy="tproxy"
+            network_dscp_force_proxy="$dscp_force_found_network"
+            port_dscp_force_proxy_tproxy="$dscp_force_found_port"
+            network_dscp_force_proxy_tproxy="$dscp_force_found_network"
+            dscp_force_proxy_status="active"
+            dscp_force_proxy_reason="listener '${dscp_force_found_tag}' найден: порт ${port_dscp_force_proxy}, network ${network_dscp_force_proxy}, proxy ${dscp_force_found_proxy}"
+            return 0
             ;;
         *)
             dscp_force_proxy_reason="функция не поддерживается для ${name_client}"
             return 1
             ;;
     esac
-
-    # Полное отсутствие полей означает, что пользователь force-listener не настраивал.
-    if [ -z "$port_candidate" ] && [ -z "$mode_candidate" ]; then
-        if [ "$name_client" = "mihomo" ]; then
-            dscp_force_proxy_reason="не найден listener с name '${dscp_force_proxy_tag}'"
-        else
-            dscp_force_proxy_reason="не найден inbound с tag '${dscp_force_proxy_tag}'"
-        fi
-        return 1
-    fi
-
-    if [ "$mode_candidate" != "tproxy" ]; then
-        if [ "$name_client" = "mihomo" ]; then
-            dscp_force_proxy_reason="listener '${dscp_force_proxy_tag}' должен иметь type=tproxy"
-        else
-            dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' должен использовать sockopt.tproxy=tproxy"
-        fi
-        return 2
-    fi
-
-    if ! is_valid_single_port "$port_candidate"; then
-        if [ "$name_client" = "mihomo" ]; then
-            dscp_force_proxy_reason="listener '${dscp_force_proxy_tag}' содержит некорректный порт"
-        else
-            dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' содержит некорректный порт"
-        fi
-        return 2
-    fi
-
-    if [ -z "$network_candidate" ]; then
-        if [ "$name_client" = "mihomo" ]; then
-            dscp_force_proxy_reason="listener '${dscp_force_proxy_tag}' не поддерживает tcp или udp"
-        else
-            dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' не поддерживает tcp или udp"
-        fi
-        return 2
-    fi
-
-    if [ "$name_client" = "mihomo" ] && [ -z "$proxy_candidate" ]; then
-        rule_proxy_candidate=$(get_mihomo_force_proxy_rule_proxy)
-        if [ -z "$rule_proxy_candidate" ]; then
-            dscp_force_proxy_reason="listener '${dscp_force_proxy_tag}' должен явно задавать proxy либо иметь правило IN-NAME,${dscp_force_proxy_tag} в rules"
-            return 2
-        fi
-        proxy_candidate="$rule_proxy_candidate"
-    fi
-
-    port_dscp_force_proxy="$port_candidate"
-    mode_dscp_force_proxy="$mode_candidate"
-    network_dscp_force_proxy="$network_candidate"
-    dscp_force_proxy_status="active"
-    if [ "$name_client" = "mihomo" ]; then
-        dscp_force_proxy_reason="listener '${dscp_force_proxy_tag}' найден: порт ${port_dscp_force_proxy}, network ${network_dscp_force_proxy}, proxy ${proxy_candidate}"
-    else
-        dscp_force_proxy_reason="inbound '${dscp_force_proxy_tag}' найден: порт ${port_dscp_force_proxy}, network ${network_dscp_force_proxy}"
-    fi
-    return 0
 }
 
 configure_dscp_force_proxy() {
@@ -1348,6 +1550,8 @@ EOL
     inject_var port_redirect "$port_redirect"
     inject_var port_tproxy "$port_tproxy"
     inject_var port_dscp_force_proxy "$port_dscp_force_proxy"
+    inject_var port_dscp_force_proxy_redirect "$port_dscp_force_proxy_redirect"
+    inject_var port_dscp_force_proxy_tproxy "$port_dscp_force_proxy_tproxy"
     inject_var port_donor "$port_donor"
     inject_var port_exclude "$port_exclude"
     inject_var policy_mark "$policy_mark"
@@ -1360,6 +1564,8 @@ EOL
     inject_var dscp_force_proxy_tag "$dscp_force_proxy_tag"
     inject_var mode_dscp_force_proxy "$mode_dscp_force_proxy"
     inject_var network_dscp_force_proxy "$network_dscp_force_proxy"
+    inject_var network_dscp_force_proxy_redirect "$network_dscp_force_proxy_redirect"
+    inject_var network_dscp_force_proxy_tproxy "$network_dscp_force_proxy_tproxy"
     inject_var user_policies "$user_policies"
     inject_var table_redirect "$table_redirect"
     inject_var table_tproxy "$table_tproxy"
@@ -1656,11 +1862,17 @@ if pidof "$name_client" >/dev/null; then
         fi
 
         # DSCP force-proxy обрабатывается отдельной chain'ой xkeen_force в
-        # mangle/PREROUTING. Если не выйти здесь из обычной chain для тех же
-        # протоколов, пакет позже попадёт в штатный REDIRECT/TPROXY path и
-        # потеряет original dst.
-        if [ -n "$port_dscp_force_proxy" ] && [ "$mode_dscp_force_proxy" = "tproxy" ]; then
-            for net in $network_dscp_force_proxy; do
+        # dedicated PREROUTING path'е соответствующей таблицы. Если не выйти
+        # здесь из обычной chain для тех же протоколов, пакет позже попадёт в
+        # штатный REDIRECT/TPROXY path и потеряет original dst.
+        if [ "$table" = "$table_redirect" ] && [ -n "$port_dscp_force_proxy_redirect" ]; then
+            for net in $network_dscp_force_proxy_redirect; do
+                ipt -I "$chain" 1 -p "$net" -m dscp --dscp "$dscp_force_proxy" $comment -j RETURN >/dev/null 2>&1
+            done
+        fi
+
+        if [ "$table" = "$table_tproxy" ] && [ -n "$port_dscp_force_proxy_tproxy" ]; then
+            for net in $network_dscp_force_proxy_tproxy; do
                 ipt -I "$chain" 1 -p "$net" -m dscp --dscp "$dscp_force_proxy" $comment -j RETURN >/dev/null 2>&1
             done
         fi
@@ -1671,23 +1883,34 @@ if pidof "$name_client" >/dev/null; then
         table="$2"
         chain="$3"
 
-        [ -n "$port_dscp_force_proxy" ] || return
-        [ "$table" = "$table_tproxy" ] || return
-        [ "$mode_dscp_force_proxy" = "tproxy" ] || return
         [ "$family" = "iptables" ] && [ "$iptables_supported" = "false" ] && return
         [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" = "false" ] && return
 
+        if [ "$table" = "$table_redirect" ]; then
+            [ -n "$port_dscp_force_proxy_redirect" ] || return
+        elif [ "$table" = "$table_tproxy" ]; then
+            [ -n "$port_dscp_force_proxy_tproxy" ] || return
+        else
+            return
+        fi
+
         add_force_exclude_rules "$chain"
 
-        ipt -I "$chain" 1 -m conntrack --ctstate ESTABLISHED,RELATED $comment -j CONNMARK --restore-mark >/dev/null 2>&1
         ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
         ipt -I "$chain" 1 -m conntrack --ctstate INVALID $comment -j RETURN >/dev/null 2>&1
 
-        for net in $network_dscp_force_proxy; do
-            ipt -A "$chain" -p "$net" -m socket --transparent $comment -j MARK --set-mark "$table_mark" >/dev/null 2>&1
-            ipt -A "$chain" -p "$net" -m mark ! --mark 0 $comment -j CONNMARK --save-mark >/dev/null 2>&1
-            ipt -A "$chain" -p "$net" $comment -j TPROXY --on-ip "$proxy_ip" --on-port "$port_dscp_force_proxy" --tproxy-mark "$table_mark" >/dev/null 2>&1
-        done
+        if [ "$table" = "$table_redirect" ]; then
+            for net in $network_dscp_force_proxy_redirect; do
+                ipt -A "$chain" -p "$net" $comment -j REDIRECT --to-port "$port_dscp_force_proxy_redirect" >/dev/null 2>&1
+            done
+        else
+            ipt -I "$chain" 1 -m conntrack --ctstate ESTABLISHED,RELATED $comment -j CONNMARK --restore-mark >/dev/null 2>&1
+            for net in $network_dscp_force_proxy_tproxy; do
+                ipt -A "$chain" -p "$net" -m socket --transparent $comment -j MARK --set-mark "$table_mark" >/dev/null 2>&1
+                ipt -A "$chain" -p "$net" -m mark ! --mark 0 $comment -j CONNMARK --save-mark >/dev/null 2>&1
+                ipt -A "$chain" -p "$net" $comment -j TPROXY --on-ip "$proxy_ip" --on-port "$port_dscp_force_proxy_tproxy" --tproxy-mark "$table_mark" >/dev/null 2>&1
+            done
+        fi
     }
 
     # Настройка таблицы маршрутов
@@ -1778,8 +2001,15 @@ if pidof "$name_client" >/dev/null; then
         # (LAN/Wi-Fi/guest-bridge); за L3-VLAN правило безвредно неактивно.
         ipt -I PREROUTING 1 -m set --match-set "$name_ipset_deny_mac" src $comment -j RETURN >/dev/null 2>&1
 
-        if [ "$table" = "$table_tproxy" ] && [ -n "$port_dscp_force_proxy" ]; then
-            for force_net in $network_dscp_force_proxy; do
+        if [ "$table" = "$table_redirect" ] && [ -n "$port_dscp_force_proxy_redirect" ]; then
+            for force_net in $network_dscp_force_proxy_redirect; do
+                set -- -m conntrack ! --ctstate INVALID -p "$force_net" -m dscp --dscp "$dscp_force_proxy" $comment -j "${name_chain}_force"
+                ipt -A PREROUTING "$@" >/dev/null 2>&1
+            done
+        fi
+
+        if [ "$table" = "$table_tproxy" ] && [ -n "$port_dscp_force_proxy_tproxy" ]; then
+            for force_net in $network_dscp_force_proxy_tproxy; do
                 set -- -m conntrack ! --ctstate INVALID -p "$force_net" -m dscp --dscp "$dscp_force_proxy" $comment -j "${name_chain}_force"
                 ipt -A PREROUTING "$@" >/dev/null 2>&1
             done
@@ -2630,4 +2860,3 @@ case "$1" in
 esac
 
 exit 0
-
