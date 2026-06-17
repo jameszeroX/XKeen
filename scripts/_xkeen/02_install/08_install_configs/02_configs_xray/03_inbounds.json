@@ -43,7 +43,7 @@
         "routeOnly": true,
         "destOverride": ["http","tls"]
       },
-      "tag": "dscp-force-proxy"
+      "tag": "dscp-force-proxy-redirect"
     },
     {
       "port": 1191,
@@ -60,7 +60,7 @@
         "routeOnly": true,
         "destOverride": ["quic"]
       },
-      "tag": "dscp-force-proxy"
+      "tag": "dscp-force-proxy-tproxy"
     }
   ]
 }

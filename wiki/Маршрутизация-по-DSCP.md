@@ -77,7 +77,7 @@ Windows Registry Editor Version 5.00
       "routeOnly": true,
       "destOverride": ["http","tls"]
     },
-    "tag": "dscp-force-proxy"
+    "tag": "dscp-force-proxy-redirect"
   },
   {
     "port": 1191,
@@ -94,20 +94,20 @@ Windows Registry Editor Version 5.00
       "routeOnly": true,
       "destOverride": ["quic"]
     },
-    "tag": "dscp-force-proxy"
+    "tag": "dscp-force-proxy-tproxy"
   }
 ]
 ```
 
-`1191` приведён только как пример. XKeen не использует хардкод порта и определяет его автоматически по inbound с тегом `dscp-force-proxy`.
+`1191` приведён только как пример. XKeen не использует хардкод порта и определяет его автоматически по inbound'ам `dscp-force-proxy-redirect` и `dscp-force-proxy-tproxy`.
 
-Также поддерживаются раздельные теги `dscp-force-proxy-redirect` и `dscp-force-proxy-tproxy`, если удобнее явно разделить inbound'ы.
+Также поддерживается компактный вариант с общим тегом `dscp-force-proxy`, но раздельные теги проще для чтения и диагностики.
 
 ### Пример routing rule Xray
 
 ```json
 {
-  "inboundTag": ["dscp-force-proxy"],
+  "inboundTag": ["dscp-force-proxy-redirect", "dscp-force-proxy-tproxy"],
   "outboundTag": "vless-reality"
 }
 ```
