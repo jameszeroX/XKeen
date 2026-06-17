@@ -5,3 +5,17 @@
 - Исправлена установка/обновление геофайлов и GeoIPSET [известные проблемы](https://github.com/jameszeroX/XKeen/wiki/Knownissues)
 - Скрыт выбор установки Mihomo Prerelease-Alpha [известные проблемы](https://github.com/jameszeroX/XKeen/wiki/Knownissues)
 - Прочие незначительные фиксы
+
+### Порядок установки/обновления
+
+```bash
+opkg update && opkg upgrade && opkg install curl tar && cd /tmp
+sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)"
+```
+
+### Порядок обновления с XKeen 2.0
+
+```bash
+xkeen -channel # переключитесь на канал разработки
+xkeen -uk  # проверьте и установите обновление
+```
