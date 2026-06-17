@@ -1,6 +1,9 @@
 # Определение времени для задач cron
 choice_cron_time() {
-    [ "$choice_geofile_cron_select" = true ] || return
+    if [ "$choice_geofile_cron_select" != true ]; then
+        echo
+        return
+    fi
 
     echo
     echo -e "  Время автоматического обновления ${yellow}геофайлов${reset}:"
@@ -24,7 +27,7 @@ choice_cron_time() {
     done
 
     [ "$day_choice" -eq 0 ] && {
-        echo -e "  Включение автоматического обновления ${yellow}геофайлов${reset} отменено."
+        echo -e "  Включение автоматического обновления ${yellow}геофайлов${reset} отменено"
         return
     }
 

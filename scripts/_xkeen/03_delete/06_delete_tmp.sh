@@ -20,7 +20,6 @@ delete_tmp() {
         fi
     fi
 
-    echo
     echo -e "  Очистка временных файлов ${green}выполнена${reset}"
 }
 

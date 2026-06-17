@@ -321,6 +321,7 @@ while [ $# -gt 0 ]; do
             fi
 
             # Удаляем временные файлы
+            echo
             delete_tmp
             sleep 2
 
@@ -480,6 +481,7 @@ while [ $# -gt 0 ]; do
             fi
 
             # Удаляем временные файлы
+            echo
             delete_tmp
             sleep 2
 
@@ -583,6 +585,8 @@ while [ $# -gt 0 ]; do
             create_xkeen_cfg
             choice_cancel_cron_select=true
             update_cron_geofile_task
+            smart_clear
+            echo
 
             echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
             delete_register_xkeen
@@ -603,6 +607,7 @@ while [ $# -gt 0 ]; do
             fi
 
             fixed_register_packages
+            echo
             delete_tmp
 
             echo -e "  Обновление XKeen ${green}выполнено${reset}"
@@ -624,6 +629,7 @@ while [ $# -gt 0 ]; do
 
             if [ -z "$bypass_xray" ]; then
                 if ! install_xray; then
+                    echo
                     delete_tmp
                     echo -e "  ${red}Ошибка${reset}: Установка Xray не выполнена"
                     exit 1
@@ -679,6 +685,7 @@ while [ $# -gt 0 ]; do
             fi
 
             fixed_register_packages
+            echo
             delete_tmp
         ;;
 
@@ -696,12 +703,14 @@ while [ $# -gt 0 ]; do
 
             [ "$mihomo_installed" = "installed" ] && echo && echo -e "  В роутере установлен Mihomo версии ${yellow}$mihomo_current_version${reset}"
             if ! download_mihomo; then
+                echo
                 delete_tmp
                 exit 1
             fi
 
             if [ -z "$bypass_mihomo" ]; then
                 if ! install_mihomo; then
+                    echo
                     delete_tmp
                     echo -e "  ${red}Ошибка${reset}: Установка Mihomo не выполнена. См. сообщения выше"
                     exit 1
@@ -709,6 +718,7 @@ while [ $# -gt 0 ]; do
                 info_mihomo
 
                 if [ "$mihomo_installed" != "installed" ]; then
+                    echo
                     delete_tmp
                     echo -e "  ${red}Ошибка${reset}: Mihomo не установлен (отсутствует обязательный Yq или бинарник Mihomo)"
                     exit 1
@@ -766,6 +776,7 @@ while [ $# -gt 0 ]; do
             fi
 
             fixed_register_packages
+            echo
             delete_tmp
         ;;
 
@@ -795,6 +806,7 @@ while [ $# -gt 0 ]; do
             echo -e "  Установка ${yellow}Yq${reset} ${green}выполнена${reset}"
 
             fixed_register_packages
+            echo
             delete_tmp
         ;;
 
@@ -802,9 +814,11 @@ while [ $# -gt 0 ]; do
         -ugc)    # Создать или изменить существующюю задачу автообновления баз GeoFile/GeoIPSET
             info_cron
             smart_clear
+            echo
             echo -e "  Создание или изменение задачи автообновления баз ${yellow}GeoFile/GeoIPSET${reset}"
             choice_update_cron
             update_cron_geofile_task
+            smart_clear
             choice_cron_time
             install_cron
             delete_tmp
@@ -841,6 +855,7 @@ while [ $# -gt 0 ]; do
             echo -e "  Удаление задачи автообновления баз ${yellow}GeoFile/GeoIPSET${reset}"
             delete_cron_geofile
             logs_delete_cron_geofile_info_console
+            echo
             delete_tmp
             echo -e "  Удаление задачи автообновления баз GeoFile/GeoIPSET ${green}выполнено${reset}"
         ;;
@@ -902,6 +917,7 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  Удаление ${yellow}XKeen${reset}"
             opkg remove xkeen
+            echo
             delete_tmp
 
             smart_clear
@@ -923,7 +939,6 @@ while [ $# -gt 0 ]; do
 
         -dgi)    # Удалить GeoIP
             smart_clear
-            echo
             choice_for_remove="GeoIP"
             choice_remove
 
@@ -941,7 +956,6 @@ while [ $# -gt 0 ]; do
 
         -dgs)    # Удалить GeoSite
             smart_clear
-            echo
             choice_for_remove="GeoSite"
             choice_remove
 
@@ -1050,6 +1064,7 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  Удаление ${yellow}XKeen${reset}"
             opkg remove xkeen
+            echo
             delete_tmp
 
             smart_clear
@@ -1106,6 +1121,8 @@ while [ $# -gt 0 ]; do
             create_xkeen_cfg
             choice_cancel_cron_select=true
             update_cron_geofile_task
+            smart_clear
+            echo
 
             echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}XKeen${reset}"
             delete_register_xkeen
@@ -1126,6 +1143,7 @@ while [ $# -gt 0 ]; do
             fi
 
             fixed_register_packages
+            echo
             delete_tmp
 
             echo

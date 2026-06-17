@@ -40,7 +40,8 @@ new_features() {
         test_github
         smart_clear
         install_geoipset init
-        if [ "$info_update_geofile_cron" != "installed" ]; then
+
+        if [ "$bypass_cron_geoipset" = "false" ] && [ "$info_update_geofile_cron" != "installed" ]; then
             smart_clear
             choice_update_cron
             update_cron_geofile_task
