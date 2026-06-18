@@ -344,17 +344,48 @@ _network_download() {
 _get_expected_size() {
     url="$1"
     size=""
-    
-    # Пробуем получить Content-Length
-    size=$(curl -sIL "$url" 2>/dev/null | grep -i 'Content-Length' | tail -n 1 | awk '{print $2}' | tr -d '\r ')
-    
-    # Проверяем, что получено число
-    if [ -n "$size" ] && [ "$size" -eq "$size" ] 2>/dev/null && [ "$size" -gt 0 ]; then
-        echo "$size"
-        return 0
-    else
-        return 1
-    fi
+    temp_file="/tmp/expected_size.$$"
+
+    probe_url=""
+    mirror_prefix=""
+
+    orders=$(_mirror_order)
+    while IFS= read -r prefix; do
+        [ "$prefix" = "$_DIRECT_TOKEN" ] && prefix=""
+        if [ -n "$prefix" ]; then
+            probe_url="${prefix%/}/$url"
+        else
+            probe_url="$url"
+        fi
+
+        # Пробуем получить Content-Length через HEAD
+        size=$(curl_with_timeout -sIL "$probe_url" 2>/dev/null | grep -i 'Content-Length' | tail -n 1 | awk '{print $2}' | tr -d '\r ')
+
+        # Проверяем, что получено число
+        if [ -n "$size" ] && [ "$size" -eq "$size" ] 2>/dev/null && [ "$size" -gt 0 ]; then
+            # Если успешно, кэшируем рабочий mirror
+            _mirror_cache_write "$prefix"
+            echo "$size"
+            return 0
+        fi
+
+        # Если HEAD не работает (405), пробуем range-запрос как в probe_with_mirrors
+        http_code=$(curl_with_timeout -s -L -r 0-0 -w '%{http_code}' -o /dev/null "$probe_url" 2>/dev/null)
+        if [ "$http_code" = "405" ] || [ "$http_code" = "416" ]; then
+            # Пробуем получить Content-Length через обычный GET с выводом заголовков
+            size=$(curl_with_timeout -sIL "$probe_url" 2>/dev/null | grep -i 'Content-Length' | tail -n 1 | awk '{print $2}' | tr -d '\r ')
+            if [ -n "$size" ] && [ "$size" -eq "$size" ] 2>/dev/null && [ "$size" -gt 0 ]; then
+                _mirror_cache_write "$prefix"
+                echo "$size"
+                return 0
+            fi
+        fi
+
+    done <<EOF
+$orders
+EOF
+
+    return 1
 }
 
 # Функция для проверки размера загруженного файла
@@ -362,12 +393,12 @@ _validate_file_with_size() {
     file="$1"
     expected_size="$2"
     min_size="${3:-0}"
-    
+
     # Сначала проверяем через стандартный валидатор
     if ! _validate_default "$file" "$min_size"; then
         return 1
     fi
-    
+
     # Затем проверяем размер, если он ожидается
     if [ -n "$expected_size" ] && [ "$expected_size" -gt 0 ] 2>/dev/null; then
         actual_size=$(wc -c < "$file" 2>/dev/null | tr -d ' ')
@@ -377,6 +408,6 @@ _validate_file_with_size() {
             return 1
         fi
     fi
-    
+
     return 0
 }
