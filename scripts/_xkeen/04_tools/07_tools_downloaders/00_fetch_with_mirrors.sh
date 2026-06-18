@@ -342,47 +342,40 @@ _network_download() {
 
 # Функция для получения ожидаемого размера файла
 _get_expected_size() {
-    url="$1"
-    size=""
-    temp_file="/tmp/expected_size.$$"
+    _ges_url="$1"
+    _ges_orders=$(_mirror_order)
 
-    probe_url=""
-    mirror_prefix=""
-
-    orders=$(_mirror_order)
-    while IFS= read -r prefix; do
-        [ "$prefix" = "$_DIRECT_TOKEN" ] && prefix=""
-        if [ -n "$prefix" ]; then
-            probe_url="${prefix%/}/$url"
+    while IFS= read -r _ges_prefix; do
+        [ "$_ges_prefix" = "$_DIRECT_TOKEN" ] && _ges_prefix=""
+        if [ -n "$_ges_prefix" ]; then
+            _ges_probe="${_ges_prefix%/}/$_ges_url"
         else
-            probe_url="$url"
+            _ges_probe="$_ges_url"
         fi
 
-        # Пробуем получить Content-Length через HEAD
-        size=$(curl_with_timeout -sIL "$probe_url" 2>/dev/null | grep -i 'Content-Length' | tail -n 1 | awk '{print $2}' | tr -d '\r ')
+        # Пробуем получить заголовки через HEAD-запрос
+        _ges_headers=$(curl_with_timeout -sIL "$_ges_probe" 2>/dev/null | tr -d '\r')
+        
+        # Проверяем HTTP-код последнего ответа в цепочке редиректов
+        _ges_http=$(echo "$_ges_headers" | awk '/^HTTP\// {code=$2} END {print code}')
 
-        # Проверяем, что получено число
-        if [ -n "$size" ] && [ "$size" -eq "$size" ] 2>/dev/null && [ "$size" -gt 0 ]; then
-            # Если успешно, кэшируем рабочий mirror
-            _mirror_cache_write "$prefix"
-            echo "$size"
+        # Если сервер запрещает HEAD (405 Method Not Allowed), делаем GET-запрос диапазона (0-0 байт)
+        if [ "$_ges_http" = "405" ]; then
+            _ges_headers=$(curl_with_timeout -sL -r 0-0 -D - "$_ges_probe" -o /dev/null 2>/dev/null | tr -d '\r')
+        fi
+
+        # Вытаскиваем Content-Length (берем последний)
+        _ges_size=$(echo "$_ges_headers" | grep -i '^Content-Length:' | tail -n 1 | awk '{print $2}')
+
+        # Проверяем, что получено валидное число больше нуля
+        if [ -n "$_ges_size" ] && [ "$_ges_size" -eq "$_ges_size" ] 2>/dev/null && [ "$_ges_size" -gt 0 ]; then
+            _mirror_cache_write "$_ges_prefix"
+            echo "$_ges_size"
             return 0
         fi
 
-        # Если HEAD не работает (405), пробуем range-запрос как в probe_with_mirrors
-        http_code=$(curl_with_timeout -s -L -r 0-0 -w '%{http_code}' -o /dev/null "$probe_url" 2>/dev/null)
-        if [ "$http_code" = "405" ] || [ "$http_code" = "416" ]; then
-            # Пробуем получить Content-Length через обычный GET с выводом заголовков
-            size=$(curl_with_timeout -sIL "$probe_url" 2>/dev/null | grep -i 'Content-Length' | tail -n 1 | awk '{print $2}' | tr -d '\r ')
-            if [ -n "$size" ] && [ "$size" -eq "$size" ] 2>/dev/null && [ "$size" -gt 0 ]; then
-                _mirror_cache_write "$prefix"
-                echo "$size"
-                return 0
-            fi
-        fi
-
     done <<EOF
-$orders
+$_ges_orders
 EOF
 
     return 1
