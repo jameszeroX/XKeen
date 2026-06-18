@@ -20,10 +20,10 @@ _validate_geoipset_v6() {
 
 # Функция для установки и обновления GeoIPSET
 install_geoipset_lst() {
-    url="$1"
-    dest_file="$2"
-    display_name="$3"
-    ip_type="$4"
+    local url="$1"
+    local dest_file="$2"
+    local display_name="$3"
+    local ip_type="$4"
 
     # Если переменная retries_download не задана, используем одну попытку
     local max_attempts=1
@@ -39,8 +39,20 @@ install_geoipset_lst() {
         _validator_name="_validate_geoipset_v6"
     fi
 
+    # Получаем ожидаемый размер файла
+    local expected_size=""
+    printf "  Запрос информации о %s...\n" "$display_name"
+    expected_size=$(_get_expected_size "$url")
+    if [ $? -eq 0 ]; then
+        printf "  Ожидаемый размер: ${yellow}%s байт${reset}\n" "$expected_size"
+    else
+        printf "  ${yellow}Предупреждение${reset}: Не удалось определить ожидаемый размер файла\n"
+        expected_size=""
+    fi
+
     local attempt=1
     local success=1
+    local tmp_file="${dest_file}.tmp.$$"
 
     while [ "$attempt" -le "$max_attempts" ]; do
         # Выводим инфо о попытках только если их больше одной
@@ -50,9 +62,28 @@ install_geoipset_lst() {
             printf "  Загрузка %s...\n" "$display_name"
         fi
 
-        if fetch_with_mirrors "$url" "$dest_file" 0 "$_validator_name"; then
-            success=0
-            break
+        if fetch_with_mirrors "$url" "$tmp_file" 0 "$_validator_name"; then
+            # Проверяем размер загруженного файла
+            printf "  Проверка размера %s...\n" "$display_name"
+            if _validate_file_with_size "$tmp_file" "$expected_size" 0; then
+                # Успешно - перемещаем файл на место
+                printf "  ${green}✔ OK${reset} - Размер файла совпал с ожидаемым\n"
+                mv -f "$tmp_file" "$dest_file"
+                success=0
+                break
+            else
+                # Проверка не прошла
+                case "$_last_error" in
+                    size_mismatch)
+                        printf "  ${red}Ошибка${reset}: Размер загруженного файла (%s байт) не соответствует ожидаемому (%s байт)\n" "$_last_size" "$expected_size"
+                        printf "  Файл повреждён или загружен не полностью. Повторная попытка...\n"
+                        ;;
+                    *)
+                        printf "  ${red}Ошибка${reset}: %s\n" "$_last_error"
+                        ;;
+                esac
+                rm -f "$tmp_file"
+            fi
         fi
 
         # Если попытка сорвалась и она НЕ последняя — ждем и повторяем
@@ -76,6 +107,9 @@ install_geoipset_lst() {
             content_v6)
                 printf "  ${red}Ошибка${reset}: %s не содержит корректных IPv6-адресов\n  Оставляем старый файл\n\n" "$display_name"
                 ;;
+            size|size_mismatch)
+                printf "  ${red}Ошибка${reset}: размер файла не соответствует ожидаемому (%s байт)\n  Оставляем старый файл\n\n" "$_last_size"
+                ;;
             *)
                 if [ "$max_attempts" -gt 1 ]; then
                     printf "  ${red}Ошибка${reset}: не удалось загрузить %s после %d попыток\n\n" "$display_name" "$max_attempts"
@@ -93,10 +127,10 @@ install_geoipset_lst() {
 }
 
 load_geoipset() {
-    set="$1"
-    file="$2"
-    family="$3"
-    tmp="${set}_tmp"
+    local set="$1"
+    local file="$2"
+    local family="$3"
+    local tmp="${set}_tmp"
 
     # Заполняем tmp; основной набор подменяется только после успешного restore
     ipset create "$set" hash:net family "$family" -exist
@@ -110,7 +144,7 @@ load_geoipset() {
 }
 
 install_geoipset() {
-    action="$1"
+    local action="$1"
 
     if [ "$action" = "init" ]; then
         # Без TTY (cron, ssh -T) read получает EOF, default-case крутит while true

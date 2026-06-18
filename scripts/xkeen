@@ -1151,7 +1151,7 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -g)    # Установка баз GeoFile
+        -g)    # Переустановка баз GeoFile
             command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
             test_health_pre
             test_connection
@@ -1173,9 +1173,7 @@ while [ $# -gt 0 ]; do
             install_geoip
             sleep 2
 
-            smart_clear
-            echo
-            echo -e "  Установка баз GeoFile ${green}выполнена${reset}"
+            echo -e "  Переустановка баз GeoFile ${green}выполнена${reset}"
         ;;
 
 

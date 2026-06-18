@@ -21,8 +21,20 @@ process_geo_file() {
 
     local delay=${retry_delay_download:-2}
 
+    # Получаем ожидаемый размер файла
+    local expected_size=""
+    printf "  Запрос информации о %s...\n" "$display_name"
+    expected_size=$(_get_expected_size "$url")
+    if [ $? -eq 0 ]; then
+        printf "  Ожидаемый размер: ${yellow}%s байт${reset}\n" "$expected_size"
+    else
+        printf "  ${yellow}Предупреждение${reset}: Не удалось определить ожидаемый размер файла\n"
+        expected_size=""
+    fi
+
     local attempt=1
     local success=1
+    local tmp_file="${geo_dir}/${filename}.tmp.$$"
 
     while [ "$attempt" -le "$max_attempts" ]; do
         # Выводим инфо о попытках только если их больше одной
@@ -32,9 +44,28 @@ process_geo_file() {
             printf "  Загрузка %s...\n" "$display_name"
         fi
 
-        if fetch_with_mirrors "$url" "$geo_dir/$filename" "$min_size"; then
-            success=0
-            break
+        if fetch_with_mirrors "$url" "$tmp_file" "$min_size"; then
+            # Проверяем размер загруженного файла
+            printf "  Проверка размера %s...\n" "$display_name"
+            if _validate_file_with_size "$tmp_file" "$expected_size" "$min_size"; then
+                # Успешно - перемещаем файл на место
+                printf "  ${green}✔ OK${reset} - Размер файла совпал с ожидаемым\n"
+                mv -f "$tmp_file" "$geo_dir/$filename"
+                success=0
+                break
+            else
+                # Проверка не прошла
+                case "$_last_error" in
+                    size_mismatch)
+                        printf "  ${red}Ошибка${reset}: Размер загруженного файла (%s байт) не соответствует ожидаемому (%s байт)\n" "$_last_size" "$expected_size"
+                        printf "  Файл повреждён или загружен не полностью. Повторная попытка...\n"
+                        ;;
+                    *)
+                        printf "  ${red}Ошибка${reset}: %s\n" "$_last_error"
+                        ;;
+                esac
+                rm -f "$tmp_file"
+            fi
         fi
 
         # Если загрузка сорвалась и это НЕ последняя попытка — ждем и повторяем
@@ -49,8 +80,8 @@ process_geo_file() {
     # Обработка ошибок, если все попытки провалились
     if [ "$success" -ne 0 ]; then
         case "$_last_error" in
-            size)
-                printf "  ${red}Ошибка${reset}: загруженный файл слишком мал (%s bytes) или повреждён\n  Невозможно обновить. Оставляем старый файл\n\n" "$_last_size"
+            size|size_mismatch)
+                printf "  ${red}Ошибка${reset}: размер файла не соответствует ожидаемому (%s байт)\n  Невозможно обновить. Оставляем старый файл\n\n" "$_last_size"
                 ;;
             html_stub)
                 printf "  ${red}Ошибка${reset}: получена HTML-страница вместо dat-файла\n  Невозможно обновить. Оставляем старый файл\n\n"

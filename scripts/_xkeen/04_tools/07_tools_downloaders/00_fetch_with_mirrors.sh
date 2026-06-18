@@ -339,3 +339,44 @@ _network_download() {
         return 1
     fi
 }
+
+# Функция для получения ожидаемого размера файла
+_get_expected_size() {
+    url="$1"
+    size=""
+    
+    # Пробуем получить Content-Length
+    size=$(curl -sIL "$url" 2>/dev/null | grep -i 'Content-Length' | tail -n 1 | awk '{print $2}' | tr -d '\r ')
+    
+    # Проверяем, что получено число
+    if [ -n "$size" ] && [ "$size" -eq "$size" ] 2>/dev/null && [ "$size" -gt 0 ]; then
+        echo "$size"
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Функция для проверки размера загруженного файла
+_validate_file_with_size() {
+    file="$1"
+    expected_size="$2"
+    min_size="${3:-0}"
+    
+    # Сначала проверяем через стандартный валидатор
+    if ! _validate_default "$file" "$min_size"; then
+        return 1
+    fi
+    
+    # Затем проверяем размер, если он ожидается
+    if [ -n "$expected_size" ] && [ "$expected_size" -gt 0 ] 2>/dev/null; then
+        actual_size=$(wc -c < "$file" 2>/dev/null | tr -d ' ')
+        if [ -n "$actual_size" ] && [ "$actual_size" -ne "$expected_size" ]; then
+            _last_error="size_mismatch"
+            _last_size="$actual_size"
+            return 1
+        fi
+    fi
+    
+    return 0
+}

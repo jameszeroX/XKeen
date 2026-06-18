@@ -157,6 +157,7 @@ choice_geodata() {
         [ "$(eval echo \$choice_delete_${type}_v2fly_select)" = "true" ] && delete_list="$delete_list ${yellow}v2fly${reset},"
         [ "$(eval echo \$choice_delete_${type}_${src3}_select)" = "true" ] && delete_list="$delete_list ${yellow}${src3_name}${reset},"
 
+        echo
         if [ -n "$install_list" ]; then
             echo -e "  Устанавливаются следующие ${type_name}: ${install_list%,}"
         fi
@@ -168,6 +169,7 @@ choice_geodata() {
         if [ -n "$delete_list" ]; then
             echo -e "  Удаляются следующие ${type_name}: ${delete_list%,}"
         fi
+        echo
 
         break
     done
