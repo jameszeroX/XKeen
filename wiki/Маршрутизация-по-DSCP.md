@@ -64,7 +64,6 @@ Windows Registry Editor Version 5.00
 ### Пример inbound Xray для Hybrid
 
 ```json
-[
   {
     "port": 1191,
     "protocol": "tunnel",
@@ -96,10 +95,9 @@ Windows Registry Editor Version 5.00
     },
     "tag": "dscp-force-proxy-tproxy"
   }
-]
 ```
 
-`1191` приведён только как пример. XKeen не использует хардкод порта и определяет его автоматически по inbound'ам `dscp-force-proxy-redirect` и `dscp-force-proxy-tproxy`.
+Порт `1191` приведён только как пример. XKeen не использует хардкод порта и определяет его автоматически по inbound'ам `dscp-force-proxy-redirect` и `dscp-force-proxy-tproxy`.
 
 Также поддерживается компактный вариант с общим тегом `dscp-force-proxy`, но раздельные теги проще для чтения и диагностики.
 
