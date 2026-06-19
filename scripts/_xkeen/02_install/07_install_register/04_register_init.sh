@@ -369,7 +369,7 @@ ${light_blue}${bad_list}${reset}
     return 0
 }
 
-# Функция проверки наличия метки 255
+# Функция проверки наличия метки для проксирования Entware
 validate_routing_mark() {
     [ "$proxy_router" != "on" ] && return 0
 
@@ -379,10 +379,20 @@ validate_routing_mark() {
     has_items="false"
     all_marks_ok="true"
     allowed_marks="255"
-    policy_mark_dec=""
-    if [ -n "$policy_mark" ]; then
-        policy_mark_dec=$(hex_mark_to_decimal "$policy_mark" 2>/dev/null)
+    policy_hex_marks="$policy_mark"
+
+    if [ -n "$user_policies" ]; then
+        user_policy_hex_marks=$(printf '%s\n' "$user_policies" | awk -F'|' '$2 != "" {print "0x"$2}')
+        policy_hex_marks="$policy_hex_marks $user_policy_hex_marks"
+    fi
+
+    for policy_hex_mark in $policy_hex_marks; do
+        policy_mark_dec=$(hex_mark_to_decimal "$policy_hex_mark" 2>/dev/null)
         [ -n "$policy_mark_dec" ] && allowed_marks="$allowed_marks $policy_mark_dec"
+    done
+
+    if [ -n "$allowed_marks" ]; then
+        allowed_marks=$(printf '%s\n' $allowed_marks | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/ $//')
     fi
 
     if [ "$name_client" = "xray" ]; then
@@ -432,10 +442,10 @@ validate_routing_mark() {
             if [ "$mark_valid" != "true" ]; then
                 if yq -e '.proxies != null' "$mihomo_config" >/dev/null 2>&1; then
                     has_items="true"
-                    bad_mark_filter='."routing-mark" != 255'
-                    if [ -n "$policy_mark_dec" ]; then
-                        bad_mark_filter="$bad_mark_filter and .\"routing-mark\" != $policy_mark_dec"
-                    fi
+                    bad_mark_filter="true"
+                    for allowed_mark in $allowed_marks; do
+                        bad_mark_filter="$bad_mark_filter and .\"routing-mark\" != $allowed_mark"
+                    done
                     current_bad=$(yq -r "
                         .proxies[]? |
                         select($bad_mark_filter) |
@@ -467,12 +477,12 @@ validate_routing_mark() {
                 error_details="
   Подключения без метки:
 ${light_blue}${bad_list}${reset}"
-                proxy_hint="  Добавьте mark: 255 либо mark политики XKeen во ВСЕ исходящие подключения (кроме blackhole и dns)"
+                proxy_hint="  Добавьте mark: 255 либо mark политики XKeen/пользовательской политики во ВСЕ исходящие подключения (кроме blackhole и dns)"
             else
                 error_details="
   Прокси без метки:
 ${light_blue}${bad_list}${reset}"
-                proxy_hint="  Добавьте в config.yaml mark 255 либо mark политики XKeen глобально или в каждое исходящее подключение"
+                proxy_hint="  Добавьте в config.yaml mark 255 либо mark политики XKeen/пользовательской политики глобально или в каждое исходящее подключение"
             fi
         fi
 
@@ -2173,7 +2183,16 @@ USER_POLICIES_EOF
 
         ipt -A "$out_chain" -o lo $comment -j RETURN >/dev/null 2>&1
         ipt -A "$out_chain" -m mark --mark 255 $comment -j RETURN >/dev/null 2>&1
-        [ -n "$policy_mark" ] && ipt -A "$out_chain" -m mark --mark "$policy_mark" $comment -j RETURN >/dev/null 2>&1
+        policy_bypass_marks="$policy_mark"
+
+        if [ -n "$user_policies" ]; then
+            user_policy_marks=$(printf '%s\n' "$user_policies" | awk -F'|' '$2 != "" {print "0x"$2}')
+            policy_bypass_marks="$policy_bypass_marks $user_policy_marks"
+        fi
+
+        for bypass_mark in $policy_bypass_marks; do
+            [ -n "$bypass_mark" ] && ipt -A "$out_chain" -m mark --mark "$bypass_mark" $comment -j RETURN >/dev/null 2>&1
+        done
 
         add_exclude_rules "$out_chain"
 
@@ -2615,6 +2634,11 @@ proxy_start() {
         check_xray_backups
         api_cache_init
         policy_mark=$(get_policy_mark)
+        if [ -n "$policy_mark" ]; then
+            user_policies=$(resolve_user_policies)
+        else
+            user_policies=""
+        fi
         validate_routing_mark
         log_clean
         sync_deny_mac_ipset
@@ -2628,8 +2652,6 @@ proxy_start() {
         if [ "$mode_proxy" != "Other" ]; then
 
             if [ -n "$policy_mark" ]; then
-                user_policies=$(resolve_user_policies)
-
                 if [ -n "$user_policies" ]; then
                     print_policy_info "yes" "yes"
                 else
