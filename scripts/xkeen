@@ -1454,6 +1454,30 @@ while [ $# -gt 0 ]; do
         ;;
 
 
+        -multiwan)    # Управление режимом multi-WAN для исходящих подключений прокси
+            case "$2" in
+                on|off)
+                    smart_clear
+                    change_multiwan_strict "$2"
+                    shift
+                    ;;
+                status)
+                    smart_clear
+                    show_multiwan_strict_status
+                    shift
+                    ;;
+                "")
+                    smart_clear
+                    change_multiwan_strict
+                    ;;
+                *)
+                    echo -e "  ${red}Ошибка${reset}: используйте ${yellow}xkeen -multiwan on${reset}, ${yellow}off${reset} или ${yellow}status${reset}"
+                    exit 1
+                    ;;
+            esac
+        ;;
+
+
         -extmsg)    # Включение/отключение расширенных сообщений запуска XKeen
             action=$(get_state_arg "$2")
             [ -n "$action" ] && shift

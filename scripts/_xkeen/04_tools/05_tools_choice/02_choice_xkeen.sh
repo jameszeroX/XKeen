@@ -252,6 +252,30 @@ change_proxy_router() {
     toggle_param "proxy_router" "проксирования трафика Entware" "restart" "$1"
 }
 
+change_multiwan_strict() {
+    toggle_param "multiwan_strict" "режима multi-WAN для исходящих подключений прокси" "restart" "$1"
+}
+
+show_multiwan_strict_status() {
+    echo
+    if [ ! -f "$initd_file" ]; then
+        echo -e "  ${red}Ошибка${reset}: Не найден файл ${yellow}S05xkeen${reset}"
+        return 1
+    fi
+
+    current_state=$(grep -m 1 -E '^[[:space:]]*multiwan_strict=' "$initd_file" | cut -d'=' -f2 | tr -d '"[:space:]')
+    [ -z "$current_state" ] && current_state="off"
+
+    if [ "$current_state" = "on" ]; then
+        echo -e "  Режим multi-WAN ${green}включён${reset}"
+        echo -e "  Исходящие подключения ${yellow}Xray/Mihomo${reset} должны корректно использовать mark выбранной политики/WAN"
+    else
+        echo -e "  Режим multi-WAN ${red}выключен${reset}"
+        echo -e "  Исходящие подключения ${yellow}Xray/Mihomo${reset} работают как обычно через ${green}default${reset}"
+    fi
+    echo -e "  Управление: ${yellow}xkeen -multiwan on${reset} | ${yellow}xkeen -multiwan off${reset} | ${yellow}xkeen -multiwan status${reset}"
+}
+
 change_extended_msg() {
     toggle_param "extended_msg" "расширенных сообщений при запуcке XKeen" "none" "$1"
 }
