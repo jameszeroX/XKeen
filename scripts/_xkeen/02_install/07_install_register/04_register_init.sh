@@ -369,15 +369,22 @@ ${light_blue}${bad_list}${reset}
     return 0
 }
 
-# Функция проверки наличия метки 255
+# Функция проверки метки исходящих соединений ядра (255 либо метка политики XKeen)
 validate_routing_mark() {
     [ "$proxy_router" != "on" ] && return 0
+
+    # Метка политики XKeen (multi-WAN): принимаем mark == 255 ЛИБО == policy_mark.
+    # get_policy_mark отдаёт валидный "0xNN" либо "" — переводим в decimal.
+    _pm_dec=""
+    _pm_hex=$(get_policy_mark)
+    [ -n "$_pm_hex" ] && _pm_dec=$(( _pm_hex ))
 
     mark_valid="false"
     mark_msg=""
     bad_items=""
     has_items="false"
     all_marks_ok="true"
+    proxy_hint=""
 
     if [ "$name_client" = "xray" ]; then
         mark_msg="mark"
@@ -388,10 +395,10 @@ validate_routing_mark() {
             if strip_json_comments "$file" | jq -e '.outbounds != null' >/dev/null 2>&1; then
                 has_items="true"
 
-                current_bad=$(strip_json_comments "$file" | jq -r '
+                current_bad=$(strip_json_comments "$file" | jq -r --argjson m255 255 --argjson mp "${_pm_dec:-255}" '
                     .outbounds[]? |
                     select(.protocol != "blackhole" and .protocol != "dns") |
-                    select(.streamSettings.sockopt.mark != 255) |
+                    select(.streamSettings.sockopt.mark != $m255 and .streamSettings.sockopt.mark != $mp) |
                     (.tag // .protocol)
                 ')
 
@@ -407,21 +414,27 @@ validate_routing_mark() {
 
         if [ -f "$mihomo_config" ]; then
 
-            if yq -e '.["routing-mark"] == 255' "$mihomo_config" >/dev/null 2>&1; then
+            if yq -e '.["routing-mark"] == 255' "$mihomo_config" >/dev/null 2>&1 || \
+               { [ -n "$_pm_dec" ] && yq -e ".[\"routing-mark\"] == $_pm_dec" "$mihomo_config" >/dev/null 2>&1; }; then
                 mark_valid="true"
             elif yq -e '
                 .proxy-providers[]? |
                 select(.override."routing-mark" == 255)
-            ' "$mihomo_config" >/dev/null 2>&1; then
+            ' "$mihomo_config" >/dev/null 2>&1 || \
+                 { [ -n "$_pm_dec" ] && yq -e "
+                .proxy-providers[]? |
+                select(.override.\"routing-mark\" == $_pm_dec)
+            " "$mihomo_config" >/dev/null 2>&1; }; then
                 mark_valid="true"
             else
                 if yq -e '.proxies != null' "$mihomo_config" >/dev/null 2>&1; then
                     has_items="true"
-                    current_bad=$(yq -r '
+                    _yq_val="${_pm_dec:-255}"
+                    current_bad=$(yq -r "
                         .proxies[]? |
-                        select(."routing-mark" != 255) |
+                        select(.\"routing-mark\" != 255 and .\"routing-mark\" != $_yq_val) |
                         .name
-                    ' "$mihomo_config")
+                    " "$mihomo_config")
 
                     if [ -n "$current_bad" ]; then
                         bad_items="${bad_items}${bad_items:+\n}$current_bad"
@@ -457,12 +470,22 @@ ${light_blue}${bad_list}${reset}"
             fi
         fi
 
+        if [ -n "$_pm_dec" ] && [ "$_pm_dec" != "255" ]; then
+            mark_allowed="${green}$mark_msg: 255${reset} либо ${green}$mark_msg: $_pm_dec${reset}"
+            mark_extra="  255 — выход через основное подключение
+  $_pm_dec — метка политики XKeen, выход через выбранного в ней провайдера
+"
+        else
+            mark_allowed="${green}$mark_msg: 255${reset}"
+            mark_extra=""
+        fi
+
         log_warning_terminal "
   Для проксирования трафика Entware требуется его маркировка
-  В конфигурации ${yellow}$name_client${reset} параметр ${green}$mark_msg: 255${reset} прописан не везде$error_details
+  В конфигурации ${yellow}$name_client${reset} параметр ${mark_allowed} прописан не везде$error_details
 
 $proxy_hint
-
+$mark_extra
   Проксирование трафика Entware ${red}отключено${reset}
 "
         proxy_router="off"
@@ -1408,17 +1431,19 @@ get_exclude_ip6() {
     echo "${ipv6_eth} ${ipv6_exclude}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
 }
 
-# Получение метки политики
+# Получение метки политики: первая совпавшая, валидный ненулевой hex -> "0xNN", иначе ""
+# Lowercase: ip rule show печатает метку в нижнем регистре, awk в configure_route регистрозависим.
 get_policy_mark() {
+    _gpm=""
     if [ -n "$api_policy_json" ]; then
-        policy_mark=$(echo "$api_policy_json" | jq -r --arg pname "$name_policy" '.[] | select(.description | ascii_downcase == ($pname | ascii_downcase)) | .mark' 2>/dev/null)
+        _gpm=$(echo "$api_policy_json" | jq -r --arg pname "$name_policy" '.[] | select(.description | ascii_downcase == ($pname | ascii_downcase)) | .mark' 2>/dev/null | head -n 1 | tr 'A-F' 'a-f')
     fi
 
-    if [ -n "$policy_mark" ]; then
-        echo "0x${policy_mark}"
-    else
-        echo ""
-    fi
+    case "$_gpm" in
+        ''|null|*[!0-9a-f]*) echo "" ;;   # пусто / null / не-hex
+        *[!0]*) echo "0x${_gpm}" ;;        # есть ненулевой разряд -> валидная метка
+        *) echo "" ;;                      # все нули: метка 0 == «без метки»
+    esac
 }
 
 # Атомарная синхронизация ipset xkeen_deny_mac с текущим состоянием hotspot API.
@@ -2127,6 +2152,8 @@ USER_POLICIES_EOF
 
         ipt -A "$out_chain" -o lo $comment -j RETURN >/dev/null 2>&1
         ipt -A "$out_chain" -m mark --mark 255 $comment -j RETURN >/dev/null 2>&1
+        # Multi-WAN: egress ядра с меткой политики XKeen тоже минует проксирование
+        [ -n "$policy_mark" ] && ipt -A "$out_chain" -m mark --mark "$policy_mark" $comment -j RETURN >/dev/null 2>&1
 
         add_exclude_rules "$out_chain"
 
@@ -2566,9 +2593,9 @@ proxy_start() {
         validate_xkeen_json
         check_policy_name_conflict
         check_xray_backups
+        api_cache_init
         validate_routing_mark
         log_clean
-        api_cache_init
         sync_deny_mac_ipset
         process_user_ports
         process_custom_mark

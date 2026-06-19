@@ -116,6 +116,24 @@ diagnostic() {
     curl_api "localhost:79/rci/ip/http/ssl" | jq -r '.port' | log_block "Проверка использования SSL порта"
     curl_api "localhost:79/rci/show/ip/policy" | jq -r '.[] | select(.description | ascii_downcase == "xkeen")' | log_block "Данные о политике доступа"
 
+    {
+        _diag_pm=$(curl_api "localhost:79/rci/show/ip/policy" | jq -r '.[] | select(.description | ascii_downcase == "xkeen") | .mark' 2>/dev/null | head -n 1)
+        case "$_diag_pm" in
+            ''|null|*[!0-9A-Fa-f]*)
+                echo "Политика XKeen не найдена в веб-интерфейсе роутера"
+                ;;
+            *[!0]*)
+                printf "Метка политики XKeen: 0x%s (десятичное: %d)\n\n" "$_diag_pm" "$(( 0x$_diag_pm ))"
+                echo "Multi-WAN: чтобы egress прокси-ядра шёл через выбранного в политике"
+                echo "провайдера, впишите десятичное значение метки в sockopt.mark (Xray)"
+                echo "или routing-mark (Mihomo) вместо 255 во всех исходящих подключениях."
+                ;;
+            *)
+                echo "Политика XKeen найдена, но метка не назначена"
+                ;;
+        esac
+    } | log_block "Метка политики XKeen для проксирования через провайдера"
+
     ip rule show | log_block "Результат команды ip rule show"
     ip route show table main | log_block "Результат команды ip route show table main"
 
