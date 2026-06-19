@@ -356,22 +356,30 @@ _get_expected_size() {
         # Пробуем получить заголовки через HEAD-запрос
         _ges_headers=$(curl_with_timeout -sIL "$_ges_probe" 2>/dev/null | tr -d '\r')
         
-        # Проверяем HTTP-код последнего ответа в цепочке редиректов
-        _ges_http=$(echo "$_ges_headers" | awk '/^HTTP\// {code=$2} END {print code}')
+        # Получаем HTTP-код последнего ответа (после редиректов)
+        _ges_http=$(echo "$_ges_headers" | grep -i '^HTTP/' | tail -n 1 | awk '{print $2}')
 
-        # Если сервер запрещает HEAD (405 Method Not Allowed), делаем GET-запрос диапазона (0-0 байт)
+        # Если сервер запрещает HEAD (405), делаем GET с range 0-0
         if [ "$_ges_http" = "405" ]; then
             _ges_headers=$(curl_with_timeout -sL -r 0-0 -D - "$_ges_probe" -o /dev/null 2>/dev/null | tr -d '\r')
+            _ges_http=$(echo "$_ges_headers" | grep -i '^HTTP/' | tail -n 1 | awk '{print $2}')
+            # Проверяем, что range-запрос успешен (206 Partial Content или 200 OK)
+            if [ -z "$_ges_http" ] || { [ "$_ges_http" != "206" ] && [ "$_ges_http" != "200" ]; }; then
+                continue  # range-запрос не удался, пробуем следующий mirror
+            fi
         fi
 
-        # Вытаскиваем Content-Length (берем последний)
-        _ges_size=$(echo "$_ges_headers" | grep -i '^Content-Length:' | tail -n 1 | awk '{print $2}')
+        # Проверяем, что ответ успешный (2xx)
+        if [ -n "$_ges_http" ] && [ "$_ges_http" -ge 200 ] 2>/dev/null && [ "$_ges_http" -lt 300 ] 2>/dev/null; then
+            # Вытаскиваем Content-Length
+            _ges_size=$(echo "$_ges_headers" | grep -i '^Content-Length:' | tail -n 1 | awk '{print $2}')
 
-        # Проверяем, что получено валидное число больше нуля
-        if [ -n "$_ges_size" ] && [ "$_ges_size" -eq "$_ges_size" ] 2>/dev/null && [ "$_ges_size" -gt 0 ]; then
-            _mirror_cache_write "$_ges_prefix"
-            echo "$_ges_size"
-            return 0
+            # Проверяем, что получено валидное число больше нуля
+            if [ -n "$_ges_size" ] && [ "$_ges_size" -eq "$_ges_size" ] 2>/dev/null && [ "$_ges_size" -gt 0 ]; then
+                _mirror_cache_write "$_ges_prefix"
+                echo "$_ges_size"
+                return 0
+            fi
         fi
 
     done <<EOF
