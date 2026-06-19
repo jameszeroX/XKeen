@@ -15,6 +15,9 @@ src/output
 # Локальные release-notes (не для коммита в PR)
 docs/release-notes/
 
+# Локальные планы/заметки (не для коммита в PR)
+tasks/
+
 # MkDocs build artifacts
 /site/
 /site_src/

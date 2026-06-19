@@ -373,18 +373,31 @@ ${light_blue}${bad_list}${reset}
 validate_routing_mark() {
     [ "$proxy_router" != "on" ] && return 0
 
-    # Метка политики XKeen (multi-WAN): принимаем mark == 255 ЛИБО == policy_mark.
-    # get_policy_mark отдаёт валидный "0xNN" либо "" — переводим в decimal.
-    _pm_dec=""
-    _pm_hex=$(get_policy_mark)
-    [ -n "$_pm_hex" ] && _pm_dec=$(( _pm_hex ))
-
     mark_valid="false"
     mark_msg=""
     bad_items=""
     has_items="false"
     all_marks_ok="true"
     proxy_hint=""
+
+    # Допустимые метки egress ядра (multi-WAN): 255 + метка политики XKeen +
+    # метки пользовательских политик из xkeen.json. policy_mark и user_policies
+    # резолвятся в proxy_start до вызова. hex_mark_to_decimal отсеивает
+    # нулевые/не-hex значения и не переполняется на mips32 (awk).
+    allowed_marks="255"
+    policy_hex_marks="$policy_mark"
+
+    if [ -n "$user_policies" ]; then
+        user_policy_hex_marks=$(printf '%s\n' "$user_policies" | awk -F'|' '$2 != "" {print "0x"$2}')
+        policy_hex_marks="$policy_hex_marks $user_policy_hex_marks"
+    fi
+
+    for policy_hex_mark in $policy_hex_marks; do
+        policy_mark_dec=$(hex_mark_to_decimal "$policy_hex_mark" 2>/dev/null)
+        [ -n "$policy_mark_dec" ] && allowed_marks="$allowed_marks $policy_mark_dec"
+    done
+
+    allowed_marks=$(printf '%s\n' $allowed_marks | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/ $//')
 
     if [ "$name_client" = "xray" ]; then
         mark_msg="mark"
@@ -395,10 +408,11 @@ validate_routing_mark() {
             if strip_json_comments "$file" | jq -e '.outbounds != null' >/dev/null 2>&1; then
                 has_items="true"
 
-                current_bad=$(strip_json_comments "$file" | jq -r --argjson m255 255 --argjson mp "${_pm_dec:-255}" '
+                current_bad=$(strip_json_comments "$file" | jq -r --arg allowed "$allowed_marks" '
                     .outbounds[]? |
                     select(.protocol != "blackhole" and .protocol != "dns") |
-                    select(.streamSettings.sockopt.mark != $m255 and .streamSettings.sockopt.mark != $mp) |
+                    (.streamSettings.sockopt.mark // "" | tostring) as $m |
+                    select(($allowed | split(" ") | index($m)) | not) |
                     (.tag // .protocol)
                 ')
 
@@ -414,25 +428,32 @@ validate_routing_mark() {
 
         if [ -f "$mihomo_config" ]; then
 
-            if yq -e '.["routing-mark"] == 255' "$mihomo_config" >/dev/null 2>&1 || \
-               { [ -n "$_pm_dec" ] && yq -e ".[\"routing-mark\"] == $_pm_dec" "$mihomo_config" >/dev/null 2>&1; }; then
-                mark_valid="true"
-            elif yq -e '
-                .proxy-providers[]? |
-                select(.override."routing-mark" == 255)
-            ' "$mihomo_config" >/dev/null 2>&1 || \
-                 { [ -n "$_pm_dec" ] && yq -e "
-                .proxy-providers[]? |
-                select(.override.\"routing-mark\" == $_pm_dec)
-            " "$mihomo_config" >/dev/null 2>&1; }; then
-                mark_valid="true"
-            else
+            for allowed_mark in $allowed_marks; do
+                if yq -e ".[\"routing-mark\"] == $allowed_mark" "$mihomo_config" >/dev/null 2>&1; then
+                    mark_valid="true"
+                    break
+                fi
+            done
+
+            if [ "$mark_valid" != "true" ]; then
+                for allowed_mark in $allowed_marks; do
+                    if yq -e ".proxy-providers[]? | select(.override.\"routing-mark\" == $allowed_mark)" "$mihomo_config" >/dev/null 2>&1; then
+                        mark_valid="true"
+                        break
+                    fi
+                done
+            fi
+
+            if [ "$mark_valid" != "true" ]; then
                 if yq -e '.proxies != null' "$mihomo_config" >/dev/null 2>&1; then
                     has_items="true"
-                    _yq_val="${_pm_dec:-255}"
+                    bad_mark_filter="true"
+                    for allowed_mark in $allowed_marks; do
+                        bad_mark_filter="$bad_mark_filter and .\"routing-mark\" != $allowed_mark"
+                    done
                     current_bad=$(yq -r "
                         .proxies[]? |
-                        select(.\"routing-mark\" != 255 and .\"routing-mark\" != $_yq_val) |
+                        select($bad_mark_filter) |
                         .name
                     " "$mihomo_config")
 
@@ -461,31 +482,23 @@ validate_routing_mark() {
                 error_details="
   Подключения без метки:
 ${light_blue}${bad_list}${reset}"
-                proxy_hint="  Добавьте маркировку во ВСЕ исходящие подключения (кроме blackhole и dns)"
+                proxy_hint="  Добавьте mark: 255 либо mark политики XKeen/пользовательской политики во ВСЕ исходящие подключения (кроме blackhole и dns)
+  Метку политики покажет команда xkeen -diag"
             else
                 error_details="
   Прокси без метки:
 ${light_blue}${bad_list}${reset}"
-                proxy_hint="  Добавьте в config.yaml маркировку трафика глобально либо в каждое исходящее подключение"
+                proxy_hint="  Добавьте в config.yaml mark 255 либо mark политики XKeen/пользовательской политики глобально или в каждое исходящее подключение
+  Метку политики покажет команда xkeen -diag"
             fi
-        fi
-
-        if [ -n "$_pm_dec" ] && [ "$_pm_dec" != "255" ]; then
-            mark_allowed="${green}$mark_msg: 255${reset} либо ${green}$mark_msg: $_pm_dec${reset}"
-            mark_extra="  255 — выход через основное подключение
-  $_pm_dec — метка политики XKeen, выход через выбранного в ней провайдера
-"
-        else
-            mark_allowed="${green}$mark_msg: 255${reset}"
-            mark_extra=""
         fi
 
         log_warning_terminal "
   Для проксирования трафика Entware требуется его маркировка
-  В конфигурации ${yellow}$name_client${reset} параметр ${mark_allowed} прописан не везде$error_details
+  В конфигурации ${yellow}$name_client${reset} параметр ${green}$mark_msg${reset} прописан не везде$error_details
 
 $proxy_hint
-$mark_extra
+
   Проксирование трафика Entware ${red}отключено${reset}
 "
         proxy_router="off"
@@ -1446,6 +1459,34 @@ get_policy_mark() {
     esac
 }
 
+# hex-метку (с/без 0x) -> decimal через awk (без переполнения на mips32).
+# Возвращает "" (rc 1) для пустого/не-hex/нулевого значения.
+hex_mark_to_decimal() {
+    mark="$1"
+    mark="${mark#0x}"
+    mark="${mark#0X}"
+
+    case "$mark" in
+        ''|*[!0-9a-fA-F]*) return 1 ;;
+    esac
+
+    printf '%s\n' "$mark" | awk '
+        BEGIN { digits = "0123456789abcdef" }
+        {
+            value = 0
+            mark = tolower($0)
+            for (i = 1; i <= length(mark); i++) {
+                digit = substr(mark, i, 1)
+                pos = index(digits, digit)
+                if (pos == 0) { exit 1 }
+                value = value * 16 + pos - 1
+            }
+            if (value == 0) { exit 1 }
+            printf "%.0f\n", value
+        }
+    '
+}
+
 # Атомарная синхронизация ipset xkeen_deny_mac с текущим состоянием hotspot API.
 # Идемпотентна: создаёт основной набор при первом вызове, в дальнейшем
 # наполняет tmp-набор и делает ipset swap. Вызывается на старте XKeen и
@@ -2152,8 +2193,20 @@ USER_POLICIES_EOF
 
         ipt -A "$out_chain" -o lo $comment -j RETURN >/dev/null 2>&1
         ipt -A "$out_chain" -m mark --mark 255 $comment -j RETURN >/dev/null 2>&1
-        # Multi-WAN: egress ядра с меткой политики XKeen тоже минует проксирование
-        [ -n "$policy_mark" ] && ipt -A "$out_chain" -m mark --mark "$policy_mark" $comment -j RETURN >/dev/null 2>&1
+
+        # Multi-WAN: egress ядра с меткой политики XKeen или пользовательской
+        # политики тоже минует проксирование. policy_mark уже нормализован
+        # (lowercase, ненулевой); метки user policy фильтруем (hex, не-ноль).
+        policy_bypass_marks="$policy_mark"
+
+        if [ -n "$user_policies" ]; then
+            user_policy_marks=$(printf '%s\n' "$user_policies" | awk -F'|' '$2 ~ /^[0-9A-Fa-f]+$/ && $2 ~ /[^0]/ {print "0x" tolower($2)}')
+            policy_bypass_marks="$policy_bypass_marks $user_policy_marks"
+        fi
+
+        for bypass_mark in $policy_bypass_marks; do
+            [ -n "$bypass_mark" ] && ipt -A "$out_chain" -m mark --mark "$bypass_mark" $comment -j RETURN >/dev/null 2>&1
+        done
 
         add_exclude_rules "$out_chain"
 
@@ -2594,6 +2647,14 @@ proxy_start() {
         check_policy_name_conflict
         check_xray_backups
         api_cache_init
+        # Метку политики и пользовательские политики резолвим ДО validate_routing_mark:
+        # они нужны валидатору (allowed_marks) и add_output (bypass-метки).
+        policy_mark=$(get_policy_mark)
+        if [ -n "$policy_mark" ]; then
+            user_policies=$(resolve_user_policies)
+        else
+            user_policies=""
+        fi
         validate_routing_mark
         log_clean
         sync_deny_mac_ipset
@@ -2605,11 +2666,7 @@ proxy_start() {
         network_tproxy=$(get_network_tproxy)
         mode_proxy=$(get_mode_proxy)
         if [ "$mode_proxy" != "Other" ]; then
-            policy_mark=$(get_policy_mark)
-
             if [ -n "$policy_mark" ]; then
-                user_policies=$(resolve_user_policies)
-
                 if [ -n "$user_policies" ]; then
                     print_policy_info "yes" "yes"
                 else
