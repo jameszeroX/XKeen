@@ -71,4 +71,5 @@ XKeen — POSIX-shell утилита (`sh`, не `bash`) для роутеров
 - Кастомные политики маршрутизации в `xkeen.json`.
 - IPSET `ru-exclude` — исключение российских IP из проксирования на уровне ipset.
 - DSCP-метки 61 (force proxy через отдельный inbound/listener), 62 (исключение) и 63 (проксирование) — маршрутизация по приоритетам QoS-пакетов. В `Hybrid` для DSCP 61 используется split path: `TCP -> Redirect`, `UDP -> TProxy`. См. также wiki-страницу [Маршрутизация по DSCP](../wiki/Маршрутизация-по-DSCP.md).
-- Проксирование трафика Entware-пакетов с `routing-mark: 255` (Xray) / `mark: 255` (Mihomo).
+- Проксирование трафика Entware-пакетов с `mark: 255` или mark политики для Xray и `routing-mark: 255` или mark политики для Mihomo.
+- Для этого сценария есть обычный и strict multi-WAN режим проверки `mark` / `routing-mark`: warning или блокировка запуска, если конфиг нельзя надёжно проверить.

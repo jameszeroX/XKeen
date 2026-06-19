@@ -83,6 +83,9 @@ proxy_dns="off"
 # Проксирование трафика Entware
 proxy_router="off"
 
+# Strict multi-WAN проверка routing-mark
+multiwan_strict="off"
+
 # Настройки запуска
 start_attempts=10
 start_auto="on"
@@ -325,6 +328,31 @@ strip_json_comments() {
         -e 's/[[:space:]]\{1,\}\/\/.*$//' "$@"
 }
 
+append_multiline() {
+    current_value="$1"
+    new_value="$2"
+
+    if [ -n "$current_value" ]; then
+        printf '%s\n%s' "$current_value" "$new_value"
+    else
+        printf '%s' "$new_value"
+    fi
+}
+
+format_routing_mark_items() {
+    item_label="$1"
+    mark_label="$2"
+    raw_items="$3"
+
+    printf '%b\n' "$raw_items" | awk -F '\t' -v item_label="$item_label" -v mark_label="$mark_label" '
+        NF == 0 || seen[$0]++ { next }
+        {
+            status = ($2 == "" ? mark_label " отсутствует" : "найден " mark_label " " $2)
+            print "  - " item_label " " $1 ": " status
+        }
+    '
+}
+
 # Функция валидации xkeen.json
 validate_xkeen_json() {
     [ ! -f "$xkeen_config" ] && return 0
@@ -373,13 +401,19 @@ ${light_blue}${bad_list}${reset}
 validate_routing_mark() {
     [ "$proxy_router" != "on" ] && return 0
 
-    mark_valid="false"
-    mark_msg=""
     bad_items=""
     has_items="false"
-    all_marks_ok="true"
     allowed_marks="255"
     policy_hex_marks="$policy_mark"
+    validation_errors=""
+    mark_msg=""
+    item_label=""
+    item_label_plural=""
+    config_hint=""
+    needs_attention="false"
+    allowed_marks_display=""
+    global_mark_valid="false"
+    provider_mark_valid="false"
 
     if [ -n "$user_policies" ]; then
         user_policy_hex_marks=$(printf '%s\n' "$user_policies" | awk -F'|' '$2 != "" {print "0x"$2}')
@@ -395,106 +429,232 @@ validate_routing_mark() {
         allowed_marks=$(printf '%s\n' $allowed_marks | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/ $//')
     fi
 
+    allowed_marks_display=$(printf '%s\n' "$allowed_marks" | tr ' ' '\n' | awk '!seen[$0]++' | paste -sd ',' - | sed 's/,/, /g')
     if [ "$name_client" = "xray" ]; then
         mark_msg="mark"
+        item_label="outbound"
+        item_label_plural="outbounds"
+        config_hint="  Для Xray задайте ${green}mark${reset} в ${yellow}streamSettings.sockopt${reset} у всех реальных outbounds, кроме служебных (${yellow}blackhole${reset}, ${yellow}dns${reset})"
 
         for file in "$directory_xray_config"/*.json; do
             [ -f "$file" ] || continue
 
-            if strip_json_comments "$file" | jq -e '.outbounds != null' >/dev/null 2>&1; then
-                has_items="true"
+            outbounds_state=$(strip_json_comments "$file" | jq -r '
+                if .outbounds == null then
+                    "missing"
+                elif (.outbounds | type) == "array" then
+                    "array"
+                else
+                    "invalid"
+                end
+            ' 2>&1)
+            outbounds_state_rc=$?
 
-                current_bad=$(strip_json_comments "$file" | jq -r --arg allowed "$allowed_marks" '
-                    .outbounds[]? |
-                    select(.protocol != "blackhole" and .protocol != "dns") |
-                    select(($allowed | split(" ") | index((.streamSettings.sockopt.mark // "") | tostring)) | not) |
-                    (.tag // .protocol)
-                ')
+            if [ "$outbounds_state_rc" -ne 0 ]; then
+                validation_errors=$(append_multiline "$validation_errors" "$(basename "$file"): $outbounds_state")
+                continue
+            fi
 
-                if [ -n "$current_bad" ]; then
-                     bad_items="${bad_items}${bad_items:+\n}$current_bad"
-                    all_marks_ok="false"
-                fi
+            case "$outbounds_state" in
+                missing)
+                    continue
+                    ;;
+                invalid)
+                    validation_errors=$(append_multiline "$validation_errors" "$(basename "$file"): поле .outbounds должно быть массивом")
+                    continue
+                    ;;
+                array)
+                    has_items="true"
+                    ;;
+            esac
+
+            current_bad=$(strip_json_comments "$file" | jq -r --arg allowed "$allowed_marks" '
+                def flatten_nested_arrays:
+                    if type == "array" then
+                        .[] | flatten_nested_arrays
+                    else
+                        .
+                    end;
+
+                (.outbounds // [])
+                | .[]?
+                | flatten_nested_arrays
+                | select(type == "object")
+                | select((.protocol // "") != "blackhole" and (.protocol // "") != "dns")
+                | (.streamSettings? | if type == "object" then . else {} end) as $stream
+                | ($stream.sockopt? | if type == "object" then . else {} end) as $sockopt
+                | ($sockopt.mark? // null) as $mark
+                | select(($allowed | split(" ") | index((if $mark == null or $mark == "" then "" else ($mark | tostring) end))) | not)
+                | [(.tag // .protocol // "<unnamed>"), (if $mark == null or $mark == "" then "" else ($mark | tostring) end)] | @tsv
+            ' 2>&1)
+            current_bad_rc=$?
+
+            if [ "$current_bad_rc" -ne 0 ]; then
+                validation_errors=$(append_multiline "$validation_errors" "$(basename "$file"): $current_bad")
+                continue
+            fi
+
+            if [ -n "$current_bad" ]; then
+                bad_items=$(append_multiline "$bad_items" "$current_bad")
             fi
         done
 
     elif [ "$name_client" = "mihomo" ]; then
         mark_msg="routing-mark"
+        item_label="proxy"
+        item_label_plural="proxies"
+        config_hint="  Для Mihomo задайте ${green}routing-mark${reset} глобально либо у нужных ${yellow}proxies${reset}/${yellow}proxy-providers${reset}"
 
         if [ -f "$mihomo_config" ]; then
+            mihomo_json=$(yq -o=json '.' "$mihomo_config" 2>&1)
+            mihomo_json_rc=$?
 
-            for allowed_mark in $allowed_marks; do
-                if yq -e ".[\"routing-mark\"] == $allowed_mark" "$mihomo_config" >/dev/null 2>&1; then
-                    mark_valid="true"
-                    break
-                fi
-            done
-
-            if [ "$mark_valid" != "true" ]; then
-                for allowed_mark in $allowed_marks; do
-                    if yq -e ".proxy-providers[]? | select(.override.\"routing-mark\" == $allowed_mark)" "$mihomo_config" >/dev/null 2>&1; then
-                        mark_valid="true"
-                        break
-                    fi
-                done
-            fi
-
-            if [ "$mark_valid" != "true" ]; then
-                if yq -e '.proxies != null' "$mihomo_config" >/dev/null 2>&1; then
-                    has_items="true"
-                    bad_mark_filter="true"
-                    for allowed_mark in $allowed_marks; do
-                        bad_mark_filter="$bad_mark_filter and .\"routing-mark\" != $allowed_mark"
-                    done
-                    current_bad=$(yq -r "
-                        .proxies[]? |
-                        select($bad_mark_filter) |
-                        .name
-                    " "$mihomo_config")
-
-                    if [ -n "$current_bad" ]; then
-                        bad_items="${bad_items}${bad_items:+\n}$current_bad"
-                        all_marks_ok="false"
-                    fi
-                fi
-            fi
-        fi
-    fi
-
-    if [ "$mark_valid" != "true" ]; then
-        if [ "$has_items" = "true" ] && [ "$all_marks_ok" = "true" ]; then
-            mark_valid="true"
-        fi
-    fi
-
-    if [ "$mark_valid" != "true" ]; then
-        error_details=""
-
-        if [ -n "$bad_items" ]; then
-            bad_list=$(printf "%b\n" "$bad_items" | awk '!seen[$0]++ {print "  - " $0}')
-
-            if [ "$name_client" = "xray" ]; then
-                error_details="
-  Подключения без метки:
-${light_blue}${bad_list}${reset}"
-                proxy_hint="  Добавьте mark: 255 либо mark политики XKeen/пользовательской политики во ВСЕ исходящие подключения (кроме blackhole и dns)"
+            if [ "$mihomo_json_rc" -ne 0 ]; then
+                validation_errors=$(append_multiline "$validation_errors" "$(basename "$mihomo_config"): $mihomo_json")
             else
-                error_details="
-  Прокси без метки:
-${light_blue}${bad_list}${reset}"
-                proxy_hint="  Добавьте в config.yaml mark 255 либо mark политики XKeen/пользовательской политики глобально или в каждое исходящее подключение"
+                root_kind=$(printf '%s' "$mihomo_json" | jq -r 'type' 2>&1)
+                root_kind_rc=$?
+
+                if [ "$root_kind_rc" -ne 0 ]; then
+                    validation_errors=$(append_multiline "$validation_errors" "$(basename "$mihomo_config"): $root_kind")
+                elif [ "$root_kind" != "object" ]; then
+                    validation_errors=$(append_multiline "$validation_errors" "$(basename "$mihomo_config"): корень config.yaml должен быть map/object")
+                else
+                    global_mark_valid=$(printf '%s' "$mihomo_json" | jq -r --arg allowed "$allowed_marks" '
+                        .["routing-mark"] as $mark
+                        | if $mark != null and (($allowed | split(" ") | index($mark | tostring)) != null) then
+                            "true"
+                        else
+                            "false"
+                        end
+                    ' 2>&1)
+                    global_mark_valid_rc=$?
+                    [ "$global_mark_valid_rc" -ne 0 ] && validation_errors=$(append_multiline "$validation_errors" "$(basename "$mihomo_config"): $global_mark_valid")
+
+                    provider_mark_valid=$(printf '%s' "$mihomo_json" | jq -r --arg allowed "$allowed_marks" '
+                        def values_or_items:
+                            if type == "object" or type == "array" then
+                                .[]?
+                            else
+                                empty
+                            end;
+
+                        [
+                            (.["proxy-providers"] // empty)
+                            | values_or_items
+                            | select(type == "object")
+                            | (.override? | if type == "object" then . else {} end)
+                            | .["routing-mark"]? as $mark
+                            | select($mark != null)
+                            | (($allowed | split(" ") | index($mark | tostring)) != null)
+                        ] | any
+                    ' 2>&1)
+                    provider_mark_valid_rc=$?
+                    [ "$provider_mark_valid_rc" -ne 0 ] && validation_errors=$(append_multiline "$validation_errors" "$(basename "$mihomo_config"): $provider_mark_valid")
+
+                    proxies_state=$(printf '%s' "$mihomo_json" | jq -r '
+                        if .proxies == null then
+                            "missing"
+                        elif (.proxies | type) == "array" then
+                            "array"
+                        else
+                            "invalid"
+                        end
+                    ' 2>&1)
+                    proxies_state_rc=$?
+
+                    if [ "$proxies_state_rc" -ne 0 ]; then
+                        validation_errors=$(append_multiline "$validation_errors" "$(basename "$mihomo_config"): $proxies_state")
+                    else
+                        case "$proxies_state" in
+                            missing)
+                                if [ "$global_mark_valid" != "true" ] && [ "$provider_mark_valid" != "true" ]; then
+                                    validation_errors=$(append_multiline "$validation_errors" "$(basename "$mihomo_config"): не найдены proxies и нет глобального/provider routing-mark для проверки")
+                                fi
+                                ;;
+                            invalid)
+                                validation_errors=$(append_multiline "$validation_errors" "$(basename "$mihomo_config"): поле .proxies должно быть массивом")
+                                ;;
+                            array)
+                                has_items="true"
+                                current_bad=$(printf '%s' "$mihomo_json" | jq -r --arg allowed "$allowed_marks" --arg global_valid "$global_mark_valid" '
+                                    def flatten_nested_arrays:
+                                        if type == "array" then
+                                            .[] | flatten_nested_arrays
+                                        else
+                                            .
+                                        end;
+
+                                    (.proxies // [])
+                                    | .[]?
+                                    | flatten_nested_arrays
+                                    | select(type == "object")
+                                    | (.["routing-mark"]? // null) as $mark
+                                    | select(
+                                        if $mark == null or $mark == "" then
+                                            $global_valid != "true"
+                                        else
+                                            (($allowed | split(" ") | index($mark | tostring)) == null)
+                                        end
+                                    )
+                                    | [(.name // .type // "<unnamed>"), (if $mark == null or $mark == "" then "" else ($mark | tostring) end)] | @tsv
+                                ' 2>&1)
+                                current_bad_rc=$?
+
+                                if [ "$current_bad_rc" -ne 0 ]; then
+                                    validation_errors=$(append_multiline "$validation_errors" "$(basename "$mihomo_config"): $current_bad")
+                                elif [ -n "$current_bad" ]; then
+                                    bad_items=$(append_multiline "$bad_items" "$current_bad")
+                                fi
+                                ;;
+                        esac
+                    fi
+                fi
             fi
+        else
+            validation_errors=$(append_multiline "$validation_errors" "config.yaml: файл не найден")
         fi
+    fi
 
-        log_warning_terminal "
-  Для проксирования трафика Entware требуется его маркировка
-  В конфигурации ${yellow}$name_client${reset} параметр ${green}$mark_msg${reset} прописан не везде$error_details
+    if [ -n "$validation_errors" ] || [ -n "$bad_items" ] || { [ "$name_client" = "xray" ] && [ "$has_items" != "true" ]; }; then
+        needs_attention="true"
+    fi
 
-$proxy_hint
+    [ "$needs_attention" != "true" ] && return 0
+    [ "$multiwan_strict" != "on" ] && return 0
 
-  Проксирование трафика Entware ${red}отключено${reset}
+    error_details=""
+
+    if [ "$name_client" = "xray" ] && [ "$has_items" != "true" ] && [ -z "$validation_errors" ]; then
+        validation_errors=$(append_multiline "$validation_errors" "Не найдены реальные outbounds для проверки")
+    fi
+
+    if [ -n "$validation_errors" ]; then
+        validation_list=$(printf "%b\n" "$validation_errors" | awk '!seen[$0]++ {print "  - " $0}')
+        error_details="${error_details}
+
+  Не удалось полностью проверить конфигурацию:
+${light_blue}${validation_list}${reset}"
+    fi
+
+    if [ -n "$bad_items" ]; then
+        bad_list=$(format_routing_mark_items "$item_label" "$mark_msg" "$bad_items")
+        error_details="${error_details}
+
+  Проблемные ${item_label_plural}:
+${light_blue}${bad_list}${reset}"
+    fi
+
+    if [ "$multiwan_strict" = "on" ]; then
+        log_error_terminal "
+  Нельзя запустить режим multi-WAN для ${yellow}$name_client${reset}$error_details
+
+  Разрешённые marks: ${yellow}${allowed_marks_display}${reset}
+$config_hint
+  Исправьте конфигурацию и повторите запуск
+  Иначе проксирование Entware может работать неверно из-за повторного захвата трафика
+  Управление режимом: ${yellow}xkeen -multiwan on${reset} | ${yellow}xkeen -multiwan off${reset} | ${yellow}xkeen -multiwan status${reset}
 "
-        proxy_router="off"
     fi
 
     return 0
