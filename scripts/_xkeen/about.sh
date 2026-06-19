@@ -81,7 +81,7 @@ help_xkeen() {
     echo -e "	-ipv6		${italic}Включить | Отключить протокол IPv6 в KeeneticOS${reset}"
     echo -e "	-dns		${italic}Включить | Отключить перенаправление DNS в прокси${reset}"
     echo -e "	-pr		${italic}Включить | Отключить проксирование трафика Entware${reset}"
-    echo -e "	-multiwan	${italic}Режим выхода Xray/Mihomo в интернет: on | off | status${reset}"
+    echo -e "	-multiwan	${italic}Режим выхода Xray/Mihomo в интернет: on | off | status | codes${reset}"
     echo -e "	-extmsg		${italic}Включить | Отключить расширенные сообщения при запуске XKeen${reset}"
     echo -e "	-cbk		${italic}Включить | Отключить резервное копирование XKeen при обновлении${reset}"
     echo -e "	-aghfix		${italic}Включить | Отключить отображение клиентов XKeen под своими IP в журнале AdGuard Home${reset}"

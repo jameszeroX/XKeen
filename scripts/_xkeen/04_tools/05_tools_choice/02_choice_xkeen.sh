@@ -256,6 +256,82 @@ change_multiwan_strict() {
     toggle_param "multiwan_strict" "режима multi-WAN для исходящих подключений прокси" "restart" "$1"
 }
 
+_multiwan_hex_to_decimal() {
+    mark="$1"
+    mark="${mark#0x}"
+    mark="${mark#0X}"
+
+    case "$mark" in
+        ''|*[!0-9a-fA-F]*) return 1 ;;
+    esac
+
+    printf '%s\n' "$mark" | awk '
+        BEGIN { digits = "0123456789abcdef" }
+        {
+            value = 0
+            mark = tolower($0)
+            for (i = 1; i <= length(mark); i++) {
+                digit = substr(mark, i, 1)
+                pos = index(digits, digit)
+                if (pos == 0) {
+                    exit 1
+                }
+                value = value * 16 + pos - 1
+            }
+            printf "%.0f\n", value
+        }
+    '
+}
+
+show_multiwan_policy_codes() {
+    policy_api_url="localhost:79/rci/show/ip/policy"
+    main_policy_name="xkeen"
+
+    echo
+    api_policy_json=$(curl_api "$policy_api_url" 2>/dev/null)
+    if [ -z "$api_policy_json" ]; then
+        echo -e "  ${red}Ошибка${reset}: Не удалось получить список политик из веб-интерфейса Keenetic"
+        return 1
+    fi
+
+    main_policy_mark=$(printf '%s' "$api_policy_json" | jq -r --arg pname "$main_policy_name" '
+        .[] | select((.description // "" | ascii_downcase) == ($pname | ascii_downcase)) | .mark // empty
+    ' 2>/dev/null | head -n 1)
+
+    user_policy_marks=""
+    if [ -f "$xkeen_config" ]; then
+        user_policy_marks=$(printf '%s' "$api_policy_json" | jq -r --argjson user_cfg "$(cat "$xkeen_config")" '
+            ($user_cfg.xkeen.policy // []) as $up |
+            .[] as $api |
+            $up[] |
+            select((.name // "" | ascii_downcase) == ($api.description // "" | ascii_downcase)) |
+            "\(.name)|\($api.mark // "")"
+        ' 2>/dev/null)
+    fi
+
+    echo -e "  Коды политик для ${yellow}mark${reset} / ${yellow}routing-mark${reset}:"
+    echo
+
+    if [ -n "$main_policy_mark" ]; then
+        main_policy_dec=$(_multiwan_hex_to_decimal "$main_policy_mark" 2>/dev/null)
+        echo "xkeen=$main_policy_dec"
+    else
+        echo "xkeen="
+    fi
+
+    if [ -n "$user_policy_marks" ]; then
+        printf '%s\n' "$user_policy_marks" | while IFS='|' read -r policy_name policy_mark; do
+            [ -n "$policy_name" ] || continue
+            [ -n "$policy_mark" ] || continue
+            policy_dec=$(_multiwan_hex_to_decimal "$policy_mark" 2>/dev/null) || continue
+            echo "${policy_name}=${policy_dec}"
+        done
+    fi
+
+    echo
+    echo "  Для mark / routing-mark используйте только число справа от '='"
+}
+
 show_multiwan_strict_status() {
     echo
     if [ ! -f "$initd_file" ]; then
@@ -273,7 +349,7 @@ show_multiwan_strict_status() {
         echo -e "  Режим multi-WAN ${red}выключен${reset}"
         echo -e "  Исходящие подключения ${yellow}Xray/Mihomo${reset} работают как обычно через ${green}default${reset}"
     fi
-    echo -e "  Управление: ${yellow}xkeen -multiwan on${reset} | ${yellow}xkeen -multiwan off${reset} | ${yellow}xkeen -multiwan status${reset}"
+    echo -e "  Управление: ${yellow}xkeen -multiwan on${reset} | ${yellow}xkeen -multiwan off${reset} | ${yellow}xkeen -multiwan status${reset} | ${yellow}xkeen -multiwan codes${reset}"
 }
 
 change_extended_msg() {

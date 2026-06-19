@@ -1466,12 +1466,17 @@ while [ $# -gt 0 ]; do
                     show_multiwan_strict_status
                     shift
                     ;;
+                codes)
+                    smart_clear
+                    show_multiwan_policy_codes
+                    shift
+                    ;;
                 "")
                     smart_clear
                     change_multiwan_strict
                     ;;
                 *)
-                    echo -e "  ${red}Ошибка${reset}: используйте ${yellow}xkeen -multiwan on${reset}, ${yellow}off${reset} или ${yellow}status${reset}"
+                    echo -e "  ${red}Ошибка${reset}: используйте ${yellow}xkeen -multiwan on${reset}, ${yellow}off${reset}, ${yellow}status${reset} или ${yellow}codes${reset}"
                     exit 1
                     ;;
             esac
