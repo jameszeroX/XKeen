@@ -61,7 +61,7 @@ XKeen работает полностью на стороне роутера, н
 - возможность [работы с IPSET](https://github.com/jameszeroX/XKeen/wiki/Configuration#описание-работы-ipset-в-xkeen)
 - поддержка [DSCP-меток QoS](https://jameszero.net/4509.htm)
 - возможность ([проксирования трафика Entware](https://github.com/jameszeroX/XKeen/wiki/Configuration#проксирование-трафика-entware))
-- strict multi-WAN проверка `mark` / `routing-mark` для сценария проксирования Entware
+- strict PBR-проверка `mark` / `routing-mark` для сценария проксирования Entware
 - Совместимость с родительским контролем и политикой "Без доступа в интернет"
 
 ### Исправлено

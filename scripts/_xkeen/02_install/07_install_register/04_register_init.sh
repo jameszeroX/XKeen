@@ -83,8 +83,8 @@ proxy_dns="off"
 # Проксирование трафика Entware
 proxy_router="off"
 
-# Strict multi-WAN проверка routing-mark
-multiwan_strict="off"
+# Строгая PBR-проверка mark / routing-mark
+pbr_strict="off"
 
 # Настройки запуска
 start_attempts=10
@@ -429,7 +429,18 @@ validate_routing_mark() {
         allowed_marks=$(printf '%s\n' $allowed_marks | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/ $//')
     fi
 
-    allowed_marks_display=$(printf '%s\n' "$allowed_marks" | tr ' ' '\n' | awk '!seen[$0]++' | paste -sd ',' - | sed 's/,/, /g')
+    allowed_marks_display=$(printf '%s\n' "$allowed_marks" | tr ' ' '\n' | awk '
+        NF && !seen[$0]++ {
+            if (out != "") {
+                out = out ", " $0
+            } else {
+                out = $0
+            }
+        }
+        END {
+            print out
+        }
+    ')
     if [ "$name_client" = "xray" ]; then
         mark_msg="mark"
         item_label="outbound"
@@ -621,7 +632,7 @@ validate_routing_mark() {
     fi
 
     [ "$needs_attention" != "true" ] && return 0
-    [ "$multiwan_strict" != "on" ] && return 0
+    [ "$pbr_strict" != "on" ] && return 0
 
     error_details=""
 
@@ -645,15 +656,15 @@ ${light_blue}${validation_list}${reset}"
 ${light_blue}${bad_list}${reset}"
     fi
 
-    if [ "$multiwan_strict" = "on" ]; then
+    if [ "$pbr_strict" = "on" ]; then
         log_error_terminal "
-  Нельзя запустить режим multi-WAN для ${yellow}$name_client${reset}$error_details
+  Нельзя запустить PBR-проверку для ${yellow}$name_client${reset}$error_details
 
   Разрешённые marks: ${yellow}${allowed_marks_display}${reset}
 $config_hint
   Исправьте конфигурацию и повторите запуск
   Иначе проксирование Entware может работать неверно из-за повторного захвата трафика
-  Управление режимом: ${yellow}xkeen -multiwan on${reset} | ${yellow}xkeen -multiwan off${reset} | ${yellow}xkeen -multiwan status${reset}
+  Управление режимом: ${yellow}xkeen -pbr on${reset} | ${yellow}xkeen -pbr off${reset} | ${yellow}xkeen -pbr status${reset}
 "
     fi
 
