@@ -252,11 +252,11 @@ change_proxy_router() {
     toggle_param "proxy_router" "проксирования трафика Entware" "restart" "$1"
 }
 
-change_multiwan_strict() {
-    toggle_param "multiwan_strict" "режима multi-WAN для исходящих подключений прокси" "restart" "$1"
+change_pbr_strict() {
+    toggle_param "pbr_strict" "PBR-проверки для исходящих подключений прокси" "restart" "$1"
 }
 
-_multiwan_hex_to_decimal() {
+_pbr_hex_to_decimal() {
     mark="$1"
     mark="${mark#0x}"
     mark="${mark#0X}"
@@ -283,7 +283,7 @@ _multiwan_hex_to_decimal() {
     '
 }
 
-show_multiwan_policy_codes() {
+show_pbr_policy_codes() {
     policy_api_url="localhost:79/rci/show/ip/policy"
     main_policy_name="xkeen"
 
@@ -313,7 +313,7 @@ show_multiwan_policy_codes() {
     echo
 
     if [ -n "$main_policy_mark" ]; then
-        main_policy_dec=$(_multiwan_hex_to_decimal "$main_policy_mark" 2>/dev/null)
+        main_policy_dec=$(_pbr_hex_to_decimal "$main_policy_mark" 2>/dev/null)
         echo "xkeen=$main_policy_dec"
     else
         echo "xkeen="
@@ -323,7 +323,7 @@ show_multiwan_policy_codes() {
         printf '%s\n' "$user_policy_marks" | while IFS='|' read -r policy_name policy_mark; do
             [ -n "$policy_name" ] || continue
             [ -n "$policy_mark" ] || continue
-            policy_dec=$(_multiwan_hex_to_decimal "$policy_mark" 2>/dev/null) || continue
+            policy_dec=$(_pbr_hex_to_decimal "$policy_mark" 2>/dev/null) || continue
             echo "${policy_name}=${policy_dec}"
         done
     fi
@@ -332,24 +332,24 @@ show_multiwan_policy_codes() {
     echo "  Для mark / routing-mark используйте только число справа от '='"
 }
 
-show_multiwan_strict_status() {
+show_pbr_strict_status() {
     echo
     if [ ! -f "$initd_file" ]; then
         echo -e "  ${red}Ошибка${reset}: Не найден файл ${yellow}S05xkeen${reset}"
         return 1
     fi
 
-    current_state=$(grep -m 1 -E '^[[:space:]]*multiwan_strict=' "$initd_file" | cut -d'=' -f2 | tr -d '"[:space:]')
+    current_state=$(grep -m 1 -E '^[[:space:]]*pbr_strict=' "$initd_file" | cut -d'=' -f2 | tr -d '"[:space:]')
     [ -z "$current_state" ] && current_state="off"
 
     if [ "$current_state" = "on" ]; then
-        echo -e "  Режим multi-WAN ${green}включён${reset}"
-        echo -e "  Исходящие подключения ${yellow}Xray/Mihomo${reset} должны корректно использовать mark выбранной политики/WAN"
+        echo -e "  PBR-проверка ${green}включена${reset}"
+        echo -e "  ${yellow}Xray/Mihomo${reset} должны использовать корректный mark/routing-mark выбранной политики Keenetic"
     else
-        echo -e "  Режим multi-WAN ${red}выключен${reset}"
+        echo -e "  PBR-проверка ${red}выключена${reset}"
         echo -e "  Исходящие подключения ${yellow}Xray/Mihomo${reset} работают как обычно через ${green}default${reset}"
     fi
-    echo -e "  Управление: ${yellow}xkeen -multiwan on${reset} | ${yellow}xkeen -multiwan off${reset} | ${yellow}xkeen -multiwan status${reset} | ${yellow}xkeen -multiwan codes${reset}"
+    echo -e "  Управление: ${yellow}xkeen -pbr on${reset} | ${yellow}xkeen -pbr off${reset} | ${yellow}xkeen -pbr status${reset} | ${yellow}xkeen -pbr codes${reset}"
 }
 
 change_extended_msg() {

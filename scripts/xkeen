@@ -1454,29 +1454,25 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -multiwan)    # Управление режимом multi-WAN для исходящих подключений прокси
+        -pbr)    # Управление PBR-проверкой для исходящих подключений прокси
             case "$2" in
                 on|off)
                     smart_clear
-                    change_multiwan_strict "$2"
+                    change_pbr_strict "$2"
                     shift
                     ;;
                 status)
                     smart_clear
-                    show_multiwan_strict_status
+                    show_pbr_strict_status
                     shift
                     ;;
                 codes)
                     smart_clear
-                    show_multiwan_policy_codes
+                    show_pbr_policy_codes
                     shift
                     ;;
-                "")
-                    smart_clear
-                    change_multiwan_strict
-                    ;;
                 *)
-                    echo -e "  ${red}Ошибка${reset}: используйте ${yellow}xkeen -multiwan on${reset}, ${yellow}off${reset}, ${yellow}status${reset} или ${yellow}codes${reset}"
+                    echo -e "  ${red}Ошибка${reset}: используйте ${yellow}xkeen -pbr on${reset}, ${yellow}off${reset}, ${yellow}status${reset} или ${yellow}codes${reset}"
                     exit 1
                     ;;
             esac
