@@ -253,7 +253,7 @@ change_proxy_router() {
 }
 
 change_pbr_strict() {
-    toggle_param "pbr_strict" "PBR-проверки для исходящих подключений прокси" "restart" "$1"
+    toggle_param "pbr_strict" "strict PBR-проверки для исходящих подключений Xray/Mihomo" "restart" "$1"
 }
 
 _pbr_hex_to_decimal() {
@@ -309,7 +309,7 @@ show_pbr_policy_codes() {
         ' 2>/dev/null)
     fi
 
-    echo -e "  Коды политик для ${yellow}mark${reset} / ${yellow}routing-mark${reset}:"
+    echo -e "  Коды политик Keenetic для ${yellow}mark${reset} / ${yellow}routing-mark${reset}:"
     echo
 
     if [ -n "$main_policy_mark" ]; then
@@ -343,11 +343,12 @@ show_pbr_strict_status() {
     [ -z "$current_state" ] && current_state="off"
 
     if [ "$current_state" = "on" ]; then
-        echo -e "  PBR-проверка ${green}включена${reset}"
-        echo -e "  ${yellow}Xray/Mihomo${reset} должны использовать корректный mark/routing-mark выбранной политики Keenetic"
+        echo -e "  Strict PBR-проверка ${green}включена${reset}"
+        echo -e "  XKeen проверяет, что исходящие подключения ${yellow}Xray/Mihomo${reset} используют корректный mark/routing-mark политики Keenetic"
     else
-        echo -e "  PBR-проверка ${red}выключена${reset}"
-        echo -e "  Исходящие подключения ${yellow}Xray/Mihomo${reset} работают как обычно через ${green}default${reset}"
+        echo -e "  Strict PBR-проверка ${red}выключена${reset}"
+        echo -e "  XKeen не проверяет mark/routing-mark перед запуском"
+        echo -e "  Если mark/routing-mark уже указан в конфиге ${yellow}Xray/Mihomo${reset}, он продолжит применяться самим ядром/системой"
     fi
     echo -e "  Управление: ${yellow}xkeen -pbr on${reset} | ${yellow}xkeen -pbr off${reset} | ${yellow}xkeen -pbr status${reset} | ${yellow}xkeen -pbr codes${reset}"
 }

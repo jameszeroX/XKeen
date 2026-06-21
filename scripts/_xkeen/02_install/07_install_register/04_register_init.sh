@@ -397,23 +397,14 @@ ${light_blue}${bad_list}${reset}
     return 0
 }
 
-# Функция проверки наличия метки для проксирования Entware
-validate_routing_mark() {
-    [ "$proxy_router" != "on" ] && return 0
-
-    bad_items=""
-    has_items="false"
-    allowed_marks="255"
+build_allowed_policy_marks() {
+    include_service_mark="$1"
+    allowed_marks=""
     policy_hex_marks="$policy_mark"
-    validation_errors=""
-    mark_msg=""
-    item_label=""
-    item_label_plural=""
-    config_hint=""
-    needs_attention="false"
-    allowed_marks_display=""
-    global_mark_valid="false"
-    provider_mark_valid="false"
+
+    if [ "$include_service_mark" = "yes" ]; then
+        allowed_marks="255"
+    fi
 
     if [ -n "$user_policies" ]; then
         user_policy_hex_marks=$(printf '%s\n' "$user_policies" | awk -F'|' '$2 != "" {print "0x"$2}')
@@ -429,7 +420,11 @@ validate_routing_mark() {
         allowed_marks=$(printf '%s\n' $allowed_marks | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/ $//')
     fi
 
-    allowed_marks_display=$(printf '%s\n' "$allowed_marks" | tr ' ' '\n' | awk '
+    printf '%s\n' "$allowed_marks"
+}
+
+format_allowed_marks_display() {
+    printf '%s\n' "$1" | tr ' ' '\n' | awk '
         NF && !seen[$0]++ {
             if (out != "") {
                 out = out ", " $0
@@ -440,12 +435,32 @@ validate_routing_mark() {
         END {
             print out
         }
-    ')
+    '
+}
+
+validate_client_routing_mark() {
+    validation_mode="$1"
+    include_service_mark="$2"
+
+    bad_items=""
+    has_items="false"
+    allowed_marks=$(build_allowed_policy_marks "$include_service_mark")
+    validation_errors=""
+    mark_msg=""
+    item_label=""
+    item_label_plural=""
+    config_hint=""
+    needs_attention="false"
+    allowed_marks_display=""
+    global_mark_valid="false"
+    provider_mark_valid="false"
+
+    allowed_marks_display=$(format_allowed_marks_display "$allowed_marks")
     if [ "$name_client" = "xray" ]; then
         mark_msg="mark"
         item_label="outbound"
         item_label_plural="outbounds"
-        config_hint="  Для Xray задайте ${green}mark${reset} в ${yellow}streamSettings.sockopt${reset} у всех реальных outbounds, кроме служебных (${yellow}blackhole${reset}, ${yellow}dns${reset})"
+        config_hint="  Для Xray задайте ${green}mark${reset} в ${yellow}streamSettings.sockopt${reset} у всех реальных outbounds, кроме служебных (${yellow}blackhole${reset}, ${yellow}dns${reset}, ${yellow}loopback${reset})"
 
         for file in "$directory_xray_config"/*.json; do
             [ -f "$file" ] || continue
@@ -632,7 +647,6 @@ validate_routing_mark() {
     fi
 
     [ "$needs_attention" != "true" ] && return 0
-    [ "$pbr_strict" != "on" ] && return 0
 
     error_details=""
 
@@ -656,19 +670,48 @@ ${light_blue}${validation_list}${reset}"
 ${light_blue}${bad_list}${reset}"
     fi
 
-    if [ "$pbr_strict" = "on" ]; then
+    if [ "$validation_mode" = "pbr" ]; then
         log_error_terminal "
-  Нельзя запустить PBR-проверку для ${yellow}$name_client${reset}$error_details
+  Включена strict PBR-проверка, но у исходящих подключений ${yellow}${name_client}${reset} не найден корректный ${yellow}mark/routing-mark${reset} политики Keenetic$error_details
 
-  Разрешённые marks: ${yellow}${allowed_marks_display}${reset}
+  Разрешённые policy marks Keenetic: ${yellow}${allowed_marks_display}${reset}
 $config_hint
-  Исправьте конфигурацию и повторите запуск
-  Иначе проксирование Entware может работать неверно из-за повторного захвата трафика
+  Служебная метка ${yellow}255${reset} не является policy mark и не подходит для PBR
+  Получите код политики командой ${yellow}xkeen -pbr codes${reset} и укажите его в конфигурации
   Управление режимом: ${yellow}xkeen -pbr on${reset} | ${yellow}xkeen -pbr off${reset} | ${yellow}xkeen -pbr status${reset}
+"
+    else
+        log_warning_terminal "
+  Проксирование Entware включено, но у исходящих подключений ${yellow}${name_client}${reset} не найден ${yellow}mark/routing-mark${reset} для bypass$error_details
+
+  Для обычного Entware proxy можно использовать служебную метку ${yellow}255${reset}
+  Разрешённые bypass marks: ${yellow}${allowed_marks_display}${reset}
+$config_hint
+  Если нужно направить сам ${yellow}${name_client}${reset} через конкретную политику Keenetic, используйте код из ${yellow}xkeen -pbr codes${reset}
 "
     fi
 
     return 0
+}
+
+validate_entware_proxy_mark() {
+    [ "$proxy_router" != "on" ] && return 0
+    validate_client_routing_mark "entware" "yes"
+}
+
+validate_pbr_routing_mark() {
+    [ "$pbr_strict" != "on" ] && return 0
+
+    allowed_policy_marks=$(build_allowed_policy_marks "no")
+    if [ -z "$allowed_policy_marks" ]; then
+        log_error_terminal "
+  Не удалось получить коды политик Keenetic для PBR
+  Создайте или проверьте политику в веб-интерфейсе Keenetic и повторите ${yellow}xkeen -pbr codes${reset}
+  Служебная метка ${yellow}255${reset} не является policy mark и не подходит для PBR
+"
+    fi
+
+    validate_client_routing_mark "pbr" "no"
 }
 
 load_user_ipset_family() {
@@ -2805,12 +2848,9 @@ proxy_start() {
         check_xray_backups
         api_cache_init
         policy_mark=$(get_policy_mark)
-        if [ -n "$policy_mark" ]; then
-            user_policies=$(resolve_user_policies)
-        else
-            user_policies=""
-        fi
-        validate_routing_mark
+        user_policies=$(resolve_user_policies)
+        validate_entware_proxy_mark
+        validate_pbr_routing_mark
         log_clean
         sync_deny_mac_ipset
         process_user_ports
