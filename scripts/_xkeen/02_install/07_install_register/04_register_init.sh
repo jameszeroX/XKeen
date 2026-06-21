@@ -491,7 +491,7 @@ validate_routing_mark() {
                 | .[]?
                 | flatten_nested_arrays
                 | select(type == "object")
-                | select((.protocol // "") != "blackhole" and (.protocol // "") != "dns")
+                | select((.protocol // "") != "blackhole" and (.protocol // "") != "dns" and (.protocol // "") != "loopback")
                 | (.streamSettings? | if type == "object" then . else {} end) as $stream
                 | ($stream.sockopt? | if type == "object" then . else {} end) as $sockopt
                 | ($sockopt.mark? // null) as $mark
