@@ -71,11 +71,6 @@ Windows Registry Editor Version 5.00
       "network": "tcp",
       "followRedirect": true
     },
-    "sniffing": {
-      "enabled": true,
-      "routeOnly": true,
-      "destOverride": ["http","tls"]
-    },
     "tag": "dscp-force-proxy-redirect"
   },
   {
@@ -87,11 +82,6 @@ Windows Registry Editor Version 5.00
     },
     "streamSettings": {
       "sockopt": {"tproxy": "tproxy"}
-    },
-    "sniffing": {
-      "enabled": true,
-      "routeOnly": true,
-      "destOverride": ["quic"]
     },
     "tag": "dscp-force-proxy-tproxy"
   }
@@ -105,7 +95,7 @@ Windows Registry Editor Version 5.00
 
 ```json
 {
-  "inboundTag": ["dscp-force-proxy-redirect", "dscp-force-proxy-tproxy"],
+  "inboundTag": ["dscp-force-proxy-redirect","dscp-force-proxy-tproxy"],
   "outboundTag": "vless-reality"
 }
 ```

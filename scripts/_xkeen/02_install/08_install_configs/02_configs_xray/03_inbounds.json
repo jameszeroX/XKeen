@@ -38,11 +38,6 @@
         "network": "tcp",
         "followRedirect": true
       },
-      "sniffing": {
-        "enabled": true,
-        "routeOnly": true,
-        "destOverride": ["http","tls"]
-      },
       "tag": "dscp-force-proxy-redirect"
     },
     {
@@ -54,11 +49,6 @@
       },
       "streamSettings": {
         "sockopt": {"tproxy": "tproxy"}
-      },
-      "sniffing": {
-        "enabled": true,
-        "routeOnly": true,
-        "destOverride": ["quic"]
       },
       "tag": "dscp-force-proxy-tproxy"
     }
