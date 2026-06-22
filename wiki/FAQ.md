@@ -2,7 +2,7 @@
 
 **Основной сборник вопросов и ответов по XKeen находится по ссылке:**
 
-### https://jameszero.net/faq-xkeen.htm
+### <https://jameszero.net/faq-xkeen.htm>
 
 На этой странице собраны дополнительные
 
