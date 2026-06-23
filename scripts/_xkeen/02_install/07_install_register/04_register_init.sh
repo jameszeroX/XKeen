@@ -67,6 +67,7 @@ comment="-m comment --comment $comment_tag"
 custom_mark=""
 
 # DSCP-метки
+dscp_enable="on"
 dscp_force_proxy="61"
 dscp_force_proxy_tag="dscp-force-proxy"
 dscp_exclude="62"
@@ -119,6 +120,15 @@ log_info_terminal() { echo -e "\n${green}Информация${reset}: $1" >&2; 
 log_warning_terminal() { echo -e "\n${yellow}Предупреждение${reset}: $1" >&2; }
 log_error_terminal() { echo -e "\n${red}Ошибка${reset}: $1" >&2; exit 1; }
 
+if [ "$dscp_enable" = "off" ]; then
+    dscp_force_proxy=""
+    dscp_exclude=""
+    dscp_proxy=""
+    port_dscp_force_proxy=""
+    mode_dscp_force_proxy=""
+    network_dscp_force_proxy=""
+fi
+
 print_policy_info() {
     found="$1"
     has_custom="$2"
@@ -134,8 +144,7 @@ print_policy_info() {
         if [ "$found" = "no" ]; then
             log_info_terminal "
   Политика '${yellow}$name_policy${reset}' не найдена в веб-интерфейсе роутера${ignore_line}
-  Прокси будет запущен для всего устройства
-"
+  Прокси будет запущен для всех клиентов устройства"
         fi
         return
     fi
@@ -169,29 +178,25 @@ print_policy_info() {
   Найдены политики '${yellow}${policies}${reset}'
   Прокси будет запущен для клиентов политик:
 ${detail_list}
-${custom_details}
-"
+${custom_details}"
         else
             if [ -z "$port_donor" ] && [ -z "$port_exclude" ]; then
                 log_info_terminal "
   Найдена политика '${yellow}$name_policy${reset}'
   Не определены целевые порты для XKeen
-  Прокси будет запущен для клиентов политики '${yellow}$name_policy${reset}' на всех портах
-"
+  Прокси будет запущен для клиентов политики '${yellow}$name_policy${reset}' на всех портах"
             elif [ -n "$port_donor" ]; then
                 log_info_terminal "
   Найдена политика '${yellow}$name_policy${reset}'
   Определены целевые порты для XKeen
   Прокси будет запущен для клиентов политики '${yellow}$name_policy${reset}'
-  на портах ${green}${port_donor}${reset}
-"
+  на портах ${green}${port_donor}${reset}"
             else
                 log_info_terminal "
   Найдена политика '${yellow}$name_policy${reset}'
   Определены порты исключения для XKeen
   Прокси будет запущен для клиентов политики '${yellow}$name_policy${reset}'
-  на всех портах кроме ${green}${port_exclude}${reset}
-"
+  на всех портах кроме ${green}${port_exclude}${reset}"
             fi
         fi
     else
@@ -200,21 +205,18 @@ ${custom_details}
   Политика '${yellow}$name_policy${reset}' не найдена в веб-интерфейсе роутера${ignore_line}
   Определены целевые порты для XKeen
   Прокси будет запущен для всех клиентов
-  на портах ${green}${port_donor}${reset}
-"
+  на портах ${green}${port_donor}${reset}"
         elif [ -n "$port_exclude" ]; then
             log_info_terminal "
   Политика '${yellow}$name_policy${reset}' не найдена в веб-интерфейсе роутера${ignore_line}
   Определены порты исключения для XKeen
   Прокси будет запущен для всех клиентов
-  на всех портах кроме ${green}${port_exclude}${reset}
-"
+  на всех портах кроме ${green}${port_exclude}${reset}"
         else
             log_info_terminal "
   Политика '${yellow}$name_policy${reset}' не найдена в веб-интерфейсе роутера${ignore_line}
   Не определены целевые порты для XKeen
-  Прокси будет запущен для всех клиентов на всех портах
-"
+  Прокси будет запущен для всех клиентов на всех портах"
         fi
     fi
 }
@@ -1575,12 +1577,27 @@ print_dscp_force_proxy_status() {
 
     resolve_dscp_force_proxy >/dev/null 2>&1
 
+    # Проверка DSCP 61
     if [ "$dscp_force_proxy_status" = "active" ]; then
-        echo -e "  DSCP ${green}${dscp_force_proxy}${reset}: ${green}активен${reset} (${light_blue}${dscp_force_proxy_reason}${reset})"
+        echo -e "  DSCP ${green}${dscp_force_proxy}${reset}: ${green}активно${reset} (${light_blue}${dscp_force_proxy_reason}${reset})"
     elif [ "$dscp_force_proxy_status" = "disabled" ]; then
-        echo -e "  DSCP 61 force proxy: ${yellow}отключен${reset} (${light_blue}${dscp_force_proxy_reason}${reset})"
+        echo -e "  DSCP 61 force proxy: ${yellow}отключено${reset} (${light_blue}${dscp_force_proxy_reason}${reset})"
     else
-        echo -e "  DSCP ${green}${dscp_force_proxy}${reset}: ${red}не активен${reset} (${light_blue}${dscp_force_proxy_reason}${reset})"
+        echo -e "  DSCP ${green}${dscp_force_proxy}${reset}: ${red}не активно${reset} (${light_blue}${dscp_force_proxy_reason}${reset})"
+    fi
+
+    # Проверка DSCP 62
+    if [ -n "$dscp_exclude" ]; then
+        echo -e "  DSCP ${green}$dscp_exclude${reset}: ${green}активно${reset} (${light_blue}исключение из проксирования${reset})"
+    else
+        echo -e "  DSCP ${green}$dscp_exclude${reset}: ${red}не активно${reset}"
+    fi
+
+    # Проверка DSCP 63
+    if [ -n "$dscp_proxy" ]; then
+        echo -e "  DSCP ${green}$dscp_proxy${reset}: ${green}активно${reset} (${light_blue}проксирование по системым правилам${reset})"
+    else
+        echo -e "  DSCP ${green}$dscp_proxy${reset}: ${red}не активно${reset}"
     fi
 }
 
@@ -3137,7 +3154,10 @@ case "$1" in
         fi
         ;;
     dscp)
-        print_dscp_force_proxy_status
+        if [ "$dscp_enable" != "off" ]; then
+            echo
+            print_dscp_force_proxy_status
+        fi
         ;;
     restart) proxy_stop; proxy_start "$2" ;;
     cold_start)

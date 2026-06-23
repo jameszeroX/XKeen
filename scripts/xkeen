@@ -1303,8 +1303,14 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -dscp)    # Статус DSCP 61 force proxy
+        -dscp)    # Состояние DSCP
+            smart_clear
             "$initd_file" dscp
+            action=$(get_state_arg "$2")
+            [ -n "$action" ] && shift
+            smart_clear
+            change_dscp_proxy "$action"
+
         ;;
 
 

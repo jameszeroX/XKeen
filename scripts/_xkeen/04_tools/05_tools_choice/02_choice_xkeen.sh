@@ -364,3 +364,7 @@ change_backup_xkeen() {
 change_aghfix_xkeen() {
     toggle_param "aghfix" "отображения клиентов XKeen под своими IP в журнале AaGuard Home" "restart" "$1"
 }
+
+change_dscp_proxy() {
+    toggle_param "dscp_enable" "маршрутизации по DSCP-меткам" "restart" "$1"
+}

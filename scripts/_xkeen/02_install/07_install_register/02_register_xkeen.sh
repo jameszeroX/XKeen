@@ -48,7 +48,7 @@ register_xkeen_initd() {
     old_start_file="${initd_dir}/S99xkeenstart"
     script_file="${xinstall_dir}/07_install_register/04_register_init.sh" 
     current_datetime=$(date "+%Y-%m-%d_%H-%M-%S")
-    variables_to_extract="name_client name_policy table_id table_mark custom_mark dscp_force_proxy dscp_force_proxy_tag dscp_exclude dscp_proxy ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude proxy_dns proxy_router pbr_strict start_attempts init_delay check_fd arm64_fd other_fd delay_fd ipv6_support extended_msg backup aghfix"
+    variables_to_extract="name_client name_policy table_id table_mark custom_mark dscp_enable dscp_force_proxy dscp_force_proxy_tag dscp_exclude dscp_proxy ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude proxy_dns proxy_router pbr_strict start_attempts init_delay check_fd arm64_fd other_fd delay_fd ipv6_support extended_msg backup aghfix"
     source_main_backup=""
     source_start_backup=""
 
