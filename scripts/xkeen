@@ -1308,7 +1308,6 @@ while [ $# -gt 0 ]; do
             "$initd_file" dscp
             action=$(get_state_arg "$2")
             [ -n "$action" ] && shift
-            smart_clear
             change_dscp_proxy "$action"
 
         ;;
