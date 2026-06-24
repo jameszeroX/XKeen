@@ -19,7 +19,7 @@ info_cpu() {
     version="$(curl_api "localhost:79/rci/show/version" 2>/dev/null)"
 
     case "$version" in
-        *KN-1212*|*KN-2910*) softfloat="true" ;;
+        *KN-1212*|*KN-2310*|*KN-2311*|*KN-2910*) softfloat="true" ;;
         *) echo; return ;;
     esac
 }
