@@ -430,11 +430,13 @@ _download_and_validate_loop() {
         # Вызываем fetch_with_mirrors (с валидатором или без)
         if [ -n "$validator_name" ]; then
             fetch_with_mirrors "$url" "$tmp_file" 1024 "$validator_name"
+            _fetch_result=$?
         else
             fetch_with_mirrors "$url" "$tmp_file" 1024
+            _fetch_result=$?
         fi
 
-        if [ $? -eq 0 ]; then
+        if [ "$_fetch_result" -eq 0 ]; then
             # Проверяем размер загруженного файла
             printf "  Проверка размера %s...\n" "$display_name"
             if _validate_file_with_size "$tmp_file" "$expected_size"; then
