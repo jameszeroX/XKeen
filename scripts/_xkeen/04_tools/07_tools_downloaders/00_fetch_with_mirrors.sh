@@ -66,15 +66,11 @@ _mirror_order() {
 }
 
 # Дефолтный валидатор для скачанного файла.
-# $1 = path, $2 = min_size (байт, 0 = без проверки размера).
-# Сетит _last_error и _last_size для caller-сообщений.
-#
 # HTML-stub detect: cloudflare challenge, jsdelivr "429: Too Many
 # Requests", proxy-error 404-page под HTTP 200. Маркеры якорные (^...)
 # чтобы не словить false-positive на байтах в gzip/zip/ELF метадате.
 _validate_default() {
     _v_f="$1"
-    _v_min="${2:-0}"
     _last_error=""
     _last_size=0
     if [ ! -s "$_v_f" ]; then
@@ -82,12 +78,6 @@ _validate_default() {
         return 1
     fi
     _last_size=$(wc -c < "$_v_f" 2>/dev/null | tr -d ' ')
-    if [ "$_v_min" -gt 0 ]; then
-        [ -n "$_last_size" ] && [ "$_last_size" -ge "$_v_min" ] || {
-            _last_error="size"
-            return 1
-        }
-    fi
     if head -c 100 "$_v_f" 2>/dev/null | grep -iqE '^(<!doctype|<html|<head|<body|404|error|not found)'; then
         _last_error="html_stub"
         return 1
@@ -393,10 +383,9 @@ EOF
 _validate_file_with_size() {
     file="$1"
     expected_size="$2"
-    min_size="${3:-0}"
 
     # Сначала проверяем через стандартный валидатор
-    if ! _validate_default "$file" "$min_size"; then
+    if ! _validate_default "$file"; then
         return 1
     fi
 
@@ -411,4 +400,68 @@ _validate_file_with_size() {
     fi
 
     return 0
+}
+
+
+# Цикл загрузки с повторами и валидацией
+_download_and_validate_loop() {
+    url="$1"
+    tmp_file="$2"
+    expected_size="$3"
+    validator_name="$4"
+    display_name="$5"
+
+    # Если переменная retries_download не задана, используем одну попытку
+    max_attempts=1
+    if [ -n "$retries_download" ] && [ "$retries_download" -gt 1 ] 2>/dev/null; then
+        max_attempts=$retries_download
+    fi
+    delay=${retry_delay_download:-2}
+
+    attempt=1
+    while [ "$attempt" -le "$max_attempts" ]; do
+        # Выводим инфо о попытках только если их больше одной
+        if [ "$max_attempts" -gt 1 ]; then
+            printf "  Загрузка %s (Попытка %d из %d)...\n" "$display_name" "$attempt" "$max_attempts"
+        else
+            printf "  Загрузка %s...\n" "$display_name"
+        fi
+
+        # Вызываем fetch_with_mirrors (с валидатором или без)
+        if [ -n "$validator_name" ]; then
+            fetch_with_mirrors "$url" "$tmp_file" 1024 "$validator_name"
+        else
+            fetch_with_mirrors "$url" "$tmp_file" 1024
+        fi
+
+        if [ $? -eq 0 ]; then
+            # Проверяем размер загруженного файла
+            printf "  Проверка размера %s...\n" "$display_name"
+            if _validate_file_with_size "$tmp_file" "$expected_size"; then
+                # Успешно - перемещаем файл на место
+                printf "  ${green}✔ OK${reset} - Размер файла совпал с ожидаемым\n"
+                return 0
+            else
+                # Проверка не прошла
+                case "$_last_error" in
+                    size_mismatch)
+                        printf "  ${red}Ошибка${reset}: Размер загруженного файла (%s байт) не соответствует ожидаемому (%s байт)\n" "$_last_size" "$expected_size"
+                        printf "  Файл повреждён или загружен не полностью. Повторная попытка...\n"
+                        ;;
+                    *)
+                        printf "  ${red}Ошибка${reset}: %s\n" "$_last_error"
+                        ;;
+                esac
+                rm -f "$tmp_file"
+            fi
+        fi
+
+        # Если попытка сорвалась и она НЕ последняя — ждем и повторяем
+        if [ "$attempt" -lt "$max_attempts" ]; then
+            printf "  ${yellow}Предупреждение${reset}: Попытка %d не удалась. Повтор через %d сек...\n" "$attempt" "$delay"
+            sleep "$delay"
+        fi
+        attempt=$((attempt + 1))
+    done
+    return 1
 }

@@ -25,99 +25,51 @@ install_geoipset_lst() {
     local display_name="$3"
     local ip_type="$4"
 
-    # Если переменная retries_download не задана, используем одну попытку
-    local max_attempts=1
-    if [ -n "$retries_download" ] && [ "$retries_download" -gt 1 ] 2>/dev/null; then
-        max_attempts=$retries_download
-    fi
-
-    local delay=${retry_delay_download:-2}
-
-    if [ "$ip_type" = "ipv4" ]; then
-        _validator_name="_validate_geoipset_v4"
-    else
+    local _validator_name="_validate_geoipset_v4"
+    if [ "$ip_type" != "ipv4" ]; then
         _validator_name="_validate_geoipset_v6"
     fi
 
     # Получаем ожидаемый размер файла
     local expected_size=""
     printf "  Запрос информации о %s...\n" "$display_name"
-    expected_size=$(_get_expected_size "$url")
-    if [ $? -eq 0 ]; then
+
+    if expected_size=$(_get_expected_size "$url"); then
         printf "  Ожидаемый размер: ${yellow}%s байт${reset}\n" "$expected_size"
     else
         printf "  ${yellow}Предупреждение${reset}: Не удалось определить ожидаемый размер файла\n"
         expected_size=""
     fi
 
-    local attempt=1
-    local success=1
     local tmp_file="${dest_file}.tmp.$$"
 
-    while [ "$attempt" -le "$max_attempts" ]; do
-        # Выводим инфо о попытках только если их больше одной
-        if [ "$max_attempts" -gt 1 ]; then
-            printf "  Загрузка %s (Попытка %d из %d)...\n" "$display_name" "$attempt" "$max_attempts"
-        else
-            printf "  Загрузка %s...\n" "$display_name"
-        fi
-
-        if fetch_with_mirrors "$url" "$tmp_file" 0 "$_validator_name"; then
-            # Проверяем размер загруженного файла
-            printf "  Проверка размера %s...\n" "$display_name"
-            if _validate_file_with_size "$tmp_file" "$expected_size" 0; then
-                # Успешно - перемещаем файл на место
-                printf "  ${green}✔ OK${reset} - Размер файла совпал с ожидаемым\n"
-                mv -f "$tmp_file" "$dest_file"
-                success=0
-                break
-            else
-                # Проверка не прошла
-                case "$_last_error" in
-                    size_mismatch)
-                        printf "  ${red}Ошибка${reset}: Размер загруженного файла (%s байт) не соответствует ожидаемому (%s байт)\n" "$_last_size" "$expected_size"
-                        printf "  Файл повреждён или загружен не полностью. Повторная попытка...\n"
-                        ;;
-                    *)
-                        printf "  ${red}Ошибка${reset}: %s\n" "$_last_error"
-                        ;;
-                esac
-                rm -f "$tmp_file"
-            fi
-        fi
-
-        # Если попытка сорвалась и она НЕ последняя — ждем и повторяем
-        if [ "$attempt" -lt "$max_attempts" ]; then
-            printf "  ${yellow}Предупреждение${reset}: Попытка %d не удалась. Повтор через %d сек...\n" "$attempt" "$delay"
-            sleep "$delay"
-        fi
-
-        attempt=$((attempt + 1))
-    done
-
-    # Если все попытки исчерпаны и загрузка не удалась
-    if [ "$success" -ne 0 ]; then
+    if _download_and_validate_loop "$url" "$tmp_file" "$expected_size" "$_validator_name" "$display_name"; then
+        mv -f "$tmp_file" "$dest_file"
+    else
+        # Обработка ошибок, если все попытки провалились
         case "$_last_error" in
             html_stub)
-                printf "  ${red}Ошибка${reset}: получена HTML-страница вместо списка IP\n  Оставляем старый файл\n\n"
+                printf "  ${red}Ошибка${reset}: получена HTML-страница вместо списка IP\n"
                 ;;
             content_v4)
-                printf "  ${red}Ошибка${reset}: %s не содержит корректных IPv4-адресов\n  Оставляем старый файл\n\n" "$display_name"
+                printf "  ${red}Ошибка${reset}: %s не содержит корректных IPv4-адресов\n" "$display_name"
                 ;;
             content_v6)
-                printf "  ${red}Ошибка${reset}: %s не содержит корректных IPv6-адресов\n  Оставляем старый файл\n\n" "$display_name"
+                printf "  ${red}Ошибка${reset}: %s не содержит корректных IPv6-адресов\n" "$display_name"
                 ;;
             size|size_mismatch)
-                printf "  ${red}Ошибка${reset}: размер файла не соответствует ожидаемому (%s байт)\n  Оставляем старый файл\n\n" "$_last_size"
+                printf "  ${red}Ошибка${reset}: Размер загруженного файла не соответствует ожидаемому\n"
                 ;;
             *)
+                local max_attempts=${retries_download:-1}
                 if [ "$max_attempts" -gt 1 ]; then
-                    printf "  ${red}Ошибка${reset}: не удалось загрузить %s после %d попыток\n\n" "$display_name" "$max_attempts"
+                    printf "  ${red}Ошибка${reset}: не удалось загрузить %s после %d попыток\n" "$display_name" "$max_attempts"
                 else
-                    printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n\n" "$display_name"
+                    printf "  ${red}Ошибка${reset}: не удалось загрузить %s\n" "$display_name"
                 fi
                 ;;
         esac
+        printf "  ${yellow}Инфо${reset}: Невозможно обновить %s. ${green}Оставляем старый файл${reset}\n\n" "$display_name"
         return 1
     fi
 
