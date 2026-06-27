@@ -283,6 +283,10 @@ _pbr_hex_to_decimal() {
     '
 }
 
+_pbr_format_single_line_error() {
+    printf '%s' "$1" | tr '\n' ' ' | sed 's/[[:space:]]\{1,\}/ /g; s/^ //; s/ $//'
+}
+
 show_pbr_policy_codes() {
     policy_api_url="localhost:79/rci/show/ip/policy"
     main_policy_name="xkeen"
@@ -294,19 +298,48 @@ show_pbr_policy_codes() {
         return 1
     fi
 
+    if ! printf '%s' "$api_policy_json" | jq -e . >/dev/null 2>&1; then
+        api_policy_error=$(_pbr_format_single_line_error "$(printf '%s' "$api_policy_json" | jq -e . 2>&1 >/dev/null)")
+        [ -z "$api_policy_error" ] && api_policy_error="невалидный JSON"
+        echo -e "  ${red}Ошибка${reset}: API политик Keenetic вернул невалидный JSON: $api_policy_error"
+        return 1
+    fi
+
     main_policy_mark=$(printf '%s' "$api_policy_json" | jq -r --arg pname "$main_policy_name" '
         .[] | select((.description // "" | ascii_downcase) == ($pname | ascii_downcase)) | .mark // empty
-    ' 2>/dev/null | head -n 1)
+    ' 2>&1)
+    main_policy_mark_rc=$?
+    if [ "$main_policy_mark_rc" -ne 0 ]; then
+        main_policy_error=$(_pbr_format_single_line_error "$main_policy_mark")
+        [ -z "$main_policy_error" ] && main_policy_error="Не удалось обработать список политик Keenetic"
+        echo -e "  ${red}Ошибка${reset}: $main_policy_error"
+        return 1
+    fi
+    main_policy_mark=$(printf '%s\n' "$main_policy_mark" | sed -n '1p')
 
     user_policy_marks=""
     if [ -f "$xkeen_config" ]; then
+        if ! jq -e . "$xkeen_config" >/dev/null 2>&1; then
+            xkeen_config_error=$(_pbr_format_single_line_error "$(jq -e . "$xkeen_config" 2>&1 >/dev/null)")
+            [ -z "$xkeen_config_error" ] && xkeen_config_error="xkeen.json содержит невалидный JSON"
+            echo -e "  ${red}Ошибка${reset}: ${yellow}xkeen.json${reset}: $xkeen_config_error"
+            return 1
+        fi
+
         user_policy_marks=$(printf '%s' "$api_policy_json" | jq -r --argjson user_cfg "$(cat "$xkeen_config")" '
             ($user_cfg.xkeen.policy // []) as $up |
             .[] as $api |
             $up[] |
             select((.name // "" | ascii_downcase) == ($api.description // "" | ascii_downcase)) |
             "\(.name)|\($api.mark // "")"
-        ' 2>/dev/null)
+        ' 2>&1)
+        user_policy_marks_rc=$?
+        if [ "$user_policy_marks_rc" -ne 0 ]; then
+            user_policy_error=$(_pbr_format_single_line_error "$user_policy_marks")
+            [ -z "$user_policy_error" ] && user_policy_error="Не удалось сопоставить пользовательские политики из xkeen.json"
+            echo -e "  ${red}Ошибка${reset}: ${yellow}xkeen.json${reset}: $user_policy_error"
+            return 1
+        fi
     fi
 
     echo -e "  Коды политик Keenetic для ${yellow}mark${reset} / ${yellow}routing-mark${reset}:"

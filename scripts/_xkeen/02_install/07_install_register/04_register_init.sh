@@ -440,6 +440,78 @@ format_allowed_marks_display() {
     '
 }
 
+format_single_line_error() {
+    printf '%s' "$1" | tr '\n' ' ' | sed 's/[[:space:]]\{1,\}/ /g; s/^ //; s/ $//'
+}
+
+convert_mihomo_yaml_to_json() {
+    config_file="$1"
+    tmp_base="${TMPDIR:-/tmp}/xkeen_mihomo_json.$$"
+    out_file="${tmp_base}.out"
+    err_file="${tmp_base}.err"
+    last_stderr=""
+
+    rm -f "$out_file" "$err_file"
+
+    for yq_variant in \
+        "dash_o_json" \
+        "dash_o_space_json" \
+        "eval_dash_o_json" \
+        "eval_dash_o_space_json"
+    do
+        : > "$out_file"
+        : > "$err_file"
+
+        case "$yq_variant" in
+            dash_o_json)
+                if yq -o=json '.' "$config_file" >"$out_file" 2>"$err_file" \
+                    && jq -e . <"$out_file" >/dev/null 2>&1; then
+                    cat "$out_file"
+                    rm -f "$out_file" "$err_file"
+                    return 0
+                fi
+                ;;
+            dash_o_space_json)
+                if yq -o json '.' "$config_file" >"$out_file" 2>"$err_file" \
+                    && jq -e . <"$out_file" >/dev/null 2>&1; then
+                    cat "$out_file"
+                    rm -f "$out_file" "$err_file"
+                    return 0
+                fi
+                ;;
+            eval_dash_o_json)
+                if yq eval -o=json '.' "$config_file" >"$out_file" 2>"$err_file" \
+                    && jq -e . <"$out_file" >/dev/null 2>&1; then
+                    cat "$out_file"
+                    rm -f "$out_file" "$err_file"
+                    return 0
+                fi
+                ;;
+            eval_dash_o_space_json)
+                if yq eval -o json '.' "$config_file" >"$out_file" 2>"$err_file" \
+                    && jq -e . <"$out_file" >/dev/null 2>&1; then
+                    cat "$out_file"
+                    rm -f "$out_file" "$err_file"
+                    return 0
+                fi
+                ;;
+        esac
+
+        candidate_stderr=$(format_single_line_error "$(cat "$err_file" 2>/dev/null)")
+        [ -n "$candidate_stderr" ] && last_stderr="$candidate_stderr"
+    done
+
+    rm -f "$out_file" "$err_file"
+
+    if [ -n "$last_stderr" ]; then
+        printf '%s' "не удалось преобразовать YAML в JSON через yq: $last_stderr"
+    else
+        printf '%s' "yq не вернул валидный JSON"
+    fi
+
+    return 1
+}
+
 validate_client_routing_mark() {
     validation_mode="$1"
     include_service_mark="$2"
@@ -534,12 +606,15 @@ validate_client_routing_mark() {
         config_hint="  Для Mihomo задайте ${green}routing-mark${reset} глобально либо у нужных ${yellow}proxies${reset}/${yellow}proxy-providers${reset}"
 
         if [ -f "$mihomo_config" ]; then
-            mihomo_json=$(yq -o=json '.' "$mihomo_config" 2>&1)
+            mihomo_json=$(convert_mihomo_yaml_to_json "$mihomo_config")
             mihomo_json_rc=$?
 
             if [ "$mihomo_json_rc" -ne 0 ]; then
                 validation_errors=$(append_multiline "$validation_errors" "$(basename "$mihomo_config"): $mihomo_json")
             else
+                if ! printf '%s' "$mihomo_json" | jq -e . >/dev/null 2>&1; then
+                    validation_errors=$(append_multiline "$validation_errors" "$(basename "$mihomo_config"): yq не вернул валидный JSON")
+                else
                 root_kind=$(printf '%s' "$mihomo_json" | jq -r 'type' 2>&1)
                 root_kind_rc=$?
 
@@ -638,6 +713,7 @@ validate_client_routing_mark() {
                         esac
                     fi
                 fi
+                fi
             fi
         else
             validation_errors=$(append_multiline "$validation_errors" "config.yaml: файл не найден")
@@ -672,9 +748,17 @@ ${light_blue}${validation_list}${reset}"
 ${light_blue}${bad_list}${reset}"
     fi
 
+    if [ -n "$bad_items" ] || { [ "$name_client" = "xray" ] && [ "$has_items" != "true" ] && [ -z "$validation_errors" ]; }; then
+        validation_summary="не найден"
+        pbr_validation_summary="не найден корректный"
+    else
+        validation_summary="не удалось проверить"
+        pbr_validation_summary="не удалось проверить корректный"
+    fi
+
     if [ "$validation_mode" = "pbr" ]; then
         log_error_terminal "
-  Включена strict PBR-проверка, но у исходящих подключений ${yellow}${name_client}${reset} не найден корректный ${yellow}mark/routing-mark${reset} политики Keenetic$error_details
+  Включена strict PBR-проверка, но у исходящих подключений ${yellow}${name_client}${reset} ${pbr_validation_summary} ${yellow}mark/routing-mark${reset} политики Keenetic$error_details
 
   Разрешённые policy marks Keenetic: ${yellow}${allowed_marks_display}${reset}
 $config_hint
@@ -684,7 +768,7 @@ $config_hint
 "
     else
         log_warning_terminal "
-  Проксирование Entware включено, но у исходящих подключений ${yellow}${name_client}${reset} не найден ${yellow}mark/routing-mark${reset} для bypass$error_details
+  Проксирование Entware включено, но у исходящих подключений ${yellow}${name_client}${reset} ${validation_summary} ${yellow}mark/routing-mark${reset} для bypass$error_details
 
   Для обычного Entware proxy можно использовать служебную метку ${yellow}255${reset}
   Разрешённые bypass marks: ${yellow}${allowed_marks_display}${reset}
