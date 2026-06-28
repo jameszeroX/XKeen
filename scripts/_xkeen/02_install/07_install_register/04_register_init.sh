@@ -88,6 +88,7 @@ proxy_router="off"
 pbr_strict="off"
 
 # Настройки запуска
+start_verbose="on"
 start_attempts=10
 start_auto="on"
 start_delay=20
@@ -3033,7 +3034,11 @@ proxy_start() {
                             nohup "$name_client" run >/dev/null 2>&1 &
                             unset fd_out
                         else
-                            "$name_client" run &
+                            if [ "$start_verbose" = "on" ]; then
+                                "$name_client" run &
+                            else
+                                "$name_client" run >/dev/null 2>&1 &
+                            fi
                         fi
                     ;;
                     mihomo)
@@ -3043,7 +3048,11 @@ proxy_start() {
                             nohup "$name_client" >/dev/null 2>&1 &
                             unset fd_out
                         else
-                            "$name_client" &
+                            if [ "$start_verbose" = "on" ]; then
+                                "$name_client" &
+                            else
+                                "$name_client" >/dev/null 2>&1 &
+                            fi
                         fi
                         ;;
                     *) log_error_terminal "Неизвестный прокси-клиент: ${yellow}$name_client${reset}" ;;

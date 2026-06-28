@@ -55,3 +55,19 @@ info_compare_xkeen() {
         info_compare_xkeen="update"
     fi
 }
+
+version_xkeen() {
+    echo
+    echo -e "  Версия ${yellow}XKeen $xkeen_current_version $xkeen_build${reset} (время сборки: ${light_blue}$build_timestamp${reset})"
+    info_xray
+    info_mihomo
+
+    if [ -f "$install_dir/xray" ] && grep -q 'name_client="xray"' "$initd_file"; then
+        echo -e "  Ядро проксирования Xray версии ${yellow}$xray_current_version${reset}"
+    elif [ -f "$install_dir/mihomo" ] && grep -q 'name_client="mihomo"' "$initd_file"; then
+        echo -e "  Ядро проксирования Mihomo версии ${yellow}$mihomo_current_version${reset}"
+        echo -e "  Парсер конфигурационных файлов Yq версии ${yellow}$yq_current_version${reset}"
+    else
+        echo -e "  Ядро проксирования ${red}не установлено${reset}"
+    fi
+}

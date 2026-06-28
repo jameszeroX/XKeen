@@ -611,6 +611,7 @@ while [ $# -gt 0 ]; do
             delete_tmp
 
             echo -e "  Обновление XKeen ${green}выполнено${reset}"
+            version_xkeen
         ;;
 
 
@@ -1148,6 +1149,7 @@ while [ $# -gt 0 ]; do
 
             echo
             echo -e "  Переустановка XKeen ${green}выполнена${reset}"
+            version_xkeen
         ;;
 
 
@@ -1241,18 +1243,7 @@ while [ $# -gt 0 ]; do
 
 
         -v|-version)    # Показать версию XKeen
-            echo -e "  Версия ${yellow}XKeen $xkeen_current_version $xkeen_build${reset} (время сборки: ${light_blue}$build_timestamp${reset})"
-            info_xray
-            info_mihomo
-
-            if [ -f "$install_dir/xray" ] && grep -q 'name_client="xray"' "$initd_file"; then
-                echo -e "  Ядро проксирования Xray версии ${yellow}$xray_current_version${reset}"
-            elif [ -f "$install_dir/mihomo" ] && grep -q 'name_client="mihomo"' "$initd_file"; then
-                echo -e "  Ядро проксирования Mihomo версии ${yellow}$mihomo_current_version${reset}"
-                echo -e "  Парсер конфигурационных файлов Yq версии ${yellow}$yq_current_version${reset}"
-            else
-                echo -e "  Ядро проксирования ${red}не установлено${reset}"
-            fi
+            version_xkeen
         ;;
 
 
@@ -1318,6 +1309,15 @@ while [ $# -gt 0 ]; do
             [ -n "$action" ] && shift
             smart_clear
             change_autostart_xkeen "$action"
+            add_chmod_init
+        ;;
+
+
+        -startvb)    # Вывод информации при старте прокси-клиента
+            action=$(get_state_arg "$2")
+            [ -n "$action" ] && shift
+            smart_clear
+            change_start_verbose "$action"
             add_chmod_init
         ;;
 

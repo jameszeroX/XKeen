@@ -401,3 +401,7 @@ change_aghfix_xkeen() {
 change_dscp_proxy() {
     toggle_param "dscp_enable" "маршрутизации по DSCP-меткам" "restart" "$1"
 }
+
+change_start_verbose() {
+    toggle_param "start_verbose" "информации при старте прокси-клиента" "none" "$1"
+}

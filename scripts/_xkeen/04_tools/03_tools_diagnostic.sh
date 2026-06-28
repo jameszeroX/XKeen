@@ -45,9 +45,11 @@ diagnostic() {
     # Функция маскировки чувствительных данных в конфигах Xray
     mask_xray_sensitive_data() {
         sed -E \
-            -e 's/("(id|uuid|password|user|pass|auth|secretKey|preSharedKey)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
-            -e 's/("(address|host|serverName|sni|path|token|spiderX)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
-            -e 's/("(publicKey|privateKey|shortId|mldsa65Verify|encryption)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g'
+            -e 's/("(id|uuid|address|host|publicKey|privateKey)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
+            -e 's/("(password|user|pass|auth|encryption)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
+            -e 's/("(secretKey|preSharedKey|dest|token)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
+            -e 's/("(serverName|serverNames|sni|path|spiderX)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
+            -e 's/("(shortId|shortIds|mldsa65Verify|mldsa65Seed)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g'
     }
 
     # Функция маскировки чувствительных данных в конфигах Mihomo
