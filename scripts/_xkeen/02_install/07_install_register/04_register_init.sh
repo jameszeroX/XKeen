@@ -3033,7 +3033,7 @@ proxy_start() {
                             nohup "$name_client" run >/dev/null 2>&1 &
                             unset fd_out
                         else
-                            "$name_client" run &
+                            "$name_client" run >/dev/null 2>&1 &
                         fi
                     ;;
                     mihomo)
@@ -3043,7 +3043,7 @@ proxy_start() {
                             nohup "$name_client" >/dev/null 2>&1 &
                             unset fd_out
                         else
-                            "$name_client" &
+                            "$name_client" >/dev/null 2>&1 &
                         fi
                         ;;
                     *) log_error_terminal "Неизвестный прокси-клиент: ${yellow}$name_client${reset}" ;;
