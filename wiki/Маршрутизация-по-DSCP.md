@@ -87,15 +87,40 @@ Windows Registry Editor Version 5.00
   }
 ```
 
+### Пример inbound Xray для TProxy
+
+```json
+    {
+      "port": 1191,
+      "protocol": "tunnel",
+      "settings": {
+        "network": "tcp,udp",
+        "followRedirect": true
+      },
+      "streamSettings": {
+        "sockopt": {"tproxy": "tproxy"}
+      },
+      "tag": "dscp-force-proxy"
+    }
+```
+
 Порт `1191` приведён только как пример. XKeen не использует хардкод порта и определяет его автоматически по inbound'ам `dscp-force-proxy-redirect` и `dscp-force-proxy-tproxy`.
 
 Также поддерживается компактный вариант с общим тегом `dscp-force-proxy`, но раздельные теги проще для чтения и диагностики.
 
-### Пример routing rule Xray
+### Пример routing rule Xray для Hybrid
 
 ```json
 {
   "inboundTag": ["dscp-force-proxy-redirect","dscp-force-proxy-tproxy"],
+  "outboundTag": "vless-reality"
+}
+```
+### Пример routing rule Xray для TProxy
+
+```json
+{
+  "inboundTag": ["dscp-force-proxy"],
   "outboundTag": "vless-reality"
 }
 ```
