@@ -1083,6 +1083,7 @@ while [ $# -gt 0 ]; do
 
 
         -k)    # Переустановка XKeen
+            test_health_pre
             xkeen_set_info
 
             smart_clear
@@ -1096,7 +1097,6 @@ while [ $# -gt 0 ]; do
                 else
                     download_func="download_xkeen_dev"
                 fi
-                test_health_pre
                 test_connection
                 test_entware
                 test_github
