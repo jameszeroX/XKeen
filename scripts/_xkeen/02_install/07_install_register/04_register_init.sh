@@ -24,6 +24,8 @@ name_ipset_deny_mac="xkeen_deny_mac"
 # Директории
 directory_os_modules="/lib/modules/$(uname -r)"
 directory_user_modules="/opt/lib/modules"
+directory_opkg_modules="/opt/lib/system-modules/$(uname -r)"
+directory_system_modules="/lib/system-modules/$(uname -r)"
 directory_configs_app="/opt/etc/$name_client"
 directory_xray_config="$directory_configs_app/configs"
 directory_xray_asset="$directory_configs_app/dat"
@@ -962,13 +964,28 @@ is_module_loaded() {
     esac
 }
 
+# Определение пути к модулям
+find_module_path() {
+    module_name="$1"
+
+    for dir in "$directory_os_modules" "$directory_user_modules" "$directory_opkg_modules" "$directory_system_modules"; do
+        if [ -f "$dir/$module_name" ]; then
+            echo "$dir/$module_name"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # Загрузка модулей
 load_modules() {
     name="${1%.ko}"
+
     if ! is_module_loaded "$name"; then
-        for dir in "$directory_os_modules" "$directory_user_modules"; do
-            [ -f "$dir/$1" ] && insmod "$dir/$1" >/dev/null 2>&1 && return
-        done
+        module_path=$(find_module_path "$1")
+        if [ -n "$module_path" ]; then
+            insmod "$module_path" >/dev/null 2>&1
+        fi
     fi
 }
 
@@ -3137,7 +3154,8 @@ proxy_start() {
 wait_for_ready() {
     _max=$(( ${start_delay:-60} * 2 ))
     _attempt=0
-    _probe_ko="$directory_os_modules/xt_TPROXY.ko"
+    _probe_ko=$(find_module_path "xt_TPROXY.ko")
+
     while [ "$_attempt" -lt "$_max" ]; do
         if ip route show default 2>/dev/null | grep -q '^default'; then
             # Проверка готовности API политик и модуля xt_TPROXY
@@ -3146,7 +3164,7 @@ wait_for_ready() {
                 ""|"{}")
                     ;;
                 \{*)
-                    if [ ! -f "$_probe_ko" ] \
+                    if [ -z "$_probe_ko" ] \
                        || grep -q '^xt_TPROXY ' /proc/modules 2>/dev/null \
                        || insmod "$_probe_ko" >/dev/null 2>&1
                     then
