@@ -15,7 +15,7 @@ info_version_xkeen() {
         if [ -z "$version" ]; then
             if [ "$attempt" -eq 1 ]; then
                 echo
-                printf "${red}Нет доступа${reset} к ${yellow}GitHub API${reset}, пробуем ${yellow}jsDelivr${reset}...\n"
+                printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}, пробуем ${yellow}jsDelivr${reset}...\n"
             fi
             version=$(curl_with_timeout -s "$xkeen_jsd_url" | jq -r '.versions | first' 2>/dev/null)
         fi
