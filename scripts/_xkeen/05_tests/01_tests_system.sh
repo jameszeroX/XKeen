@@ -24,12 +24,12 @@ check_binary_health() {
 }
 
 # Функция предварительной проверки исправности системы
-check_health_pre() {
+check_health() {
     local curl_err
     local exit_code
 
     check_binary_health busybox --help
-    for prog in curl opkg grep iptables; do
+    for prog in curl opkg grep; do
         check_binary_health "$prog" --version
     done
 

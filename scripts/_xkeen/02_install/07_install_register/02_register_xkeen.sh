@@ -5,7 +5,7 @@ register_xkeen_control() {
     write_opkg_control \
         "xkeen" \
         "$xkeen_current_version" \
-        "jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset" \
+        "jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset, ip-full" \
         "Skrill" \
         "xkeen" \
         "Skrill / jameszero" \
@@ -34,7 +34,7 @@ register_xkeen_status() {
     write_opkg_status \
         "xkeen" \
         "$xkeen_current_version" \
-        "jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset"
+        "jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset, ip-full"
 }
 
 

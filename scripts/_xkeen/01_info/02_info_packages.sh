@@ -30,21 +30,9 @@ info_packages_curl=$package_status
 info_packages "jq"
 info_packages_jq=$package_status
 
-# Проверка наличия пакета "libc"
-info_packages "libc"
-info_packages_libc=$package_status
-
-# Проверка наличия пакета "libssp"
-info_packages "libssp"
-info_packages_libssp=$package_status
-
-# Проверка наличия пакета "librt"
-info_packages "librt"
-info_packages_librt=$package_status
-
-# Проверка наличия пакета "libpthread"
-info_packages "libpthread"
-info_packages_libpthread=$package_status
+# Проверка наличия пакета "ip-full"
+info_packages "ip-full"
+info_packages_ip_full=$package_status
 
 # Проверка наличия пакета "ca-bundle"
 info_packages "ca-bundle"

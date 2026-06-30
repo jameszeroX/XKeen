@@ -117,8 +117,8 @@ while [ $# -gt 0 ]; do
 
         -i|-install)    # Запуск полного цикла установки
             info_firmware
-            check_health_pre
             test_connection
+            check_health
             test_entware
             test_github
             sleep 2
@@ -506,8 +506,8 @@ while [ $# -gt 0 ]; do
 
 
         -ug)    # Обновление баз GeoFile/GeoIPSET
-            check_health_pre
             test_connection
+            check_health
             test_github
             sleep 2
 
@@ -542,8 +542,9 @@ while [ $# -gt 0 ]; do
 
 
         -uk)    # Обновление XKeen
-            check_health_pre	
             test_connection
+            check_health	
+            test_entware
             test_github
             sleep 2
 
@@ -617,8 +618,8 @@ while [ $# -gt 0 ]; do
 
         -ux)    # Обновление или установка ядра Xray
             check_free_space xray || exit 1
-            check_health_pre
             test_connection
+            check_health
             test_github
             info_cpu
             sleep 2
@@ -693,8 +694,8 @@ while [ $# -gt 0 ]; do
 
         -um)    # Обновление или установка ядра Mihomo
             check_free_space mihomo || exit 1
-            check_health_pre
             test_connection
+            check_health
             test_github
             info_cpu
             sleep 2
@@ -783,8 +784,8 @@ while [ $# -gt 0 ]; do
 
 
         -uy)    # Обновление или установка Yq
-            check_health_pre
             test_connection
+            check_health
             test_github
             info_cpu
             sleep 2
@@ -1083,7 +1084,9 @@ while [ $# -gt 0 ]; do
 
 
         -k)    # Переустановка XKeen
-            check_health_pre
+            test_connection
+            check_health
+            test_entware
             xkeen_set_info
 
             smart_clear
@@ -1097,8 +1100,6 @@ while [ $# -gt 0 ]; do
                 else
                     download_func="download_xkeen_dev"
                 fi
-                test_connection
-                test_entware
                 test_github
                 sleep 2
                 "$download_func"
@@ -1155,8 +1156,8 @@ while [ $# -gt 0 ]; do
 
         -g)    # Переустановка баз GeoFile
             command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
-            check_health_pre
             test_connection
+            check_health
             test_github
             sleep 2
 
@@ -1180,8 +1181,8 @@ while [ $# -gt 0 ]; do
 
 
         -gips)    # Установка GeoIPSET
-            check_health_pre
             test_connection
+            check_health
             test_github
 
             smart_clear
@@ -1515,6 +1516,13 @@ while [ $# -gt 0 ]; do
 
         -mtest)    # Проверка конфигурации Mihomo
             core_conf_test mihomo
+        ;;
+
+
+        -health)    # Базовая проверка исправности Entware
+            test_connection
+            check_health
+            echo -e "  Базовая проверка ${yellow}Entware${reset} выполнена. ${green}Система исправна${reset}"
         ;;
 
 

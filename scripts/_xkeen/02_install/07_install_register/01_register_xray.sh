@@ -3,7 +3,7 @@ register_xray_control() {
     write_opkg_control \
         "xray_s" \
         "$xray_current_version" \
-        "libc, libssp, librt, libpthread, ca-bundle" \
+        "ca-bundle" \
         "XTLS Team" \
         "xray_s" \
         "Skrill / jameszero" \
@@ -32,5 +32,5 @@ register_xray_status() {
     write_opkg_status \
         "xray_s" \
         "$xray_current_version" \
-        "libc, libssp, librt, libpthread, ca-bundle"
+        "ca-bundle"
 }

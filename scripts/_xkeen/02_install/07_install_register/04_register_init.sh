@@ -224,11 +224,15 @@ ${custom_details}"
     fi
 }
 
-utils="jq curl grep awk sed ipset"
+utils="jq curl grep awk sed ipset ip"
 [ "$name_client" = "mihomo" ] && utils="$utils yq"
 for cmd in $utils; do
     command -v "$cmd" >/dev/null 2>&1 || log_error_terminal "Не найдена необходимая утилита: ${yellow}$cmd${reset}"
 done
+
+if readlink $(which ip) | grep -q 'busybox'; then
+    log_error_terminal "Обнаружена урезанная версия ip (BusyBox). Необходим пакет: ${yellow}ip-full${reset}"
+fi
 
 log_clean() { [ "$name_client" = "xray" ] && : > "$log_access" && : > "$log_error"; }
 
@@ -2338,7 +2342,7 @@ if pidof "$name_client" >/dev/null; then
             if [ "$source_table" = "main" ]; then
                 ip -"$ip_version" route show default 2>/dev/null | grep -q '^default'
             else
-                ip -"$ip_version" route show table all 2>/dev/null | grep -E "^[[:space:]]*default .* table $policy_table([[:space:]]|$)" | grep -vq 'unreachable' >/dev/null
+                ip -"$ip_version" route show table "$policy_table" 2>/dev/null | grep -E '^default ' | grep -vq 'unreachable'
             fi
         }
 
