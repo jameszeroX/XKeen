@@ -1,9 +1,6 @@
 # Определение времени для задач cron
 choice_cron_time() {
-    if [ "$choice_geofile_cron_select" != true ]; then
-        echo
-        return
-    fi
+    [ "$choice_geofile_cron_select" != true ] && return
 
     echo
     echo -e "  Время автоматического обновления ${yellow}геофайлов${reset}:"
