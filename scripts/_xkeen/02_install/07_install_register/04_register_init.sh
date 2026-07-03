@@ -2209,13 +2209,6 @@ if pidof "$name_client" >/dev/null; then
         ipt -I "$chain" 1 -m set --match-set "$geo_set" dst -m set ! --match-set "$override_set" dst $comment -j RETURN >/dev/null 2>&1
     }
 
-    add_force_exclude_rules() {
-        chain="$1"
-        for exclude in $exclude_list; do
-            ipt -A "$chain" -d "$exclude" $comment -j RETURN >/dev/null 2>&1
-        done
-    }
-
     # Добавление правил iptables
     add_ipt_rule() {
         family="$1"
@@ -2318,7 +2311,7 @@ if pidof "$name_client" >/dev/null; then
             return
         fi
 
-        add_force_exclude_rules "$chain"
+        add_exclude_rules "$chain"
 
         ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
         ipt -I "$chain" 1 -m conntrack --ctstate INVALID $comment -j RETURN >/dev/null 2>&1
