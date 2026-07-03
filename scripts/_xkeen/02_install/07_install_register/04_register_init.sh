@@ -373,14 +373,14 @@ validate_xkeen_json() {
 
     jq_check=
     jq_check='
-      if .xkeen then
+      if has("xkeen") and .xkeen != null then
         if .xkeen.policy then
           .xkeen.policy | type == "array" and ([.[] | select(has("name") | not)] | length == 0)
         else
           true
         end
       else
-        false
+        true
       end
     '
 
