@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Информация о службе: Запуск / Остановка XKeen
-# Версия: 2.30
+# Версия: 2.31
 
 # Окружение
 PATH="/opt/bin:/opt/sbin:/sbin:/bin:/usr/sbin:/usr/bin"
@@ -17,6 +17,7 @@ reset="\033[0m"
 name_client="xray"
 name_app="XKeen"
 name_policy="xkeen"
+name_policy_full="xkeen_full"
 name_profile="xkeen"
 name_chain="xkeen"
 name_ipset_deny_mac="xkeen_deny_mac"
@@ -127,9 +128,6 @@ if [ "$dscp_enable" = "off" ]; then
     dscp_force_proxy=""
     dscp_exclude=""
     dscp_proxy=""
-    port_dscp_force_proxy=""
-    mode_dscp_force_proxy=""
-    network_dscp_force_proxy=""
 fi
 
 print_policy_info() {
@@ -365,20 +363,32 @@ format_routing_mark_items() {
 # Функция валидации xkeen.json
 validate_xkeen_json() {
     [ ! -f "$xkeen_config" ] && return 0
+
     if ! jq -e . "$xkeen_config" >/dev/null 2>&1; then
-            log_error_terminal "
+        log_error_terminal "
   Валидация JSON: файл '${yellow}xkeen.json${reset}' содержит синтаксические ошибки
   Запуск прокси невозможен
 "
     fi
 
-    if ! jq -e '.xkeen.policy[]? | .name' "$xkeen_config" >/dev/null 2>&1; then
-        if jq -e '.xkeen' "$xkeen_config" >/dev/null 2>&1; then
-            log_error_terminal "
+    jq_check=
+    jq_check='
+      if .xkeen then
+        if .xkeen.policy then
+          .xkeen.policy | type == "array" and ([.[] | select(has("name") | not)] | length == 0)
+        else
+          true
+        end
+      else
+        false
+      end
+    '
+
+    if ! jq -e "$jq_check" "$xkeen_config" >/dev/null 2>&1; then
+        log_error_terminal "
   Файл '${yellow}xkeen.json${reset}' имеет неверную структуру
   Запуск прокси невозможен
 "
-        fi
     fi
 
     return 0
@@ -1052,9 +1062,6 @@ get_modules() {
             dscp_force_proxy=""
             dscp_exclude=""
             dscp_proxy=""
-            port_dscp_force_proxy=""
-            mode_dscp_force_proxy=""
-            network_dscp_force_proxy=""
         fi
     fi
 }
@@ -1418,11 +1425,11 @@ resolve_dscp_force_proxy() {
     port_dscp_force_proxy_tproxy=""
     network_dscp_force_proxy_tproxy=""
 
-    [ -n "$dscp_force_proxy" ] || {
+    if [ ! -n "$dscp_force_proxy" ] && [ ! -n "$name_policy_full" ]; then
         dscp_force_proxy_status="disabled"
-        dscp_force_proxy_reason="метка отключена в конфиге XKeen"
+        dscp_force_proxy_reason="метка и политика отключены в конфиге XKeen"
         return 1
-    }
+    fi
 
     if [ "$mode_proxy" != "TProxy" ] && [ "$mode_proxy" != "Hybrid" ]; then
         dscp_force_proxy_reason="текущий режим ${mode_proxy:-Other} не поддерживается"
@@ -1776,14 +1783,15 @@ get_exclude_ip6() {
 
 # Получение метки политики
 get_policy_mark() {
-    if [ -n "$api_policy_json" ]; then
-        policy_mark=$(echo "$api_policy_json" | jq -r --arg pname "$name_policy" '.[] | select(.description | ascii_downcase == ($pname | ascii_downcase)) | .mark // empty' 2>/dev/null)
+    _mark=""
+    if [ -n "$api_policy_json" ] && [ -n "$1" ]; then
+        _mark=$(echo "$api_policy_json" | jq -r --arg pname "$1" '.[] | select(.description | ascii_downcase == ($pname | ascii_downcase)) | .mark // empty' 2>/dev/null)
     fi
 
-    if [ -n "$policy_mark" ]; then
-        echo "0x${policy_mark}"
+    if [ -n "$_mark" ]; then
+        printf '0x%s\n' "$_mark"
     else
-        echo ""
+        printf '\n'
     fi
 }
 
@@ -1850,7 +1858,11 @@ get_user_policies() {
 # Проверка на конфликт имен политик
 check_policy_name_conflict() {
     if [ -f "$xkeen_config" ]; then
-        conflict=$(jq -r --arg main "$name_policy" '.xkeen.policy[] | select((.name | ascii_downcase) == ($main | ascii_downcase)) | .name' "$xkeen_config" 2>/dev/null | head -n 1)
+        conflict=$(jq -r \
+            --arg main "$name_policy" \
+            --arg full "$name_policy_full" \
+            '.xkeen.policy[] | select((.name | ascii_downcase) == ($main | ascii_downcase) or (.name | ascii_downcase) == ($full | ascii_downcase)) | .name' \
+            "$xkeen_config" 2>/dev/null | head -n 1)
 
         if [ -n "$conflict" ]; then
             log_error_router "Ошибка конфигурации: Имя политики в xkeen.json совпадает с зарезервированным"
@@ -1966,6 +1978,7 @@ EOL
     inject_var port_donor "$port_donor"
     inject_var port_exclude "$port_exclude"
     inject_var policy_mark "$policy_mark"
+    inject_var policy_mark_full "$policy_mark_full"
     inject_var comment_tag "$comment_tag"
     inject_var comment "$comment"
     inject_var custom_mark "$custom_mark"
@@ -2118,7 +2131,7 @@ if pidof "$name_client" >/dev/null; then
         {
             printf '*%s\n' "$_table"
             printf ':%s -\n' "$name_chain"
-            [ -n "$port_dscp_force_proxy" ] && printf ':%s_force -\n' "$name_chain"
+            { [ -n "$port_dscp_force_proxy" ] || [ -n "$policy_mark_full" ]; } && printf ':%s_force -\n' "$name_chain"
             [ "$proxy_router" = "on" ] && printf ':%s_out -\n' "$name_chain"
             [ -n "$_deletes" ] && printf '%s\n' "$_deletes"
             printf '%s' "$_rules"
@@ -2276,13 +2289,13 @@ if pidof "$name_client" >/dev/null; then
         # dedicated PREROUTING path'е соответствующей таблицы. Если не выйти
         # здесь из обычной chain для тех же протоколов, пакет позже попадёт в
         # штатный REDIRECT/TPROXY path и потеряет original dst.
-        if [ "$table" = "$table_redirect" ] && [ -n "$port_dscp_force_proxy_redirect" ]; then
+        if [ "$table" = "$table_redirect" ] && [ -n "$port_dscp_force_proxy_redirect" ] && [ -n "$dscp_force_proxy" ]; then
             for net in $network_dscp_force_proxy_redirect; do
                 ipt -I "$chain" 1 -p "$net" -m dscp --dscp "$dscp_force_proxy" $comment -j RETURN >/dev/null 2>&1
             done
         fi
 
-        if [ "$table" = "$table_tproxy" ] && [ -n "$port_dscp_force_proxy_tproxy" ]; then
+        if [ "$table" = "$table_tproxy" ] && [ -n "$port_dscp_force_proxy_tproxy" ] && [ -n "$dscp_force_proxy" ]; then
             for net in $network_dscp_force_proxy_tproxy; do
                 ipt -I "$chain" 1 -p "$net" -m dscp --dscp "$dscp_force_proxy" $comment -j RETURN >/dev/null 2>&1
             done
@@ -2412,14 +2425,14 @@ if pidof "$name_client" >/dev/null; then
         # (LAN/Wi-Fi/guest-bridge); за L3-VLAN правило безвредно неактивно.
         ipt -I PREROUTING 1 -m set --match-set "$name_ipset_deny_mac" src $comment -j RETURN >/dev/null 2>&1
 
-        if [ "$table" = "$table_redirect" ] && [ -n "$port_dscp_force_proxy_redirect" ]; then
+        if [ "$table" = "$table_redirect" ] && [ -n "$port_dscp_force_proxy_redirect" ] && [ -n "$dscp_force_proxy" ]; then
             for force_net in $network_dscp_force_proxy_redirect; do
                 set -- -m conntrack ! --ctstate INVALID -p "$force_net" -m dscp --dscp "$dscp_force_proxy" $comment -j "${name_chain}_force"
                 ipt -A PREROUTING "$@" >/dev/null 2>&1
             done
         fi
 
-        if [ "$table" = "$table_tproxy" ] && [ -n "$port_dscp_force_proxy_tproxy" ]; then
+        if [ "$table" = "$table_tproxy" ] && [ -n "$port_dscp_force_proxy_tproxy" ] && [ -n "$dscp_force_proxy" ]; then
             for force_net in $network_dscp_force_proxy_tproxy; do
                 set -- -m conntrack ! --ctstate INVALID -p "$force_net" -m dscp --dscp "$dscp_force_proxy" $comment -j "${name_chain}_force"
                 ipt -A PREROUTING "$@" >/dev/null 2>&1
@@ -2469,6 +2482,12 @@ if pidof "$name_client" >/dev/null; then
             done <<USER_POLICIES_EOF
 $user_policies
 USER_POLICIES_EOF
+
+            # Политика xkeen_full (принудительное проксирование)
+            if [ -n "$policy_mark_full" ]; then
+                set -- -m connmark --mark "$policy_mark_full" -m conntrack ! --ctstate INVALID -p "$net" $comment -j "${name_chain}_force"
+                ipt -A PREROUTING "$@" >/dev/null 2>&1
+            fi
 
             # Политика xkeen (стандартная)
             if [ -n "$policy_mark" ]; then
@@ -2569,7 +2588,7 @@ USER_POLICIES_EOF
 
         all_marks=""
         [ -n "$policy_mark" ] && all_marks="$policy_mark"
-
+        [ -n "$policy_mark_full" ] && all_marks="$policy_mark_full $all_marks"
         [ -n "$custom_mark" ] && all_marks="$custom_mark $all_marks"
 
         if [ -n "$user_policies" ]; then
@@ -2970,7 +2989,8 @@ proxy_start() {
         check_policy_name_conflict
         check_xray_backups
         api_cache_init
-        policy_mark=$(get_policy_mark)
+        policy_mark=$(get_policy_mark "$name_policy")
+        policy_mark_full=$(get_policy_mark "$name_policy_full")
         user_policies=$(resolve_user_policies)
         validate_entware_proxy_mark
         validate_pbr_routing_mark
