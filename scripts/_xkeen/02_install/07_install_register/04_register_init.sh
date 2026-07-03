@@ -72,7 +72,7 @@ custom_mark=""
 # DSCP-метки
 dscp_enable="on"
 dscp_force_proxy="61"
-dscp_force_proxy_tag="dscp-force-proxy"
+dscp_force_proxy_tag="force-proxy"
 dscp_exclude="62"
 dscp_proxy="63"
 
@@ -2335,6 +2335,14 @@ if pidof "$name_client" >/dev/null; then
                 ipt -A "$chain" -p "$net" $comment -j TPROXY --on-ip "$proxy_ip" --on-port "$port_dscp_force_proxy_tproxy" --tproxy-mark "$table_mark" >/dev/null 2>&1
             done
         fi
+
+        # Расскомментируйте блок если необходимо
+        # учитывать DSCP 62 в политике xkeen_full
+        # if [ -n "$dscp_exclude" ]; then
+            # for dscp in $dscp_exclude; do
+                # ipt -I "$chain" -m dscp --dscp "$dscp" $comment -j RETURN
+            # done
+        # fi
     }
 
     # Настройка таблицы маршрутов

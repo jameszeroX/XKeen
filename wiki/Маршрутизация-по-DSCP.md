@@ -71,7 +71,7 @@ Windows Registry Editor Version 5.00
       "network": "tcp",
       "followRedirect": true
     },
-    "tag": "dscp-force-proxy-redirect"
+    "tag": "force-proxy-redirect"
   },
   {
     "port": 1191,
@@ -83,7 +83,7 @@ Windows Registry Editor Version 5.00
     "streamSettings": {
       "sockopt": {"tproxy": "tproxy"}
     },
-    "tag": "dscp-force-proxy-tproxy"
+    "tag": "force-proxy-tproxy"
   }
 ```
 
@@ -100,19 +100,19 @@ Windows Registry Editor Version 5.00
       "streamSettings": {
         "sockopt": {"tproxy": "tproxy"}
       },
-      "tag": "dscp-force-proxy"
+      "tag": "force-proxy"
     }
 ```
 
-Порт `1191` приведён только как пример. XKeen не использует хардкод порта и определяет его автоматически по inbound'ам `dscp-force-proxy-redirect` и `dscp-force-proxy-tproxy`.
+Порт `1191` приведён только как пример. XKeen не использует хардкод порта и определяет его автоматически по inbound'ам `force-proxy-redirect` и `force-proxy-tproxy`.
 
-Также поддерживается компактный вариант с общим тегом `dscp-force-proxy`, но раздельные теги проще для чтения и диагностики.
+Также поддерживается компактный вариант с общим тегом `force-proxy`, но раздельные теги проще для чтения и диагностики.
 
 ### Пример routing rule Xray для Hybrid
 
 ```json
 {
-  "inboundTag": ["dscp-force-proxy-redirect","dscp-force-proxy-tproxy"],
+  "inboundTag": ["force-proxy-redirect","force-proxy-tproxy"],
   "outboundTag": "vless-reality"
 }
 ```
@@ -120,7 +120,7 @@ Windows Registry Editor Version 5.00
 
 ```json
 {
-  "inboundTag": ["dscp-force-proxy"],
+  "inboundTag": ["force-proxy"],
   "outboundTag": "vless-reality"
 }
 ```
@@ -133,12 +133,12 @@ Windows Registry Editor Version 5.00
 
 ```yaml
 listeners:
-  - name: dscp-force-proxy-redirect
+  - name: force-proxy-redirect
     type: redir
     port: 1191
     listen: 0.0.0.0
     proxy: ProxyTCP
-  - name: dscp-force-proxy-tproxy
+  - name: force-proxy-tproxy
     type: tproxy
     port: 1192
     listen: 0.0.0.0
@@ -150,28 +150,28 @@ listeners:
 
 ```yaml
 listeners:
-  - name: dscp-force-proxy-redirect
+  - name: force-proxy-redirect
     type: redir
     port: 1191
     listen: 0.0.0.0
-  - name: dscp-force-proxy-tproxy
+  - name: force-proxy-tproxy
     type: tproxy
     port: 1192
     listen: 0.0.0.0
     udp: true
 
 rules:
-  - IN-NAME,dscp-force-proxy-redirect,ProxyTCP
-  - IN-NAME,dscp-force-proxy-tproxy,ProxyUDP
+  - IN-NAME,force-proxy-redirect,ProxyTCP
+  - IN-NAME,force-proxy-tproxy,ProxyUDP
 ```
 
-Для режима `TProxy` достаточно listener `dscp-force-proxy` или `dscp-force-proxy-tproxy`. Для режима `Hybrid` нужны оба listener'а.
+Для режима `TProxy` достаточно listener `force-proxy` или `force-proxy-tproxy`. Для режима `Hybrid` нужны оба listener'а.
 
 `ProxyTCP` и `ProxyUDP` должны быть именами существующих исходящих прокси или proxy-group в конфигурации Mihomo.
 
 `proxy` можно указывать либо прямо в listener, либо через правило `IN-NAME,<listener>,<proxy>` в `rules`. XKeen включает `DSCP 61` для Mihomo только если для каждого нужного listener'а найден корректный `type`, валидный `port` и задан `proxy` — либо прямо в listener, либо через `IN-NAME`.
 
-Для `Hybrid` это правило должно быть задано отдельно для каждого listener'а, например `dscp-force-proxy-redirect` и `dscp-force-proxy-tproxy`. Для режима `TProxy` тот же подход работает с `dscp-force-proxy` или `dscp-force-proxy-tproxy`.
+Для `Hybrid` это правило должно быть задано отдельно для каждого listener'а, например `force-proxy-redirect` и `force-proxy-tproxy`. Для режима `TProxy` тот же подход работает с `force-proxy` или `force-proxy-tproxy`.
 
 ### Маркировка трафика в Windows
 

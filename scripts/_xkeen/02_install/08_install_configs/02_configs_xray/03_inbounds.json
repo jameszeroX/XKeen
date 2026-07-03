@@ -38,7 +38,7 @@
         "network": "tcp",
         "followRedirect": true
       },
-      "tag": "dscp-force-proxy-redirect"
+      "tag": "force-proxy-redirect"
     },
     {
       "port": 1191,
@@ -50,7 +50,7 @@
       "streamSettings": {
         "sockopt": {"tproxy": "tproxy"}
       },
-      "tag": "dscp-force-proxy-tproxy"
+      "tag": "force-proxy-tproxy"
     }
   ]
 }

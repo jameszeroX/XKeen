@@ -6,7 +6,7 @@
 ## Изменения
 
 - Расширен функционал [маршрутизации по DSCP-меткам](https://github.com/jameszeroX/XKeen/wiki/Маршрутизация-по-DSCP). Добавлена метка `61` - принудительное проксирование через отдельный transparent inbound/listener [@MichaelDavislol](https://github.com/MichaelDavislol), [@zxc-rv](https://github.com/zxc-rv)
-- Добавлена политика `xkeen_full`, повторяющая функционал `61` метки DSCP 
+- Добавлена политика `xkeen_full`, повторяющая функционал `DSCP 61` для устройств в политике роутера
 - Реализована возможность [проксирования через выбранного провайдера](https://github.com/jameszeroX/XKeen/wiki/Configuration#pbr-для-исходящих-подключений-xraymihomo) [@MichaelDavislol](https://github.com/MichaelDavislol)
 - Добавлена проверка исправности Entware перед началом установки XKeen
 - Исправлена установка/обновление геофайлов и GeoIPSET [известные проблемы](https://github.com/jameszeroX/XKeen/wiki/Knownissues)
