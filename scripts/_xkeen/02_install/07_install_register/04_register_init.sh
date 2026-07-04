@@ -551,7 +551,7 @@ validate_client_routing_mark() {
         mark_msg="mark"
         item_label="outbound"
         item_label_plural="outbounds"
-        config_hint="  Для Xray задайте ${green}mark${reset} в ${yellow}streamSettings.sockopt${reset} у всех реальных outbounds, кроме служебных (${yellow}blackhole${reset}, ${yellow}dns${reset}, ${yellow}loopback${reset})"
+        config_hint="  Для Xray задайте ${green}mark${reset} в ${yellow}streamSettings.sockopt${reset} у всех реальных outbounds, кроме служебных (${yellow}blackhole${reset}, ${yellow}loopback${reset})"
 
         for file in "$directory_xray_config"/*.json; do
             [ -f "$file" ] || continue
@@ -597,7 +597,7 @@ validate_client_routing_mark() {
                 | .[]?
                 | flatten_nested_arrays
                 | select(type == "object")
-                | select((.protocol // "") != "blackhole" and (.protocol // "") != "dns" and (.protocol // "") != "loopback")
+                | select((.protocol // "") != "blackhole" and (.protocol // "") != "loopback")
                 | (.streamSettings? | if type == "object" then . else {} end) as $stream
                 | ($stream.sockopt? | if type == "object" then . else {} end) as $sockopt
                 | ($sockopt.mark? // null) as $mark

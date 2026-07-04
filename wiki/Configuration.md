@@ -151,7 +151,7 @@ xkeen -pbr status
 
 - `123456` замените на код из `xkeen -pbr codes`.
 - `mark` задаётся для реальных outbounds, которые устанавливают внешние подключения.
-- Служебные outbounds `blackhole`, `dns`, `loopback` policy mark не требуют.
+- Служебные outbounds `blackhole` и `loopback` policy mark не требуют.
 - `255` для PBR не используйте.
 
 ### Пример для Mihomo
@@ -186,7 +186,7 @@ xkeen -pr on
 ### Как настроить Entware proxy
 
 Для Xray укажите `mark: 255` в `streamSettings.sockopt` у реальных outbounds, включая `direct`.
-Служебные outbounds `blackhole`, `dns`, `loopback` можно не трогать.
+Служебные outbounds `blackhole` и `loopback` можно не трогать.
 
 ```json
 "streamSettings": {
