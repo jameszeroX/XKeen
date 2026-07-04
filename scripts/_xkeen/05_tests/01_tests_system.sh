@@ -3,8 +3,7 @@ check_binary_health() {
     local program="$1"
     shift
 
-    local err
-    err=$("$program" "$@" >/dev/null 2>&1)
+    "$program" "$@" >/dev/null 2>&1
     local rc=$?
 
     local error_message=""
