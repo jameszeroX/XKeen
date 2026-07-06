@@ -95,8 +95,68 @@ load_geoipset() {
     ipset destroy "$tmp"
 }
 
+# issue #89: упрощённый install-time детект "безшлюзового" WAN (IPv4, только
+# таблица main). Если основной default — on-link заглушка без шлюза (типично
+# для mobile/CGNAT WAN, где рабочий маршрут провайдера лежит в отдельной
+# policy-таблице "from <WAN-IP> lookup N"), ядро не форвардит транзитный
+# трафик клиентов мимо XKeen, и правило-исключение GeoIPSET (geo_exclude
+# -j RETURN) не имеет эффекта: сайты РФ перестают открываться. Возвращает 0,
+# если WAN похож на такой случай, иначе 1. Только для предупреждения — сама
+# установка/загрузка списков не блокируется.
+_geoipset_wan_default_broken() {
+    command -v ip >/dev/null 2>&1 || return 1
+
+    # default-маршрут(ы) main; unreachable/blackhole не годятся для форвардинга.
+    # При нескольких default берём с наименьшей metric — его выбрало бы ядро.
+    _gwb_def=$(ip -4 route show default 2>/dev/null | grep -v -e 'unreachable' -e 'blackhole' | awk '
+        NF {
+            m = 0
+            for (i = 1; i <= NF; i++) if ($i == "metric") m = $(i + 1)
+            print m, $0
+        }
+    ' | sort -n | sed -n '1s/^[0-9]* //p')
+
+    [ -z "$_gwb_def" ] && return 1
+
+    # Есть "via <шлюз>" — полноценный маршрут, форвард работает штатно (Ethernet)
+    case "$_gwb_def" in
+        *" via "*) return 1 ;;
+    esac
+
+    _gwb_if=$(printf '%s\n' "$_gwb_def" | sed -n 's/.*[[:space:]]dev[[:space:]]\([^[:space:]]*\).*/\1/p')
+    [ -z "$_gwb_if" ] && return 1
+
+    # Point-to-point устройствам (PPPoE/L2TP/SSTP/WireGuard/tun) шлюз не нужен,
+    # форвард у них идёт и без via — это не наш случай.
+    _gwb_type=$(cat "/sys/class/net/$_gwb_if/type" 2>/dev/null)
+    case "$_gwb_type" in
+        512|65534|768|769|776|778|823) return 1 ;;  # ppp/none(tun,wg)/tunnel/gre/sit
+        *) return 0 ;;
+    esac
+}
+
+# issue #89: предупреждение о несовместимости GeoIPSET с "безшлюзовым" WAN.
+# "$1" — action ("init"/"update"), меняет только финальную рекомендацию.
+_warn_geoipset_wan_incompatible() {
+    printf "\n  ${yellow}Предупреждение${reset}: похоже, WAN-подключение мобильное (LTE) или\n"
+    printf "  CGNAT, и в основной таблице маршрутизации нет шлюза для транзитного\n"
+    printf "  трафика клиентов (default ... scope link, без via). На таком WAN\n"
+    printf "  GeoIPSET ${yellow}не работает${reset}: правило-исключение для российских адресов не\n"
+    printf "  форвардится, и сайты РФ перестанут открываться при включённом\n"
+    printf "  проксировании.\n"
+    if [ "$1" = "update" ]; then
+        printf "  Рекомендуем отключить GeoIPSET: ${yellow}xkeen -dgips${reset}\n"
+    else
+        printf "  Рекомендуем отказаться от установки (пункт ${yellow}0${reset} в меню ниже)\n"
+    fi
+    printf "  Подробнее: Known Issues в вики проекта, issue #89:\n"
+    printf "  https://github.com/jameszeroX/XKeen/issues/89\n\n"
+}
+
 install_geoipset() {
     local action="$1"
+
+    _geoipset_wan_default_broken && _warn_geoipset_wan_incompatible "$action"
 
     if [ "$action" = "init" ]; then
         # Без TTY (cron, ssh -T) read получает EOF, default-case крутит while true
