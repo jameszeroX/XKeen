@@ -98,9 +98,9 @@ sh -c "$(curl -sSL https://clck.ru/3U9qXt)"
 
 ```
 {
-"network": "udp",
-"port": "443",
-"outboundTag": "block"
+  "network": "udp",
+  "port": "443",
+  "outboundTag": "block"
 },
 ```
 
@@ -189,21 +189,25 @@ PIDFILE="/var/run/dropbear.pid"
 
 ```
 #!/bin/sh
+
 # Сайт для проверки доступности интернета
 HOST="ya.ru"
+
 # Бесконечный цикл для проверки доступности интернета
 while true; do
-# Пингуем сайт
-ping -c 1 "$HOST" > /dev/null 2>&1
-# Проверяем результат ping и если ОК перезапускаем xkeen через 15 секунд
-if [ $? -eq 0 ]; then
-sleep 15
-xkeen -restart
-break
-else
-echo "Сайт $HOST не доступен, пытаюсь снова..."
-fi
-sleep 5
+    # Пингуем сайт
+    ping -c 1 "$HOST" > /dev/null 2>&1
+
+    # Проверяем результат ping и если ОК перезапускаем xkeen через 15 секунд
+    if [ $? -eq 0 ]; then
+        sleep 15
+        xkeen -restart
+        break
+    else
+        echo "Сайт $HOST не доступен, пытаюсь снова..."
+    fi
+
+    sleep 5
 done
 ```
 
@@ -215,9 +219,9 @@ done
 
 ```
 "sniffing": {
-"enabled": true,
-"routeOnly": true,
-"destOverride": ["http","tls"]
+  "enabled": true,
+  "routeOnly": true,
+  "destOverride": ["http","tls"]
 },
 ```
 
@@ -225,12 +229,12 @@ done
 
 ```
 sniffer:
-enable: true
-parse-pure-ip: true
-override-destination: false
-sniff:
-HTTP:
-TLS:
+  enable: true
+  parse-pure-ip: true
+  override-destination: false
+  sniff:
+    HTTP:
+    TLS:
 ```
 
 **Важно!**
@@ -241,32 +245,37 @@ TLS:
 
 ```
 #!/bin/sh
+
 get_interface_list(){
-ip a | grep -E ': br[0-9]:' | cut -d':' -f2 | cut -d' ' -f2
+    ip a | grep -E ': br[0-9]:' | cut -d':' -f2 | cut -d' ' -f2
 }
+
 for brX in $(get_interface_list); do
-get_router_ip4() {
-ip a show dev "${brX}" | grep 'inet ' | tr -s ' ' | cut -d' ' -f3 | cut -d'/' -f1
-}
-get_router_ip6() {
-ip a show dev "${brX}" | grep 'inet6 ' | grep 'scope link' | tr -s ' ' | cut -d' ' -f3 | cut -d'/' -f1
-}
-local_ip4=$(get_router_ip4)
-if ! iptables -t nat -C PREROUTING -i ${brX} -p udp --dport 53 -j DNAT --to-destination ${local_ip4} >/dev/null 2>&1; then
-iptables -t nat -I PREROUTING -i ${brX} -p udp --dport 53 -j DNAT --to-destination ${local_ip4} >/dev/null 2>&1
-fi
-if ! iptables -t nat -C PREROUTING -i ${brX} -p tcp --dport 53 -j DNAT --to-destination ${local_ip4} >/dev/null 2>&1; then
-iptables -t nat -I PREROUTING -i ${brX} -p tcp --dport 53 -j DNAT --to-destination ${local_ip4} >/dev/null 2>&1
-fi
-local_ip6=$(get_router_ip6)
-if [ -n "${local_ip6}" ]; then
-if ! ip6tables -t nat -C PREROUTING -i ${brX} -p udp --dport 53 -j DNAT --to-destination ${local_ip6} >/dev/null 2>&1; then
-ip6tables -t nat -I PREROUTING -i ${brX} -p udp --dport 53 -j DNAT --to-destination ${local_ip6} >/dev/null 2>&1
-fi
-if ! ip6tables -t nat -C PREROUTING -i ${brX} -p tcp --dport 53 -j DNAT --to-destination ${local_ip6} >/dev/null 2>&1; then
-ip6tables -t nat -I PREROUTING -i ${brX} -p tcp --dport 53 -j DNAT --to-destination ${local_ip6} >/dev/null 2>&1
-fi
-fi
+    get_router_ip4() {
+        ip a show dev "${brX}" | grep 'inet ' | tr -s ' ' | cut -d' ' -f3 | cut -d'/' -f1
+    }
+
+    get_router_ip6() {
+        ip a show dev "${brX}" | grep 'inet6 ' | grep 'scope link' | tr -s ' ' | cut -d' ' -f3 | cut -d'/' -f1
+    }
+
+    local_ip4=$(get_router_ip4)
+    if ! iptables -t nat -C PREROUTING -i ${brX} -p udp --dport 53 -j DNAT --to-destination ${local_ip4} >/dev/null 2>&1; then
+        iptables -t nat -I PREROUTING -i ${brX} -p udp --dport 53 -j DNAT --to-destination ${local_ip4} >/dev/null 2>&1
+    fi
+    if ! iptables -t nat -C PREROUTING -i ${brX} -p tcp --dport 53 -j DNAT --to-destination ${local_ip4} >/dev/null 2>&1; then
+        iptables -t nat -I PREROUTING -i ${brX} -p tcp --dport 53 -j DNAT --to-destination ${local_ip4} >/dev/null 2>&1
+    fi
+
+    local_ip6=$(get_router_ip6)
+    if [ -n "${local_ip6}" ]; then
+        if ! ip6tables -t nat -C PREROUTING -i ${brX} -p udp --dport 53 -j DNAT --to-destination ${local_ip6} >/dev/null 2>&1; then
+            ip6tables -t nat -I PREROUTING -i ${brX} -p udp --dport 53 -j DNAT --to-destination ${local_ip6} >/dev/null 2>&1
+        fi
+        if ! ip6tables -t nat -C PREROUTING -i ${brX} -p tcp --dport 53 -j DNAT --to-destination ${local_ip6} >/dev/null 2>&1; then
+            ip6tables -t nat -I PREROUTING -i ${brX} -p tcp --dport 53 -j DNAT --to-destination ${local_ip6} >/dev/null 2>&1
+        fi
+    fi
 done
 ```
 
@@ -281,21 +290,21 @@ done
 
 ```
 {
-"outbounds": [
-{
-"protocol": "freedom",
-"streamSettings": {
-"sockopt": {
-"interface": "nwg0"
-}
-},
-"tag": "newtag"
-},
-{
-"protocol": "freedom",
-"tag": "direct"
-}
-]
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "streamSettings": {
+         "sockopt": {
+            "interface": "nwg0"
+         }
+      },
+      "tag": "newtag"
+    },
+    {
+      "protocol": "freedom",
+      "tag": "direct"
+    }
+  ]
 }
 ```
 
@@ -303,22 +312,22 @@ done
 
 ```
 {
-"routing": {
-"rules": [
-{
-"domain": [
-"site1.ru",
-"site2.ru",
-"site3.ru"
-],
-"outboundTag": "newtag"
-},
-{
-"network": "tcp,udp",
-"outboundTag": "direct"
-}
-]
-}
+  "routing": {
+    "rules": [
+      {
+        "domain": [
+          "site1.ru",
+          "site2.ru",
+          "site3.ru"
+        ],
+        "outboundTag": "newtag"
+      },
+      {
+        "network": "tcp,udp",
+        "outboundTag": "direct"
+      }
+    ]
+  }
 }
 ```
 
@@ -326,10 +335,10 @@ done
 
 ```
 proxies:
-- name: WG
-type: direct
-udp: true
-interface-name: nwg0
+  - name: WG
+    type: direct
+    udp: true
+    interface-name: nwg0
 ```
 
 ### 15
@@ -372,27 +381,27 @@ system configuration save
 
 ```
 {
-"routing": {
-"rules": [
-{
-"source": ["192.168.1.0/24"],
-"domain": [
-"site1.ru",
-"site2.ru",
-"site3.ru"
-],
-"outboundTag": "vless-reality"
-},
-{
-"source": ["192.168.2.0/24"],
-"outboundTag": "vless-reality"
-},
-{
-"network": "tcp,udp",
-"outboundTag": "direct"
-}
-]
-}
+  "routing": {
+    "rules": [
+      {
+        "source": ["192.168.1.0/24"],
+        "domain": [
+          "site1.ru",
+          "site2.ru",
+          "site3.ru"
+        ],
+        "outboundTag": "vless-reality"
+      },
+      {
+        "source": ["192.168.2.0/24"],
+        "outboundTag": "vless-reality"
+      },
+      {
+        "network": "tcp,udp",
+        "outboundTag": "direct"
+      }
+    ]
+  }
 }
 ```
 
@@ -400,18 +409,18 @@ system configuration save
 
 ```
 {
-"routing": {
-"rules": [
-{
-"source": ["192.168.1.0/24"],
-"outboundTag": "vless-reality-eu"
-},
-{
-"source": ["192.168.2.0/24"],
-"outboundTag": "vless-reality-us"
-}
-]
-}
+  "routing": {
+    "rules": [
+      {
+        "source": ["192.168.1.0/24"],
+        "outboundTag": "vless-reality-eu"
+      },
+      {
+        "source": ["192.168.2.0/24"],
+        "outboundTag": "vless-reality-us"
+      }
+    ]
+  }
 }
 ```
 
@@ -419,22 +428,22 @@ system configuration save
 
 ```
 {
-"routing": {
-"rules": [
-{
-"source": ["192.168.1.5"],
-"outboundTag": "vless-reality-eu"
-},
-{
-"source": ["192.168.1.6","192.168.1.7","192.168.1.8"],
-"outboundTag": "vless-reality-us"
-},
-{
-"source": ["192.168.1.9"],
-"outboundTag": "direct"
-}
-]
-}
+  "routing": {
+    "rules": [
+      {
+        "source": ["192.168.1.5"],
+        "outboundTag": "vless-reality-eu"
+      },
+      {
+        "source": ["192.168.1.6","192.168.1.7","192.168.1.8"],
+        "outboundTag": "vless-reality-us"
+      },
+      {
+        "source": ["192.168.1.9"],
+        "outboundTag": "direct"
+      }
+    ]
+  }
 }
 ```
 
@@ -475,26 +484,26 @@ xkeen -fd
 
 ```
 {
-"outbounds": [
-{
-"protocol": "vless",
-"settings": {
-// Тут прописываем подключение к серверу proxy1
-},
-"tag": "proxy1"
-},
-{
-"protocol": "vless",
-"settings": {
-// Тут прописываем подключение к серверу proxy2
-},
-"tag": "proxy2"
-},
-{
-"protocol": "freedom",
-"tag": "direct"
-}
-]
+  "outbounds": [
+    {
+      "protocol": "vless",
+      "settings": {
+         // Тут прописываем подключение к серверу proxy1
+      },
+      "tag": "proxy1"
+    },
+    {
+      "protocol": "vless",
+      "settings": {
+         // Тут прописываем подключение к серверу proxy2
+      },
+      "tag": "proxy2"
+    },
+    {
+      "protocol": "freedom",
+      "tag": "direct"
+    }
+  ]
 }
 ```
 
@@ -502,29 +511,29 @@ xkeen -fd
 
 ```
 {
-"routing": {
-"rules": [
-{
-// Сайт site1.ru открываем через proxy1
-"domain": [
-"site1.ru"
-],
-"outboundTag": "proxy1"
-},
-{
-// Сайт site2.ru открываем через proxy2
-"domain": [
-"site2.ru"
-],
-"outboundTag": "proxy2"
-},
-{
-// Остальное через провайдера
-"network": "tcp,udp",
-"outboundTag": "direct"
-}
-]
-}
+  "routing": {
+    "rules": [
+      {
+        // Сайт site1.ru открываем через proxy1
+        "domain": [
+          "site1.ru"
+        ],
+        "outboundTag": "proxy1"
+      },
+      {
+        // Сайт site2.ru открываем через proxy2
+        "domain": [
+          "site2.ru"
+        ],
+        "outboundTag": "proxy2"
+      },
+      {
+        // Остальное через провайдера
+        "network": "tcp,udp",
+        "outboundTag": "direct"
+      }
+    ]
+  }
 }
 ```
 
@@ -547,13 +556,13 @@ xkeen -fd
 
 ```
 {
-"protocol": "freedom",
-"streamSettings": {
-"sockopt": {
-"interface": "lte_br0"
-}
-},
-"tag": "direct"
+  "protocol": "freedom",
+  "streamSettings": {
+    "sockopt": {
+      "interface": "lte_br0"
+    }
+  },
+  "tag": "direct"
 },
 ```
 
@@ -561,21 +570,21 @@ xkeen -fd
 
 ```
 {
-"protocol": "vless",
-"settings": {
-// тут ваши настройки прокси-сервера
-},
-"streamSettings": {
-"network": "raw",
-"security": "reality",
-"realitySettings": {
-// тут ваши настройки прокси-сервера
-},
-"sockopt": {
-"interface": "lte_br0"
-}
-},
-"tag": "proxy"
+  "protocol": "vless",
+  "settings": {
+    // тут ваши настройки прокси-сервера
+  },
+  "streamSettings": {
+    "network": "raw",
+    "security": "reality",
+    "realitySettings": {
+      // тут ваши настройки прокси-сервера
+    },
+    "sockopt": {
+      "interface": "lte_br0"
+    }
+  },
+  "tag": "proxy"
 },
 ```
 
