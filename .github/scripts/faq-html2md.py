@@ -12,9 +12,12 @@ Invariants:
 - HTML comments are stripped BEFORE conversion: the source hides outdated
   items inside <!-- --> and the Crayon plugin emits per-request
   "[Format Time: ...]" comments that would produce noise diffs.
-- Crayon/Urvanov code blocks are replaced with fenced code taken from their
-  plain <textarea> copy; the highlighted markup contains randomized element
-  ids that change on every page load.
+- Crayon/Urvanov code blocks are replaced with fenced code rebuilt from the
+  highlighted div.crayon-line elements: the plain <textarea> copy loses
+  leading indentation, while the highlighted lines keep it as U+00A0 runs.
+  The textarea is still used as a cross-check (same tokens, whitespace
+  aside) to catch plugin layout changes. Randomized element ids in the
+  highlighted markup do not matter — only text is extracted.
 - Two runs over the same HTML must produce byte-identical output.
 """
 
@@ -50,9 +53,19 @@ def extract_content(html):
         plain = crayon.select_one("textarea.urvanov-syntax-highlighter-plain")
         if plain is None:
             raise ValueError("crayon block without plain textarea — layout changed")
+        lines = crayon.select("div.crayon-line")
+        if not lines:
+            raise ValueError("crayon block without div.crayon-line — layout changed")
+        text = "\n".join(
+            line.get_text().replace("\xa0", " ").rstrip() for line in lines
+        )
+        if "".join(text.split()) != "".join(plain.get_text().split()):
+            raise ValueError(
+                "crayon highlighted lines diverge from plain textarea copy"
+            )
         pre = soup.new_tag("pre")
         code = soup.new_tag("code")
-        code.string = plain.get_text().strip("\n")
+        code.string = text.strip("\n")
         pre.append(code)
         crayon.replace_with(pre)
 
