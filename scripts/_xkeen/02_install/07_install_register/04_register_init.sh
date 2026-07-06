@@ -1,7 +1,6 @@
 #!/bin/sh
 
 # Информация о службе: Запуск / Остановка XKeen
-# Версия: 2.31
 
 # Окружение
 PATH="/opt/bin:/opt/sbin:/sbin:/bin:/usr/sbin:/usr/bin"
@@ -364,7 +363,7 @@ format_routing_mark_items() {
 validate_xkeen_json() {
     [ ! -f "$xkeen_config" ] && return 0
 
-    if ! jq -e . "$xkeen_config" >/dev/null 2>&1; then
+    if ! strip_json_comments "$xkeen_config" | jq -e . >/dev/null 2>&1; then
         log_error_terminal "
   Валидация JSON: файл '${yellow}xkeen.json${reset}' содержит синтаксические ошибки
   Запуск прокси невозможен
@@ -384,7 +383,7 @@ validate_xkeen_json() {
       end
     '
 
-    if ! jq -e "$jq_check" "$xkeen_config" >/dev/null 2>&1; then
+    if ! strip_json_comments "$xkeen_config" | jq -e "$jq_check" >/dev/null 2>&1; then
         log_error_terminal "
   Файл '${yellow}xkeen.json${reset}' имеет неверную структуру
   Запуск прокси невозможен
@@ -1852,25 +1851,23 @@ sync_deny_mac_ipset() {
 # Получаем пользовательские политики
 get_user_policies() {
     [ ! -f "$xkeen_config" ] && return
-    jq -r '.xkeen.policy[]? | "\(.name)|\(.port // "")" ' "$xkeen_config" 2>/dev/null
+    strip_json_comments "$xkeen_config" | jq -r '.xkeen.policy[]? | "\(.name)|\(.port // "")" ' 2>/dev/null
 }
 
 # Проверка на конфликт имен политик
 check_policy_name_conflict() {
     if [ -f "$xkeen_config" ]; then
-        conflict=$(jq -r \
-            --arg main "$name_policy" \
-            --arg full "$name_policy_full" \
-            '.xkeen.policy[] | select((.name | ascii_downcase) == ($main | ascii_downcase) or (.name | ascii_downcase) == ($full | ascii_downcase)) | .name' \
-            "$xkeen_config" 2>/dev/null | head -n 1)
+        conflict=$(strip_json_comments "$xkeen_config" | jq -r \
+          --arg main "$name_policy" \
+          --arg full "$name_policy_full" \
+          '[ .xkeen.policy[] | select((.name | ascii_downcase) == ($main | ascii_downcase) or (.name | ascii_downcase) == ($full | ascii_downcase)) | .name ] | join(", ")' 2>/dev/null)
 
         if [ -n "$conflict" ]; then
             log_error_router "Ошибка конфигурации: Имя политики в xkeen.json совпадает с зарезервированным"
             log_error_terminal "
-  В файле '${yellow}xkeen.json${reset}' найдена политика с именем '${red}${conflict}${reset}'
-  Это имя зарезервировано основной службой XKeen
+  Имя пользовательской политики совпадает с зарезервированным: '${light_blue}${conflict}${reset}'
+  Устраните конфликт политик в файле '${yellow}xkeen.json${reset}'
 
-  Переименуйте пользовательскую политику в json-файле
   Запуск ${yellow}$name_client${reset} ${red}отменен${reset}
 "
         fi
@@ -1884,7 +1881,7 @@ resolve_user_policies() {
     api_exclude_ports=$(get_api_exclude_ports)
 
     # Получаем сопоставленные политики одним вызовом jq
-    matched_policies=$(printf '%s' "$api_policy_json" | jq -r --argjson user_cfg "$(cat "$xkeen_config")" '
+    matched_policies=$(printf '%s' "$api_policy_json" | jq -r --argjson user_cfg "$(strip_json_comments "$xkeen_config")" '
         ($user_cfg.xkeen.policy // []) as $up |
         .[] as $api |
         $up[] | 

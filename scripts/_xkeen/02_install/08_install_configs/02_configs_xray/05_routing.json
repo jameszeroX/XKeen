@@ -1,3 +1,12 @@
-{
 // Создайте файл по ссылке https://xray-routing-generator.netlify.app
+// Далее приведён пример роутинга, использующего политику xkeen_full
+{
+  "routing": {
+    "rules": [
+      {
+        "inboundTag": ["force-proxy-redirect","force-proxy-tproxy"],
+        "outboundTag": "vless-reality"
+      }
+    ]
+  }
 }
