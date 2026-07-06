@@ -1,0 +1,73 @@
+name: Sync FAQ from jameszero.net
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  faq-sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install beautifulsoup4 markdownify
+
+      - name: Fetch FAQ page
+        run: |
+          curl -fsSL --retry 3 --retry-delay 10 \
+            -A "xkeen-faq-sync (+https://github.com/${GITHUB_REPOSITORY})" \
+            "https://jameszero.net/faq-xkeen.htm" -o /tmp/faq.html
+
+      - name: Convert to Markdown
+        run: python3 .github/scripts/faq-html2md.py /tmp/faq.html wiki/FAQ.md
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet -- wiki/FAQ.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "FAQ is up to date"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Import GPG key
+        if: steps.diff.outputs.changed == 'true'
+        uses: crazy-max/ghaction-import-gpg@v7
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
+          git_config_global: true
+
+      - name: Commit and push signed FAQ update
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git add wiki/FAQ.md
+          git commit -S -m "[github-actions] sync FAQ from jameszero.net"
+          git push origin main
+
+      # Pushes made with GITHUB_TOKEN do not fire push-triggered workflows,
+      # so wiki-sync and Pages deploy are dispatched explicitly.
+      - name: Trigger wiki sync and Pages deploy
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run wiki-sync.yaml --ref main --repo "$GITHUB_REPOSITORY"
+          gh workflow run deploy.yaml --ref main --repo "$GITHUB_REPOSITORY"
