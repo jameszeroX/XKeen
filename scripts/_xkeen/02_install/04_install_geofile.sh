@@ -44,7 +44,12 @@ process_geo_file() {
                 fi
                 ;;
         esac
-        printf "  ${yellow}Инфо${reset}: Невозможно обновить %s. ${green}Оставляем старый файл${reset}\n\n" "$display_name"
+
+        if [ "$update_flag" = "true" ] && { [ -f "$geo_dir/$filename" ] || [ -L "$geo_dir/$filename" ]; }; then
+            printf "  ${yellow}Инфо${reset}: Невозможно обновить %s. ${green}Оставляем старый файл${reset}\n\n" "$display_name"
+        else
+            printf "  ${yellow}Инфо${reset}: Невозможно загрузить %s\n\n" "$display_name"
+        fi
         return 1
     fi
 

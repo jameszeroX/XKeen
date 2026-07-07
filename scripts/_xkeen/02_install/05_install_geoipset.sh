@@ -69,7 +69,12 @@ install_geoipset_lst() {
                 fi
                 ;;
         esac
-        printf "  ${yellow}Инфо${reset}: Невозможно обновить %s. ${green}Оставляем старый файл${reset}\n\n" "$display_name"
+
+        if [ "$action" != "init" ] && { [ -f "$dest_file" ] || [ -L "$dest_file" ]; }; then
+            printf "  ${yellow}Инфо${reset}: Невозможно обновить %s. ${green}Оставляем старый файл${reset}\n\n" "$display_name"
+        else
+            printf "  ${yellow}Инфо${reset}: Невозможно загрузить %s\n\n" "$display_name"
+        fi
         return 1
     fi
 
