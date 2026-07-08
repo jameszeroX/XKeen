@@ -64,6 +64,7 @@ choice_update_cron() {
                 break
             else
                 echo -e "  ${red}Некорректный ввод.${reset} Выберите один из предложенных вариантов"
+                echo
             fi
         done
 
@@ -80,19 +81,21 @@ choice_update_cron() {
                 0)
                     choice_cancel_cron_select=true
                     echo "  Выполнен пропуск настройки автообновления"
+                    echo
                     return
                     ;;
                 2)
                     if [ "$has_updatable_cron_tasks" = true ]; then
                         delete_cron_geofile
                         echo -e "  Автообновление баз GeoFile/GeoIPSET ${green}выключено${reset}"
+                        echo
                     else
                         echo -e "  ${red}Автообновление баз GeoFile/GeoIPSET не включено${reset}. Выберите другой пункт"
+                        echo
                         invalid_choice=true
                     fi
                     ;;
                 *)
-                    echo -e "  ${red}Некорректный ввод${reset}"
                     invalid_choice=true
                     ;;
             esac

@@ -38,6 +38,7 @@ choice_add_proxy_cores() {
                 add_mihomo=true
                 ;;
             0)
+                echo "  Выполнен пропуск установки / обновления ядра проксирования"
                 add_xray=false
                 add_mihomo=false
                 ;;

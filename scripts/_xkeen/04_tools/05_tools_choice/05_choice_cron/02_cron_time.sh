@@ -21,10 +21,12 @@ choice_cron_time() {
         read -r -p "  Ваш выбор: " day_choice
         echo "$day_choice" | grep -qE '^[0-8]$' && break
         echo -e "  ${red}Некорректный номер действия.${reset} Пожалуйста, выберите снова"
+        echo
     done
 
     [ "$day_choice" -eq 0 ] && {
         echo -e "  Включение автоматического обновления ${yellow}геофайлов${reset} отменено"
+        echo
         return
     }
 
@@ -69,6 +71,7 @@ choice_cron_time() {
 
     echo
     echo -e "  Выбранное время обновления ${yellow}геофайлов${reset}: $day_name в $formatted_hour:$formatted_minute"
+    echo
 
     choice_geofile_cron_time="$cron_expression"
 }

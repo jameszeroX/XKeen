@@ -237,7 +237,7 @@ while [ $# -gt 0 ]; do
                 # Настраиваем автоматические обновления
                 choice_update_cron
                 update_cron_geofile_task
-                smart_clear
+                [ "$choice_geofile_cron_select" = "true" ] && smart_clear
                 choice_cron_time
                 install_cron
                 sleep 2
@@ -820,7 +820,7 @@ while [ $# -gt 0 ]; do
             echo -e "  Создание или изменение задачи автообновления баз ${yellow}GeoFile/GeoIPSET${reset}"
             choice_update_cron
             update_cron_geofile_task
-            smart_clear
+            [ "$choice_geofile_cron_select" = "true" ] && smart_clear
             choice_cron_time
             install_cron
             delete_tmp

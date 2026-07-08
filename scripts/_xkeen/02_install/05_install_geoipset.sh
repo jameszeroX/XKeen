@@ -121,7 +121,7 @@ install_geoipset() {
 
                 case "$choice" in
                     0)
-                        printf "  Пропуск установки списков GeoIPSET\n\n"
+                        printf "  Выполнен пропуск установки списков GeoIPSET\n\n"
 
                         if [ ! -f "$ru_exclude_ipv4" ] && [ ! -f "$ru_exclude_ipv6" ]; then
                             bypass_cron_geoipset=true
