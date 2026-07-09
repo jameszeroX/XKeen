@@ -2238,6 +2238,7 @@ if pidof "$name_client" >/dev/null; then
                     ipt -A "$chain" -p tcp $comment -j REDIRECT --to-port "$port_redirect" >/dev/null 2>&1
                 else
                     ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
+                    ipt -I "$chain" 1 -m conntrack --ctstate INVALID $comment -j RETURN >/dev/null 2>&1
                     add_ipset_exclude ext_exclude hash:ip
                     add_ipset_exclude user_exclude hash:net
                     add_geo_exclude
@@ -2248,6 +2249,7 @@ if pidof "$name_client" >/dev/null; then
                 ;;
             TProxy)
                 ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
+                ipt -I "$chain" 1 -m conntrack --ctstate INVALID $comment -j RETURN >/dev/null 2>&1
                 add_ipset_exclude ext_exclude hash:ip
                 add_ipset_exclude user_exclude hash:net
                 add_geo_exclude
