@@ -249,6 +249,8 @@ while [ $# -gt 0 ]; do
             register_cron_initd
             "$initd_dir/S05crond" start >/dev/null 2>&1
 
+            smart_clear
+
             if [ -z "$bypass_xray" ]; then
                 delete_register_xray
                 echo
@@ -321,7 +323,6 @@ while [ $# -gt 0 ]; do
             fi
 
             # Удаляем временные файлы
-            echo
             delete_tmp
             sleep 2
 

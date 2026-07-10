@@ -173,6 +173,7 @@ choice_backup_xkeen() {
 
 choice_autostart_xkeen() {
     if [ -f "$initd_file" ] && grep -q 'start_auto="off"' "$initd_file"; then
+        echo
         return 1
     fi
 
@@ -181,6 +182,7 @@ choice_autostart_xkeen() {
         "Да" \
         "Нет"; then
         echo -e "  Автозагрузка XKeen ${green}включена${reset}"
+        echo
         return 0
     else
         bypass_autostart_msg="yes"
