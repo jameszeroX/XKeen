@@ -312,7 +312,7 @@ _network_download() {
             printf "  Загрузка %s (Попытка %d из %d)...\n" "$component" "$attempt" "$max_attempts"
         fi
 
-        if fetch_with_mirrors "$url" "$target" 32768; then
+        if fetch_with_mirrors "$url" "$target" 24576; then
             success=0
             break
         fi
@@ -435,10 +435,10 @@ _download_and_validate_loop() {
 
         # Вызываем fetch_with_mirrors (с валидатором или без)
         if [ -n "$validator_name" ]; then
-            fetch_with_mirrors "$url" "$tmp_file" 32768 "$validator_name"
+            fetch_with_mirrors "$url" "$tmp_file" 24576 "$validator_name"
             _fetch_result=$?
         else
-            fetch_with_mirrors "$url" "$tmp_file" 32768
+            fetch_with_mirrors "$url" "$tmp_file" 24576
             _fetch_result=$?
         fi
 
