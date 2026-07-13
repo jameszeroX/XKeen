@@ -71,6 +71,7 @@ _mirror_order() {
 # чтобы не словить false-positive на байтах в gzip/zip/ELF метадате.
 _validate_default() {
     _v_f="$1"
+    _v_min="${2:-0}"
     _last_error=""
     _last_size=0
     if [ ! -s "$_v_f" ]; then
@@ -78,6 +79,11 @@ _validate_default() {
         return 1
     fi
     _last_size=$(wc -c < "$_v_f" 2>/dev/null | tr -d ' ')
+    if [ -n "$_v_min" ] && [ "$_v_min" -gt 0 ] 2>/dev/null \
+       && [ -n "$_last_size" ] && [ "$_last_size" -lt "$_v_min" ] 2>/dev/null; then
+        _last_error="size"
+        return 1
+    fi
     if head -c 100 "$_v_f" 2>/dev/null | grep -iqE '^(<!doctype|<html|<head|<body|404|error|not found)'; then
         _last_error="html_stub"
         return 1
@@ -306,7 +312,7 @@ _network_download() {
             printf "  Загрузка %s (Попытка %d из %d)...\n" "$component" "$attempt" "$max_attempts"
         fi
 
-        if fetch_with_mirrors "$url" "$target" 1024; then
+        if fetch_with_mirrors "$url" "$target" 32768; then
             success=0
             break
         fi
@@ -429,10 +435,10 @@ _download_and_validate_loop() {
 
         # Вызываем fetch_with_mirrors (с валидатором или без)
         if [ -n "$validator_name" ]; then
-            fetch_with_mirrors "$url" "$tmp_file" 1024 "$validator_name"
+            fetch_with_mirrors "$url" "$tmp_file" 32768 "$validator_name"
             _fetch_result=$?
         else
-            fetch_with_mirrors "$url" "$tmp_file" 1024
+            fetch_with_mirrors "$url" "$tmp_file" 32768
             _fetch_result=$?
         fi
 
