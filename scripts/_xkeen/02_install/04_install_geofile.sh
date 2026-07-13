@@ -142,3 +142,50 @@ install_geoip() {
         fi
     fi
 }
+
+# Функция для обновления пользовательских геофайлов
+update_user_geofiles() {
+    mkdir -p "$geo_dir" || { echo "Ошибка: Не удалось создать директорию $geo_dir"; exit 1; }
+
+    [ -f "$xkeen_config" ] || return 0
+
+    if ! command -v jq >/dev/null 2>&1; then
+        printf "  ${red}Ошибка${reset}: jq не найден, пропуск обработки пользовательских геофайлов\n\n"
+        return 1
+    fi
+
+    if ! strip_json_comments "$xkeen_config" | jq empty >/dev/null 2>&1; then
+        printf "  ${red}Ошибка${reset}: Некорректный JSON в файле ${yellow}xkeen.json${reset}\n\n"
+        return 1
+    fi
+
+    local tmp_list="${geo_dir}/.geofile_list.$$"
+    strip_json_comments "$xkeen_config" | jq -c '.xkeen.geodata[]?' > "$tmp_list" 2>/dev/null
+
+    if [ ! -s "$tmp_list" ]; then
+        rm -f "$tmp_list"
+        return 0
+    fi
+
+    local entry file url update_flag
+
+    while IFS= read -r entry; do
+        file=$(printf '%s' "$entry" | jq -r '.file // empty')
+        url=$(printf '%s' "$entry" | jq -r '.url // empty')
+
+        if [ -z "$file" ] || [ -z "$url" ]; then
+            printf "  ${red}Ошибка${reset}: Некорректная запись в разделе ${light_blue}geofile${reset} файла ${yellow}xkeen.json${reset}\n\n"
+            return 1
+        fi
+
+        if [ -f "$geo_dir/$file" ] || [ -L "$geo_dir/$file" ]; then
+            update_flag="true"
+        else
+            update_flag="false"
+        fi
+
+        process_geo_file "$url" "$file" "$file" "$update_flag"
+    done < "$tmp_list"
+
+    rm -f "$tmp_list"
+}

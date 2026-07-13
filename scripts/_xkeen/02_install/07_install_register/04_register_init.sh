@@ -465,58 +465,17 @@ convert_mihomo_yaml_to_json() {
     tmp_base="${TMPDIR:-/tmp}/xkeen_mihomo_json.$$"
     out_file="${tmp_base}.out"
     err_file="${tmp_base}.err"
-    last_stderr=""
 
     rm -f "$out_file" "$err_file"
 
-    for yq_variant in \
-        "dash_o_json" \
-        "dash_o_space_json" \
-        "eval_dash_o_json" \
-        "eval_dash_o_space_json"
-    do
-        : > "$out_file"
-        : > "$err_file"
+    if yq -o=json '.' "$config_file" >"$out_file" 2>"$err_file" \
+        && jq -e . <"$out_file" >/dev/null 2>&1; then
+        cat "$out_file"
+        rm -f "$out_file" "$err_file"
+        return 0
+    fi
 
-        case "$yq_variant" in
-            dash_o_json)
-                if yq -o=json '.' "$config_file" >"$out_file" 2>"$err_file" \
-                    && jq -e . <"$out_file" >/dev/null 2>&1; then
-                    cat "$out_file"
-                    rm -f "$out_file" "$err_file"
-                    return 0
-                fi
-                ;;
-            dash_o_space_json)
-                if yq -o json '.' "$config_file" >"$out_file" 2>"$err_file" \
-                    && jq -e . <"$out_file" >/dev/null 2>&1; then
-                    cat "$out_file"
-                    rm -f "$out_file" "$err_file"
-                    return 0
-                fi
-                ;;
-            eval_dash_o_json)
-                if yq eval -o=json '.' "$config_file" >"$out_file" 2>"$err_file" \
-                    && jq -e . <"$out_file" >/dev/null 2>&1; then
-                    cat "$out_file"
-                    rm -f "$out_file" "$err_file"
-                    return 0
-                fi
-                ;;
-            eval_dash_o_space_json)
-                if yq eval -o json '.' "$config_file" >"$out_file" 2>"$err_file" \
-                    && jq -e . <"$out_file" >/dev/null 2>&1; then
-                    cat "$out_file"
-                    rm -f "$out_file" "$err_file"
-                    return 0
-                fi
-                ;;
-        esac
-
-        candidate_stderr=$(format_single_line_error "$(cat "$err_file" 2>/dev/null)")
-        [ -n "$candidate_stderr" ] && last_stderr="$candidate_stderr"
-    done
-
+    last_stderr=$(format_single_line_error "$(cat "$err_file" 2>/dev/null)")
     rm -f "$out_file" "$err_file"
 
     if [ -n "$last_stderr" ]; then
@@ -1288,13 +1247,13 @@ get_mihomo_listener_field_by_name() {
     listener_name="$1"
     field_name="$2"
 
-    DSCP_FORCE_LISTENER="$listener_name" yq eval ".listeners[] | select(.name == strenv(DSCP_FORCE_LISTENER)) | .$field_name // \"\"" "$mihomo_config" 2>/dev/null | sed -n '1p'
+    DSCP_FORCE_LISTENER="$listener_name" yq ".listeners[] | select(.name == strenv(DSCP_FORCE_LISTENER)) | .$field_name // \"\"" "$mihomo_config" 2>/dev/null | sed -n '1p'
 }
 
 get_mihomo_listener_rule_proxy_by_name() {
     listener_name="$1"
 
-    yq eval '.rules[] // ""' "$mihomo_config" 2>/dev/null | awk -F',' -v tag="$listener_name" '
+    yq '.rules[] // ""' "$mihomo_config" 2>/dev/null | awk -F',' -v tag="$listener_name" '
         {
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", $1)
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2)
@@ -1332,9 +1291,9 @@ get_port_redirect() {
         port=$(get_xray_port_by_mode "redirect")
         [ -n "$port" ] && echo "$port" && return 0
     elif [ "$name_client" = "mihomo" ]; then
-        port=$(yq eval '.redir-port // ""' "$mihomo_config" 2>/dev/null)
+        port=$(yq '.redir-port // ""' "$mihomo_config" 2>/dev/null)
         if [ -z "$port" ]; then
-            port=$(DSCP_FORCE_TAG="$dscp_force_proxy_tag" DSCP_FORCE_TAG_REDIRECT="${dscp_force_proxy_tag}-redirect" DSCP_FORCE_TAG_TPROXY="${dscp_force_proxy_tag}-tproxy" yq eval '.listeners[] | select(.type == "redir" and (.name // "") != strenv(DSCP_FORCE_TAG) and (.name // "") != strenv(DSCP_FORCE_TAG_REDIRECT) and (.name // "") != strenv(DSCP_FORCE_TAG_TPROXY)) | .port // ""' "$mihomo_config" 2>/dev/null | sed -n '1p')
+            port=$(DSCP_FORCE_TAG="$dscp_force_proxy_tag" DSCP_FORCE_TAG_REDIRECT="${dscp_force_proxy_tag}-redirect" DSCP_FORCE_TAG_TPROXY="${dscp_force_proxy_tag}-tproxy" yq '.listeners[] | select(.type == "redir" and (.name // "") != strenv(DSCP_FORCE_TAG) and (.name // "") != strenv(DSCP_FORCE_TAG_REDIRECT) and (.name // "") != strenv(DSCP_FORCE_TAG_TPROXY)) | .port // ""' "$mihomo_config" 2>/dev/null | sed -n '1p')
         fi
         [ -n "$port" ] && echo "$port" && return 0
     else
@@ -1348,9 +1307,9 @@ get_port_tproxy() {
         port=$(get_xray_port_by_mode "tproxy")
         [ -n "$port" ] && echo "$port" && return 0
     elif [ "$name_client" = "mihomo" ]; then
-        port=$(yq eval '.tproxy-port // ""' "$mihomo_config" 2>/dev/null)
+        port=$(yq '.tproxy-port // ""' "$mihomo_config" 2>/dev/null)
         if [ -z "$port" ]; then
-            port=$(DSCP_FORCE_TAG="$dscp_force_proxy_tag" DSCP_FORCE_TAG_REDIRECT="${dscp_force_proxy_tag}-redirect" DSCP_FORCE_TAG_TPROXY="${dscp_force_proxy_tag}-tproxy" yq eval '.listeners[] | select(.type == "tproxy" and (.name // "") != strenv(DSCP_FORCE_TAG) and (.name // "") != strenv(DSCP_FORCE_TAG_REDIRECT) and (.name // "") != strenv(DSCP_FORCE_TAG_TPROXY)) | .port // ""' "$mihomo_config" 2>/dev/null | sed -n '1p')
+            port=$(DSCP_FORCE_TAG="$dscp_force_proxy_tag" DSCP_FORCE_TAG_REDIRECT="${dscp_force_proxy_tag}-redirect" DSCP_FORCE_TAG_TPROXY="${dscp_force_proxy_tag}-tproxy" yq '.listeners[] | select(.type == "tproxy" and (.name // "") != strenv(DSCP_FORCE_TAG) and (.name // "") != strenv(DSCP_FORCE_TAG_REDIRECT) and (.name // "") != strenv(DSCP_FORCE_TAG_TPROXY)) | .port // ""' "$mihomo_config" 2>/dev/null | sed -n '1p')
         fi
         [ -n "$port" ] && echo "$port" && return 0
     else

@@ -51,3 +51,9 @@ new_features() {
         fi
     fi
 }
+
+strip_json_comments() {
+    sed -e ':a; s:/\*[^*]*\*[^/]*\*/::g; ta' \
+        -e 's/^[[:space:]]*\/\/.*$//' \
+        -e 's/[[:space:]]\{1,\}\/\/.*$//' "$@"
+}

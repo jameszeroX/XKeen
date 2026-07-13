@@ -529,6 +529,7 @@ while [ $# -gt 0 ]; do
                 echo
                 install_geosite
                 install_geoip
+                update_user_geofiles
                 install_geoipset update
 
                 if pidof xray >/dev/null; then

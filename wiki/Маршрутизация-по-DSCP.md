@@ -61,33 +61,40 @@ Windows Registry Editor Version 5.00
 
 Если в `Hybrid` настроен только отдельный `tproxy` inbound/listener без отдельного `redirect` inbound/listener для TCP, XKeen отключит DSCP 61 и покажет причину в `xkeen -dscp`.
 
-### Пример inbound Xray для Hybrid
+### Пример inbound и routing Xray для Hybrid
 
 ```json
-  {
-    "port": 1191,
-    "protocol": "tunnel",
-    "settings": {
-      "network": "tcp",
-      "followRedirect": true
+    {
+      "port": 1191,
+      "protocol": "tunnel",
+      "settings": {
+        "network": "tcp",
+        "followRedirect": true
+      },
+      "tag": "force-proxy-redirect"
     },
-    "tag": "force-proxy-redirect"
-  },
-  {
-    "port": 1191,
-    "protocol": "tunnel",
-    "settings": {
-      "network": "udp",
-      "followRedirect": true
-    },
-    "streamSettings": {
-      "sockopt": {"tproxy": "tproxy"}
-    },
-    "tag": "force-proxy-tproxy"
-  }
+    {
+      "port": 1191,
+      "protocol": "tunnel",
+      "settings": {
+        "network": "udp",
+        "followRedirect": true
+      },
+      "streamSettings": {
+        "sockopt": {"tproxy": "tproxy"}
+      },
+      "tag": "force-proxy-tproxy"
+    }
 ```
 
-### Пример inbound Xray для TProxy
+```json
+      {
+        "inboundTag": ["force-proxy-redirect","force-proxy-tproxy"],
+        "outboundTag": "vless-reality"
+      }
+```
+
+### Пример inbound и routing Xray для TProxy
 
 ```json
     {
@@ -104,28 +111,18 @@ Windows Registry Editor Version 5.00
     }
 ```
 
-Порт `1191` приведён только как пример. XKeen не использует хардкод порта и определяет его автоматически по inbound'ам `force-proxy-redirect` и `force-proxy-tproxy`.
+```json
+      {
+        "inboundTag": ["force-proxy"],
+        "outboundTag": "vless-reality"
+      }
+```
+
+Порт `1191` приведён только для примера. XKeen не использует хардкод порта и определяет его автоматически по inbound'ам `force-proxy-redirect` и `force-proxy-tproxy`.
 
 Также поддерживается компактный вариант с общим тегом `force-proxy`, но раздельные теги проще для чтения и диагностики.
 
-### Пример routing rule Xray для Hybrid
-
-```json
-{
-  "inboundTag": ["force-proxy-redirect","force-proxy-tproxy"],
-  "outboundTag": "vless-reality"
-}
-```
-### Пример routing rule Xray для TProxy
-
-```json
-{
-  "inboundTag": ["force-proxy"],
-  "outboundTag": "vless-reality"
-}
-```
-
-Это правило пользователь добавляет самостоятельно. XKeen не изменяет автоматически `routing.rules` и `outbounds`.
+Правило роутинга пользователь добавляет самостоятельно. XKeen не изменяет автоматически `routing.rules` и `outbounds`.
 
 Для режима `TProxy` достаточно отдельного inbound'а `tproxy`. Для режима `Hybrid` нужен полноценный split force-path: `redirect` для TCP и `tproxy` для UDP.
 
@@ -133,41 +130,67 @@ Windows Registry Editor Version 5.00
 
 ```yaml
 listeners:
-  - name: force-proxy-redirect
-    type: redir
-    port: 1191
-    listen: 0.0.0.0
-    proxy: ProxyTCP
   - name: force-proxy-tproxy
     type: tproxy
-    port: 1192
+    port: 1191
     listen: 0.0.0.0
     udp: true
     proxy: ProxyUDP
+  - name: force-proxy-redirect
+    type: redir
+    port: 1192
+    listen: 0.0.0.0
+    proxy: ProxyTCP
 ```
 
 или
 
 ```yaml
 listeners:
-  - name: force-proxy-redirect
-    type: redir
-    port: 1191
-    listen: 0.0.0.0
   - name: force-proxy-tproxy
     type: tproxy
+    port: 1191
+    listen: 0.0.0.0
+    udp: true
+  - name: force-proxy-redirect
+    type: redir
     port: 1192
+    listen: 0.0.0.0
+
+rules:
+  - IN-NAME,force-proxy-tproxy,ProxyUDP
+  - IN-NAME,force-proxy-redirect,ProxyTCP
+```
+
+### Пример listener Mihomo для TProxy
+
+```yaml
+listeners:
+  - name: force-proxy
+    type: tproxy
+    port: 1191
+    listen: 0.0.0.0
+    udp: true
+    proxy: ProxyTCPUDP
+```
+
+или
+
+```yaml
+listeners:
+  - name: force-proxy
+    type: tproxy
+    port: 1191
     listen: 0.0.0.0
     udp: true
 
 rules:
-  - IN-NAME,force-proxy-redirect,ProxyTCP
-  - IN-NAME,force-proxy-tproxy,ProxyUDP
+  - IN-NAME,force-proxy,ProxyTCPUDP
 ```
 
 Для режима `TProxy` достаточно listener `force-proxy` или `force-proxy-tproxy`. Для режима `Hybrid` нужны оба listener'а.
 
-`ProxyTCP` и `ProxyUDP` должны быть именами существующих исходящих прокси или proxy-group в конфигурации Mihomo.
+`ProxyTCP`, `ProxyUDP` или `ProxyTCPUDP` должны быть именами существующих исходящих прокси или proxy-group в конфигурации Mihomo.
 
 `proxy` можно указывать либо прямо в listener, либо через правило `IN-NAME,<listener>,<proxy>` в `rules`. XKeen включает `DSCP 61` для Mihomo только если для каждого нужного listener'а найден корректный `type`, валидный `port` и задан `proxy` — либо прямо в listener, либо через `IN-NAME`.
 
