@@ -28,6 +28,7 @@
     "gh_proxy": "https://user_gh_proxy.com"
   }
 }
+```
 
 ---
 
