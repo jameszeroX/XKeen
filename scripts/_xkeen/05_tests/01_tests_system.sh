@@ -117,12 +117,15 @@ get_user_proxy() {
     gh_proxy_user=""
     [ ! -f "$xkeen_config" ] && return 1
 
+    local json_clean
+    json_clean=$(strip_json_comments "$xkeen_config")
+
     if command -v jq >/dev/null 2>&1; then
-        gh_proxy_user=$(jq -r '.xkeen.gh_proxy // empty' "$xkeen_config" 2>/dev/null)
+        gh_proxy_user=$(printf '%s' "$json_clean" | jq -r '.xkeen.gh_proxy // empty' 2>/dev/null)
     fi
 
     if [ -z "$gh_proxy_user" ]; then
-        gh_proxy_user=$(sed -n 's/.*"gh_proxy": *"\([^"]*\)".*/\1/p' "$xkeen_config" | xargs 2>/dev/null)
+        gh_proxy_user=$(printf '%s' "$json_clean" | sed -n 's/.*"gh_proxy": *"\([^"]*\)".*/\1/p' | xargs 2>/dev/null)
     fi
 
     [ "$gh_proxy_user" = "null" ] && gh_proxy_user=""

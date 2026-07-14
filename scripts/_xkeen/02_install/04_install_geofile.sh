@@ -19,7 +19,13 @@ process_geo_file() {
         printf "  Ожидаемый размер: ${yellow}%s байт${reset}\n" "$expected_size"
     else
         printf "  ${yellow}Предупреждение${reset}: Не удалось определить ожидаемый размер файла\n"
-        expected_size=""
+        printf "  ${yellow}Инфо${reset}: Без точного ожидаемого размера сравнение невозможно — загрузка пропущена, чтобы не подменить рабочий файл обрезанным\n"
+        if [ -f "$geo_dir/$filename" ] || [ -L "$geo_dir/$filename" ]; then
+            printf "  ${green}Оставляем старый файл${reset} %s\n\n" "$display_name"
+        else
+            printf "  ${red}Ошибка${reset}: старый файл %s отсутствует, а загрузка без проверки размера пропущена\n\n" "$display_name"
+        fi
+        return 1
     fi
 
     local tmp_file="${geo_dir}/${filename}.tmp.$$"

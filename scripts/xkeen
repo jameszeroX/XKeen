@@ -570,7 +570,13 @@ while [ $# -gt 0 ]; do
 
             backup_xkeen
             "$download_func"
-            install_xkeen
+
+            if ! install_xkeen; then
+                echo
+                echo -e "  Установка новой версии XKeen ${red}не выполнена${reset}"
+                delete_tmp
+                exit 1
+            fi
 
             # Перезапуск скрипта
             grep -E "^\s*-uk_post_update\s*\)" "$0" > /dev/null && exec sh "$0" -uk_post_update
@@ -1107,7 +1113,12 @@ while [ $# -gt 0 ]; do
                 "$download_func"
             fi
 
-            install_xkeen
+            if ! install_xkeen; then
+                echo
+                echo -e "  Переустановка XKeen ${red}не выполнена${reset}"
+                delete_tmp
+                exit 1
+            fi
 
             # Перезапуск скрипта
             grep -E "^\s*-k_post_install\s*\)" "$0" > /dev/null && exec sh "$0" -k_post_install

@@ -184,21 +184,30 @@ curl_with_timeout() {
     fi
 }
 
+strip_json_comments() {
+    sed -e ':a; s:/\*[^*]*\*[^/]*\*/::g; ta' \
+        -e 's/^[[:space:]]*\/\/.*$//' \
+        -e 's/[[:space:]]\{1,\}\/\/.*$//' "$@"
+}
+
 # Параметры повтора загрузок
 retries_download_settings() {
     retries_download=1
     retry_delay_download=2
 
     if [ -f "$xkeen_config" ] && command -v jq >/dev/null 2>&1; then
+        local json_clean
+        json_clean=$(strip_json_comments "$xkeen_config")
+
         local parsed_val
-        parsed_val=$(jq -r '.xkeen.retries_download // empty' "$xkeen_config" 2>/dev/null)
+        parsed_val=$(printf '%s' "$json_clean" | jq -r '.xkeen.retries_download // empty' 2>/dev/null)
 
         if [ -n "$parsed_val" ] && [ "$parsed_val" -gt 0 ] 2>/dev/null; then
             retries_download="$parsed_val"
         fi
 
         local parsed_delay
-        parsed_delay=$(jq -r '.xkeen.retry_delay_download // empty' "$xkeen_config" 2>/dev/null)
+        parsed_delay=$(printf '%s' "$json_clean" | jq -r '.xkeen.retry_delay_download // empty' 2>/dev/null)
         if [ -n "$parsed_delay" ] && [ "$parsed_delay" -gt 0 ] 2>/dev/null; then
             retry_delay_download="$parsed_delay"
         fi

@@ -28,6 +28,7 @@ install_xkeen() {
         rm "$xkeen_archive"
     fi
     [ -d "$log_dir/xkeen" ] && rm -rf "$log_dir/xkeen"
+    return 0
 }
 
 check_keen_mode() {
@@ -50,10 +51,4 @@ new_features() {
             install_cron
         fi
     fi
-}
-
-strip_json_comments() {
-    sed -e ':a; s:/\*[^*]*\*[^/]*\*/::g; ta' \
-        -e 's/^[[:space:]]*\/\/.*$//' \
-        -e 's/[[:space:]]\{1,\}\/\/.*$//' "$@"
 }
