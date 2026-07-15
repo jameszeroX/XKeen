@@ -8,10 +8,10 @@ about_xkeen() {
 help_xkeen() {
     echo
     echo -e "  ${yellow}Установка${reset}"
-    echo -e "	-i		${italic}Основной режим установки XKeen + Xray + GeoFile/GeoIPSET + Mihomo${reset}"
+    echo -e "	-i		${italic}Основной режим установки XKeen + Xray + Mihomo + GeoFile/GeoIPSET${reset}"
     echo -e "	-io		${italic}OffLine установка XKeen${reset}"
     echo -e "	-toff		${italic}Отключение таймаута при меделенной загрузке с GitHub (xkeen -i -toff)${reset}"
-    echo -e "	-health		${italic}Базовая проверка исправности Entware${reset}"
+    echo -e "	-health		${italic}Базовая проверка исправности Entware перед установкой${reset}"
     echo
     echo -e "  ${green}Переустановка${reset}"
     echo -e "	-k		${italic}XKeen${reset}"
@@ -24,7 +24,7 @@ help_xkeen() {
     echo -e "	-ug		${italic}GeoFile/GeoIPSET${reset}"
     echo -e "	-ux		${italic}Xray (установка, повышение/понижение версии)${reset}"
     echo -e "	-um		${italic}Mihomo (установка, повышение/понижение версии)${reset}"
-    echo -e "	-uy		${italic}Yq (установка, повышение/понижение версии)${reset}"
+    echo -e "	-uy		${italic}Yq (установка/обновление)${reset}"
     echo
     echo -e "  ${yellow}Запланированная задача автообновления GeoFile/GeoIPSET${reset}"
     echo -e "	-ugc		${italic}Создание${reset}"

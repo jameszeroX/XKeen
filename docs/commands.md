@@ -6,10 +6,10 @@
 
 | Флаг | Действие |
 | --- | --- |
-| `-i`, `-install` | Полный цикл: XKeen + Xray + GeoFile/GeoIPSET + Mihomo |
+| `-i`, `-install` | Полный цикл: XKeen + Xray + Mihomo + GeoFile/GeoIPSET |
 | `-io` | OffLine-установка XKeen из локальной флешки |
 | `-toff` | Отключить таймаут `curl` для медленных каналов: `xkeen -i -toff` |
-| `-health` | Базовая проверка исправности Entware |
+| `-health` | Базовая проверка исправности Entware перед установкой XKeen |
 
 ## Переустановка
 
