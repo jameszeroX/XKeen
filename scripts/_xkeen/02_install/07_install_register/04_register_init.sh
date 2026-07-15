@@ -1908,6 +1908,7 @@ configure_firewall() {
 #!/bin/sh
 # XKeen: Auto-generated file. DO NOT EDIT!
 [ -f /tmp/xkeen_ready ] || exit 0
+case "${table:-}" in filter|raw) exit 0 ;; esac
 EOL
 
     # Securely inject variables into the script
@@ -1989,6 +1990,11 @@ if pidof "$name_client" >/dev/null; then
     # в FORWARD, где штатно дропается NDM-цепочкой _NDM_HOTSPOT_FWD.
     # Хук перезапускается NDM при netfilter rewrite, schedule.d дёргает этот же
     # скрипт на start/stop расписаний — список MAC всегда актуален.
+    # Вызывается ПОСЛЕ _xkeen_apply: NDM к моменту вызова хука уже снёс
+    # xkeen-цепочки, и каждая миллисекунда до их восстановления — окно, в
+    # котором проксируемый трафик идёт мимо политики. curl к hotspot API
+    # (до 2+5 c таймаутов) в этом окне недопустим; правилам достаточно,
+    # чтобы ipset существовал — членство синхронизируется после.
     _xkeen_sync_deny_mac_ipset() {
         command -v ipset >/dev/null 2>&1 || return 0
         ipset create "$name_ipset_deny_mac" hash:mac -exist 2>/dev/null || return 0
@@ -2009,7 +2015,7 @@ if pidof "$name_client" >/dev/null; then
         ipset swap "$_tmp" "$name_ipset_deny_mac" 2>/dev/null
         ipset destroy "$_tmp" 2>/dev/null
     }
-    _xkeen_sync_deny_mac_ipset
+    command -v ipset >/dev/null 2>&1 && ipset create "$name_ipset_deny_mac" hash:mac -exist 2>/dev/null
 
     # Аккумулируем правила в строки, применяем атомарно одним
     # iptables-restore --noflush на (family, table) в _xkeen_apply.
@@ -2330,6 +2336,23 @@ if pidof "$name_client" >/dev/null; then
         done
         [ "$ip_version" = "4" ] && rm -f "/tmp/noinet"
 
+        # NDM при netfilter rewrite (в т.ч. на каждый DHCP renew) не трогает
+        # ни ip rule, ни table $table_id — безусловный flush ниже рвал
+        # установленные TProxy-потоки без причины. Если целевое состояние
+        # (local default + копия non-default маршрутов source_table + fwmark
+        # rule) уже действует — не трогаем. Любое расхождение -> полная
+        # пересборка, как раньше.
+        _cur_routes=$(ip -"$ip_version" route show table "$table_id" 2>/dev/null)
+        _want_routes=$(ip -"$ip_version" route show table "$source_table" 2>/dev/null | \
+            grep -v '^default\|^unreachable\|^blackhole')
+        if [ -n "$_cur_routes" ] && \
+           printf '%s\n' "$_cur_routes" | grep -q '^local default dev lo' && \
+           [ "$(printf '%s\n' "$_cur_routes" | grep -v '^local default dev lo' | sort)" = \
+             "$(printf '%s\n' "$_want_routes" | sort)" ] && \
+           ip -"$ip_version" rule show 2>/dev/null | grep -q "fwmark $table_mark lookup $table_id"; then
+            return 0
+        fi
+
         ip -"$ip_version" rule del fwmark "$table_mark" lookup "$table_id" >/dev/null 2>&1 || true
         ip -"$ip_version" route flush table "$table_id" >/dev/null 2>&1 || true
         ip -"$ip_version" route add local default dev lo table "$table_id" >/dev/null 2>&1 || true
@@ -2566,6 +2589,49 @@ USER_POLICIES_EOF
         done
     }
 
+    # Лёгкий путь. NDM зовёт netfilter.d на каждую пересобранную (type, table)
+    # пару, schedule.d дёргает хук ради deny-MAC ipset — в этих вызовах наши
+    # правила часто уже на месте. Если все xkeen-цепочки и tagged-правила
+    # уцелели, полная пересборка не нужна: только идемпотентные маршруты и
+    # ре-синхронизация deny-MAC. Любое сомнение -> полная пересборка.
+    _xkeen_hook_tables=""
+    [ -n "$port_tproxy" ] && _xkeen_hook_tables="$table_tproxy"
+    [ -n "$port_redirect" ] && [ "$table_redirect" != "$table_tproxy" ] && \
+        _xkeen_hook_tables="$_xkeen_hook_tables $table_redirect"
+
+    _xkeen_family_intact() {
+        _bin="$1"
+        for _tbl in $_xkeen_hook_tables; do
+            [ "$("$_bin" -w -t "$_tbl" -S "$name_chain" 2>/dev/null | wc -l)" -gt 1 ] || return 1
+            "$_bin" -w -t "$_tbl" -S PREROUTING 2>/dev/null | grep -q "$comment_tag" || return 1
+            if [ "$proxy_router" = "on" ]; then
+                "$_bin" -w -t "$_tbl" -S OUTPUT 2>/dev/null | grep -q "$comment_tag" || return 1
+            fi
+        done
+        if [ "$aghfix" = "on" ] && ! { [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ]; }; then
+            "$_bin" -w -t nat -S _NDM_HOTSPOT_DNSREDIR 2>/dev/null | grep -q "$comment_tag" || return 1
+        fi
+        return 0
+    }
+
+    _xkeen_rules_intact() {
+        [ -n "$_xkeen_hook_tables" ] || return 1
+        if [ "$iptables_supported" = "true" ]; then
+            _xkeen_family_intact iptables || return 1
+        fi
+        if [ "$ip6tables_supported" = "true" ]; then
+            _xkeen_family_intact ip6tables || return 1
+        fi
+        return 0
+    }
+
+    if _xkeen_rules_intact; then
+        [ "$iptables_supported" = "true" ] && configure_route 4
+        [ "$ip6tables_supported" = "true" ] && configure_route 6
+        _xkeen_sync_deny_mac_ipset
+        exit 0
+    fi
+
     if [ -n "$port_donor" ] || [ -n "$port_exclude" ]; then
         [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ] && [ -n "$port_donor" ] && port_donor="53,$port_donor"
     fi
@@ -2609,6 +2675,10 @@ USER_POLICIES_EOF
     # Атомарно применяем все аккумулированные правила одним
     # iptables-restore --noflush per (family, table).
     _xkeen_apply
+
+    # Медленная часть (curl к hotspot API) — строго после восстановления
+    # правил: см. комментарий у _xkeen_sync_deny_mac_ipset.
+    _xkeen_sync_deny_mac_ipset
 else
     [ -f "/tmp/xkeen_starting.lock" ] && exit 0
     touch "/tmp/xkeen_starting.lock"
