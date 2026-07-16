@@ -2659,6 +2659,70 @@ USER_POLICIES_EOF
         exit 0
     fi
 
+    # Кэш готовых restore-блобов. Набор правил полностью детерминирован
+    # конфигурацией, запечённой в этот файл при генерации, — на каждом
+    # прогоне пересобирать его сотнями shell-вызовов незачем. После полной
+    # сборки блобы сохраняются в /tmp с ключом = md5 самого хука: любое
+    # изменение конфигурации перегенерирует хук и инвалидирует кэш,
+    # перезагрузка очищает /tmp. При попадании в кэш хук сразу применяет
+    # блобы — окно «NDM снёс цепочки, правил нет» сокращается до
+    # длительности самих iptables-restore.
+    _xkeen_cache_dir="/tmp/xkeen_rules_cache"
+
+    _xkeen_ensure_ipsets() {
+        command -v ipset >/dev/null 2>&1 || return 0
+        if [ "$iptables_supported" = "true" ]; then
+            ipset create ext_exclude hash:ip family inet -exist 2>/dev/null
+            ipset create user_exclude hash:net family inet -exist 2>/dev/null
+            ipset create geo_exclude hash:net family inet -exist 2>/dev/null
+            ipset create geo_override hash:net family inet -exist 2>/dev/null
+        fi
+        if [ "$ip6tables_supported" = "true" ]; then
+            ipset create ext_exclude6 hash:ip family inet6 -exist 2>/dev/null
+            ipset create user_exclude6 hash:net family inet6 -exist 2>/dev/null
+            ipset create geo_exclude6 hash:net family inet6 -exist 2>/dev/null
+            ipset create geo_override6 hash:net family inet6 -exist 2>/dev/null
+        fi
+    }
+
+    _xkeen_cache_valid() {
+        [ -s "$_xkeen_cache_dir/key" ] || return 1
+        [ "$(cat "$_xkeen_cache_dir/key" 2>/dev/null)" = "$(md5sum "$0" 2>/dev/null | awk '{print $1}')" ]
+    }
+
+    # Восстанавливает хвостовой перевод строки, съеденный $(cat ...):
+    # _xkeen_apply_table печатает блоб через printf '%s' и рассчитывает,
+    # что каждая строка правил завершена.
+    _xkeen_cache_load() {
+        for _cn in v4_nat v4_mangle v6_nat v6_mangle; do
+            _cb=$(cat "$_xkeen_cache_dir/$_cn" 2>/dev/null)
+            [ -n "$_cb" ] && eval "_xkeen_${_cn}_rules=\"\$_cb
+\""
+        done
+    }
+
+    _xkeen_cache_save() {
+        rm -rf "${_xkeen_cache_dir}.new" 2>/dev/null
+        mkdir -p "${_xkeen_cache_dir}.new" 2>/dev/null || return 0
+        printf '%s' "$_xkeen_v4_nat_rules"    > "${_xkeen_cache_dir}.new/v4_nat"
+        printf '%s' "$_xkeen_v4_mangle_rules" > "${_xkeen_cache_dir}.new/v4_mangle"
+        printf '%s' "$_xkeen_v6_nat_rules"    > "${_xkeen_cache_dir}.new/v6_nat"
+        printf '%s' "$_xkeen_v6_mangle_rules" > "${_xkeen_cache_dir}.new/v6_mangle"
+        md5sum "$0" 2>/dev/null | awk '{print $1}' > "${_xkeen_cache_dir}.new/key"
+        rm -rf "$_xkeen_cache_dir" 2>/dev/null
+        mv "${_xkeen_cache_dir}.new" "$_xkeen_cache_dir" 2>/dev/null
+    }
+
+    if _xkeen_cache_valid; then
+        _xkeen_ensure_ipsets
+        _xkeen_cache_load
+        [ "$iptables_supported" = "true" ] && configure_route 4
+        [ "$ip6tables_supported" = "true" ] && configure_route 6
+        _xkeen_apply
+        _xkeen_sync_deny_mac_ipset
+        exit 0
+    fi
+
     if [ -n "$port_donor" ] || [ -n "$port_exclude" ]; then
         [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ] && [ -n "$port_donor" ] && port_donor="53,$port_donor"
     fi
@@ -2702,6 +2766,10 @@ USER_POLICIES_EOF
     # Атомарно применяем все аккумулированные правила одним
     # iptables-restore --noflush per (family, table).
     _xkeen_apply
+
+    # Блобы детерминированы конфигурацией — сохраняем для быстрых
+    # последующих прогонов (см. _xkeen_cache_* выше).
+    _xkeen_cache_save
 
     # Медленная часть (curl к hotspot API) — строго после восстановления
     # правил: см. комментарий у _xkeen_sync_deny_mac_ipset.
