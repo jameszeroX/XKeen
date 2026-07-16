@@ -1984,6 +1984,33 @@ restart_script() {
 
 if pidof "$name_client" >/dev/null; then
 
+    # Сериализация прогонов хука. NDM вызывает netfilter.d конкурентно —
+    # по событию на каждую пересобранную (type, table) пару, плюс schedule.d.
+    # Два параллельных прогона опасны: delete-list строится по снапшоту
+    # iptables-save, и restore соседа может отвергнуть весь блоб целиком.
+    # mkdir — единственный атомарный lock в busybox-ash. Не дождались за
+    # ~5 с — держатель уже применил актуальное состояние, выходим; если
+    # правила всё же не целы, следующее событие NDM их доставит.
+    _xkeen_nf_lock="/tmp/xkeen_netfilter.lock.d"
+    _xkeen_lock_owned=""
+    _lock_try=0
+    while [ "$_lock_try" -lt 50 ]; do
+        if mkdir "$_xkeen_nf_lock" 2>/dev/null; then
+            _xkeen_lock_owned=1
+            printf '%s' "$$" > "$_xkeen_nf_lock/pid"
+            trap 'rm -rf "$_xkeen_nf_lock"' EXIT INT TERM
+            break
+        fi
+        _lock_pid=$(cat "$_xkeen_nf_lock/pid" 2>/dev/null)
+        if [ -n "$_lock_pid" ] && ! kill -0 "$_lock_pid" 2>/dev/null; then
+            rm -rf "$_xkeen_nf_lock" 2>/dev/null
+            continue
+        fi
+        _lock_try=$((_lock_try + 1))
+        usleep 100000 2>/dev/null || sleep 1
+    done
+    [ -n "$_xkeen_lock_owned" ] || exit 0
+
     # Динамическая синхронизация ipset с deny-MAC из hotspot API.
     # Закрывает обход built-in политики «Без доступа в интернет» при включенном
     # проксировании: PREROUTING на эти MAC делает RETURN до TPROXY, пакет идёт
