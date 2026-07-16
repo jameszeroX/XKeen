@@ -12,8 +12,11 @@
 - Добавлена возможность автообновления пользовательских геофайлов ([настройка](https://github.com/jameszeroX/XKeen/wiki/Конфигурационный-файл))
 - Исправлена установка/обновление геофайлов и GeoIPSET ([известные проблемы](https://github.com/jameszeroX/XKeen/wiki/Knownissues))
 - Скрыт выбор установки Mihomo Prerelease-Alpha ([известные проблемы](https://github.com/jameszeroX/XKeen/wiki/Knownissues))
-- Повышена стабильность соединения при частых обновлениях аренды IP у провайдера [#98](https://github.com/jameszeroX/XKeen/pull/98) - [@dmiales](https://github.com/dmiales)
-- Прочие незначительные фиксы
+- Сокращено окно отсутствия правил netfilter при пересборке файрвола NDM (renew DHCP) — трафик больше не уходит в обход прокси на 1–1.5 секунды [#98](https://github.com/jameszeroX/XKeen/pull/98) - [@dmiales](https://github.com/dmiales)
+- Сгенерированные блобы правил netfilter теперь кэшируются между запусками хука — это дополнительно сокращает окно, в котором трафик идёт мимо прокси после пересборки файрвола NDM [#102](https://github.com/jameszeroX/XKeen/pull/102) - [@dmiales](https://github.com/dmiales)
+- Параллельные запуски netfilter.d-хука теперь сериализуются через lock-файл, что устраняет гонку при одновременной пересборке нескольких таблиц iptables [#101](https://github.com/jameszeroX/XKeen/pull/101) - [@dmiales](https://github.com/dmiales)
+- Применение правил iptables в netfilter-хуке теперь логирует и повторяет неудачный iptables-restore вместо игнорирования ошибки [#99](https://github.com/jameszeroX/XKeen/pull/99) - [@dmiales](https://github.com/dmiales)
+- Для mihomo теперь автоматически выставляется GOMEMLIMIT (половина RAM устройства), что предотвращает рост потребления памяти и убийство процесса OOM-killer'ом на слабых роутерах [#100](https://github.com/jameszeroX/XKeen/pull/100) - [@dmiales](https://github.com/dmiales)
 
 ### Порядок установки/обновления
 
