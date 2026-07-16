@@ -2816,6 +2816,19 @@ else
         ;;
         mihomo)
             export CLASH_HOME_DIR="$directory_configs_app"
+            # mihomo — Go-приложение: без GOMEMLIMIT сборщик мусора не
+            # стремится возвращать память ОС, и на роутерах RSS ползёт
+            # вверх до OOM. Мягкий лимит в половину RAM (минимум 64MiB)
+            # заставляет GC ужиматься заранее. Уже заданный извне
+            # GOMEMLIMIT не игнорируется.
+            if [ -z "$GOMEMLIMIT" ]; then
+                _mem_kb=$(awk '/^MemTotal:/{print $2}' /proc/meminfo 2>/dev/null)
+                if [ -n "$_mem_kb" ] && [ "$_mem_kb" -gt 0 ] 2>/dev/null; then
+                    _goml=$(( _mem_kb / 2048 ))
+                    [ "$_goml" -lt 64 ] && _goml=64
+                    export GOMEMLIMIT="${_goml}MiB"
+                fi
+            fi
             "$name_client" >/dev/null 2>&1 &
         ;;
     esac
@@ -3231,6 +3244,17 @@ proxy_start() {
                     ;;
                     mihomo)
                         export CLASH_HOME_DIR="$directory_configs_app"
+                        # См. комментарий у запуска mihomo в netfilter-хуке:
+                        # мягкий лимит памяти для Go GC, половина RAM,
+                        # минимум 64MiB, внешний GOMEMLIMIT не игнорируется.
+                        if [ -z "$GOMEMLIMIT" ]; then
+                            _mem_kb=$(awk '/^MemTotal:/{print $2}' /proc/meminfo 2>/dev/null)
+                            if [ -n "$_mem_kb" ] && [ "$_mem_kb" -gt 0 ] 2>/dev/null; then
+                                _goml=$(( _mem_kb / 2048 ))
+                                [ "$_goml" -lt 64 ] && _goml=64
+                                export GOMEMLIMIT="${_goml}MiB"
+                            fi
+                        fi
                         apply_fd_limit
                         if [ -n "$fd_out" ]; then
                             nohup "$name_client" >/dev/null 2>&1 &
