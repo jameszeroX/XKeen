@@ -12,6 +12,7 @@
 - Добавлена возможность автообновления пользовательских геофайлов ([настройка](https://github.com/jameszeroX/XKeen/wiki/Конфигурационный-файл))
 - Исправлена установка/обновление геофайлов и GeoIPSET ([известные проблемы](https://github.com/jameszeroX/XKeen/wiki/Knownissues))
 - Скрыт выбор установки Mihomo Prerelease-Alpha ([известные проблемы](https://github.com/jameszeroX/XKeen/wiki/Knownissues))
+- Доработки согласно PR [#98](https://github.com/jameszeroX/XKeen/pull/98) - [@dmiales](https://github.com/dmiales)
 - Прочие незначительные фиксы
 
 ### Порядок установки/обновления

@@ -42,6 +42,13 @@ diagnostic() {
         echo >> "$diagnostic"; echo >> "$diagnostic"
     }
 
+    # Функция маскировки чувствительных данных в xkeen.json
+    mask_xkeen_sensitive_data() {
+        sed -E \
+            -e 's/("gh_proxy")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
+            -e 's/("url")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g'
+    }
+
     # Функция маскировки чувствительных данных в конфигах Xray
     mask_xray_sensitive_data() {
         sed -E \
@@ -139,7 +146,11 @@ diagnostic() {
 
     echo "Версия XKeen $xkeen_current_version $xkeen_build (время сборки: $build_timestamp)" | log_block "Версия XKeen"
 
-    [ -f "$xkeen_config" ] && log_file "$xkeen_config" "Файл xkeen.json"
+    if [ -f "$xkeen_config" ]; then
+        write_header "Файл xkeen.json"
+        mask_xkeen_sensitive_data < "$xkeen_config" >> "$diagnostic"
+        echo >> "$diagnostic"; echo >> "$diagnostic"
+    fi
 
     if [ "${name_client}" = "xray" ] && [ -d "$xray_conf_dir" ]; then
         ls -p "$xray_conf_dir" | log_block "Содержимое директории configs"
