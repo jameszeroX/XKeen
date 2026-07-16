@@ -2090,19 +2090,42 @@ if pidof "$name_client" >/dev/null; then
             }
         ')
 
-        {
+        _blob=$( {
             printf '*%s\n' "$_table"
             printf ':%s -\n' "$name_chain"
             { [ -n "$port_dscp_force_proxy" ] || [ -n "$policy_mark_full" ]; } && printf ':%s_force -\n' "$name_chain"
             [ "$proxy_router" = "on" ] && printf ':%s_out -\n' "$name_chain"
             [ -n "$_deletes" ] && printf '%s\n' "$_deletes"
             printf '%s' "$_rules"
-            printf 'COMMIT\n'
-        } | if [ "$_family" = "iptables" ]; then
-            iptables-restore --noflush 2>/dev/null
-        else
-            ip6tables-restore --noflush 2>/dev/null
-        fi
+            printf 'COMMIT'
+        } )
+
+        _restore_cmd="iptables-restore"
+        [ "$_family" = "ip6tables" ] && _restore_cmd="ip6tables-restore"
+
+        # Отказ restore = таблица осталась без правил xkeen до следующего
+        # события netfilter, молча. Одна повторная попытка закрывает гонку
+        # с параллельной модификацией таблицы (delete-list строится по
+        # снапшоту iptables-save); стойкий отказ уходит в syslog — иначе
+        # диагностировать «прокси молча перестал перехватывать» нечем.
+        _attempt=1
+        while :; do
+            _restore_err=$(printf '%s\n' "$_blob" | "$_restore_cmd" --noflush 2>&1) && {
+                [ "$_attempt" -gt 1 ] && command -v logger >/dev/null 2>&1 && \
+                    logger -p daemon.notice -t xkeen \
+                        "$_restore_cmd $_table: applied on retry $_attempt"
+                break
+            }
+            if [ "$_attempt" -ge 2 ]; then
+                command -v logger >/dev/null 2>&1 && \
+                    logger -p daemon.err -t xkeen \
+                        "$_restore_cmd --noflush failed for $_table: $(printf '%s' "$_restore_err" | head -n1)"
+                return 1
+            fi
+            _attempt=$((_attempt + 1))
+            usleep 200000 2>/dev/null || sleep 1
+        done
+        return 0
     }
 
     _xkeen_apply() {
