@@ -742,13 +742,16 @@ $config_hint
   Управление режимом: ${yellow}xkeen -pbr on${reset} | ${yellow}xkeen -pbr off${reset} | ${yellow}xkeen -pbr status${reset}
 "
     else
-        log_warning_terminal "
+        log_error_terminal "
   Проксирование Entware включено, но у исходящих подключений ${yellow}${name_client}${reset} ${validation_summary} ${yellow}mark/routing-mark${reset} для bypass$error_details
 
   Для обычного Entware proxy можно использовать служебную метку ${yellow}255${reset}
   Разрешённые bypass marks: ${yellow}${allowed_marks_display}${reset}
 $config_hint
   Если нужно направить сам ${yellow}${name_client}${reset} через конкретную политику Keenetic, используйте код из ${yellow}xkeen -pbr codes${reset}
+
+  Отсутствие метки в этом режиме приведет к петле трафика и зависанию роутера
+  ${red}Запуск прокси-клиента отменен в целях безопасности${reset}
 "
     fi
 
