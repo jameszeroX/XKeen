@@ -129,6 +129,7 @@ get_user_proxy() {
     fi
 
     [ "$gh_proxy_user" = "null" ] && gh_proxy_user=""
+    gh_proxy_user="${gh_proxy_user%/}"
 }
 
 # Функция проверки доступности GitHub.
@@ -148,7 +149,7 @@ test_github() {
     if probe_with_mirrors "$xkeen_tar_url" && probe_with_mirrors "$xkeen_dev_url"; then
         _gh_probed=1
         if [ -n "$gh_proxy_user" ]; then
-            printf "  GitHub ${green}доступен через ваш прокси${reset}: ${yellow}$gh_proxy_user${reset}. Продолжаем...\n"
+            printf "  Используется ${green}пользовательский прокси${reset}: ${yellow}$gh_proxy_user${reset}\n"
         elif [ -r /tmp/.xkeen_mirror_cache ] && grep -q "__direct__" /tmp/.xkeen_mirror_cache 2>/dev/null; then
             printf "  GitHub ${green}доступен${reset}. Продолжаем...\n"
         else

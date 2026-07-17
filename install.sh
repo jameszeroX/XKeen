@@ -10,6 +10,7 @@ reset="\033[0m"
 url_stable="https://github.com/jameszeroX/XKeen/releases/latest/download/xkeen.tar.gz"
 url_beta="https://raw.githubusercontent.com/jameszeroX/XKeen/main/test/xkeen.tar.gz"
 archive_name="xkeen.tar.gz"
+xkeen_config="/opt/etc/xkeen/xkeen.json"
 
 # Функция для вывода справки
 show_help() {
@@ -30,10 +31,35 @@ echo  "    $0 --help"
 echo  "    curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh | sh -s -- --stable"
 }
 
+# Функция извлечения пользовательского прокси из /opt/etc/xkeen/xkeen.json
+get_user_proxy() {
+    gh_proxy_user=""
+    [ ! -f "$xkeen_config" ] && return 1
+
+    gh_proxy_user=$(sed \
+        -e ':a; s:/\*[^*]*\*[^/]*\*/::g; ta' \
+        -e 's/^[[:space:]]*\/\/.*$//' \
+        -e 's/[[:space:]]\{1,\}\/\/.*$//' \
+        "$xkeen_config" | \
+        sed -n 's/.*"gh_proxy"[[:space:]]*: *"\([^"]*\)".*/\1/p' | \
+        xargs 2>/dev/null)
+
+    [ "$gh_proxy_user" = "null" ] && gh_proxy_user=""
+    [ -z "$gh_proxy_user" ] && return 1
+
+    gh_proxy_user="${gh_proxy_user%/}"
+    return 0
+}
+
 # Функция проверки доступности версии
 check_version_available() {
     local test_url="$1"
-    curl -sI -f --connect-timeout 3 -m 7 "$test_url" >/dev/null || \
+    curl -sI -f --connect-timeout 3 -m 7 "$test_url" >/dev/null && return 0
+
+    if [ -n "$gh_proxy_user" ]; then
+        curl -sI -f --connect-timeout 3 -m 7 "$gh_proxy_user/$test_url" >/dev/null && return 0
+    fi
+
     curl -sI -f --connect-timeout 3 -m 7 "https://gh-proxy.com/$test_url" >/dev/null || \
     curl -sI -f --connect-timeout 3 -m 7 "https://ghfast.top/$test_url" >/dev/null
 }
@@ -41,6 +67,10 @@ check_version_available() {
 # Функция загрузки XKeen
 download_xkeen_release() {
     if curl -fLo "$archive_name" --connect-timeout 10 -m 15 "$1"; then
+        return 0
+    fi
+
+    if [ -n "$gh_proxy_user" ] && curl -fLo "$archive_name" --connect-timeout 10 -m 15 "$gh_proxy_user/$1"; then
         return 0
     fi
 
@@ -89,6 +119,11 @@ done
 
 clear
 echo
+
+# Проверяем наличие пользовательского прокси в конфиге
+if get_user_proxy; then
+    printf "  Используется ${green}пользовательский прокси${reset}: ${yellow}%s${reset}\n\n" "$gh_proxy_user"
+fi
 
 # Если параметры не переданы, показываем интерактивное меню
 if [ -z "$VERSION_TYPE" ]; then
