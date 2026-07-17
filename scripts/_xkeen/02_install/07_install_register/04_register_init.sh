@@ -2569,6 +2569,9 @@ USER_POLICIES_EOF
         orig_chain="$chain"
         chain="$out_chain"
 
+        # Разрешаем traceroute 
+        ipt -A "$out_chain" -p udp --dport 33434:33534 $comment -j RETURN >/dev/null 2>&1
+
         ipt -A "$out_chain" -o lo $comment -j RETURN >/dev/null 2>&1
         ipt -A "$out_chain" -m mark --mark 255 $comment -j RETURN >/dev/null 2>&1
         policy_bypass_marks="$policy_mark"
