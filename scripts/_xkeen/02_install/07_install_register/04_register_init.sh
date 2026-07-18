@@ -44,7 +44,6 @@ file_port_proxying="$xkeen_cfg/port_proxying.lst"
 file_port_exclude="$xkeen_cfg/port_exclude.lst"
 file_ip_exclude="$xkeen_cfg/ip_exclude.lst"
 xkeen_config="$xkeen_cfg/xkeen.json"
-status_file="/opt/lib/opkg/status"
 file_pid_fd="/var/run/xkeen_fd.pid"
 file_ca="/opt/etc/ssl/certs/ca-certificates.crt"
 ru_exclude_ipv4="$ipset_cfg/ru_exclude_ipv4.lst"
@@ -1964,7 +1963,6 @@ EOL
     inject_var table_tproxy "$table_tproxy"
     inject_var table_mark "$table_mark"
     inject_var table_id "$table_id"
-    inject_var status_file "$status_file"
     inject_var file_dns "$file_dns"
     inject_var arm_cpu "$arm_cpu"
     inject_var file_ca "$file_ca"
@@ -3165,7 +3163,7 @@ proxy_start() {
         sync_deny_mac_ipset
         process_user_ports
         process_custom_mark
-	detect_architecture
+        detect_architecture
         port_redirect=$(get_port_redirect)
         network_redirect=$(get_network_redirect)
         port_tproxy=$(get_port_tproxy)
