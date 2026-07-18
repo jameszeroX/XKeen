@@ -46,7 +46,6 @@ file_ip_exclude="$xkeen_cfg/ip_exclude.lst"
 xkeen_config="$xkeen_cfg/xkeen.json"
 status_file="/opt/lib/opkg/status"
 file_pid_fd="/var/run/xkeen_fd.pid"
-file_cpu="/opt/sbin/.xkeen/01_info/08_info_router.sh"
 file_ca="/opt/etc/ssl/certs/ca-certificates.crt"
 ru_exclude_ipv4="$ipset_cfg/ru_exclude_ipv4.lst"
 ru_exclude_ipv6="$ipset_cfg/ru_exclude_ipv6.lst"
@@ -128,6 +127,14 @@ if [ "$dscp_enable" = "off" ]; then
     dscp_exclude=""
     dscp_proxy=""
 fi
+
+detect_architecture() {
+    arm_cpu="false"
+    command -v opkg >/dev/null 2>&1 || return
+    case "$(opkg print-architecture | awk '!/all/ {print $2; exit}')" in
+        aarch64*) arm_cpu="true" ;;
+    esac
+}
 
 print_policy_info() {
     found="$1"
@@ -1959,7 +1966,7 @@ EOL
     inject_var table_id "$table_id"
     inject_var status_file "$status_file"
     inject_var file_dns "$file_dns"
-    inject_var file_cpu "$file_cpu"
+    inject_var arm_cpu "$arm_cpu"
     inject_var file_ca "$file_ca"
     inject_var proxy_dns "$proxy_dns"
     inject_var proxy_router "$proxy_router"
@@ -2808,11 +2815,9 @@ USER_POLICIES_EOF
 else
     [ -f "/tmp/xkeen_starting.lock" ] && exit 0
     touch "/tmp/xkeen_starting.lock"
-    . "$file_cpu"
-    info_cpu
 
     fd_limit="$other_fd"
-    [ "$architecture" = "arm64-v8a" ] && fd_limit="$arm64_fd"
+    [ "$arm_cpu" = "true" ] && fd_limit="$arm64_fd"
     ulimit -SHn "$fd_limit"
 
     export SSL_CERT_FILE="$file_ca"
@@ -2982,12 +2987,6 @@ load_ipset() {
         ipset swap "$set" "$tmp"
     fi
     ipset destroy "$tmp"
-}
-
-apply_fd_limit() {
-    fd_limit="$other_fd"
-    [ "$architecture" = "arm64-v8a" ] && fd_limit="$arm64_fd"
-    ulimit -SHn "$fd_limit"
 }
 
 cleanup_fd_monitor() {
@@ -3166,6 +3165,7 @@ proxy_start() {
         sync_deny_mac_ipset
         process_user_ports
         process_custom_mark
+	detect_architecture
         port_redirect=$(get_port_redirect)
         network_redirect=$(get_network_redirect)
         port_tproxy=$(get_port_tproxy)
@@ -3229,8 +3229,11 @@ proxy_start() {
         else
             log_info_router "Инициирован запуск прокси-клиента"
             attempt=1
-            . "$file_cpu"
-            info_cpu
+
+            fd_limit="$other_fd"
+            [ "$arm_cpu" = "true" ] && fd_limit="$arm64_fd"
+            ulimit -SHn "$fd_limit"
+
             export SSL_CERT_FILE="$file_ca"
             while [ "$attempt" -le "$start_attempts" ]; do
                 case "$name_client" in
@@ -3238,7 +3241,6 @@ proxy_start() {
                         export XRAY_LOCATION_CONFDIR="$directory_xray_config"
                         export XRAY_LOCATION_ASSET="$directory_xray_asset"
                         find "$directory_xray_config" -maxdepth 1 -name '._*.json' -type f -delete
-                        apply_fd_limit
                         if [ -n "$fd_out" ]; then
                             nohup "$name_client" run >/dev/null 2>&1 &
                             unset fd_out
@@ -3263,7 +3265,6 @@ proxy_start() {
                                 export GOMEMLIMIT="${_goml}MiB"
                             fi
                         fi
-                        apply_fd_limit
                         if [ -n "$fd_out" ]; then
                             nohup "$name_client" >/dev/null 2>&1 &
                             unset fd_out

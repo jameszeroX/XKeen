@@ -58,7 +58,7 @@ info_compare_xkeen() {
 
 version_xkeen() {
     echo
-    echo -e "  Версия ${yellow}XKeen $xkeen_current_version $xkeen_build${reset} (время сборки: ${light_blue}$build_timestamp${reset})"
+    echo -e "  ${yellow}XKeen $xkeen_current_version $xkeen_build${reset} (время сборки: ${light_blue}$build_timestamp${reset})"
     info_xray
     info_mihomo
 
