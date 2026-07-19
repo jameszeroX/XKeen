@@ -166,14 +166,18 @@ curl_with_timeout() {
 
     if [ "$_is_probe" = "0" ]; then
         # Режим скачивания (fetch_with_mirrors)
+        # Код возврата curl снимаем через отдельный дескриптор: $? после пайпа
+        # вернул бы код awk из indent_stderr_live, а не curl, из-за чего любой
+        # сетевой сбой выглядел бы как успех. pipefail в POSIX sh недоступен.
+        exec 3>&1
         if [ -e "/tmp/toff" ]; then
-            (curl -# --connect-timeout 10 "$@" 2>&1 1>&3 | indent_stderr_live) 3>&1
+            _curl_rc=$( { { curl -# --connect-timeout 10 "$@" 2>&1 1>&3; echo $? >&4; } | indent_stderr_live; } 4>&1 )
         else
-            (curl -# --connect-timeout 10 -m 180 "$@" 2>&1 1>&3 | indent_stderr_live) 3>&1
+            _curl_rc=$( { { curl -# --connect-timeout 10 -m 180 "$@" 2>&1 1>&3; echo $? >&4; } | indent_stderr_live; } 4>&1 )
         fi
-        _curl_rc=$?
+        exec 3>&-
 
-        return $_curl_rc
+        return "${_curl_rc:-1}"
     else
         # Режим проверки доступности (probe_with_mirrors / test_github)
         if [ -e "/tmp/toff" ]; then
