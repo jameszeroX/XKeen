@@ -77,6 +77,7 @@ help_xkeen() {
     echo -e "	-channel	${italic}Переключить канал получения обновлений XKeen (Stable/Dev версия)${reset}"
     echo -e "	-xtest		${italic}Проверить конфигурацию Xray на ошибки${reset}"
     echo -e "	-mtest		${italic}Проверить конфигурацию Mihomo на ошибки${reset}"
+    echo -e "	-sb		${italic}Балансировка outbound по фактической скорости (on | off | status)${reset}"
     echo -e "	-xray		${italic}Переключить XKeen на ядро Xray${reset}"
     echo -e "	-mihomo		${italic}Переключить XKeen на ядро Mihomo${reset}"
     echo -e "	-ipv6		${italic}Включить | Отключить протокол IPv6 в KeeneticOS${reset}"

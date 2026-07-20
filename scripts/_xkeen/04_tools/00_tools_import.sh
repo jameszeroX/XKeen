@@ -11,3 +11,6 @@
 
 # Модуль загрузок
 . "$xtools_dir/07_tools_downloaders/00_downloaders_import.sh"
+
+# Модуль балансировки по фактической скорости
+. "$xtools_dir/08_tools_balancer/00_balancer_import.sh"

@@ -59,6 +59,18 @@ file_schedule_hook="/opt/etc/ndm/schedule.d/00-xkeen-hotspot-sync.sh"
 name_ipset_deny_mac="xkeen_deny_mac"
 
 # -------------------------------------
+# Балансировка по фактической скорости (xkeen -sb)
+# -------------------------------------
+sb_api_config="$xray_conf_dir/00_api.json"		 # блок gRPC api Xray
+sb_probe_config="$xray_conf_dir/00_probe.json"		 # probe http-proxy inbound для замера
+sb_api_addr="127.0.0.1:10085"				 # адрес gRPC api
+sb_probe_addr="127.0.0.1:10808"				 # адрес probe http-proxy
+sb_probe_intag="probe"					 # tag probe-inbound
+sb_rule_tag="xkeen-sb-probe"				 # ruleTag временного правила замера
+sb_rule_tmp="$tmp_dir/sb_probe_rule.json"		 # временный файл правила замера
+sb_log_file="$xray_log_dir/speed_balancer.log"		 # лог замеров и переключений
+
+# -------------------------------------
 # Ресурсы для проверки доступа в интернет
 # -------------------------------------
 conn_URL="ya.ru"
@@ -218,3 +230,41 @@ retries_download_settings() {
     fi
 }
 retries_download_settings
+
+# Настройки балансировки по скорости (.xkeen.speed_balancer.*).
+# Вызывается по требованию из модуля -sb, а не глобально: несвязанным командам
+# xkeen лишний разбор xkeen.json не нужен. Значения по умолчанию — рабочие,
+# файл настроек не обязателен.
+speed_balancer_settings() {
+    sb_enabled="false"
+    sb_interval="15"
+    sb_hysteresis="25"
+    sb_balancer="balancer"
+    sb_maxtime="8"
+    # 50 МБ: endpoint Cloudflare __down отдаёт 403 на запрос больше ~50 МБ
+    sb_test_url="https://speed.cloudflare.com/__down?bytes=50000000"
+
+    if [ -f "$xkeen_config" ] && command -v jq >/dev/null 2>&1; then
+        local json_clean
+        json_clean=$(strip_json_comments "$xkeen_config")
+
+        local v
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.enabled // empty' 2>/dev/null)
+        [ "$v" = "true" ] && sb_enabled="true"
+
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.interval // empty' 2>/dev/null)
+        [ -n "$v" ] && [ "$v" -gt 0 ] 2>/dev/null && sb_interval="$v"
+
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.hysteresis // empty' 2>/dev/null)
+        [ -n "$v" ] && [ "$v" -ge 0 ] 2>/dev/null && sb_hysteresis="$v"
+
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.balancer // empty' 2>/dev/null)
+        [ -n "$v" ] && sb_balancer="$v"
+
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.max_time // empty' 2>/dev/null)
+        [ -n "$v" ] && [ "$v" -gt 0 ] 2>/dev/null && sb_maxtime="$v"
+
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.test_url // empty' 2>/dev/null)
+        [ -n "$v" ] && sb_test_url="$v"
+    fi
+}
