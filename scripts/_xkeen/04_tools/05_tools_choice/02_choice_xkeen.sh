@@ -290,7 +290,7 @@ _pbr_format_single_line_error() {
 }
 
 show_pbr_policy_codes() {
-    policy_api_url="localhost:79/rci/show/ip/policy"
+    policy_api_url="127.0.0.1:79/rci/show/ip/policy"
     main_policy_name="xkeen"
 
     echo

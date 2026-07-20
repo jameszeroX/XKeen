@@ -122,14 +122,14 @@ diagnostic() {
 
     log_file "/opt/etc/ndm/netfilter.d/proxy.sh" "Содержимое файла /opt/etc/ndm/netfilter.d/proxy.sh"
 
-    curl_api "localhost:79/rci/ip/http/ssl" | jq -r '.port' | log_block "Проверка использования SSL порта"
-    curl_api "localhost:79/rci/show/ip/policy" | jq -r '.[] | select(.description | ascii_downcase == "xkeen")' | log_block "Данные о политике доступа"
+    curl_api "127.0.0.1:79/rci/ip/http/ssl" | jq -r '.port' | log_block "Проверка использования SSL порта"
+    curl_api "127.0.0.1:79/rci/show/ip/policy" | jq -r '.[] | select(.description | ascii_downcase == "xkeen")' | log_block "Данные о политике доступа"
 
     ip rule show | log_block "Результат команды ip rule show"
     ip route show table main | log_block "Результат команды ip route show table main"
 
     {
-        curl_api "localhost:79/rci/show/version" | jq -r '.title, .model, .region'
+        curl_api "127.0.0.1:79/rci/show/version" | jq -r '.title, .model, .region'
         echo
         echo "Архитектура пакетов (opkg):"
         opkg print-architecture 2>/dev/null || echo "Команда opkg недоступна"

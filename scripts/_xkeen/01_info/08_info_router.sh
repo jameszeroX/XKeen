@@ -16,7 +16,7 @@ info_cpu() {
 
     # Получение информации о необходимости softfloat банарников
     [ "$architecture" != "mips32le" ] && echo && return
-    version="$(curl_api "localhost:79/rci/show/version" 2>/dev/null)"
+    version="$(curl_api "127.0.0.1:79/rci/show/version" 2>/dev/null)"
 
     case "$version" in
         *KN-1212*|*KN-2310*|*KN-2311*|*KN-2910*) softfloat="true" ;;
@@ -27,7 +27,7 @@ info_cpu() {
 # Функция для получения информации о версии Keenetic OS
 info_firmware() {
     json_data=""
-    json_data="$(curl_api "localhost:79/rci/show/version" 2>/dev/null)"
+    json_data="$(curl_api "127.0.0.1:79/rci/show/version" 2>/dev/null)"
 
     if [ -z "$json_data" ]; then
         echo
