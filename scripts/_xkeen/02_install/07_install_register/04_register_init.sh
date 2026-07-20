@@ -51,7 +51,7 @@ ru_exclude_ipv6="$ipset_cfg/ru_exclude_ipv6.lst"
 ru_override="$ipset_cfg/ru_exclude_override.lst"
 
 # URL
-url_server="localhost:79"
+url_server="127.0.0.1:79" # Временный фикс для прошивки 5.2, до появления информации о токенах доступа
 url_policy="rci/show/ip/policy"
 url_keenetic_port="rci/ip/http"
 url_redirect_port="rci/ip/static"
@@ -936,9 +936,23 @@ check_dns_config() {
 }
 file_dns=$(check_dns_config)
 
+# Кэш зарегистрированных в ядре модулей
+_registered_modules=""
+_load_registered_modules_cache() {
+    for _f in /proc/net/ip_tables_matches /proc/net/ip_tables_targets; do
+        [ -f "$_f" ] || continue
+        while IFS= read -r _n; do
+            [ -n "$_n" ] && _registered_modules="$_registered_modules xt_$_n"
+        done < "$_f"
+    done
+
+    _registered_modules=" $_registered_modules "
+}
+_load_registered_modules_cache
+
 # Кэш списка загруженных модулей; is_module_loaded читает его без форков
 _loaded_modules=""
-_refresh_modules_cache() { _loaded_modules=" $(lsmod 2>/dev/null | awk '{print $1}' | tr '\n' ' ') "; }
+_refresh_modules_cache() { _loaded_modules=" $(lsmod 2>/dev/null | awk '{print $1}' | tr '\n' ' ')$_registered_modules"; }
 
 is_module_loaded() {
     case "$_loaded_modules" in
