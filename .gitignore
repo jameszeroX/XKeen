@@ -20,3 +20,4 @@ docs/release-notes/
 /site_src/
 .venv/
 __pycache__/
+.idea/
