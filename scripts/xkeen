@@ -1544,6 +1544,22 @@ while [ $# -gt 0 ]; do
         ;;
 
 
+        -sb)    # Балансировка outbound по фактической скорости
+            case "$2" in
+                on)     smart_clear; sb_enable ;;
+                off)    smart_clear; sb_disable ;;
+                status) sb_status ;;
+                *)      smart_clear; sb_menu ;;
+            esac
+        ;;
+
+
+        -sbt)    # Тик балансировки по скорости (вызывается cron, без интерактива)
+            speed_balancer_settings
+            [ "$sb_enabled" = "true" ] && sb_tick
+        ;;
+
+
         *)
             echo -e "     Неизвестный ключ: ${red}$1${reset}"
             echo -e "     Список доступных ключей: ${yellow}xkeen -h${reset}"
