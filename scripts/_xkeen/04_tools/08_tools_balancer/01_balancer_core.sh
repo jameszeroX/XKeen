@@ -25,15 +25,15 @@ sb_log_trim() {
 # если балансировщик или ноды не найдены.
 sb_node_list() {
     sb_nodes=""
-    [ -f "$xray_conf_dir/05_routing.json" ] || return 1
-    [ -f "$xray_conf_dir/04_outbounds.json" ] || return 1
+    [ -f "$sb_routing_file" ] || return 1
+    [ -f "$sb_outbounds_file" ] || return 1
 
     local selectors all tag sel
-    selectors=$(strip_json_comments "$xray_conf_dir/05_routing.json" \
+    selectors=$(strip_json_comments "$sb_routing_file" \
         | jq -r --arg b "$sb_balancer" '.routing.balancers[]? | select(.tag==$b) | .selector[]?' 2>/dev/null)
     [ -n "$selectors" ] || return 1
 
-    all=$(strip_json_comments "$xray_conf_dir/04_outbounds.json" \
+    all=$(strip_json_comments "$sb_outbounds_file" \
         | jq -r '.outbounds[]? | .tag // empty' 2>/dev/null)
     [ -n "$all" ] || return 1
 

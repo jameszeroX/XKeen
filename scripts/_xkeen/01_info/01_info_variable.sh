@@ -243,6 +243,10 @@ speed_balancer_settings() {
     sb_maxtime="8"
     # 50 МБ: endpoint Cloudflare __down отдаёт 403 на запрос больше ~50 МБ
     sb_test_url="https://speed.cloudflare.com/__down?bytes=50000000"
+    # Имена файлов конфигурации Xray переопределяемы: ядро генерирует их с этими
+    # именами, но нигде их не enforce'ит — у пользователя раскладка может отличаться.
+    sb_routing_file="$xray_conf_dir/05_routing.json"
+    sb_outbounds_file="$xray_conf_dir/04_outbounds.json"
 
     if [ -f "$xkeen_config" ] && command -v jq >/dev/null 2>&1; then
         local json_clean
@@ -266,5 +270,12 @@ speed_balancer_settings() {
 
         v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.test_url // empty' 2>/dev/null)
         [ -n "$v" ] && sb_test_url="$v"
+
+        # Имена файлов задаются базовыми — каталог остаётся xray_conf_dir.
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.routing_file // empty' 2>/dev/null)
+        [ -n "$v" ] && sb_routing_file="$xray_conf_dir/$v"
+
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.outbounds_file // empty' 2>/dev/null)
+        [ -n "$v" ] && sb_outbounds_file="$xray_conf_dir/$v"
     fi
 }

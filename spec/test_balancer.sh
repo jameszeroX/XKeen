@@ -22,6 +22,8 @@ sb_probe_intag="probe"
 sb_rule_tag="xkeen-sb-probe"
 sb_rule_tmp="$WORK/sb_rule.json"
 sb_log_file="$WORK/sb.log"
+sb_routing_file="$xray_conf_dir/05_routing.json"
+sb_outbounds_file="$xray_conf_dir/04_outbounds.json"
 
 strip_json_comments() {
     sed -e ':a; s:/\*[^*]*\*[^/]*\*/::g; ta' \
@@ -136,6 +138,26 @@ check "ноды balancer-us (sub-us)" "$sb_nodes" "sub-us1"
 sb_balancer="нет-такого"
 sb_node_list; rc=$?
 check "неизвестный балансировщик -> код 1" "$rc" "1"
+
+# === кастомные имена файлов (routing_file / outbounds_file) ===
+# Ядро читает конфиг через $sb_routing_file/$sb_outbounds_file, а не по хардкоду —
+# при кастомных именах ноды всё равно должны разбираться.
+cat > "$xray_conf_dir/routing_custom.json" <<'EOF'
+{ "routing": { "balancers": [
+  { "tag": "balancer", "selector": ["node-"] }
+], "rules": [] } }
+EOF
+cat > "$xray_conf_dir/outbounds_custom.json" <<'EOF'
+{ "outbounds": [ { "tag": "node-1" }, { "tag": "node-2" }, { "tag": "direct" } ] }
+EOF
+sb_routing_file="$xray_conf_dir/routing_custom.json"
+sb_outbounds_file="$xray_conf_dir/outbounds_custom.json"
+sb_balancer="balancer"
+sb_node_list
+check "кастомные имена файлов: ноды по node-" "$sb_nodes" "node-1 node-2"
+# вернуть дефолтные пути — дальше sb_tick внутри снова зовёт sb_node_list
+sb_routing_file="$xray_conf_dir/05_routing.json"
+sb_outbounds_file="$xray_conf_dir/04_outbounds.json"
 
 # === разбор текущей ноды из bi ===
 sb_balancer="balancer"; STUB_CURRENT="sub-b"
