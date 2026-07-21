@@ -76,7 +76,7 @@ EOF
 
     # api-правило первым в основной routing.rules, если его там ещё нет
     local rjson has_rule
-    rjson="$xray_conf_dir/05_routing.json"
+    rjson="$sb_routing_file"
     if [ -f "$rjson" ]; then
         has_rule=$(strip_json_comments "$rjson" \
             | jq '[.routing.rules[]? | select(.outboundTag=="api")] | length' 2>/dev/null)
