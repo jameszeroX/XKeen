@@ -1546,9 +1546,9 @@ while [ $# -gt 0 ]; do
 
         -sb)    # Балансировка outbound по фактической скорости
             case "$2" in
-                on)     smart_clear; sb_enable ;;
-                off)    smart_clear; sb_disable ;;
-                status) sb_status ;;
+                on)     smart_clear; sb_enable;  shift ;;
+                off)    smart_clear; sb_disable; shift ;;
+                status) sb_status;               shift ;;
                 *)      smart_clear; sb_menu ;;
             esac
         ;;
