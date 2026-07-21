@@ -190,7 +190,10 @@ sb_menu() {
         printf '     2. Прогнать замер сейчас\n'
         printf '     0. Выход\n\n'
         printf '  Ваш выбор: '
-        read -r choice
+        # read возвращает ненулевой код на EOF (нет TTY: пайп, ssh без -t, cron).
+        # Без этой проверки пустой ввод уходил бы в ветку * и while true крутился
+        # бы вплотную — CPU-spin. EOF трактуем как выход из меню.
+        read -r choice || { echo; return 0; }
         case "$choice" in
             0) return 0 ;;
             1)
