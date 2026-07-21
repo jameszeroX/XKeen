@@ -68,6 +68,8 @@
       "balancer": "balancer",
       "max_time": 8,
       "test_url": "https://speed.cloudflare.com/__down?bytes=50000000"
+      "routing_file": "05_routing.json",
+      "outbounds_file": "04_outbounds.json"
     }
   }
 }
