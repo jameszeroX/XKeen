@@ -45,8 +45,8 @@ diagnostic() {
     # Функция маскировки чувствительных данных в xkeen.json
     mask_xkeen_sensitive_data() {
         sed -E \
-            -e 's/("gh_proxy")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
-            -e 's/("url")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g'
+            -e 's/("(rci_token|gh_proxy|url)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
+            -e "s/\b(rci_token)='[^']*'/\1='***MASKED***'/g"
     }
 
     # Функция маскировки чувствительных данных в конфигах Xray
@@ -120,7 +120,13 @@ diagnostic() {
         fi
     fi
 
-    log_file "/opt/etc/ndm/netfilter.d/proxy.sh" "Содержимое файла /opt/etc/ndm/netfilter.d/proxy.sh"
+    xkeen_ndm="/opt/etc/ndm/netfilter.d/proxy.sh"
+
+    if [ -f "$xkeen_ndm" ]; then
+        write_header "Файл $xkeen_ndm"
+        mask_xkeen_sensitive_data < "$xkeen_ndm" >> "$diagnostic"
+        echo >> "$diagnostic"; echo >> "$diagnostic"
+    fi
 
     curl_api "127.0.0.1:79/rci/ip/http/ssl" | jq -r '.port' | log_block "Проверка использования SSL порта"
     curl_api "127.0.0.1:79/rci/show/ip/policy" | jq -r '.[] | select(.description | ascii_downcase == "xkeen")' | log_block "Данные о политике доступа"
@@ -144,7 +150,7 @@ diagnostic() {
         grep 'Max open files' "/proc/$(pidof ${name_client})/limits" | awk '{print $4}'
     } | log_block "Версия $name_client и файловые дескрипторы"
 
-    echo "Версия XKeen $xkeen_current_version $xkeen_build (время сборки: $build_timestamp)" | log_block "Версия XKeen"
+    echo "XKeen $xkeen_current_version $xkeen_build (время сборки: $build_timestamp)" | log_block "Версия XKeen"
 
     if [ -f "$xkeen_config" ]; then
         write_header "Файл xkeen.json"

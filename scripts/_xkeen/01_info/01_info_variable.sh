@@ -141,29 +141,93 @@ init_directories() {
     touch "$xray_error_log" || { echo "Ошибка: Не удалось создать файл $xray_error_log"; exit 1; }
 }
 
+strip_json_comments() {
+    sed -e ':a; s:/\*[^*]*\*[^/]*\*/::g; ta' \
+        -e 's/^[[:space:]]*\/\/.*$//' \
+        -e 's/[[:space:]]\{1,\}\/\/.*$//' "$@"
+}
+
+# Параметры повтора загрузок
+retries_download_settings() {
+    retries_download=1
+    retry_delay_download=2
+
+    if [ -f "$xkeen_config" ] && command -v jq >/dev/null 2>&1; then
+        local json_clean
+        json_clean=$(strip_json_comments "$xkeen_config")
+
+        local parsed_val
+        parsed_val=$(printf '%s' "$json_clean" | jq -r '.xkeen.retries_download // empty' 2>/dev/null)
+
+        if [ -n "$parsed_val" ] && [ "$parsed_val" -gt 0 ] 2>/dev/null; then
+            retries_download="$parsed_val"
+        fi
+
+        local parsed_delay
+        parsed_delay=$(printf '%s' "$json_clean" | jq -r '.xkeen.retry_delay_download // empty' 2>/dev/null)
+        if [ -n "$parsed_delay" ] && [ "$parsed_delay" -gt 0 ] 2>/dev/null; then
+            retry_delay_download="$parsed_delay"
+        fi
+    fi
+}
+retries_download_settings
+
+# Функция извлечения rci-токена
+get_rci_token() {
+    rci_token=""
+    [ ! -f "$xkeen_config" ] && return 1
+
+    local json_clean
+    json_clean=$(strip_json_comments "$xkeen_config")
+
+    rci_token=$(printf '%s' "$json_clean" | sed -n 's/.*"rci_token": *"\([^"]*\)".*/\1/p' | xargs 2>/dev/null)
+
+    [ "$rci_token" = "null" ] && rci_token=""
+}
+get_rci_token
+
+http_code=$(
+    curl -ksS -o /dev/null -w "%{http_code}" -H "X-Ndma-Tkn: $rci_token" "127.0.0.1:79/rci/show/version"
+)
+
+if [ "$http_code" = "403" ]; then
+    printf "  ${red}Ошибка${reset}: Отсутствует или недействителен ${light_blue}токен доступа${reset} к RCI
+
+  Для ${green}KeeneticOS 5.2${reset} и выше требуется ${light_blue}токен доступа${reset}
+  Создайте его в веб-интерфейсе и укажите в ${yellow}xkeen.json${reset}\n"
+    exit 1
+fi
+
 # Параметры curl
-curl_api() { curl --connect-timeout 2 -m 5 -kfsS "$@"; }
+curl_api() {
+    if [ -n "$rci_token" ]; then
+        curl --connect-timeout 2 -m 5 -kfsS -H "X-Ndma-Tkn: $rci_token" "$@"
+    else
+        curl --connect-timeout 2 -m 5 -kfsS "$@"
+    fi
+}
+
 curl_with_timeout() {
     # Функция динамической очистки и форматирования баров в реальном времени
     indent_stderr_live() {
-        # Меняем RS (разделитель строк) в awk на '\r'. 
+        # Меняем RS (разделитель строк) в awk на '\r'
         awk -v RS='\r' '{
             # Удаляем мусор (таблицы, ошибки curl)
             if ($0 ~ /(% Total|Average Speed|Time Current|curl:)/) next;
             if ($0 ~ /^[[:space:]]*$/) next;
-            
+
             # Если это самый первый символ прогресс-бара, делаем начальный отступ
             if (first == 0 && $0 ~ /^[# ]/) {
                 printf "  "
                 first = 1
             }
-            
+
             # Выводим бар обратно в stderr с возвратом каретки и отступом
             printf "%s\r  ", $0
             fflush()
         }
         END {
-            # Если выполнение закончилось, принудительно сбрасываем каретку 
+            # Если выполнение закончилось, принудительно сбрасываем каретку
             # в самый левый край (\r), чтобы стереть паразитный отступ для caller-скрипта
             printf "\r"
             fflush()
@@ -199,37 +263,6 @@ curl_with_timeout() {
         fi
     fi
 }
-
-strip_json_comments() {
-    sed -e ':a; s:/\*[^*]*\*[^/]*\*/::g; ta' \
-        -e 's/^[[:space:]]*\/\/.*$//' \
-        -e 's/[[:space:]]\{1,\}\/\/.*$//' "$@"
-}
-
-# Параметры повтора загрузок
-retries_download_settings() {
-    retries_download=1
-    retry_delay_download=2
-
-    if [ -f "$xkeen_config" ] && command -v jq >/dev/null 2>&1; then
-        local json_clean
-        json_clean=$(strip_json_comments "$xkeen_config")
-
-        local parsed_val
-        parsed_val=$(printf '%s' "$json_clean" | jq -r '.xkeen.retries_download // empty' 2>/dev/null)
-
-        if [ -n "$parsed_val" ] && [ "$parsed_val" -gt 0 ] 2>/dev/null; then
-            retries_download="$parsed_val"
-        fi
-
-        local parsed_delay
-        parsed_delay=$(printf '%s' "$json_clean" | jq -r '.xkeen.retry_delay_download // empty' 2>/dev/null)
-        if [ -n "$parsed_delay" ] && [ "$parsed_delay" -gt 0 ] 2>/dev/null; then
-            retry_delay_download="$parsed_delay"
-        fi
-    fi
-}
-retries_download_settings
 
 # Настройки балансировки по скорости (.xkeen.speed_balancer.*).
 # Вызывается по требованию из модуля -sb, а не глобально: несвязанным командам

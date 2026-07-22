@@ -37,7 +37,6 @@ register_xkeen_status() {
         "jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset, ip-full"
 }
 
-
 fixed_register_packages() {
 	awk 'BEGIN {RS=""; ORS="\n\n"} {gsub(/\n\n+/,"\n\n")}1' "$status_file" > tmp_status_file && mv tmp_status_file "$status_file"
 }

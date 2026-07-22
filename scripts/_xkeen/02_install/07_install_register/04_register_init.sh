@@ -51,7 +51,7 @@ ru_exclude_ipv6="$ipset_cfg/ru_exclude_ipv6.lst"
 ru_override="$ipset_cfg/ru_exclude_override.lst"
 
 # URL
-url_server="127.0.0.1:79" # Временный фикс для прошивки 5.2, до появления информации о токенах доступа
+url_server="127.0.0.1:79"
 url_policy="rci/show/ip/policy"
 url_keenetic_port="rci/ip/http"
 url_redirect_port="rci/ip/static"
@@ -126,6 +126,72 @@ if [ "$dscp_enable" = "off" ]; then
     dscp_exclude=""
     dscp_proxy=""
 fi
+
+strip_json_comments() {
+    sed -e ':a; s:/\*[^*]*\*[^/]*\*/::g; ta' \
+        -e 's/^[[:space:]]*\/\/.*$//' \
+        -e 's/[[:space:]]\{1,\}\/\/.*$//' "$@"
+}
+
+# Функция извлечения rci-токена
+get_rci_token() {
+    rci_token=""
+    [ ! -f "$xkeen_config" ] && return 1
+
+    local json_clean
+    json_clean=$(strip_json_comments "$xkeen_config")
+
+    rci_token=$(printf '%s' "$json_clean" | sed -n 's/.*"rci_token": *"\([^"]*\)".*/\1/p' | xargs 2>/dev/null)
+
+    [ "$rci_token" = "null" ] && rci_token=""
+}
+get_rci_token
+
+wait_for_webui() {
+    max_wait=20
+    i=0
+
+    while [ "$i" -lt "$max_wait" ]; do
+        pidof nginx >/dev/null 2>&1 && return 0
+        sleep 1
+        i=$((i + 1))
+    done
+
+    return 1
+}
+
+wait_for_rci_token() {
+    [ -n "$rci_token" ] || return 1
+
+    wait_for_webui || {
+        log_error_router "Веб-интерфейс недоступен"
+        return 1
+    }
+
+    http_code=$(curl -ksS -o /dev/null -w "%{http_code}" -H "X-Ndma-Tkn: $rci_token" "${url_server}/${url_policy}")
+
+    case "$http_code" in
+        200) return 0 ;;
+        401|403)
+            log_error_router "Отсутствует или недействителен токен доступа к RCI роутера"
+            log_error_terminal "Отсутствует или недействителен токен доступа к RCI роутера"
+            ;;
+        *)
+            log_error_router "RCI не отвечает (http_code=$http_code)"
+            log_error_terminal "RCI не отвечает (http_code=$http_code)"
+            ;;
+    esac
+}
+wait_for_rci_token
+
+# Параметры curl
+curl_api() {
+    if [ -n "$rci_token" ]; then
+        curl --connect-timeout 2 -m 5 -kfsS -H "X-Ndma-Tkn: $rci_token" "$@"
+    else
+        curl --connect-timeout 2 -m 5 -kfsS "$@"
+    fi
+}
 
 detect_architecture() {
     arm_cpu="false"
@@ -239,8 +305,6 @@ fi
 
 log_clean() { [ "$name_client" = "xray" ] && : > "$log_access" && : > "$log_error"; }
 
-curl_api() { curl --connect-timeout 2 -m 5 -kfsS "$@"; }
-
 api_cache_init() {
     api_policy_json=$(curl_api "${url_server}/${url_policy}" 2>/dev/null)
     api_port_json=$(curl_api "${url_server}/${url_keenetic_port}" 2>/dev/null)
@@ -275,19 +339,6 @@ get_keenetic_port() {
     return 0
 }
 
-wait_for_webui() {
-    max_wait=10
-    i=0
-
-    while [ "$i" -lt "$max_wait" ]; do
-        pidof nginx >/dev/null 2>&1 && return 0
-        sleep 1
-        i=$((i + 1))
-    done
-
-    return 1
-}
-
 apply_ipv6_state() {
     ipv6_disabled=
     ipv6_disabled=$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null || echo "0")
@@ -297,10 +348,6 @@ apply_ipv6_state() {
     [ "$ipv6_support" != "off" ] && return 0
 
     ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::" || return 0
-
-    wait_for_webui || { log_error_router "Веб-интерфейс недоступен"; return 1; }
-
-    sleep 5
 
     sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
 
@@ -332,12 +379,6 @@ get_ipver_support() {
 
     iptables_supported=$([ "$ip4_supported" = "true" ] && command -v iptables >/dev/null 2>&1 && echo true || echo false)
     ip6tables_supported=$([ "$ip6_supported" = "true" ] && command -v ip6tables >/dev/null 2>&1 && echo true || echo false)
-}
-
-strip_json_comments() {
-    sed -e ':a; s:/\*[^*]*\*[^/]*\*/::g; ta' \
-        -e 's/^[[:space:]]*\/\/.*$//' \
-        -e 's/[[:space:]]\{1,\}\/\/.*$//' "$@"
 }
 
 append_multiline() {
@@ -1998,12 +2039,21 @@ EOL
     inject_var name_ipset_deny_mac "$name_ipset_deny_mac"
     inject_var url_server "$url_server"
     inject_var url_hotspot "$url_hotspot"
+    inject_var rci_token "$rci_token"
 
     cat >> "$file_netfilter_hook" <<'EOL'
 
 # Перезапуск скрипта
 restart_script() {
     exec /bin/sh "$0" "$@"
+}
+
+curl_api() {
+    if [ -n "$rci_token" ]; then
+        curl --connect-timeout 2 -m 5 -kfsS -H "X-Ndma-Tkn: $rci_token" "$@"
+    else
+        curl --connect-timeout 2 -m 5 -kfsS "$@"
+    fi
 }
 
 if pidof "$name_client" >/dev/null; then
@@ -2052,7 +2102,7 @@ if pidof "$name_client" >/dev/null; then
         _tmp="${name_ipset_deny_mac}_tmp"
         ipset create "$_tmp" hash:mac -exist 2>/dev/null
         ipset flush "$_tmp" >/dev/null 2>&1
-        _hjson=$(curl --connect-timeout 2 -m 5 -kfsS "${url_server}/${url_hotspot}" 2>/dev/null)
+        _hjson=$(curl_api "${url_server}/${url_hotspot}" 2>/dev/null)
         if [ -n "$_hjson" ]; then
             printf '%s' "$_hjson" | jq -r '
                 ((.host // . // []) |
