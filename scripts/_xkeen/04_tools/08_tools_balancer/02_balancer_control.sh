@@ -7,12 +7,72 @@ sb_api_alive() {
     xray api lsrules -s "$sb_api_addr" >/dev/null 2>&1
 }
 
-# Записать одну настройку .xkeen.speed_balancer.KEY = VALUE в xkeen.json.
-# Комментарии в xkeen.json при записи теряются — jq их не сохраняет; XKeen и так
-# регенерирует xkeen.json при установке. Файл бэкапится и результат проверяется
-# до замены, чтобы сбой jq не оставил битый конфиг.
+# Заменить объект .xkeen.speed_balancer его новой версией ($1), сохранив ВЕСЬ
+# остальной текст файла ($2) побайтово — включая комментарии на чужих ключах.
+# Скобки считаются от '{' самого блока с учётом строк и escape, поэтому фигурные
+# скобки в чужих комментариях/строках счёт не сбивают. На stdout — результат.
+# Код возврата: 0 — заменено; 3 — ключа speed_balancer нет (нужна вставка);
+# иное — блок найден, но не удалось сматчить скобки (повреждён).
+_sb_replace_block() {
+    SB_NEW="$1" awk '
+    { buf = buf $0 "\n" }
+    END {
+      new = ENVIRON["SB_NEW"]; key = "\"speed_balancer\""
+      kp = index(buf, key)
+      if (kp == 0) { printf "%s", buf; exit 3 }
+      i = kp + length(key); n = length(buf)
+      while (i <= n && substr(buf,i,1) != "{") i++
+      if (i > n) { printf "%s", buf; exit 4 }
+      depth=0; instr=0; esc=0
+      for (; i <= n; i++) {
+        c = substr(buf,i,1)
+        if (instr) { if (esc) esc=0; else if (c=="\\") esc=1; else if (c=="\"") instr=0 }
+        else { if (c=="\"") instr=1; else if (c=="{") depth++;
+               else if (c=="}") { depth--; if (depth==0) { ve=i; break } } }
+      }
+      if (depth != 0) { printf "%s", buf; exit 5 }
+      printf "%s%s: %s%s", substr(buf,1,kp-1), key, new, substr(buf,ve+1)
+    }' "$2"
+}
+
+# Вставить блок speed_balancer ($1) в существующий объект .xkeen файла ($2),
+# сразу после его открывающей '{'. Прочий текст сохраняется. Код возврата:
+# 0 — вставлено; 3 — объекта .xkeen нет (нужен jq-fallback).
+_sb_insert_block() {
+    SB_NEW="$1" awk '
+    { buf = buf $0 "\n" }
+    END {
+      new = ENVIRON["SB_NEW"]; key = "\"xkeen\""
+      kp = index(buf, key)
+      if (kp == 0) { printf "%s", buf; exit 3 }
+      i = kp + length(key); n = length(buf)
+      while (i <= n && substr(buf,i,1) != "{") i++
+      if (i > n) { printf "%s", buf; exit 3 }
+      j = i + 1
+      while (j <= n && substr(buf,j,1) ~ /[ \t\r\n]/) j++
+      before = substr(buf,1,i); after = substr(buf,i+1)
+      if (substr(buf,j,1) == "}")
+        printf "%s\n    \"speed_balancer\": %s\n  %s", before, new, after
+      else
+        printf "%s\n    \"speed_balancer\": %s,%s", before, new, after
+    }' "$2"
+}
+
+# Обновить ОДИН ключ .xkeen.speed_balancer.KEY = VALUE в xkeen.json, трогая ТОЛЬКО
+# блок балансера. Весь остальной файл (policy, geodata, комментарии) сохраняется
+# как есть — XKeen сам xkeen.json не переписывает, и балансер тоже не должен.
+#
+# Как: новый блок собирается через jq (текущий speed_balancer + этот ключ, чтобы
+# сохранить значения прочих параметров), затем ТЕКСТОВО вставляется на место
+# старого блока (_sb_replace_block / _sb_insert_block). Комментарии/формат ВНУТРИ
+# блока балансера при этом нормализуются — блок машинный; всё вне блока цело.
+#
+# Страховка: перед записью — реальный бэкап; результат проходит синтаксис (jq -e .)
+# и структуру (тем же критерием, что валидатор старта: policy, если есть, — массив
+# объектов с name). При любом сбое конфиг восстанавливается из бэкапа, так что
+# ошибка текстовой хирургии не оставит битый файл.
 sb_write_setting() {
-    local key raw val tmp
+    local key raw val new tmp bak struct_ok rc
     key="$1"; raw="$2"
     case "$raw" in
         true|false)   val="$raw" ;;
@@ -21,17 +81,46 @@ sb_write_setting() {
     esac
 
     command -v jq >/dev/null 2>&1 || { echo "  jq не найден — настройку не записать"; return 1; }
-    [ -f "$xkeen_config" ] || echo '{}' > "$xkeen_config"
+    [ -f "$xkeen_config" ] || printf '{}\n' > "$xkeen_config"
+
+    new=$(strip_json_comments "$xkeen_config" \
+        | jq -c --arg k "$key" --argjson v "$val" '(.xkeen.speed_balancer // {}) | .[$k] = $v' 2>/dev/null)
+    [ -n "$new" ] || { echo "  Не удалось разобрать xkeen.json — настройку не записать"; return 1; }
+
+    bak="$xkeen_config.bak"
+    cp "$xkeen_config" "$bak" 2>/dev/null
 
     tmp="$xkeen_config.sb.tmp"
-    if strip_json_comments "$xkeen_config" \
-        | jq --arg k "$key" --argjson v "$val" '.xkeen.speed_balancer[$k] = $v' > "$tmp" 2>/dev/null \
-        && jq -e . "$tmp" >/dev/null 2>&1; then
+    _sb_replace_block "$new" "$xkeen_config" > "$tmp"; rc=$?
+    if [ "$rc" = 3 ]; then                       # блока ещё нет — вставить в .xkeen
+        _sb_insert_block "$new" "$xkeen_config" > "$tmp"; rc=$?
+    fi
+    if [ "$rc" = 3 ]; then                        # нет и .xkeen (реально — только {})
+        strip_json_comments "$xkeen_config" \
+            | jq --argjson sb "$new" '.xkeen.speed_balancer = $sb' > "$tmp" 2>/dev/null; rc=$?
+    fi
+
+    # Критерий структуры повторяет validate_xkeen_json (04_register_init.sh):
+    # менять его надо синхронно в обоих местах.
+    struct_ok='
+      if has("xkeen") and .xkeen != null then
+        if .xkeen.policy then
+          .xkeen.policy | type == "array" and ([.[] | select(has("name") | not)] | length == 0)
+        else true end
+      else true end'
+
+    # Валидируем через strip: в tmp теперь СОХРАНЕНЫ комментарии, и голый jq на
+    # них упал бы, ложно забраковав корректный результат.
+    if [ "$rc" = 0 ] && strip_json_comments "$tmp" | jq -e . >/dev/null 2>&1 \
+       && strip_json_comments "$tmp" | jq -e "$struct_ok" >/dev/null 2>&1; then
         mv "$tmp" "$xkeen_config"
         return 0
     fi
+
+    # Сбой хирургии или проверки: не оставляем ни битого tmp, ни повреждённого конфига.
     rm -f "$tmp"
-    echo "  Не удалось записать настройку в $xkeen_config"
+    [ -f "$bak" ] && cp "$bak" "$xkeen_config" 2>/dev/null
+    echo "  Не удалось безопасно обновить блок балансера в $xkeen_config (восстановлено из бэкапа)"
     return 1
 }
 
@@ -169,7 +258,7 @@ sb_status() {
     else
         echo -e "  api Xray (${yellow}$sb_api_addr${reset}) недоступен"
     fi
-    if [ -f "$sb_log_file" ]; then
+    if [ "$sb_log_enabled" != "false" ] && [ -f "$sb_log_file" ]; then
         echo "  Последние события:"
         tail -n 8 "$sb_log_file" | sed 's/^/    /'
     fi
