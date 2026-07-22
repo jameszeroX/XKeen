@@ -127,10 +127,34 @@ if [ "$dscp_enable" = "off" ]; then
     dscp_proxy=""
 fi
 
+# Дубль функции из 01_info_variable.sh: этот файл побайтово копируется в
+# init.d/S05xkeen и модули не подключает, поэтому правки нужны в обоих местах.
+# Обоснование разбора состоянием — там же.
 strip_json_comments() {
-    sed -e ':a; s:/\*[^*]*\*[^/]*\*/::g; ta' \
-        -e 's/^[[:space:]]*\/\/.*$//' \
-        -e 's/[[:space:]]\{1,\}\/\/.*$//' "$@"
+    awk '
+    {
+        line = ""; i = 1; n = length($0); instr = 0; esc = 0
+        while (i <= n) {
+            c = substr($0, i, 1)
+            if (inblk) {
+                if (c == "*" && substr($0, i + 1, 1) == "/") { inblk = 0; i += 2 } else i++
+                continue
+            }
+            if (instr) {
+                line = line c
+                if (esc) esc = 0
+                else if (c == "\\") esc = 1
+                else if (c == "\"") instr = 0
+                i++
+                continue
+            }
+            if (c == "\"") { instr = 1; line = line c; i++; continue }
+            if (c == "/" && substr($0, i + 1, 1) == "*") { inblk = 1; i += 2; continue }
+            if (c == "/" && substr($0, i + 1, 1) == "/") break
+            line = line c; i++
+        }
+        print line
+    }' "$@"
 }
 
 # Функция извлечения rci-токена
