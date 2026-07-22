@@ -270,6 +270,7 @@ curl_with_timeout() {
 # файл настроек не обязателен.
 speed_balancer_settings() {
     sb_enabled="false"
+    sb_log_enabled="true"
     sb_interval="15"
     sb_hysteresis="25"
     sb_balancer="balancer"
@@ -288,6 +289,14 @@ speed_balancer_settings() {
         local v
         v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.enabled // empty' 2>/dev/null)
         [ "$v" = "true" ] && sb_enabled="true"
+
+        # Логирование замеров/переключений можно отключить (.speed_balancer.log:
+        # false) — по умолчанию включено. Лог и так усечён до 200 строк, но кому-то
+        # он не нужен вовсе (запрос из issue #103). Читаем БЕЗ `// empty`: для
+        # булева false оператор // считает его пустым и вернул бы empty, из-за чего
+        # log:false никогда бы не срабатывал. Отсутствующий ключ даёт "null".
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.log' 2>/dev/null)
+        [ "$v" = "false" ] && sb_log_enabled="false"
 
         v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.interval // empty' 2>/dev/null)
         [ -n "$v" ] && [ "$v" -gt 0 ] 2>/dev/null && sb_interval="$v"
