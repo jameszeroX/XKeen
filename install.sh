@@ -21,12 +21,14 @@ echo -e "  ${yellow}Опции${reset}"
 echo -e "    -s, --stable	${italic}Установить стабильную версию${reset}"
 echo -e "    -b, --beta		${italic}Установить бета-версию${reset}"
 echo -e "    -l, --legacy ВЕРСИЯ	${italic}Установить предыдущую версию (например, 1.1.3.9)${reset}"
+echo -e "    -p, --patch		${italic}Пропатчить установленную версию для совместимости с KeeneticOS 5.1.2+${reset}"
 echo -e "    -h, --help		${italic}Показать эту справку${reset}"
 echo
 echo -e "  ${yellow}Примеры${reset}"
 echo  "    $0 --stable"
 echo  "    $0 --beta"
 echo  "    $0 --legacy 1.1.3.9"
+echo  "    $0 --patch"
 echo  "    $0 --help"
 echo  "    curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh | sh -s -- --stable"
 }
@@ -86,6 +88,56 @@ download_xkeen_release() {
     return 1
 }
 
+# Функция патча установленной версии для совместимости с KeeneticOS 5.1.2+
+# (замена "localhost" на "127.0.0.1" в rci-запросах)
+patch_localhost_compat() {
+    local target_init_dir="/opt/etc/init.d"
+    local target_init_files="S05xkeen S99xkeen S24xray"
+    local target_dir="/opt/sbin/.xkeen"
+    local patched=0
+    local found_files
+    local init_file
+    local init_path
+
+    echo
+    printf "  Патчим файлы для совместимости с ${yellow}KeeneticOS 5.1.2+${reset}...\n\n"
+
+    for init_file in $target_init_files; do
+        init_path="$target_init_dir/$init_file"
+        if [ -f "$init_path" ]; then
+            if grep -q "localhost" "$init_path" 2>/dev/null; then
+                sed -i 's/localhost/127.0.0.1/g' "$init_path"
+                printf "  ${green}✓${reset} Обновлён файл: %s\n" "$init_path"
+                patched=1
+            else
+                printf "  Файл %s не требует патча\n" "$init_path"
+            fi
+        fi
+    done
+
+    if [ -d "$target_dir" ]; then
+        found_files=$(grep -rl "localhost" "$target_dir" 2>/dev/null)
+        if [ -n "$found_files" ]; then
+            patched=1
+            echo "$found_files" | while IFS= read -r f; do
+                sed -i 's/localhost/127.0.0.1/g' "$f"
+                printf "  ${green}✓${reset} Обновлён файл: %s\n" "$f"
+            done
+        else
+            printf "  Файлы в папке %s не требуют патча\n" "$target_dir"
+        fi
+    else
+        printf "  ${yellow}Внимание${reset}: папка %s не найдена\n" "$target_dir"
+    fi
+
+    echo
+    if [ "$patched" -eq 1 ]; then
+        printf "  ${green}Патч успешно применён.${reset}\n"
+    else
+        printf "  Патч не потребовался. XKeen совместим с ${yellow}KeeneticOS 5.1.2+${reset} либо не установлен\n"
+    fi
+}
+
 # Парсинг аргументов командной строки
 VERSION_TYPE=""
 LEGACY_VERSION=""
@@ -104,6 +156,10 @@ while [ $# -gt 0 ]; do
             VERSION_TYPE="legacy"
             LEGACY_VERSION="$2"
             shift 2
+            ;;
+        -p|--patch)
+            VERSION_TYPE="patch"
+            shift
             ;;
         -h|--help)
             show_help
@@ -131,7 +187,8 @@ if [ -z "$VERSION_TYPE" ]; then
         printf "  Какую версию ${yellow}XKeen${reset} вы хотите установить?\n\n"
         printf "  1) Стабильную версию (${light_blue}Stable${reset})\n"
         printf "  2) Новую Бета-версию (${light_blue}Beta${reset})\n"
-        printf "  3) Предыдущую версию (${light_blue}Legacy${reset})\n\n"
+        printf "  3) Предыдущую версию (${light_blue}Legacy${reset})\n"
+        printf "  4) Пропатчить установленную версию для совместимости с ${yellow}KeeneticOS 5.1.2+${reset}\n\n"
         printf "  0) Отмена\n\n"
         printf "  Выберите пункт меню [по умолчанию 1]: "
         read -r version_choice
@@ -179,9 +236,13 @@ if [ -z "$VERSION_TYPE" ]; then
                     fi
                 done
                 ;;
+            4)
+                patch_localhost_compat
+                exit 0
+                ;;
             *)
                 clear
-                printf "\n  ${red}Неверный выбор.${reset} Пожалуйста, выберите пункт от 0 до 3.\n\n"
+                printf "\n  ${red}Неверный выбор.${reset} Пожалуйста, выберите пункт от 0 до 4.\n\n"
                 ;;
         esac
     done
@@ -212,6 +273,10 @@ else
                 exit 1
             fi
             printf "  ${green}Версия найдена${reset}, продолжаем установку...\n"
+            ;;
+        patch)
+            patch_localhost_compat
+            exit 0
             ;;
         *)
             printf "  ${red}Неизвестный тип версии${reset}\n"
