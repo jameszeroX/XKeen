@@ -25,11 +25,10 @@ sb_log_file="$WORK/sb.log"
 sb_routing_file="$xray_conf_dir/05_routing.json"
 sb_outbounds_file="$xray_conf_dir/04_outbounds.json"
 
-strip_json_comments() {
-    sed -e ':a; s:/\*[^*]*\*[^/]*\*/::g; ta' \
-        -e 's/^[[:space:]]*\/\/.*$//' \
-        -e 's/[[:space:]]\{1,\}\/\/.*$//' "$@"
-}
+# strip_json_comments берём из реального кода, а не копией: модуль целиком не
+# подключить (на верхнем уровне он ходит curl'ом в RCI роутера), а копия
+# разъезжается с оригиналом. Тот же приём, что в test_strip_json.sh.
+eval "$(awk '/^strip_json_comments\(\) \{/,/^\}/' /repo/scripts/_xkeen/01_info/01_info_variable.sh)"
 
 # speed_balancer_settings копируется сюда в упрощённом виде — тот же разбор,
 # что в 01_info_variable.sh, но без прочего содержимого файла переменных.
@@ -320,6 +319,52 @@ cp "$xkeen_config" "$WORK/orig_bad.json"
 sb_write_setting enabled true >/dev/null 2>&1; check "битая policy: rc=1" "$?" "1"
 check "битая policy: sb НЕ добавлен"      "$(rjq '.xkeen.speed_balancer.enabled // "нет"')" "нет"
 check "битая policy: файл не изменён"     "$(cmp -s "$xkeen_config" "$WORK/orig_bad.json" && echo same || echo diff)" "same"
+
+# === формат записанного блока: по ключу на строку, с отступом по месту вставки ===
+# Блок машинный, но лежит в пользовательском файле рядом с рукописными ключами,
+# поэтому пишется читаемым, а не одной строкой.
+cat > "$xkeen_config" <<'JSON'
+{
+  "xkeen": {
+    "speed_balancer": { "enabled": false, "interval": 20 }
+  }
+}
+JSON
+sb_write_setting enabled true >/dev/null 2>&1
+check "формат update: ключ и '{' на своей строке" "$(grep -c '^    "speed_balancer": {$' "$xkeen_config")" "1"
+check "формат update: ключи блока с отступом"     "$(grep -c '^      "enabled": true' "$xkeen_config")" "1"
+check "формат update: чужой ключ блока цел"       "$(grep -c '^      "interval": 20' "$xkeen_config")" "1"
+check "формат update: закрывающая скобка блока"   "$(grep -c '^    }$' "$xkeen_config")" "1"
+check "формат update: файл валиден"               "$(jq -e . "$xkeen_config" >/dev/null 2>&1 && echo ok || echo bad)" "ok"
+
+cat > "$xkeen_config" <<'JSON'
+{
+  "xkeen": {
+    "policy": [ { "name": "XKeen" } ]
+  }
+}
+JSON
+sb_write_setting enabled true >/dev/null 2>&1
+check "формат insert: ключ и '{' на своей строке" "$(grep -c '^    "speed_balancer": {$' "$xkeen_config")" "1"
+check "формат insert: ключи блока с отступом"     "$(grep -c '^      "enabled": true' "$xkeen_config")" "1"
+check "формат insert: файл валиден"               "$(jq -e . "$xkeen_config" >/dev/null 2>&1 && echo ok || echo bad)" "ok"
+
+# нестандартный шаг отступа: блок встаёт вровень с соседним ключом, а не по 2
+cat > "$xkeen_config" <<'JSON'
+{
+    "xkeen": {
+        "policy": [ { "name": "XKeen" } ]
+    }
+}
+JSON
+sb_write_setting enabled true >/dev/null 2>&1
+check "формат insert: отступ как у соседа" "$(grep -c '^        "speed_balancer": {$' "$xkeen_config")" "1"
+
+# компактный (однострочный) файл таким и остаётся — переносы там были бы чужеродны
+printf '{"xkeen":{"speed_balancer":{"enabled":false}}}\n' > "$xkeen_config"
+sb_write_setting enabled true >/dev/null 2>&1
+check "формат: однострочный файл не разбит"  "$(awk 'END { print NR }' "$xkeen_config")" "1"
+check "формат: однострочный файл валиден"    "$(jq -r '.xkeen.speed_balancer.enabled' "$xkeen_config")" "true"
 
 rm -rf "$WORK"
 printf '\n=== пройдено: %s, провалено: %s ===\n' "$pass" "$fail"

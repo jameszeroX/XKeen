@@ -15,6 +15,15 @@ sb_api_alive() {
 # иное — блок найден, но не удалось сматчить скобки (повреждён).
 _sb_replace_block() {
     SB_NEW="$1" awk '
+    # Многострочный блок от jq выравниваем по отступу самого ключа: без этого
+    # вторая и последующие строки прижались бы к левому краю файла.
+    function reindent(s, pad,   n, i, parts, out) {
+      n = split(s, parts, "\n")
+      if (n < 2) return s
+      out = parts[1]
+      for (i = 2; i <= n; i++) out = out "\n" pad parts[i]
+      return out
+    }
     { buf = buf $0 "\n" }
     END {
       new = ENVIRON["SB_NEW"]; key = "\"speed_balancer\""
@@ -31,7 +40,14 @@ _sb_replace_block() {
                else if (c=="}") { depth--; if (depth==0) { ve=i; break } } }
       }
       if (depth != 0) { printf "%s", buf; exit 5 }
-      printf "%s%s: %s%s", substr(buf,1,kp-1), key, new, substr(buf,ve+1)
+      # Отступ строки, на которой стоит ключ. Если перед ключом есть что-то кроме
+      # пробелов (файл записан в одну строку) — блок тоже пишем одной строкой,
+      # чтобы не ломать компактный формат.
+      ls = kp
+      while (ls > 1 && substr(buf, ls - 1, 1) != "\n") ls--
+      pad = substr(buf, ls, kp - ls)
+      if (pad ~ /[^ \t]/) { gsub(/\n[ \t]*/, " ", new); pad = "" }
+      printf "%s%s: %s%s", substr(buf,1,kp-1), key, reindent(new, pad), substr(buf,ve+1)
     }' "$2"
 }
 
@@ -40,6 +56,13 @@ _sb_replace_block() {
 # 0 — вставлено; 3 — объекта .xkeen нет (нужен jq-fallback).
 _sb_insert_block() {
     SB_NEW="$1" awk '
+    function reindent(s, pad,   n, i, parts, out) {
+      n = split(s, parts, "\n")
+      if (n < 2) return s
+      out = parts[1]
+      for (i = 2; i <= n; i++) out = out "\n" pad parts[i]
+      return out
+    }
     { buf = buf $0 "\n" }
     END {
       new = ENVIRON["SB_NEW"]; key = "\"xkeen\""
@@ -50,11 +73,26 @@ _sb_insert_block() {
       if (i > n) { printf "%s", buf; exit 3 }
       j = i + 1
       while (j <= n && substr(buf,j,1) ~ /[ \t\r\n]/) j++
+      # Отступ блока: как у соседнего ключа объекта .xkeen, чтобы вставка легла
+      # вровень с рукописными ключами при любом шаге отступа в файле. Если
+      # соседей нет (объект пуст) — отступ .xkeen плюс два пробела. Тем же
+      # отступом выравниваются перенесённые строки блока.
+      ls = kp
+      while (ls > 1 && substr(buf, ls - 1, 1) != "\n") ls--
+      base = substr(buf, ls, kp - ls)
+      if (base ~ /[^ \t]/) base = ""
+      pad = base "  "
+      if (substr(buf,j,1) != "}") {
+        ks = j
+        while (ks > 1 && substr(buf, ks - 1, 1) != "\n") ks--
+        cand = substr(buf, ks, j - ks)
+        if (cand != "" && cand !~ /[^ \t]/) pad = cand
+      }
       before = substr(buf,1,i); after = substr(buf,i+1)
       if (substr(buf,j,1) == "}")
-        printf "%s\n    \"speed_balancer\": %s\n  %s", before, new, after
+        printf "%s\n%s\"speed_balancer\": %s\n%s%s", before, pad, reindent(new, pad), base, after
       else
-        printf "%s\n    \"speed_balancer\": %s,%s", before, new, after
+        printf "%s\n%s\"speed_balancer\": %s,%s", before, pad, reindent(new, pad), after
     }' "$2"
 }
 
@@ -83,8 +121,10 @@ sb_write_setting() {
     command -v jq >/dev/null 2>&1 || { echo "  jq не найден — настройку не записать"; return 1; }
     [ -f "$xkeen_config" ] || printf '{}\n' > "$xkeen_config"
 
+    # jq без -c: блок пишется в файл человекочитаемым, по ключу на строку —
+    # выравнивание по месту вставки делают _sb_replace_block/_sb_insert_block.
     new=$(strip_json_comments "$xkeen_config" \
-        | jq -c --arg k "$key" --argjson v "$val" '(.xkeen.speed_balancer // {}) | .[$k] = $v' 2>/dev/null)
+        | jq --arg k "$key" --argjson v "$val" '(.xkeen.speed_balancer // {}) | .[$k] = $v' 2>/dev/null)
     [ -n "$new" ] || { echo "  Не удалось разобрать xkeen.json — настройку не записать"; return 1; }
 
     bak="$xkeen_config.bak"
