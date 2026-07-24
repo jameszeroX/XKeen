@@ -141,10 +141,43 @@ init_directories() {
     touch "$xray_error_log" || { echo "Ошибка: Не удалось создать файл $xray_error_log"; exit 1; }
 }
 
+# Вырезание комментариев перед подачей файла в jq: сам jq принимает только
+# строгий JSON, режима JSON5/JSONC у него нет.
+#
+# Разбор состоянием, а не регуляркой. Регулярка не отличает комментарий от
+# строкового значения: `/*` внутри строки склеивался бы со следующим настоящим
+# комментарием и вырезал кусок конфига, а ` // ` внутри строки обрезало бы
+# значение. Прежняя реализация вдобавок требовала лишнюю `*` внутри блока,
+# из-за чего обычный `/* текст */` не вырезался вовсе и jq падал.
+#
+# inblk намеренно живёт между строками — блочный комментарий многострочный.
+# instr сбрасывается на каждой строке: в JSON строка не может содержать
+# неэкранированный перевод строки.
 strip_json_comments() {
-    sed -e ':a; s:/\*[^*]*\*[^/]*\*/::g; ta' \
-        -e 's/^[[:space:]]*\/\/.*$//' \
-        -e 's/[[:space:]]\{1,\}\/\/.*$//' "$@"
+    awk '
+    {
+        line = ""; i = 1; n = length($0); instr = 0; esc = 0
+        while (i <= n) {
+            c = substr($0, i, 1)
+            if (inblk) {
+                if (c == "*" && substr($0, i + 1, 1) == "/") { inblk = 0; i += 2 } else i++
+                continue
+            }
+            if (instr) {
+                line = line c
+                if (esc) esc = 0
+                else if (c == "\\") esc = 1
+                else if (c == "\"") instr = 0
+                i++
+                continue
+            }
+            if (c == "\"") { instr = 1; line = line c; i++; continue }
+            if (c == "/" && substr($0, i + 1, 1) == "*") { inblk = 1; i += 2; continue }
+            if (c == "/" && substr($0, i + 1, 1) == "/") break
+            line = line c; i++
+        }
+        print line
+    }' "$@"
 }
 
 # Параметры повтора загрузок
@@ -270,6 +303,7 @@ curl_with_timeout() {
 # файл настроек не обязателен.
 speed_balancer_settings() {
     sb_enabled="false"
+    sb_log_enabled="true"
     sb_interval="15"
     sb_hysteresis="25"
     sb_balancer="balancer"
@@ -288,6 +322,14 @@ speed_balancer_settings() {
         local v
         v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.enabled // empty' 2>/dev/null)
         [ "$v" = "true" ] && sb_enabled="true"
+
+        # Логирование замеров/переключений можно отключить (.speed_balancer.log:
+        # false) — по умолчанию включено. Лог и так усечён до 200 строк, но кому-то
+        # он не нужен вовсе (запрос из issue #103). Читаем БЕЗ `// empty`: для
+        # булева false оператор // считает его пустым и вернул бы empty, из-за чего
+        # log:false никогда бы не срабатывал. Отсутствующий ключ даёт "null".
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.log' 2>/dev/null)
+        [ "$v" = "false" ] && sb_log_enabled="false"
 
         v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.interval // empty' 2>/dev/null)
         [ -n "$v" ] && [ "$v" -gt 0 ] 2>/dev/null && sb_interval="$v"
