@@ -7,6 +7,13 @@ sb_api_alive() {
     xray api lsrules -s "$sb_api_addr" >/dev/null 2>&1
 }
 
+# Запущен ли Xray. Отдельно от sb_api_alive: у остановленного ядра api молчит
+# независимо от того, настроен он или нет, и по одной пробе живости уже
+# настроенная конфигурация неотличима от ненастроенной.
+sb_xray_running() {
+    pidof xray >/dev/null 2>&1
+}
+
 # Заменить объект .xkeen.speed_balancer его новой версией ($1), сохранив ВЕСЬ
 # остальной текст файла ($2) побайтово — включая комментарии на чужих ключах.
 # Скобки считаются от '{' самого блока с учётом строк и escape, поэтому фигурные
@@ -175,6 +182,21 @@ sb_write_setting() {
 # сохраняется; но при РУЧНОЙ перегенерации роутинга (например смене outbound'ов)
 # его нужно вернуть повторным `xkeen -sb on`. Это известное ограничение.
 sb_ensure_api() {
+    # Пока Xray не запущен, api молчит и по нему нельзя судить, настроены ли уже
+    # api и probe: предложение «настроить автоматически» здесь означало бы
+    # повторное добавление того, что в конфигурации уже есть.
+    if ! sb_xray_running; then
+        echo
+        if pidof mihomo >/dev/null 2>&1; then
+            echo -e "  Балансировка по скорости работает только с ядром ${yellow}Xray${reset} — сейчас запущен ${yellow}Mihomo${reset}."
+            echo -e "  Переключить ядро: '${green}xkeen -xray${reset}'"
+        else
+            echo -e "  ${yellow}XKeen${reset} остановлен — состояние api и probe определить нельзя."
+            echo -e "  Запустите ${yellow}XKeen${reset} командой '${green}xkeen -start${reset}' и повторите '${green}xkeen -sb on${reset}'"
+        fi
+        return 1
+    fi
+
     sb_api_alive && return 0
 
     echo
@@ -266,7 +288,8 @@ sb_remove_cron() {
 
 sb_enable() {
     speed_balancer_settings
-    sb_ensure_api || { echo -e "  ${red}✗${reset} Балансировка не включена: нет рабочего api."; return 1; }
+    # причина уже напечатана внутри sb_ensure_api — здесь только итог
+    sb_ensure_api || { echo -e "  ${red}✗${reset} Балансировка не включена."; return 1; }
     sb_write_setting enabled true || return 1
     sb_install_cron
     echo -e "  ${green}✔${reset} Балансировка по скорости включена (замер каждые ${yellow}$sb_interval${reset} мин)."
@@ -296,6 +319,8 @@ sb_status() {
     echo -e "  Балансировщик: ${yellow}$sb_balancer${reset}   Интервал: ${yellow}$sb_interval${reset} мин   Гистерезис: ${yellow}$sb_hysteresis${reset}%"
     if sb_api_alive; then
         echo -e "  Текущая нода: ${yellow}$(sb_current_target)${reset}"
+    elif ! sb_xray_running; then
+        echo -e "  Xray не запущен — текущая нода неизвестна"
     else
         echo -e "  api Xray (${yellow}$sb_api_addr${reset}) недоступен"
     fi

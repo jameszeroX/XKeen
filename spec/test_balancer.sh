@@ -54,15 +54,27 @@ speed_balancer_settings() {
 . /repo/scripts/_xkeen/04_tools/08_tools_balancer/01_balancer_core.sh
 . /repo/scripts/_xkeen/04_tools/08_tools_balancer/02_balancer_control.sh
 
-# --- заглушки xray и curl ------------------------------------------------
+# --- заглушки xray, curl и pidof -----------------------------------------
 # STUB_CURRENT — что балансировщик выбирает сейчас; STUB_SPEED_<node> в КБ*1024
 # задаёт «скорость» ноды (байт за 1с). STUB_BO — куда записан последний bo.
-STUB_CURRENT="sub-a"; STUB_BO=""; STUB_OVERRIDE=""
+# STUB_API_ALIVE — отвечает ли gRPC api; STUB_XRAY_RUNNING/STUB_MIHOMO_RUNNING —
+# что видит pidof (какое ядро запущено).
+STUB_CURRENT="sub-a"; STUB_BO=""; STUB_OVERRIDE=""; STUB_API_ALIVE="yes"
+STUB_XRAY_RUNNING="yes"; STUB_MIHOMO_RUNNING="no"
+
+pidof() {
+    case "$1" in
+        xray)   [ "$STUB_XRAY_RUNNING" = "yes" ]   && { echo 111; return 0; } ;;
+        mihomo) [ "$STUB_MIHOMO_RUNNING" = "yes" ] && { echo 222; return 0; } ;;
+    esac
+    return 1
+}
 
 xray() {
     # $1=api
     case "$2" in
-        lsrules) echo '{"rules":[]}'; return 0 ;;
+        lsrules) [ "$STUB_API_ALIVE" = "yes" ] || return 1
+                 echo '{"rules":[]}'; return 0 ;;
         # Override печатается, только если STUB_OVERRIDE задан (как на живом bi:
         # пустая секция = override не выставлен). Selects всегда = STUB_CURRENT.
         # Печатаем по строкам, а не через $(...) — подстановка срезала бы \n и
@@ -365,6 +377,32 @@ printf '{"xkeen":{"speed_balancer":{"enabled":false}}}\n' > "$xkeen_config"
 sb_write_setting enabled true >/dev/null 2>&1
 check "формат: однострочный файл не разбит"  "$(awk 'END { print NR }' "$xkeen_config")" "1"
 check "формат: однострочный файл валиден"    "$(jq -r '.xkeen.speed_balancer.enabled' "$xkeen_config")" "true"
+
+# === xray остановлен: автонастройка api не предлагается (комментарий к PR #107) ===
+# По молчащему api нельзя отличить ненастроенную конфигурацию от настроенной, но
+# неработающей — иначе -sb on предлагает добавить уже существующие api и probe.
+STUB_XRAY_RUNNING="no"; STUB_MIHOMO_RUNNING="no"; STUB_API_ALIVE="no"
+out=$(sb_ensure_api 2>&1); rc=$?
+check "xray остановлен: rc=1"                   "$rc" "1"
+check "xray остановлен: подсказка -start"       "$(printf '%s' "$out" | grep -c 'xkeen -start')" "1"
+check "xray остановлен: без предложения настроить" "$(printf '%s' "$out" | grep -c 'Настроить автоматически')" "0"
+
+STUB_MIHOMO_RUNNING="yes"
+out=$(sb_ensure_api 2>&1); rc=$?
+check "ядро Mihomo: rc=1"                       "$rc" "1"
+check "ядро Mihomo: подсказка -xray"            "$(printf '%s' "$out" | grep -c 'xkeen -xray')" "1"
+
+# статус тоже различает «ядро стоит» и «api не отвечает»
+printf '{"xkeen":{"speed_balancer":{"enabled":true}}}\n' > "$xkeen_config"
+STUB_MIHOMO_RUNNING="no"
+check "status: xray остановлен"  "$(sb_status 2>&1 | grep -c 'Xray не запущен')" "1"
+STUB_XRAY_RUNNING="yes"
+check "status: api недоступен"   "$(sb_status 2>&1 | grep -c 'недоступен')" "1"
+
+# api жив — автонастройка не нужна
+STUB_API_ALIVE="yes"
+sb_ensure_api >/dev/null 2>&1
+check "api жив: sb_ensure_api rc=0" "$?" "0"
 
 rm -rf "$WORK"
 printf '\n=== пройдено: %s, провалено: %s ===\n' "$pass" "$fail"
