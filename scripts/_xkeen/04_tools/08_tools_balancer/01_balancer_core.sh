@@ -67,7 +67,8 @@ sb_measure_node() {
     local node size time code
     node="$1"
 
-    printf '{"routing":{"rules":[{"ruleTag":"%s","type":"field","inboundTag":["%s"],"outboundTag":"%s"}]}}' \
+    # без "type": "field" — поле deprecated с xray-core v1.8.10 и правилу не нужно
+    printf '{"routing":{"rules":[{"ruleTag":"%s","inboundTag":["%s"],"outboundTag":"%s"}]}}' \
         "$sb_rule_tag" "$sb_probe_intag" "$node" > "$sb_rule_tmp" 2>/dev/null
 
     xray api rmrules -s "$sb_api_addr" "$sb_rule_tag" >/dev/null 2>&1

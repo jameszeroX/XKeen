@@ -85,6 +85,9 @@ xray() {
 
 curl() {
     # Узнаём ноду из правила, записанного sb_measure_node, и отдаём её скорость.
+    # Правило копируется наружу: sb_measure_node удаляет его за собой, а вызов
+    # идёт из субшелла — файл единственный способ проверить, что в нём было.
+    cp "$sb_rule_tmp" "$WORK/last_rule.json" 2>/dev/null
     # STUB_RAW, если задан, печатается как есть (для проверки разбора -w).
     [ -n "$STUB_RAW" ] && { printf '%s' "$STUB_RAW"; return 1; }
     _n=$(jq -r '.routing.rules[0].outboundTag' "$sb_rule_tmp" 2>/dev/null)
@@ -177,8 +180,14 @@ STUB_OVERRIDE=""
 
 # === замер одной ноды (возвращает "КБ/с код") ===
 STUB_SPEED_sub_a=$((2048*1024))   # 2048 КБ/с
-printf '{"routing":{"rules":[{"ruleTag":"x","type":"field","inboundTag":["probe"],"outboundTag":"sub-a"}]}}' > "$sb_rule_tmp"
+printf '{"routing":{"rules":[{"ruleTag":"x","inboundTag":["probe"],"outboundTag":"sub-a"}]}}' > "$sb_rule_tmp"
 check "sb_measure_node считает КБ/с и код" "$(sb_measure_node sub-a)" "2048 200"
+
+# правило замера: без deprecated "type": "field" (xray-core v1.8.10+), но с тегами
+check "правило замера: без type"          "$(jq -r '.routing.rules[0] | has("type")' "$WORK/last_rule.json")" "false"
+check "правило замера: inbound->outbound" "$(jq -r '.routing.rules[0] | .inboundTag[0] + " -> " + .outboundTag' "$WORK/last_rule.json")" "probe -> sub-a"
+check "правило замера: ruleTag"           "$(jq -r '.routing.rules[0].ruleTag' "$WORK/last_rule.json")" "$sb_rule_tag"
+
 STUB_SPEED_sub_a=0
 check "нулевой ответ -> 0 и код" "$(sb_measure_node sub-a)" "0 000"
 
