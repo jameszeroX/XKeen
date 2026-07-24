@@ -132,7 +132,7 @@ patch_localhost_compat() {
 
     echo
     if [ "$patched" -eq 1 ]; then
-        printf "  ${green}Патч успешно применён.${reset}\n"
+        printf "  ${green}Патч успешно применён${reset}\n"
     else
         printf "  Патч не потребовался. XKeen совместим с ${yellow}KeeneticOS 5.1.2+${reset} либо не установлен\n"
     fi
@@ -216,13 +216,17 @@ if [ -z "$VERSION_TYPE" ]; then
             3)
                 echo
                 while true; do
-                    printf "  Введите интересующую версию (например, ${light_blue}1.1.3.9${reset}): "
+                    printf "  ${red}Внимание!${reset} Предыдущие версии ${red}несовместимы${reset} с ${yellow}KeeneticOS 5.1.2+${reset}\n"
+                    printf "  Убедитесь, что используете более старую прошивку\n\n"
+                    printf "  Введите интересующую версию XKeen (например, ${light_blue}1.1.3.9${reset} или ${light_blue}0${reset} для выхода): "
                     read -r legacy_version
-                    
+
                     if [ -z "$legacy_version" ]; then
                         printf "  ${red}Ошибка${reset}: версия не может быть пустой.\n\n"
                         continue
                     fi
+
+                    [ "$legacy_version" = 0 ] && exit 0
 
                     url="https://github.com/jameszeroX/XKeen/releases/download/${legacy_version}/xkeen.tar.gz"
                     
