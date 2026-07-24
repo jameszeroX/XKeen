@@ -185,8 +185,8 @@ fi
 if [ -z "$VERSION_TYPE" ]; then
     while true; do
         printf "  Какую версию ${yellow}XKeen${reset} вы хотите установить?\n\n"
-        printf "  1) Стабильную версию (${light_blue}Stable${reset})	для ${yellow}KeeneticOS${reset} ${green}до${reset} ${yellow}5.1.2${reset}\n"
-        printf "  2) Новую Бета-версию (${light_blue}Beta${reset})	для ${yellow}KeeneticOS 5.1.2+${reset}\n"
+        printf "  1) Стабильную версию (${light_blue}Stable${reset}) только для ${yellow}KeeneticOS${reset} ${green}до${reset} ${yellow}5.1.2${reset}\n"
+        printf "  2) Новую Бета-версию (${light_blue}Beta${reset})\n"
         printf "  3) Предыдущую версию (${light_blue}Legacy${reset})\n"
         printf "  4) Пропатчить установленную версию для совместимости с ${yellow}KeeneticOS 5.1.2+${reset}\n\n"
         printf "  0) Отмена\n\n"
