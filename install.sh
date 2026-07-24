@@ -216,8 +216,8 @@ if [ -z "$VERSION_TYPE" ]; then
             3)
                 echo
                 while true; do
-                    printf "  ${red}Внимание!${reset} Предыдущие версии ${red}несовместимы${reset} с ${yellow}KeeneticOS 5.1.2+${reset}\n"
-                    printf "  Убедитесь, что используете более старую прошивку\n\n"
+                    printf "  ${red}Внимание!${reset}\n  Предыдущие версии могут быть несовместимы с новыми прошивками\n"
+                    printf "  Продолжайте только если уверены в том, что делаете\n\n"
                     printf "  Введите интересующую версию XKeen (например, ${light_blue}1.1.3.9${reset} или ${light_blue}0${reset} для выхода): "
                     read -r legacy_version
 
