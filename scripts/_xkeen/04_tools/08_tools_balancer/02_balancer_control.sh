@@ -171,8 +171,9 @@ EOF
         has_rule=$(strip_json_comments "$rjson" \
             | jq '[.routing.rules[]? | select(.outboundTag=="api")] | length' 2>/dev/null)
         if [ "${has_rule:-0}" = "0" ]; then
+            # без "type": "field" — поле deprecated с xray-core v1.8.10 и правилу не нужно
             if strip_json_comments "$rjson" \
-                | jq '.routing.rules = ([{type:"field",inboundTag:["api"],outboundTag:"api"}] + (.routing.rules // []))' \
+                | jq '.routing.rules = ([{inboundTag:["api"],outboundTag:"api"}] + (.routing.rules // []))' \
                   > "$rjson.tmp" 2>/dev/null && jq -e . "$rjson.tmp" >/dev/null 2>&1; then
                 mv "$rjson.tmp" "$rjson"
             else
