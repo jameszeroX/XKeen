@@ -286,10 +286,43 @@ sb_remove_cron() {
     sed -i '/^$/d' "$path"
 }
 
+sb_cron_installed() {
+    grep -q "$install_dir/xkeen -sbt" "$cron_dir/$cron_file" 2>/dev/null
+}
+
+# Предложение прогнать замер вне расписания. Без TTY (cron, ssh без -t, пайп)
+# read возвращает EOF — трактуем как отказ, чтобы вызов из скрипта не завис.
+sb_ask_measure() {
+    local ans
+    printf "  Выполнить замер сейчас? [y/N]: "
+    read -r ans || { echo; return 0; }
+    case "$ans" in
+        [Yy]*) ;;
+        *) return 0 ;;
+    esac
+    echo -e "  ${yellow}Замер...${reset}"
+    sb_tick
+    echo -e "  ${green}✔${reset} Замер завершён. Текущая нода: ${yellow}$(sb_current_target)${reset}"
+}
+
+# Балансировка считается включённой, только когда настройка и cron-задача есть
+# обе: enabled правят и руками в xkeen.json, и тогда расписание ещё не стоит —
+# такой полувключённый случай нужно доводить до конца, а не рапортовать «уже».
 sb_enable() {
     speed_balancer_settings
-    # причина уже напечатана внутри sb_ensure_api — здесь только итог
+    # причина уже напечатана внутри sb_ensure_api — здесь только итог.
+    # Проверка идёт и при повторном включении: молчащий api означает, что
+    # правило api потеряно (например при ручной перегенерации роутинга).
     sb_ensure_api || { echo -e "  ${red}✗${reset} Балансировка не включена."; return 1; }
+
+    if [ "$sb_enabled" = "true" ] && sb_cron_installed; then
+        echo
+        echo -e "  Балансировка по скорости уже ${green}включена${reset} (замер каждые ${yellow}$sb_interval${reset} мин)."
+        echo -e "  Текущая нода: ${yellow}$(sb_current_target)${reset}"
+        sb_ask_measure
+        return 0
+    fi
+
     sb_write_setting enabled true || return 1
     sb_install_cron
     echo -e "  ${green}✔${reset} Балансировка по скорости включена (замер каждые ${yellow}$sb_interval${reset} мин)."
@@ -301,6 +334,11 @@ sb_enable() {
 
 sb_disable() {
     speed_balancer_settings
+    if [ "$sb_enabled" != "true" ] && ! sb_cron_installed; then
+        echo
+        echo -e "  Балансировка по скорости уже ${yellow}выключена${reset}."
+        return 0
+    fi
     # снять override — без него выбор залипнет на последней ноде (у bo нет TTL)
     xray api bo -s "$sb_api_addr" -b "$sb_balancer" -r >/dev/null 2>&1
     sb_remove_cron
