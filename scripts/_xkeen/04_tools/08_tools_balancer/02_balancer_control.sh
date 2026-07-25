@@ -304,7 +304,7 @@ sb_disable() {
     # снять override — без него выбор залипнет на последней ноде (у bo нет TTL)
     xray api bo -s "$sb_api_addr" -b "$sb_balancer" -r >/dev/null 2>&1
     sb_remove_cron
-    sb_write_setting enabled false
+    sb_write_setting enabled false || return 1
     echo -e "  ${green}✔${reset} Балансировка по скорости выключена, override снят."
 }
 
@@ -366,4 +366,24 @@ sb_menu() {
             *) echo "  Неверный ввод. Введите 1, 2 или 0." ;;
         esac
     done
+}
+
+# Второй параметр `xkeen -sb`, если это распознанная команда; иначе пусто.
+# Аналог get_state_arg диспетчера, но для трёх команд балансировки.
+sb_command_arg() {
+    case "$1" in
+        on|off|status) echo "$1" ;;
+    esac
+}
+
+# Точка входа `xkeen -sb [on|off|status]`. Разбор команды здесь, а не в case
+# диспетчера: там код завершения операции терялся на завершающем shift, и
+# `xkeen -sb on` возвращал 0 даже когда включение было отклонено.
+sb_control() {
+    case "$1" in
+        on)     smart_clear; sb_enable ;;
+        off)    smart_clear; sb_disable ;;
+        status) sb_status ;;
+        *)      smart_clear; sb_menu ;;
+    esac
 }
