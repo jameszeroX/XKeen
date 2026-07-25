@@ -24,6 +24,8 @@ sb_rule_tmp="$WORK/sb_rule.json"
 sb_log_file="$WORK/sb.log"
 sb_routing_file="$xray_conf_dir/05_routing.json"
 sb_outbounds_file="$xray_conf_dir/04_outbounds.json"
+cron_dir="$WORK/cron"; cron_file="root"
+install_dir="$WORK/sbin"
 
 # strip_json_comments берём из реального кода, а не копией: модуль целиком не
 # подключить (на верхнем уровне он ходит curl'ом в RCI роутера), а копия
@@ -61,6 +63,9 @@ speed_balancer_settings() {
 # что видит pidof (какое ядро запущено).
 STUB_CURRENT="sub-a"; STUB_BO=""; STUB_OVERRIDE=""; STUB_API_ALIVE="yes"
 STUB_XRAY_RUNNING="yes"; STUB_MIHOMO_RUNNING="no"
+
+# smart_clear живёт в диспетчере xkeen, модулю доступна как готовая функция.
+smart_clear() { :; }
 
 pidof() {
     case "$1" in
@@ -403,6 +408,38 @@ check "status: api недоступен"   "$(sb_status 2>&1 | grep -c 'недо
 STUB_API_ALIVE="yes"
 sb_ensure_api >/dev/null 2>&1
 check "api жив: sb_ensure_api rc=0" "$?" "0"
+
+# === код возврата `xkeen -sb ...` ===
+# Второй параметр разбирает модуль, а не case диспетчера: там код операции
+# терялся на завершающем shift, и отклонённое включение выглядело успехом.
+check "аргумент on"               "$(sb_command_arg on)"     "on"
+check "аргумент off"              "$(sb_command_arg off)"    "off"
+check "аргумент status"           "$(sb_command_arg status)" "status"
+check "аргумент мусор -> пусто"   "$(sb_command_arg wat)"    ""
+check "аргумент пустой -> пусто"  "$(sb_command_arg '')"     ""
+
+STUB_XRAY_RUNNING="no"; STUB_API_ALIVE="no"
+sb_control on >/dev/null 2>&1
+check "sb_control on: отказ -> rc=1" "$?" "1"
+
+STUB_XRAY_RUNNING="yes"; STUB_API_ALIVE="yes"
+sb_control on >/dev/null 2>&1
+check "sb_control on: успех -> rc=0"        "$?" "0"
+check "sb_control on: cron-задача создана"  "$(grep -c 'xkeen -sbt' "$cron_dir/$cron_file")" "1"
+check "sb_control on: enabled=true"         "$(rjq '.xkeen.speed_balancer.enabled')" "true"
+
+sb_control status >/dev/null 2>&1
+check "sb_control status: rc=0" "$?" "0"
+
+sb_control off >/dev/null 2>&1
+check "sb_control off: rc=0"               "$?" "0"
+check "sb_control off: cron-задача снята"  "$(grep -c 'xkeen -sbt' "$cron_dir/$cron_file")" "0"
+check "sb_control off: enabled=false"      "$(rjq '.xkeen.speed_balancer.enabled')" "false"
+
+# запись настройки не удалась — выключение тоже не выдаёт себя за успех
+printf '{"xkeen":{"policy":[{"port":"80"}]}}\n' > "$xkeen_config"
+sb_control off >/dev/null 2>&1
+check "sb_control off: конфиг не записан -> rc=1" "$?" "1"
 
 rm -rf "$WORK"
 printf '\n=== пройдено: %s, провалено: %s ===\n' "$pass" "$fail"
