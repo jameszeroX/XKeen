@@ -436,10 +436,41 @@ check "sb_control off: rc=0"               "$?" "0"
 check "sb_control off: cron-задача снята"  "$(grep -c 'xkeen -sbt' "$cron_dir/$cron_file")" "0"
 check "sb_control off: enabled=false"      "$(rjq '.xkeen.speed_balancer.enabled')" "false"
 
-# запись настройки не удалась — выключение тоже не выдаёт себя за успех
+# запись настройки не удалась — выключение тоже не выдаёт себя за успех.
+# Расписание возвращаем: по пустому cron выключение отрапортовало бы «уже
+# выключена» и до записи не дошло бы.
+sb_install_cron
 printf '{"xkeen":{"policy":[{"port":"80"}]}}\n' > "$xkeen_config"
 sb_control off >/dev/null 2>&1
 check "sb_control off: конфиг не записан -> rc=1" "$?" "1"
+
+# === повторное включение/выключение ===
+# На уже включённой балансировке `-sb on` не включает её заново: сообщает
+# состояние и предлагает замер. «Включено» = настройка И cron-задача вместе.
+loglines() { awk 'END { print NR }' "$sb_log_file" 2>/dev/null; }
+
+printf '{"xkeen":{}}\n' > "$xkeen_config"
+sb_control on </dev/null >/dev/null 2>&1
+before=$(loglines)
+
+out=$(sb_control on </dev/null 2>&1); rc=$?
+check "повторный on: rc=0"                   "$rc" "0"
+check "повторный on: сообщает 'уже включена'" "$(printf '%s' "$out" | grep -c 'уже .*включена')" "1"
+check "повторный on: предложен замер"        "$(printf '%s' "$out" | grep -c 'Выполнить замер сейчас')" "1"
+check "повторный on: без ответа замер не идёт" "$(loglines)" "$before"
+
+echo y | sb_control on >/dev/null 2>&1
+check "повторный on: ответ y запускает замер" "$([ "$(loglines)" -gt "$before" ] && echo yes || echo no)" "yes"
+
+# enabled правили руками в xkeen.json — расписания ещё нет, включение доводится
+sb_remove_cron
+sb_control on </dev/null >/dev/null 2>&1
+check "on без cron: расписание восстановлено" "$(grep -c 'xkeen -sbt' "$cron_dir/$cron_file")" "1"
+
+sb_control off >/dev/null 2>&1
+out=$(sb_control off 2>&1); rc=$?
+check "повторный off: rc=0"                     "$rc" "0"
+check "повторный off: сообщает 'уже выключена'" "$(printf '%s' "$out" | grep -c 'уже .*выключена')" "1"
 
 rm -rf "$WORK"
 printf '\n=== пройдено: %s, провалено: %s ===\n' "$pass" "$fail"
