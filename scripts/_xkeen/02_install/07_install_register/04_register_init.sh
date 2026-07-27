@@ -3553,9 +3553,24 @@ proxy_start() {
             if [ "$mode_proxy" != "Other" ] && ! configure_firewall; then
                 rm -f "$xkeen_rundir/ready"
                 log_error_terminal "Не удалось записать netfilter-хук"
+                _release_coldstart_guard
+                if [ "$_ps_mutex_rc" -eq 0 ]; then
+                    _release_proxy_mutex
+                    trap - INT TERM HUP
+                fi
+                return 1
             fi
             : > "$xkeen_rundir/ready"
-            [ "$mode_proxy" != "Other" ] && sh "$file_netfilter_hook" || true
+            if [ "$mode_proxy" != "Other" ] && ! sh "$file_netfilter_hook"; then
+                rm -f "$xkeen_rundir/ready"
+                log_error_terminal "Не удалось применить netfilter-хук"
+                _release_coldstart_guard
+                if [ "$_ps_mutex_rc" -eq 0 ]; then
+                    _release_proxy_mutex
+                    trap - INT TERM HUP
+                fi
+                return 1
+            fi
             if [ "$start_manual" = "on" ]; then
                 log_error_terminal "Не удалось запустить ${yellow}$name_client${reset}, так как он уже запущен"
             else
@@ -3617,9 +3632,24 @@ proxy_start() {
                     if [ "$mode_proxy" != "Other" ] && ! configure_firewall; then
                         rm -f "$xkeen_rundir/ready"
                         log_error_terminal "Не удалось записать netfilter-хук"
+                        _release_coldstart_guard
+                        if [ "$_ps_mutex_rc" -eq 0 ]; then
+                            _release_proxy_mutex
+                            trap - INT TERM HUP
+                        fi
+                        return 1
                     fi
                     : > "$xkeen_rundir/ready"
-                    [ "$mode_proxy" != "Other" ] && sh "$file_netfilter_hook" || true
+                    if [ "$mode_proxy" != "Other" ] && ! sh "$file_netfilter_hook"; then
+                        rm -f "$xkeen_rundir/ready"
+                        log_error_terminal "Не удалось применить netfilter-хук"
+                        _release_coldstart_guard
+                        if [ "$_ps_mutex_rc" -eq 0 ]; then
+                            _release_proxy_mutex
+                            trap - INT TERM HUP
+                        fi
+                        return 1
+                    fi
                     # Последовательно: параллельный ipset restore больших RU-списков
                     # сразу после fork mihomo даёт пик RAM / OOM на слабых роутерах.
                     [ "$iptables_supported" = "true" ] && [ -f "$ru_exclude_ipv4" ] && load_ipset geo_exclude "$ru_exclude_ipv4" inet
