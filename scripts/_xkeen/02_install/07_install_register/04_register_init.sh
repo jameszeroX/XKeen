@@ -2917,6 +2917,26 @@ USER_POLICIES_EOF
         return 0
     }
 
+    # OOM can leave an existing geo set empty even though its list is valid.
+    # Refill only the broken state, keeping ordinary renews inexpensive.
+    _xkeen_refill_geo_if_empty() {
+        _rg_set="$1"
+        _rg_file="$2"
+        _rg_family="$3"
+        [ -s "$_rg_file" ] || return 0
+        ipset save "$_rg_set" 2>/dev/null | grep -q '^add ' && return 0
+        _rg_tmp="${_rg_set}_renew_tmp"
+        ipset create "$_rg_tmp" hash:net family "$_rg_family" -exist 2>/dev/null || return 1
+        ipset flush "$_rg_tmp" 2>/dev/null
+        if sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$_rg_file" | \
+             awk '{print "add '"$_rg_tmp"' "$1}' | ipset restore -exist; then
+            ipset swap "$_rg_set" "$_rg_tmp" 2>/dev/null || return 1
+        else
+            logger -p daemon.warning -t xkeen "не удалось восстановить $_rg_set из $_rg_file"
+        fi
+        ipset destroy "$_rg_tmp" 2>/dev/null
+    }
+
     # Текущий WAN IPv4 (тот же способ, что get_exclude_ip4 при генерации).
     # На коротком DHCP lease (MGTS ~300 с) renew приходит каждые ~150 с
     # с тем же IP: NDM всё равно зовёт netfilter.d. Если IP не сменился
@@ -2930,6 +2950,8 @@ USER_POLICIES_EOF
     if [ -n "$_xkeen_cur_wan" ] && [ "$_xkeen_cur_wan" = "$_xkeen_prev_wan" ] && _xkeen_rules_intact; then
         # IP тот же, цепочки целы: deny-MAC обновляет schedule.d —
         # здесь curl под lock только мешает соседним событиям NDM.
+        [ "$iptables_supported" = "true" ] && _xkeen_refill_geo_if_empty geo_exclude "$ru_exclude_ipv4" inet
+        [ "$ip6tables_supported" = "true" ] && _xkeen_refill_geo_if_empty geo_exclude6 "$ru_exclude_ipv6" inet6
         _xkeen_release_nf_lock
         exit 0
     fi
@@ -2967,26 +2989,6 @@ USER_POLICIES_EOF
             ipset create geo_exclude6 hash:net family inet6 -exist 2>/dev/null
             ipset create geo_override6 hash:net family inet6 -exist 2>/dev/null
         fi
-    }
-
-    # OOM can leave an existing geo set empty even though its list is valid.
-    # On renew refill only that broken state; normal renews stay inexpensive.
-    _xkeen_refill_geo_if_empty() {
-        _rg_set="$1"
-        _rg_file="$2"
-        _rg_family="$3"
-        [ -s "$_rg_file" ] || return 0
-        ipset save "$_rg_set" 2>/dev/null | grep -q '^add ' && return 0
-        _rg_tmp="${_rg_set}_renew_tmp"
-        ipset create "$_rg_tmp" hash:net family "$_rg_family" -exist 2>/dev/null || return 1
-        ipset flush "$_rg_tmp" 2>/dev/null
-        if sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$_rg_file" | \
-             awk '{print "add '"$_rg_tmp"' "$1}' | ipset restore -exist; then
-            ipset swap "$_rg_set" "$_rg_tmp" 2>/dev/null || return 1
-        else
-            logger -p daemon.warning -t xkeen "не удалось восстановить $_rg_set из $_rg_file"
-        fi
-        ipset destroy "$_rg_tmp" 2>/dev/null
     }
 
     _xkeen_cache_valid() {
