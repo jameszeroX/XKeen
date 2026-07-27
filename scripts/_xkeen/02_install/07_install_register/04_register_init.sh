@@ -274,15 +274,28 @@ wait_for_rci_token() {
         200) return 0 ;;
         401|403)
             log_error_router "Отсутствует или недействителен токен доступа к RCI роутера"
-            log_error_terminal "Отсутствует или недействителен токен доступа к RCI роутера"
+            if [ "$rci_token_fatal" = "true" ]; then
+                log_error_terminal "Отсутствует или недействителен токен доступа к RCI роутера"
+            fi
             ;;
         *)
             log_error_router "RCI не отвечает (http_code=$http_code)"
-            log_error_terminal "RCI не отвечает (http_code=$http_code)"
+            if [ "$rci_token_fatal" = "true" ]; then
+                log_error_terminal "RCI не отвечает (http_code=$http_code)"
+            fi
             ;;
     esac
 }
-wait_for_rci_token
+case "$1" in
+    stop|status)
+        rci_token_fatal="false"
+        wait_for_rci_token || log_warning_router "RCI недоступен: выполняется $1 без проверки политик"
+        ;;
+    *)
+        rci_token_fatal="true"
+        wait_for_rci_token
+        ;;
+esac
 
 # Параметры curl
 curl_api() {
@@ -3124,7 +3137,7 @@ EOL
 SCHEDULE_EOL
     chmod 755 "$file_schedule_hook"
 
-    sh "$file_netfilter_hook"
+    return 0
 }
 
 # Удаление правил iptables
@@ -3451,7 +3464,18 @@ proxy_start() {
     _acquire_proxy_mutex
     _ps_mutex_rc=$?
     if [ "$_ps_mutex_rc" -eq 1 ]; then
-        return 0
+        _ps_wait=0
+        while [ "$_ps_wait" -lt 5 ]; do
+            sleep 1
+            _acquire_proxy_mutex
+            _ps_mutex_rc=$?
+            [ "$_ps_mutex_rc" -ne 1 ] && break
+            _ps_wait=$((_ps_wait + 1))
+        done
+        if [ "$_ps_mutex_rc" -eq 1 ]; then
+            log_warning_terminal "Запуск занят другим процессом, повторите команду"
+            return 1
+        fi
     fi
     if [ "$_ps_mutex_rc" -eq 0 ]; then
         trap '_release_proxy_mutex; trap - INT TERM HUP' INT TERM HUP
@@ -3526,10 +3550,12 @@ proxy_start() {
         fi
         if proxy_status; then
             echo -e "  Прокси-клиент уже ${green}запущен${reset}"
-            # Marker до configure_firewall: тот завершается `sh proxy.sh`,
-            # gate в хуке читает /tmp/xkeen_ready.
+            if [ "$mode_proxy" != "Other" ] && ! configure_firewall; then
+                rm -f "$xkeen_rundir/ready"
+                log_error_terminal "Не удалось записать netfilter-хук"
+            fi
             : > "$xkeen_rundir/ready"
-            [ "$mode_proxy" != "Other" ] && configure_firewall
+            [ "$mode_proxy" != "Other" ] && sh "$file_netfilter_hook" || true
             if [ "$start_manual" = "on" ]; then
                 log_error_terminal "Не удалось запустить ${yellow}$name_client${reset}, так как он уже запущен"
             else
@@ -3588,9 +3614,12 @@ proxy_start() {
                 done
                 unset _probe_attempt
                 if proxy_status; then
-                    # См. alive-branch: marker до configure_firewall.
+                    if [ "$mode_proxy" != "Other" ] && ! configure_firewall; then
+                        rm -f "$xkeen_rundir/ready"
+                        log_error_terminal "Не удалось записать netfilter-хук"
+                    fi
                     : > "$xkeen_rundir/ready"
-                    [ "$mode_proxy" != "Other" ] && configure_firewall
+                    [ "$mode_proxy" != "Other" ] && sh "$file_netfilter_hook" || true
                     # Последовательно: параллельный ipset restore больших RU-списков
                     # сразу после fork mihomo даёт пик RAM / OOM на слабых роутерах.
                     [ "$iptables_supported" = "true" ] && [ -f "$ru_exclude_ipv4" ] && load_ipset geo_exclude "$ru_exclude_ipv4" inet
@@ -3691,7 +3720,18 @@ proxy_stop() {
     _acquire_proxy_mutex
     _pstop_mutex_rc=$?
     if [ "$_pstop_mutex_rc" -eq 1 ]; then
-        return 0
+        _pstop_wait=0
+        while [ "$_pstop_wait" -lt 5 ]; do
+            sleep 1
+            _acquire_proxy_mutex
+            _pstop_mutex_rc=$?
+            [ "$_pstop_mutex_rc" -ne 1 ] && break
+            _pstop_wait=$((_pstop_wait + 1))
+        done
+        if [ "$_pstop_mutex_rc" -eq 1 ]; then
+            log_warning_terminal "Остановка занята другим процессом, повторите команду"
+            return 1
+        fi
     fi
     if [ "$_pstop_mutex_rc" -eq 0 ]; then
         trap '_release_proxy_mutex; trap - INT TERM HUP' INT TERM HUP
