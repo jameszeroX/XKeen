@@ -61,7 +61,10 @@ jobs:
         env:
           MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
         run: |
-          test -n "$MINISIGN_SECRET_KEY"
+          if [ -z "$MINISIGN_SECRET_KEY" ]; then
+            echo "MINISIGN_SECRET_KEY is not configured; publishing an unsigned legacy-compatible release."
+            exit 0
+          fi
           sudo apt-get update
           sudo apt-get install -y minisign
           printf '%s\n' "$MINISIGN_SECRET_KEY" > /tmp/xkeen.minisign.key
@@ -93,8 +96,10 @@ jobs:
           git push origin "$TAG_NAME"
 
           # Создаем релиз
+          assets="dist/${ARCHIVE_NAME}"
+          [ -f "dist/${ARCHIVE_NAME}.minisig" ] && assets="$assets dist/${ARCHIVE_NAME}.minisig"
           gh release create "$TAG_NAME" \
-            dist/*.tar.gz dist/*.tar.gz.minisig \
+            $assets \
             --title "${{ env.VERSION }}" \
             --notes-file /tmp/release_notes.md \
             ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }} \
