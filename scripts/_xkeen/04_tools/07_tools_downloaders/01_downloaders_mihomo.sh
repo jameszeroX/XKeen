@@ -98,6 +98,8 @@ download_mihomo() {
             printf "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - Yq"
             if _network_probe "$download_yq" "Yq"; then
                 if _network_download "$download_yq" "$install_dir/yq" "Yq" "$max_attempts" "$delay"; then
+                    verify_download_sha256 "$install_dir/yq" "$(basename "$download_yq")" \
+                        "${yq_download_base_url}/checksums" checksums || return 1
                     chmod +x "$install_dir/yq"
                     yq_available="true"
                     printf "  Yq ${green}успешно загружен и установлен${reset}\n"
@@ -113,6 +115,12 @@ download_mihomo() {
         printf "  ${yellow}Выполняется загрузка${reset} Mihomo %s\n" "$version_selected"
 
         if ! _network_download "$download_url" "$tmp_ram/mihomo.$extension" "Mihomo" "$max_attempts" "$delay" 1048576; then
+            continue
+        fi
+        # GitHub release API exposes the immutable asset digest (sha256:...)
+        # independently from the mirror used for the archive.
+        if ! verify_download_sha256 "$tmp_ram/mihomo.$extension" "$filename" \
+            "https://api.github.com/repos/MetaCubeX/mihomo/releases/tags/$VERSION_ARG" github-api; then
             continue
         fi
 
@@ -149,6 +157,8 @@ download_yq() {
     fi
 
     if _network_download "$download_url" "$install_dir/yq" "Yq" "$yq_max_attempts" "$yq_delay"; then
+        verify_download_sha256 "$install_dir/yq" "$(basename "$download_url")" \
+            "${yq_base_url}/checksums" checksums || return 1
         chmod +x "$install_dir/yq"
         printf "  Yq ${green}успешно обновлен/установлен${reset}\n"
         return 0

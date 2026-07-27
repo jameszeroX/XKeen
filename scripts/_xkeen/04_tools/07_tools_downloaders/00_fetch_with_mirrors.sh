@@ -337,6 +337,53 @@ _network_download() {
     fi
 }
 
+# Reference files are deliberately fetched directly, never through the mirror
+# that delivered the executable.  This makes a compromised mirror insufficient
+# to forge both the payload and its independent SHA-256 reference.
+verify_download_sha256() {
+    _vds_file="$1"
+    _vds_asset="$2"
+    _vds_ref_url="$3"
+    _vds_format="$4" # dgst | checksums | github-api
+    [ "$verify_downloads" = "off" ] && return 0
+    _vds_ref="${_vds_file}.sha256ref.$$"
+    _vds_expected=""
+    if ! curl_with_timeout -fLsS -o "$_vds_ref" "$_vds_ref_url"; then
+        rm -f "$_vds_ref"
+        if [ "$verify_downloads" = "strict" ]; then
+            printf "  ${red}Ошибка${reset}: нет независимой SHA-256 reference для %s\n" "$_vds_asset"
+            return 1
+        fi
+        printf "  ${yellow}Предупреждение${reset}: независимая SHA-256 reference для %s недоступна\n" "$_vds_asset"
+        return 0
+    fi
+    case "$_vds_format" in
+        dgst) _vds_expected=$(awk 'tolower($0) ~ /sha256/ {for (i=1;i<=NF;i++) if (length($i) == 64 && $i ~ /^[0-9a-fA-F]+$/) {print $i; exit}}' "$_vds_ref") ;;
+        checksums) _vds_expected=$(awk -v asset="$_vds_asset" '$NF == asset && length($1) == 64 && $1 ~ /^[0-9a-fA-F]+$/ {print $1; exit}' "$_vds_ref") ;;
+        github-api) _vds_expected=$(jq -r --arg asset "$_vds_asset" '.assets[]? | select(.name == $asset) | (.digest // "") | sub("^sha256:"; "")' "$_vds_ref" 2>/dev/null | head -n 1) ;;
+    esac
+    rm -f "$_vds_ref"
+    case "$_vds_expected" in
+        [0-9a-fA-F][0-9a-fA-F]*) ;;
+        *)
+            if [ "$verify_downloads" = "strict" ]; then
+                printf "  ${red}Ошибка${reset}: SHA-256 для %s не найдена в reference\n" "$_vds_asset"
+                return 1
+            fi
+            printf "  ${yellow}Предупреждение${reset}: SHA-256 для %s не найдена в reference\n" "$_vds_asset"
+            return 0
+            ;;
+    esac
+    _vds_actual=$(sha256sum "$_vds_file" 2>/dev/null | awk '{print $1}')
+    if [ "$_vds_actual" = "$_vds_expected" ]; then
+        printf "  SHA-256 %s ${green}проверена${reset}\n" "$_vds_asset"
+        return 0
+    fi
+    printf "  ${red}Ошибка${reset}: SHA-256 %s не совпадает\n" "$_vds_asset"
+    [ "$verify_downloads" = "strict" ] && return 1
+    return 0
+}
+
 # Функция для получения ожидаемого размера файла
 _get_expected_size() {
     _ges_url="$1"
