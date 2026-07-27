@@ -202,6 +202,17 @@ get_rci_token() {
 }
 get_rci_token
 
+# Fail closed is deliberately opt-in.  Old configurations remain fail-open.
+load_killswitch_settings() {
+    killswitch="off"
+    [ -f "$xkeen_config" ] || return 0
+    command -v jq >/dev/null 2>&1 || return 0
+    _ks_v=$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.killswitch.enabled // false' 2>/dev/null)
+    [ "$_ks_v" = "true" ] && killswitch="on"
+    unset _ks_v
+}
+load_killswitch_settings
+
 # GOMEMLIMIT для mihomo: доля RAM или абсолютный лимит из xkeen.json.
 # Дефолт — 50% RAM (сохраняет прежнее поведение). Внешний
 # GOMEMLIMIT в окружении всегда побеждает.
@@ -2178,6 +2189,7 @@ EOL
     # GOMEMLIMIT для respawn mihomo внутри хука (вычислен при генерации)
     apply_gomemlimit
     inject_var gomemlimit_value "$gomemlimit_value"
+    inject_var killswitch "$killswitch"
 
     cat >> "$file_netfilter_hook" <<'EOL'
 
@@ -3192,6 +3204,12 @@ clean_firewall() {
             "$family" -w -t "$table" -F "$force_chain" >/dev/null 2>&1
             "$family" -w -t "$table" -X "$force_chain" >/dev/null 2>&1
         fi
+
+        killswitch_chain="${name_chain}_killswitch"
+        if "$family" -w -t "$table" -nL "$killswitch_chain" >/dev/null 2>&1; then
+            "$family" -w -t "$table" -F "$killswitch_chain" >/dev/null 2>&1
+            "$family" -w -t "$table" -X "$killswitch_chain" >/dev/null 2>&1
+        fi
     }
 
     for family in iptables ip6tables; do
@@ -3442,6 +3460,46 @@ _release_nf_lock() {
     fi
 }
 
+# Install an explicit fail-closed policy only after an unintentional core
+# failure.  Only traffic already selected by xkeen policy marks is dropped;
+# LAN/management and all unmarked traffic remain untouched.  The restore blob
+# is atomic and uses the same netfilter lock as normal cleanup.
+enable_killswitch() {
+    [ "$killswitch" = "on" ] || return 0
+    _ks_marks="$policy_mark $policy_mark_full"
+    if [ -n "$user_policies" ]; then
+        _ks_user_marks=$(printf '%s\n' "$user_policies" | awk -F'|' '$2 != "" {print "0x"$2}')
+        _ks_marks="$_ks_marks $_ks_user_marks"
+    fi
+    [ -n "$(printf '%s' "$_ks_marks" | tr -d ' ')" ] || {
+        log_warning_router "Kill-switch не установлен: нет policy-mark для безопасной выборки трафика"
+        return 1
+    }
+
+    _acquire_nf_lock || return 1
+    for _ks_family in iptables ip6tables; do
+        if [ "$_ks_family" = "iptables" ] && [ "$iptables_supported" != "true" ]; then continue; fi
+        if [ "$_ks_family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ]; then continue; fi
+        _ks_restore="${_ks_family}-restore"
+        _ks_blob=$( {
+            printf '*mangle\n'
+            printf ':%s_killswitch -\n' "$name_chain"
+            for _ks_mark in $_ks_marks; do
+                [ -n "$_ks_mark" ] || continue
+                printf '%s\n' "-A ${name_chain}_killswitch -m conntrack ! --ctstate INVALID -m connmark --mark ${_ks_mark} $comment -j DROP"
+            done
+            printf '%s\n' "-A PREROUTING $comment -j ${name_chain}_killswitch"
+            printf 'COMMIT\n'
+        } )
+        printf '%s' "$_ks_blob" | "$_ks_restore" --noflush || {
+            _release_nf_lock
+            return 1
+        }
+    done
+    _release_nf_lock
+    log_warning_router "Kill-switch включён: трафик политики xkeen заблокирован до явного stop/start"
+}
+
 # Очистка при аварийной остановке прокси-клиента
 emergency_clear() {
     _acquire_proxy_mutex
@@ -3454,6 +3512,7 @@ emergency_clear() {
     _release_coldstart_guard
     cleanup_fd_monitor
     clean_firewall
+    enable_killswitch
     if [ "$_ec_mutex_rc" -eq 0 ]; then
         _release_proxy_mutex
     fi
@@ -3701,6 +3760,8 @@ proxy_start() {
                 attempt=$((attempt + 1))
             done
             echo -e "  ${red}Не удалось запустить${reset} прокси-клиент"
+            clean_firewall
+            enable_killswitch
             log_error_terminal "Не удалось запустить прокси-клиент"
             _release_coldstart_guard
         fi

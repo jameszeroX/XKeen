@@ -258,6 +258,30 @@ change_pbr_strict() {
     toggle_param "pbr_strict" "strict PBR-проверки для исходящих подключений Xray/Mihomo" "restart" "$1"
 }
 
+change_killswitch() {
+    state="$1"
+    [ "$state" = "on" ] || [ "$state" = "off" ] || return 1
+    [ -f "$xkeen_config" ] || { echo -e "  ${red}Ошибка${reset}: не найден xkeen.json"; return 1; }
+    command -v jq >/dev/null 2>&1 || { echo -e "  ${red}Ошибка${reset}: требуется jq"; return 1; }
+    tmp="${xkeen_config}.tmp.$$"
+    if strip_json_comments "$xkeen_config" | jq --argjson enabled "$([ "$state" = on ] && echo true || echo false)" \
+        '.xkeen = (.xkeen // {}) | .xkeen.killswitch = (.xkeen.killswitch // {}) | .xkeen.killswitch.enabled = $enabled' > "$tmp" \
+        && chmod 600 "$tmp" && mv -f "$tmp" "$xkeen_config"; then
+        echo -e "  Kill-switch ${green}${state}${reset}"
+        register_xkeen_initd
+    else
+        rm -f "$tmp"
+        echo -e "  ${red}Ошибка${reset}: не удалось сохранить настройку kill-switch"
+        return 1
+    fi
+}
+
+show_killswitch_status() {
+    state="off"
+    [ -f "$xkeen_config" ] && state=$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.killswitch.enabled // false' 2>/dev/null)
+    [ "$state" = "true" ] && echo -e "  Kill-switch: ${green}включён${reset}" || echo -e "  Kill-switch: ${red}выключен${reset}"
+}
+
 _pbr_hex_to_decimal() {
     mark="$1"
     mark="${mark#0x}"
