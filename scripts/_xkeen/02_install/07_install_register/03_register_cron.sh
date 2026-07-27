@@ -97,13 +97,12 @@ exit 0'
 # Обновление cron задач
 update_cron_geofile_task() {
     if [ -f "$cron_dir/$cron_file" ]; then
-        tmp_file="$cron_dir/${cron_file}.tmp"
-        cp "$cron_dir/$cron_file" "$tmp_file"
-        
+        tmp_file="$cron_dir/${cron_file}.tmp.$$"
         if [ -z "$choice_cancel_cron_select" ]; then
-            grep -v -e "ug" -e "ux" -e "uk" -e '^\s*$' "$tmp_file" > "$cron_dir/$cron_file"
+            grep -v -E "($install_dir/xkeen[[:space:]]+-(ug|ux|uk))" "$cron_dir/$cron_file" > "$tmp_file"
         else
-            grep -v -e "ugi" -e "ugs" -e "ux" -e "uk" -e '^\s*$' "$tmp_file" > "$cron_dir/$cron_file"
+            grep -v -E "($install_dir/xkeen[[:space:]]+-(ugi|ugs|ux|uk))" "$cron_dir/$cron_file" > "$tmp_file"
         fi
+        mv -f "$tmp_file" "$cron_dir/$cron_file" || rm -f "$tmp_file"
     fi
 }

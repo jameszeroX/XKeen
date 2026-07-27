@@ -628,6 +628,8 @@ while [ $# -gt 0 ]; do
             migrate_ports_from_initd
             register_xkeen_initd
             create_xkeen_cfg
+            chmod 700 "$xkeen_cfg" 2>/dev/null
+            chmod 600 "$xkeen_config" 2>/dev/null
             choice_cancel_cron_select=true
             update_cron_geofile_task
             smart_clear
