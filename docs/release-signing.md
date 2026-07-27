@@ -7,8 +7,16 @@ Release archives are signed with Minisign. The maintainer must:
 3. Commit the corresponding one-line public key to
    `scripts/_xkeen/keys/xkeen.minisign.pub`.
 
-The release workflow refuses to publish without the private-key secret and
-uploads `xkeen.tar.gz.minisig` with the archive. Installations verify a
-signature when both that file and the packaged public key are available.
-Unsigned legacy releases warn in `verify_downloads: warn` (the default) and
-fail in `strict`; `off` is an explicit escape hatch.
+The release workflow permits unsigned legacy-compatible releases when the
+private-key secret is absent. Once `MINISIGN_SECRET_KEY` is configured, it
+refuses to sign or publish unless the public-key file above is already
+committed. TODO for the maintainer: generate the key pair and commit its
+public half before enabling the secret.
+
+Installations verify a signature when both that file and the packaged public
+key are available. `verify_downloads` defaults to `warn`: third-party
+downloads are checked against an independent upstream SHA-256 reference when
+it is available. If a binary was obtained through a mirror while that
+reference is unavailable, installation continues for compatibility but emits
+a prominent “installed WITHOUT integrity verification” warning. `strict`
+fails in that case; `off` is an explicit escape hatch.

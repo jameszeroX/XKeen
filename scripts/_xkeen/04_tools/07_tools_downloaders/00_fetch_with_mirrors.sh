@@ -99,7 +99,8 @@ _validate_default() {
 # Возврат: 0 на успех, 1 на полный провал (все попытки failed/invalid).
 # При rc != 0: _last_error содержит причину последней неудачи
 # (curl_failed / size / html_stub), _last_size содержит размер файла
-# при size-fail.
+# при size-fail.  При успехе _last_download_mirror содержит использованный
+# префикс (пустая строка для direct GitHub).
 fetch_with_mirrors() {
     _fwm_url="$1"
     _fwm_dest="$2"
@@ -109,6 +110,7 @@ fetch_with_mirrors() {
     _fwm_winner=""
     _last_error=""
     _last_size=0
+    _last_download_mirror=""
 
     rm -f "$_fwm_tmp"
     _fwm_orders=$(_mirror_order)
@@ -135,6 +137,7 @@ EOF
     if [ -f "$_fwm_tmp" ]; then
         mv -f "$_fwm_tmp" "$_fwm_dest" || { rm -f "$_fwm_tmp"; return 1; }
         _mirror_cache_write "$_fwm_winner"
+        _last_download_mirror="$_fwm_winner"
         _last_error=""
         return 0
     fi
@@ -346,6 +349,14 @@ verify_download_sha256() {
     _vds_ref_url="$3"
     _vds_format="$4" # dgst | checksums | github-api
     [ "$verify_downloads" = "off" ] && return 0
+    if ! command -v sha256sum >/dev/null 2>&1; then
+        if [ "$verify_downloads" = "strict" ]; then
+            printf "  ${red}Ошибка${reset}: sha256sum не установлен; невозможно проверить %s\n" "$_vds_asset"
+            return 1
+        fi
+        printf "  ${yellow}ВНИМАНИЕ${reset}: бинарь %s установлен БЕЗ проверки целостности (sha256sum не установлен)\n" "$_vds_asset"
+        return 0
+    fi
     _vds_ref="${_vds_file}.sha256ref.$$"
     _vds_expected=""
     if ! curl_with_timeout -fLsS -o "$_vds_ref" "$_vds_ref_url"; then
@@ -354,7 +365,11 @@ verify_download_sha256() {
             printf "  ${red}Ошибка${reset}: нет независимой SHA-256 reference для %s\n" "$_vds_asset"
             return 1
         fi
-        printf "  ${yellow}Предупреждение${reset}: независимая SHA-256 reference для %s недоступна\n" "$_vds_asset"
+        if [ -n "$_last_download_mirror" ]; then
+            printf "  ${yellow}ВНИМАНИЕ${reset}: бинарь %s установлен БЕЗ проверки целостности (зеркало + недоступен независимый reference)\n" "$_vds_asset"
+        else
+            printf "  ${yellow}ВНИМАНИЕ${reset}: бинарь %s установлен БЕЗ проверки целостности (независимый reference недоступен)\n" "$_vds_asset"
+        fi
         return 0
     fi
     case "$_vds_format" in
@@ -390,6 +405,8 @@ _get_expected_size() {
     _ges_orders=$(_mirror_order)
 
     while IFS= read -r _ges_prefix; do
+        _ges_size=""
+        _ges_range_unknown=""
         [ "$_ges_prefix" = "$_DIRECT_TOKEN" ] && _ges_prefix=""
         if [ -n "$_ges_prefix" ]; then
             _ges_probe="${_ges_prefix%/}/$_ges_url"
@@ -412,15 +429,26 @@ _get_expected_size() {
                 continue  # range-запрос не удался, пробуем следующий mirror
             fi
             if [ "$_ges_http" = "206" ]; then
-                _ges_size=$(echo "$_ges_headers" | grep -i '^Content-Range:' | tail -n 1 | \
-                    sed -n 's|.*/\([0-9][0-9]*\)$|\1|p')
+                _ges_range_total=$(echo "$_ges_headers" | awk '
+                    tolower($1) == "content-range:" {
+                        total = $0
+                        sub(".*/", "", total)
+                    }
+                    END { print total }
+                ')
+                case "$_ges_range_total" in
+                    '*') _ges_range_unknown=1 ;;
+                    ''|*[!0-9]*) _ges_range_unknown=1 ;;
+                    *) _ges_size="$_ges_range_total" ;;
+                esac
             fi
         fi
 
         # Проверяем, что ответ успешный (2xx)
         if [ -n "$_ges_http" ] && [ "$_ges_http" -ge 200 ] 2>/dev/null && [ "$_ges_http" -lt 300 ] 2>/dev/null; then
             # Вытаскиваем Content-Length
-            [ -n "$_ges_size" ] || _ges_size=$(echo "$_ges_headers" | grep -i '^Content-Length:' | tail -n 1 | awk '{print $2}')
+            [ -n "$_ges_size" ] || [ -n "$_ges_range_unknown" ] || \
+                _ges_size=$(echo "$_ges_headers" | grep -i '^Content-Length:' | tail -n 1 | awk '{print $2}')
 
             # Проверяем, что получено валидное число больше нуля
             if [ -n "$_ges_size" ] && [ "$_ges_size" -eq "$_ges_size" ] 2>/dev/null && [ "$_ges_size" -gt 0 ]; then

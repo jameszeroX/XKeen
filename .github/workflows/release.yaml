@@ -65,6 +65,10 @@ jobs:
             echo "MINISIGN_SECRET_KEY is not configured; publishing an unsigned legacy-compatible release."
             exit 0
           fi
+          if [ ! -s scripts/_xkeen/keys/xkeen.minisign.pub ]; then
+            echo "::error::Commit the public key before enabling signing (scripts/_xkeen/keys/xkeen.minisign.pub is missing or empty)."
+            exit 1
+          fi
           sudo apt-get update
           sudo apt-get install -y minisign
           printf '%s\n' "$MINISIGN_SECRET_KEY" > /tmp/xkeen.minisign.key
