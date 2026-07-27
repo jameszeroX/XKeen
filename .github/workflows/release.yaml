@@ -57,6 +57,18 @@ jobs:
 
           find . -type f -o -type l | sed 's|^\./||' | tar -czf "../dist/${ARCHIVE_NAME}" -T -
 
+      - name: Sign release archive
+        env:
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+        run: |
+          test -n "$MINISIGN_SECRET_KEY"
+          sudo apt-get update
+          sudo apt-get install -y minisign
+          printf '%s\n' "$MINISIGN_SECRET_KEY" > /tmp/xkeen.minisign.key
+          chmod 600 /tmp/xkeen.minisign.key
+          minisign -Sm "dist/${ARCHIVE_NAME}" -s /tmp/xkeen.minisign.key
+          rm -f /tmp/xkeen.minisign.key
+
       - name: Clean up temporary files
         run: rm -rf scripts_for_release
 
@@ -82,7 +94,7 @@ jobs:
 
           # Создаем релиз
           gh release create "$TAG_NAME" \
-            dist/*.tar.gz \
+            dist/*.tar.gz dist/*.tar.gz.minisig \
             --title "${{ env.VERSION }}" \
             --notes-file /tmp/release_notes.md \
             ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }} \

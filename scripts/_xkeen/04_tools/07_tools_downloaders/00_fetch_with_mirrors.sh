@@ -364,12 +364,16 @@ _get_expected_size() {
             if [ -z "$_ges_http" ] || { [ "$_ges_http" != "206" ] && [ "$_ges_http" != "200" ]; }; then
                 continue  # range-запрос не удался, пробуем следующий mirror
             fi
+            if [ "$_ges_http" = "206" ]; then
+                _ges_size=$(echo "$_ges_headers" | grep -i '^Content-Range:' | tail -n 1 | \
+                    sed -n 's|.*/\([0-9][0-9]*\)$|\1|p')
+            fi
         fi
 
         # Проверяем, что ответ успешный (2xx)
         if [ -n "$_ges_http" ] && [ "$_ges_http" -ge 200 ] 2>/dev/null && [ "$_ges_http" -lt 300 ] 2>/dev/null; then
             # Вытаскиваем Content-Length
-            _ges_size=$(echo "$_ges_headers" | grep -i '^Content-Length:' | tail -n 1 | awk '{print $2}')
+            [ -n "$_ges_size" ] || _ges_size=$(echo "$_ges_headers" | grep -i '^Content-Length:' | tail -n 1 | awk '{print $2}')
 
             # Проверяем, что получено валидное число больше нуля
             if [ -n "$_ges_size" ] && [ "$_ges_size" -eq "$_ges_size" ] 2>/dev/null && [ "$_ges_size" -gt 0 ]; then
@@ -402,6 +406,7 @@ _validate_file_with_size() {
         if [ -n "$actual_size" ] && [ "$actual_size" -ne "$expected_size" ]; then
             _last_error="size_mismatch"
             _last_size="$actual_size"
+            rm -f "$_mirror_cache"
             return 1
         fi
     fi
