@@ -1544,6 +1544,25 @@ while [ $# -gt 0 ]; do
             esac
         ;;
 
+        -killswitch)
+            case "$2" in
+                on|off)
+                    smart_clear
+                    change_killswitch "$2"
+                    shift
+                    ;;
+                status)
+                    smart_clear
+                    show_killswitch_status
+                    shift
+                    ;;
+                *)
+                    echo -e "  ${red}Ошибка${reset}: используйте ${yellow}xkeen -killswitch on${reset}, ${yellow}off${reset} или ${yellow}status${reset}"
+                    exit 1
+                    ;;
+            esac
+        ;;
+
 
         -extmsg)    # Включение/отключение расширенных сообщений запуска XKeen
             action=$(get_state_arg "$2")

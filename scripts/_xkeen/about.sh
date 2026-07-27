@@ -84,6 +84,7 @@ help_xkeen() {
     echo -e "	-dns		${italic}Включить | Отключить перенаправление DNS в прокси${reset}"
     echo -e "	-pr		${italic}Включить | Отключить проксирование трафика Entware через Xray/Mihomo${reset}"
     echo -e "	-pbr		${italic}Strict PBR-проверка mark / routing-mark для Xray/Mihomo: on | off | status | codes${reset}"
+    echo -e "	-killswitch	${italic}Блокировать трафик policy xkeen при аварии ядра: on | off | status${reset}"
     echo -e "	-startvb	${italic}Включить | Отключить вывод информации при старте прокси-клиента${reset}"
     echo -e "	-extmsg		${italic}Включить | Отключить расширенные сообщения при запуске XKeen${reset}"
     echo -e "	-cbk		${italic}Включить | Отключить резервное копирование XKeen при обновлении${reset}"
