@@ -34,6 +34,11 @@ _xray_perform_install() {
     if ! _network_download "$download_url" "$tmp_ram/xray.$extension" "Xray" "$max_attempts" "$delay" 1048576; then
         return 1
     fi
+    # Xray publishes a sibling <asset>.dgst containing OpenSSL SHA256.
+    # Fetch it directly from GitHub, independent of the selected download mirror.
+    if ! verify_download_sha256 "$tmp_ram/xray.$extension" "$filename" "${download_url}.dgst" dgst; then
+        return 1
+    fi
 
     printf "  Xray ${green}успешно загружен${reset}\n"
     return 0
