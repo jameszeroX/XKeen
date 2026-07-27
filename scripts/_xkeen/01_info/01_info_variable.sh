@@ -78,6 +78,14 @@ _xkeen_secure_rundir() {
     printf '%s' "$d"
 }
 
+verify_downloads_settings() {
+    verify_downloads="warn"
+    [ -f "$xkeen_config" ] || return 0
+    command -v jq >/dev/null 2>&1 || return 0
+    _vd_value=$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.verify_downloads // "warn"' 2>/dev/null)
+    case "$_vd_value" in strict|warn|off) verify_downloads="$_vd_value" ;; esac
+    unset _vd_value
+}
 # -------------------------------------
 # Балансировка по фактической скорости (xkeen -sb)
 # -------------------------------------
@@ -199,6 +207,7 @@ strip_json_comments() {
         print line
     }' "$@"
 }
+verify_downloads_settings
 
 # Параметры повтора загрузок
 retries_download_settings() {

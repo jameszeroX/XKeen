@@ -1,4 +1,29 @@
 # Загрузка XKeen
+verify_xkeen_signature() {
+    archive="$1"
+    signature="${archive}.minisig"
+    public_key="$xkeen_dir/keys/xkeen.minisign.pub"
+
+    [ "$verify_downloads" = "off" ] && return 0
+    if ! fetch_with_mirrors "${xkeen_tar_url}.minisig" "$signature" 32; then
+        if [ "$verify_downloads" = "strict" ]; then
+            printf "  ${red}Ошибка${reset}: подпись XKeen недоступна в strict-режиме\n"
+            return 1
+        fi
+        printf "  ${yellow}Предупреждение${reset}: подпись XKeen отсутствует (старый или неподписанный релиз)\n"
+        return 0
+    fi
+    if [ ! -r "$public_key" ] || ! command -v minisign >/dev/null 2>&1; then
+        printf "  ${red}Ошибка${reset}: релиз подписан, но отсутствует ключ или minisign\n"
+        return 1
+    fi
+    minisign -Vm "$archive" -x "$signature" -P "$(cat "$public_key")" >/dev/null 2>&1 || {
+        printf "  ${red}Ошибка${reset}: подпись XKeen не прошла проверку\n"
+        return 1
+    }
+    printf "  Подпись XKeen ${green}проверена${reset}\n"
+}
+
 download_xkeen() {
     mkdir -p "$tmp_ram"
 
@@ -20,8 +45,11 @@ download_xkeen() {
         fi
 
         if fetch_with_mirrors "$xkeen_tar_url" "$tmp_ram/xkeen.tar.gz" 1024; then
-            success=0
-            break
+            if verify_xkeen_signature "$tmp_ram/xkeen.tar.gz"; then
+                success=0
+                break
+            fi
+            rm -f "$tmp_ram/xkeen.tar.gz" "$tmp_ram/xkeen.tar.gz.minisig"
         fi
 
         if [ "$attempt" -lt "$max_attempts" ]; then
