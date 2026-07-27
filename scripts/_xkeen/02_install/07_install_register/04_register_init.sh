@@ -69,7 +69,17 @@ _xkeen_secure_rundir() {
     chmod 700 "$d" 2>/dev/null || return 1
     printf '%s' "$d"
 }
-xkeen_rundir=$(_xkeen_secure_rundir) || exit 1
+if ! xkeen_rundir=$(_xkeen_secure_rundir); then
+    case "$1" in
+        stop|status)
+            xkeen_rundir="/tmp/.xkeen-unavailable"
+            logger -p warning -t XKeen "Недоступен runtime-каталог; продолжаем $1 без runtime-state"
+            ;;
+        *)
+            exit 1
+            ;;
+    esac
+fi
 
 # URL
 url_server="127.0.0.1:79"
@@ -2156,7 +2166,7 @@ EOL
     apply_gomemlimit
     inject_var gomemlimit_value "$gomemlimit_value"
 
-    cat >> "$hook_tmp" <<'EOL'
+    cat >> "$file_netfilter_hook" <<'EOL'
 
 # Перезапуск скрипта
 restart_script() {
