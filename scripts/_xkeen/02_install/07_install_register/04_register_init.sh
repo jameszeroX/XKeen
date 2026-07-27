@@ -3550,6 +3550,19 @@ proxy_start() {
         check_xray_backups
         api_cache_init
         policy_mark=$(get_policy_mark "$name_policy")
+        policy_mark_cache="$xkeen_cfg/.last_policy_mark"
+        if [ -n "$policy_mark" ]; then
+            _pm_tmp="${policy_mark_cache}.tmp.$$"
+            (umask 077; printf '%s\n' "$policy_mark" > "$_pm_tmp") &&
+                chmod 600 "$_pm_tmp" && mv -f "$_pm_tmp" "$policy_mark_cache"
+        elif [ -s "$policy_mark_cache" ]; then
+            _cached_mark=$(cat "$policy_mark_cache" 2>/dev/null)
+            case "$_cached_mark" in
+                0x[0-9A-Fa-f]*) policy_mark="$_cached_mark"; log_warning_router "RCI не вернул mark xkeen; используется последний успешный mark" ;;
+            esac
+        else
+            log_warning_router "RCI не вернул mark xkeen; без policy-mark будет применён явный режим проксирования всех"
+        fi
         policy_mark_full=$(get_policy_mark "$name_policy_full")
         user_policies=$(resolve_user_policies)
         validate_entware_proxy_mark
