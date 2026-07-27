@@ -41,7 +41,7 @@ smart_clear() {
 }
 
 for arg in "$@"; do
-    [ "$arg" = "-toff" ] && touch "/tmp/toff"
+    [ "$arg" = "-toff" ] && export XKEEN_TIMEOUT_OFF=1
     [ "$arg" = "-restart" ] && apply="restart"
     case "$arg" in
         -restart|-start|-stop) detach_eligible=true ;;
@@ -78,8 +78,9 @@ get_state_arg() {
 # Импортируем модули
 . "$script_dir/.xkeen/import.sh"
 
-# Маркер /tmp/toff отключает таймаут curl — снимаем при прерывании
-trap 'rm -f /tmp/toff; exit 1' INT TERM
+# -toff действует только в этом процессе и его потомках: пользователь без
+# root больше не может отключить curl timeouts общим файлом в /tmp.
+trap 'exit 1' INT TERM
 
 xkeen_info() {
     # Проверяем версию XKeen
