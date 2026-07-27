@@ -295,7 +295,11 @@ if ! download_xkeen_release "$url"; then
     exit 1
 fi
 
-if ! tar -xzf "$archive_name" -C /opt/sbin; then
+stage_dir="/opt/sbin/.xkeen-install.$$"
+rm -rf "$stage_dir"
+mkdir -p "$stage_dir"
+if ! tar -xzf "$archive_name" -C "$stage_dir" || [ ! -f "$stage_dir/xkeen" ] || [ ! -d "$stage_dir/_xkeen" ]; then
+    rm -rf "$stage_dir"
     rm -f "$archive_name"
     printf "  ${red}Ошибка${reset}: не удалось распаковать ${yellow}xkeen.tar.gz${reset}\n"
     exit 1
@@ -303,9 +307,20 @@ fi
 
 rm -f "$archive_name"
 
-if [ ! -x /opt/sbin/xkeen ]; then
+chmod +x "$stage_dir/xkeen"
+if ! mv "$stage_dir/xkeen" /opt/sbin/xkeen.new || ! mv /opt/sbin/xkeen.new /opt/sbin/xkeen; then
+    rm -rf "$stage_dir" /opt/sbin/xkeen.new
     printf "  ${red}Ошибка${reset}: после распаковки не найден исполняемый файл ${yellow}/opt/sbin/xkeen${reset}\n"
     exit 1
 fi
+rm -rf /opt/sbin/.xkeen.old
+[ -d /opt/sbin/.xkeen ] && mv /opt/sbin/.xkeen /opt/sbin/.xkeen.old
+if ! mv "$stage_dir/_xkeen" /opt/sbin/.xkeen; then
+    [ -d /opt/sbin/.xkeen.old ] && mv /opt/sbin/.xkeen.old /opt/sbin/.xkeen
+    rm -rf "$stage_dir"
+    printf "  ${red}Ошибка${reset}: не удалось установить модули XKeen\n"
+    exit 1
+fi
+rm -rf /opt/sbin/.xkeen.old "$stage_dir"
 
 exec /opt/sbin/xkeen -i

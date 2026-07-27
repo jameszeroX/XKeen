@@ -11,33 +11,33 @@ install_xkeen() {
             return 1
         fi
 
-        # Распаковка во временный каталог, затем атомарная замена —
-        # при обрыве не оставляем полузаписанный .xkeen поверх живой установки.
-        _xk_extract="${tmp_ram}/xkeen_extract.$$"
-        rm -rf "$_xk_extract"
-        mkdir -p "$_xk_extract" || {
+        # Unpack away from the live tree, verify, then replace directories
+        # using the .old dance so interruption retains a usable installation.
+        stage_dir="$install_dir/.xkeen.stage.$$"
+        rm -rf "$stage_dir"
+        mkdir -p "$stage_dir" || {
             echo -e "  ${red}Ошибка${reset}: Не удалось создать временный каталог для распаковки"
             rm -f "$xkeen_archive"
             return 1
         }
-
-        if ! tar -xzf "$xkeen_archive" -C "$_xk_extract" xkeen _xkeen; then
-            echo -e "  ${red}Ошибка${reset}: Не удалось распаковать архив XKeen"
-            rm -rf "$_xk_extract" "$xkeen_archive"
-            return 1
-        fi
-
-        if [ ! -f "$_xk_extract/xkeen" ] || [ ! -d "$_xk_extract/_xkeen" ]; then
+        if ! tar -xzf "$xkeen_archive" -C "$stage_dir" xkeen _xkeen \
+            || [ ! -f "$stage_dir/xkeen" ] || [ ! -d "$stage_dir/_xkeen" ]; then
             echo -e "  ${red}Ошибка${reset}: В архиве XKeen нет ожидаемых xkeen/_xkeen"
-            rm -rf "$_xk_extract" "$xkeen_archive"
+            rm -rf "$stage_dir" "$xkeen_archive"
             return 1
         fi
-
-        chmod +x "$_xk_extract/xkeen"
-        mv -f "$_xk_extract/xkeen" "$install_dir/xkeen"
-        rm -rf "$install_dir/.xkeen"
-        mv "$_xk_extract/_xkeen" "$install_dir/.xkeen"
-        rm -rf "$_xk_extract" "$xkeen_archive"
+        chmod +x "$stage_dir/xkeen"
+        mv "$stage_dir/xkeen" "$install_dir/xkeen.new" || { rm -rf "$stage_dir"; return 1; }
+        mv "$install_dir/xkeen.new" "$install_dir/xkeen" || { rm -rf "$stage_dir"; return 1; }
+        rm -rf "$install_dir/.xkeen.old"
+        [ -d "$install_dir/.xkeen" ] && mv "$install_dir/.xkeen" "$install_dir/.xkeen.old"
+        if mv "$stage_dir/_xkeen" "$install_dir/.xkeen"; then
+            rm -rf "$install_dir/.xkeen.old" "$stage_dir"
+        else
+            [ -d "$install_dir/.xkeen.old" ] && mv "$install_dir/.xkeen.old" "$install_dir/.xkeen"
+            rm -rf "$stage_dir"
+            return 1
+        fi
     fi
     [ -d "$log_dir/xkeen" ] && rm -rf "$log_dir/xkeen"
     return 0
