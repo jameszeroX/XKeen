@@ -77,6 +77,7 @@ _xkeen_secure_rundir() {
     chmod 700 "$d" 2>/dev/null || return 1
     printf '%s' "$d"
 }
+tmp_ram="$(_xkeen_secure_rundir)/work.$$"
 
 verify_downloads_settings() {
     verify_downloads="warn"

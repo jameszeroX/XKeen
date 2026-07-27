@@ -14,8 +14,12 @@ verify_xkeen_signature() {
         return 0
     fi
     if [ ! -r "$public_key" ] || ! command -v minisign >/dev/null 2>&1; then
-        printf "  ${red}Ошибка${reset}: релиз подписан, но отсутствует ключ или minisign\n"
-        return 1
+        if [ "$verify_downloads" = "strict" ]; then
+            printf "  ${red}Ошибка${reset}: релиз подписан, но отсутствует ключ или minisign\n"
+            return 1
+        fi
+        printf "  ${yellow}Предупреждение${reset}: подпись доступна, но ключ или minisign пока не установлены\n"
+        return 0
     fi
     minisign -Vm "$archive" -x "$signature" -P "$(cat "$public_key")" >/dev/null 2>&1 || {
         printf "  ${red}Ошибка${reset}: подпись XKeen не прошла проверку\n"
