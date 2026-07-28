@@ -340,6 +340,9 @@ refresh_port_cache() { api_port_json=$(curl_api "${url_server}/${url_keenetic_po
 json_get_ports() { [ -n "$api_port_json" ] && printf '%s' "$api_port_json" | jq -r '.port, (.ssl.port // empty)' 2>/dev/null; }
 
 # Получение портов Keenetic
+# Важно: при сбое RCI НЕ меняем конфигурацию HTTP-портов роутера.
+# Старый fallback (ndmc ip http port 8080/80 + save) молча ломал
+# кастомные порты веб-интерфейса у пользователей.
 get_keenetic_port() {
     ports=""
     ports=$(json_get_ports)
@@ -349,15 +352,10 @@ get_keenetic_port() {
     esac
 
     if [ -z "$ports" ]; then
-        ndmc -c 'ip http port 8080' >/dev/null 2>&1
-        ndmc -c 'ip http port 80' >/dev/null 2>&1
-        ndmc -c 'system configuration save' >/dev/null 2>&1
-        sleep 2
-        refresh_port_cache
-        ports=$(json_get_ports)
+        log_warning_router "Не удалось получить порты HTTP Keenetic через RCI; проверка 443 пропущена"
+        echo ""
+        return 0
     fi
-
-    [ -n "$ports" ] || return 1
 
     echo "$ports"
     return 0
