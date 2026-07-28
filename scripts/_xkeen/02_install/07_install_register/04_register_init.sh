@@ -3072,7 +3072,15 @@ SCHEDULE_EOL
 
 # Удаление правил iptables
 clean_firewall() {
-    [ -f "$file_netfilter_hook" ] && : > "$file_netfilter_hook"
+    _acquire_nf_lock
+    _cf_nf_rc=$?
+
+    # Атомарно гасим хук: truncate live mid-renew больше не оставляем.
+    if [ -f "$file_netfilter_hook" ] || [ -e "$file_netfilter_hook" ]; then
+        _cf_hook_tmp="${file_netfilter_hook}.clean.$$"
+        : > "$_cf_hook_tmp"
+        mv -f "$_cf_hook_tmp" "$file_netfilter_hook" 2>/dev/null || : > "$file_netfilter_hook"
+    fi
 
     get_ipver_support
 
@@ -3140,6 +3148,9 @@ clean_firewall() {
     # Schedule.d-hook идемпотентно перегенерируется в configure_firewall,
     # на остановке убираем чтобы NDM не дёргал мёртвый netfilter.d/proxy.sh.
     [ -f "$file_schedule_hook" ] && rm -f "$file_schedule_hook"
+
+    # rc=2 — re-entrant (тот же PID уже держал lock), чужой замок не снимаем.
+    [ "$_cf_nf_rc" -ne 2 ] && _release_nf_lock
 }
 
 # Мониторинг файловых дескрипторов
@@ -3320,12 +3331,61 @@ _release_proxy_mutex() {
     rm -rf "/tmp/xkeen_proxy.mutex.d"
 }
 
+# Тот же mkdir-lock, что у netfilter-хука. Нужен stop/emergency_clear,
+# чтобы не сносить цепочки посреди iptables-restore на DHCP renew.
+_acquire_nf_lock() {
+    _xkeen_nf_lock="/tmp/xkeen_netfilter.lock.d"
+    _xkeen_lock_owned=""
+    _lock_try=0
+    while [ "$_lock_try" -lt 50 ]; do
+        if mkdir "$_xkeen_nf_lock" 2>/dev/null; then
+            _xkeen_lock_owned=1
+            printf '%s' "$$" > "$_xkeen_nf_lock/pid"
+            return 0
+        fi
+        _lock_pid=$(cat "$_xkeen_nf_lock/pid" 2>/dev/null)
+        if [ "$_lock_pid" = "$$" ]; then
+            return 2
+        fi
+        if [ -n "$_lock_pid" ] && ! kill -0 "$_lock_pid" 2>/dev/null; then
+            rm -rf "$_xkeen_nf_lock" 2>/dev/null
+            continue
+        fi
+        _lock_try=$((_lock_try + 1))
+        usleep 100000 2>/dev/null || sleep 1
+    done
+    # Stop/emergency важнее застрявшего хука: забираем замок силой.
+    rm -rf "$_xkeen_nf_lock" 2>/dev/null
+    if mkdir "$_xkeen_nf_lock" 2>/dev/null; then
+        _xkeen_lock_owned=1
+        printf '%s' "$$" > "$_xkeen_nf_lock/pid"
+        return 0
+    fi
+    return 1
+}
+
+_release_nf_lock() {
+    if [ "$_xkeen_lock_owned" = "1" ]; then
+        rm -rf "/tmp/xkeen_netfilter.lock.d" 2>/dev/null
+        _xkeen_lock_owned=""
+    fi
+}
+
 # Очистка при аварийной остановке прокси-клиента
 emergency_clear() {
+    _acquire_proxy_mutex
+    _ec_mutex_rc=$?
+    # Идёт нормальный start/stop/restart — не сносим чужие правила.
+    if [ "$_ec_mutex_rc" -eq 1 ]; then
+        return 0
+    fi
     rm -f "/tmp/xkeen_ready"
     _release_coldstart_guard
     cleanup_fd_monitor
     clean_firewall
+    if [ "$_ec_mutex_rc" -eq 0 ]; then
+        _release_proxy_mutex
+    fi
 }
 
 # Запуск прокси-клиента
