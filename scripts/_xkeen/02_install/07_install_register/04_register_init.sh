@@ -3487,7 +3487,6 @@ enable_killswitch() {
             for _ks_mark in $_ks_marks; do
                 [ -n "$_ks_mark" ] || continue
                 printf '%s\n' "-A ${name_chain}_killswitch -m conntrack ! --ctstate INVALID -m mark --mark ${_ks_mark} $comment -j DROP"
-                printf '%s\n' "-A ${name_chain}_killswitch -m conntrack ! --ctstate INVALID -m connmark --mark ${_ks_mark} $comment -j DROP"
             done
             printf '%s\n' "-A PREROUTING $comment -j ${name_chain}_killswitch"
             printf 'COMMIT\n'
