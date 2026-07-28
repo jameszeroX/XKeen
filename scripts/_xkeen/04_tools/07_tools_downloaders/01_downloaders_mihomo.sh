@@ -112,7 +112,7 @@ download_mihomo() {
 
         printf "  ${yellow}Выполняется загрузка${reset} Mihomo %s\n" "$version_selected"
 
-        if ! _network_download "$download_url" "$tmp_ram/mihomo.$extension" "Mihomo" "$max_attempts" "$delay"; then
+        if ! _network_download "$download_url" "$tmp_ram/mihomo.$extension" "Mihomo" "$max_attempts" "$delay" 1048576; then
             continue
         fi
 

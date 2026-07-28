@@ -11,21 +11,33 @@ install_xkeen() {
             return 1
         fi
 
-        # Распаковка архива
-        tar -xzf "$xkeen_archive" -C "$install_dir" xkeen _xkeen
-
-        # Проверка наличия _xkeen в install_dir и его перемещение
-        if [ -d "$install_dir/_xkeen" ]; then
-            rm -rf "$install_dir/.xkeen"
-            mv "$install_dir/_xkeen" "$install_dir/.xkeen"
-        else
-            echo -e "  ${red}Ошибка${reset}: _xkeen не была правильно перенесена"
+        # Распаковка во временный каталог, затем атомарная замена —
+        # при обрыве не оставляем полузаписанный .xkeen поверх живой установки.
+        _xk_extract="${tmp_ram}/xkeen_extract.$$"
+        rm -rf "$_xk_extract"
+        mkdir -p "$_xk_extract" || {
+            echo -e "  ${red}Ошибка${reset}: Не удалось создать временный каталог для распаковки"
             rm -f "$xkeen_archive"
+            return 1
+        }
+
+        if ! tar -xzf "$xkeen_archive" -C "$_xk_extract" xkeen _xkeen; then
+            echo -e "  ${red}Ошибка${reset}: Не удалось распаковать архив XKeen"
+            rm -rf "$_xk_extract" "$xkeen_archive"
             return 1
         fi
 
-        # Удаление архива
-        rm "$xkeen_archive"
+        if [ ! -f "$_xk_extract/xkeen" ] || [ ! -d "$_xk_extract/_xkeen" ]; then
+            echo -e "  ${red}Ошибка${reset}: В архиве XKeen нет ожидаемых xkeen/_xkeen"
+            rm -rf "$_xk_extract" "$xkeen_archive"
+            return 1
+        fi
+
+        chmod +x "$_xk_extract/xkeen"
+        mv -f "$_xk_extract/xkeen" "$install_dir/xkeen"
+        rm -rf "$install_dir/.xkeen"
+        mv "$_xk_extract/_xkeen" "$install_dir/.xkeen"
+        rm -rf "$_xk_extract" "$xkeen_archive"
     fi
     [ -d "$log_dir/xkeen" ] && rm -rf "$log_dir/xkeen"
     return 0

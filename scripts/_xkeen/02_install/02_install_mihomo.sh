@@ -20,6 +20,17 @@ install_mihomo() {
 
     _mihomo_tmp="$mtmp_dir/mihomo.tmp.$$"
     gzip_err="$mtmp_dir/gzip.err.$$"
+    # Предварительная проверка целостности gzip до записи на диск
+    if ! gzip -t "$mihomo_archive" 2>"$gzip_err"; then
+        _err="$(cat "$gzip_err" 2>/dev/null)"
+        rm -f "$gzip_err" "$mihomo_archive"
+        echo -e "  ${red}Ошибка${reset}: Архив Mihomo повреждён (gzip -t)"
+        [ -n "$_err" ] && echo -e "  Подробности: $_err"
+        [ -f "$install_dir/mihomo_bak" ] && mv "$install_dir/mihomo_bak" "$install_dir/mihomo" && \
+            echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Mihomo"
+        return 1
+    fi
+    rm -f "$gzip_err"
     if gzip -cd "$mihomo_archive" > "$_mihomo_tmp" 2>"$gzip_err" && [ -s "$_mihomo_tmp" ]; then
         rm -f "$gzip_err"
     else

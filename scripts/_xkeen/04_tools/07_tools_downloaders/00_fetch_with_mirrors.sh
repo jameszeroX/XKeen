@@ -295,7 +295,7 @@ _network_probe() {
 }
 
 # Универсальный загрузчик файлов с повторными попытками
-# Аргументы: $1 - URL, $2 - Путь сохранения, $3 - Имя компонента, $4 - max_attempts, $5 - delay
+# Аргументы: $1 - URL, $2 - Путь сохранения, $3 - Имя компонента, $4 - max_attempts, $5 - delay, $6 - min_size (опц.)
 # Возвращает: 0 - успешно, 1 - ошибка
 _network_download() {
     url="$1"
@@ -303,6 +303,7 @@ _network_download() {
     component="$3"
     max_attempts="${4:-1}"
     delay="${5:-2}"
+    min_size="${6:-24576}"
     
     attempt=1
     success=1
@@ -312,7 +313,7 @@ _network_download() {
             printf "  Загрузка %s (Попытка %d из %d)...\n" "$component" "$attempt" "$max_attempts"
         fi
 
-        if fetch_with_mirrors "$url" "$target" 24576; then
+        if fetch_with_mirrors "$url" "$target" "$min_size"; then
             success=0
             break
         fi
