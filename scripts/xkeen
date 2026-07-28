@@ -515,6 +515,31 @@ while [ $# -gt 0 ]; do
             smart_clear
             echo
             echo "  Обновление установленных баз GeoFile/GeoIPSET"
+
+            # Ядро из initd: для mihomo dat-файлы XKeen (/opt/etc/xray/dat)
+            # не используются — у mihomo свои GeoSite/geoip/ASN и geo-auto-update.
+            current_core=""
+            if [ -f "$initd_file" ]; then
+                current_core=$(grep -m1 '^name_client=' "$initd_file" 2>/dev/null | cut -d= -f2- | tr -d '"')
+            fi
+            if [ "$current_core" = "mihomo" ]; then
+                echo
+                echo -e "  Активное ядро: ${yellow}mihomo${reset}"
+                echo -e "  Базы GeoFile XKeen (xray/dat) этим ядром ${yellow}не используются${reset}"
+                echo -e "  Геоданные mihomo обновляет сам при ${yellow}geo-auto-update: true${reset} в config.yaml"
+                if [ -f "$mihomo_conf_dir/config.yaml" ] && [ -x "$install_dir/yq" ]; then
+                    _geo_auto=$("$install_dir/yq" '.geo-auto-update // false' "$mihomo_conf_dir/config.yaml" 2>/dev/null)
+                    if [ "$_geo_auto" != "true" ]; then
+                        echo -e "  ${yellow}Внимание${reset}: geo-auto-update выключен — базы mihomo могут устареть"
+                        echo -e "  Включите в config.yaml: ${yellow}geo-auto-update: true${reset}"
+                    else
+                        echo -e "  geo-auto-update: ${green}включён${reset} — mihomo обновит базы самостоятельно"
+                    fi
+                    unset _geo_auto
+                fi
+                echo -e "  Будут обновлены только списки ${yellow}GeoIPSET${reset} (исключения netfilter), если они установлены"
+            fi
+
             info_geosite
             info_geoip
             if 
@@ -527,18 +552,28 @@ while [ $# -gt 0 ]; do
                 [ -f "$ru_exclude_ipv4" ]; then
 
                 echo
+                # dat-файлы Xray на чистом mihomo-сетапе обычно пусты —
+                # install_* отработают no-op по флагам info_geosite/info_geoip.
                 install_geosite
                 install_geoip
                 update_user_geofiles
                 install_geoipset update
 
-                if pidof xray >/dev/null; then
+                if [ "$current_core" = "mihomo" ]; then
+                    if pidof mihomo >/dev/null; then
+                        # GeoIPSET загружается в ipset при старте — нужен reapply.
+                        "$initd_file" restart on >/dev/null 2>&1
+                    fi
+                elif pidof xray >/dev/null; then
                     "$initd_file" restart on >/dev/null 2>&1
                 fi
 
                 echo -e "  Обновление установленных баз GeoFile/GeoIPSET ${green}завершено${reset}"
             else
                 echo -e "  ${red}Не обнаружены${reset} базы GeoFile/GeoIPSET для обновления"
+                if [ "$current_core" = "mihomo" ]; then
+                    echo -e "  Для mihomo настройте ${yellow}geo-auto-update${reset} / ${yellow}geox-url${reset} в config.yaml"
+                fi
             fi
         ;;
 
@@ -838,19 +873,30 @@ while [ $# -gt 0 ]; do
 
         -ri)    # Пересоздать файл автозапуска XKeen
             smart_clear
-            "$initd_file" stop >/dev/null 2>&1
-            [ -e "$initd_file" ] && rm -f "$initd_file"
+            # Не останавливаем прокси и не rm initd заранее:
+            # register_xkeen_initd сам делает mv→бэкап и мигрирует
+            # name_client/порты/политики. Прежний rm убивал миграцию
+            # и сбрасывал mihomo-пользователей на дефолтный xray.
+            was_running=false
+            is_proxy_running && was_running=true
 
             echo -e "  Создание файла автозапуска ${yellow}XKeen${reset}"
             sleep 1
 
+            init_directories
             migrate_ports_from_initd
             register_xkeen_initd
             logs_register_xkeen_initd_info_console
+            add_chmod_init
 
             echo
             echo -e "  Создание файла автозапуска XKeen ${green}выполнено${reset}"
-            echo -e "  Если конфигурация настроена, то можете запустить проксирование командой '${yellow}xkeen -start${reset}'"
+            if [ "$was_running" = "true" ]; then
+                echo -e "  Прокси работал до пересоздания — выполняется ${yellow}перезапуск${reset}"
+                "$initd_file" restart on
+            else
+                echo -e "  Если конфигурация настроена, запустите проксирование командой '${yellow}xkeen -start${reset}'"
+            fi
         ;;
 
 
