@@ -2006,7 +2006,9 @@ EOL
         local name="$1"
         local val="$2"
         local safe_val
-        safe_val="${val//\'/\'\\\'\'}"
+        # POSIX: BusyBox ash не поддерживает ${var//pattern/repl} (bashism).
+        # Экранируем одинарные кавычки для записи name='...' в hook.
+        safe_val=$(printf '%s' "$val" | sed "s/'/'\\\\''/g")
         printf "%s='%s'\n" "$name" "$safe_val" >> "$file_netfilter_hook"
     }
 
