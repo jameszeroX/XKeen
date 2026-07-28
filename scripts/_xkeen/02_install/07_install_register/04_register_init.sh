@@ -2824,10 +2824,26 @@ USER_POLICIES_EOF
         return 0
     }
 
+    # Текущий WAN IPv4 (тот же способ, что get_exclude_ip4 при генерации).
+    # На коротком DHCP lease (MGTS ~300 с) renew приходит каждые ~150 с
+    # с тем же IP: NDM всё равно зовёт netfilter.d. Если IP не сменился
+    # и цепочки на месте — не трогаем даже configure_route (он и так
+    # идемпотентен, но лишние ip route show на каждом renew не нужны).
+    _xkeen_wan_state="/tmp/xkeen_wan_ip"
+    _xkeen_cur_wan=$(ip -o route get 195.208.4.1 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p' || \
+                     ip -o route get 77.88.8.8 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
+    _xkeen_prev_wan=$(cat "$_xkeen_wan_state" 2>/dev/null)
+
+    if [ -n "$_xkeen_cur_wan" ] && [ "$_xkeen_cur_wan" = "$_xkeen_prev_wan" ] && _xkeen_rules_intact; then
+        _xkeen_sync_deny_mac_ipset
+        exit 0
+    fi
+
     if _xkeen_rules_intact; then
         [ "$iptables_supported" = "true" ] && configure_route 4
         [ "$ip6tables_supported" = "true" ] && configure_route 6
         _xkeen_sync_deny_mac_ipset
+        [ -n "$_xkeen_cur_wan" ] && printf '%s' "$_xkeen_cur_wan" > "$_xkeen_wan_state"
         exit 0
     fi
 
@@ -2892,6 +2908,7 @@ USER_POLICIES_EOF
         [ "$ip6tables_supported" = "true" ] && configure_route 6
         _xkeen_apply
         _xkeen_sync_deny_mac_ipset
+        [ -n "$_xkeen_cur_wan" ] && printf '%s' "$_xkeen_cur_wan" > "$_xkeen_wan_state"
         exit 0
     fi
 
@@ -2946,6 +2963,7 @@ USER_POLICIES_EOF
     # Медленная часть (curl к hotspot API) — строго после восстановления
     # правил: см. комментарий у _xkeen_sync_deny_mac_ipset.
     _xkeen_sync_deny_mac_ipset
+    [ -n "$_xkeen_cur_wan" ] && printf '%s' "$_xkeen_cur_wan" > "$_xkeen_wan_state"
 else
     [ -f "/tmp/xkeen_starting.lock" ] && exit 0
     touch "/tmp/xkeen_starting.lock"
