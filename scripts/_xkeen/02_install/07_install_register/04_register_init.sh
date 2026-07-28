@@ -1927,16 +1927,21 @@ sync_deny_mac_ipset() {
     ipset create "$_xkeen_deny_tmp" hash:mac -exist 2>/dev/null
     ipset flush "$_xkeen_deny_tmp" >/dev/null 2>&1
     _xkeen_hotspot_json=$(curl_api "${url_server}/${url_hotspot}" 2>/dev/null)
-    if [ -n "$_xkeen_hotspot_json" ]; then
-        printf '%s' "$_xkeen_hotspot_json" | jq -r '
-            ((.host // . // []) |
-             (if type == "array" then .[] else . end)) |
-            select((.access // "") == "deny" and (.mac // "") != "") |
-            .mac
-        ' 2>/dev/null | tr '[:lower:]' '[:upper:]' | while IFS= read -r _xkeen_mac; do
-            [ -n "$_xkeen_mac" ] && ipset add "$_xkeen_deny_tmp" "$_xkeen_mac" -exist 2>/dev/null
-        done
+    if [ -z "$_xkeen_hotspot_json" ]; then
+        # Сбой RCI/curl: не swap'аем пустой tmp поверх живого набора —
+        # иначе родительский контроль «Без интернета» снимается до следующего успеха.
+        ipset destroy "$_xkeen_deny_tmp" 2>/dev/null
+        unset _xkeen_deny_tmp _xkeen_hotspot_json
+        return 0
     fi
+    printf '%s' "$_xkeen_hotspot_json" | jq -r '
+        ((.host // . // []) |
+         (if type == "array" then .[] else . end)) |
+        select((.access // "") == "deny" and (.mac // "") != "") |
+        .mac
+    ' 2>/dev/null | tr '[:lower:]' '[:upper:]' | while IFS= read -r _xkeen_mac; do
+        [ -n "$_xkeen_mac" ] && ipset add "$_xkeen_deny_tmp" "$_xkeen_mac" -exist 2>/dev/null
+    done
     ipset swap "$_xkeen_deny_tmp" "$name_ipset_deny_mac" 2>/dev/null
     ipset destroy "$_xkeen_deny_tmp" 2>/dev/null
     unset _xkeen_deny_tmp _xkeen_hotspot_json _xkeen_mac
@@ -2033,7 +2038,12 @@ get_mode_proxy() {
 
 # Настройка брандмауэра
 configure_firewall() {
-    : > "$file_netfilter_hook"
+    # Пишем во временный файл и атомарно подменяем: иначе DHCP renew
+    # посреди генерации вызывает пустой/обрезанный proxy.sh.
+    _hook_live="$file_netfilter_hook"
+    _hook_tmp="${_hook_live}.tmp.$$"
+    rm -f "$_hook_tmp"
+    file_netfilter_hook="$_hook_tmp"
 
     # Pre-evaluate dynamic variables
     val_exclude_ip6="$(get_exclude_ip6)"
@@ -2175,20 +2185,33 @@ if pidof "$name_client" >/dev/null; then
         ipset create "$_tmp" hash:mac -exist 2>/dev/null
         ipset flush "$_tmp" >/dev/null 2>&1
         _hjson=$(curl_api "${url_server}/${url_hotspot}" 2>/dev/null)
-        if [ -n "$_hjson" ]; then
-            printf '%s' "$_hjson" | jq -r '
-                ((.host // . // []) |
-                 (if type == "array" then .[] else . end)) |
-                select((.access // "") == "deny" and (.mac // "") != "") |
-                .mac
-            ' 2>/dev/null | tr '[:lower:]' '[:upper:]' | while IFS= read -r _m; do
-                [ -n "$_m" ] && ipset add "$_tmp" "$_m" -exist 2>/dev/null
-            done
+        if [ -z "$_hjson" ]; then
+            # Сбой curl/RCI: не затираем живой deny-MAC пустым набором.
+            ipset destroy "$_tmp" 2>/dev/null
+            return 0
         fi
+        printf '%s' "$_hjson" | jq -r '
+            ((.host // . // []) |
+             (if type == "array" then .[] else . end)) |
+            select((.access // "") == "deny" and (.mac // "") != "") |
+            .mac
+        ' 2>/dev/null | tr '[:lower:]' '[:upper:]' | while IFS= read -r _m; do
+            [ -n "$_m" ] && ipset add "$_tmp" "$_m" -exist 2>/dev/null
+        done
         ipset swap "$_tmp" "$name_ipset_deny_mac" 2>/dev/null
         ipset destroy "$_tmp" 2>/dev/null
     }
     command -v ipset >/dev/null 2>&1 && ipset create "$name_ipset_deny_mac" hash:mac -exist 2>/dev/null
+
+    # Снять nf-lock до медленного curl (deny-MAC) / exit: иначе соседние
+    # события NDM ждут ~5 с и уходят с exit 0, не восстановив цепочки.
+    _xkeen_release_nf_lock() {
+        if [ -n "$_xkeen_lock_owned" ]; then
+            rm -rf "$_xkeen_nf_lock" 2>/dev/null
+            _xkeen_lock_owned=""
+            trap - EXIT INT TERM
+        fi
+    }
 
     # Аккумулируем правила в строки, применяем атомарно одним
     # iptables-restore --noflush на (family, table) в _xkeen_apply.
@@ -2835,15 +2858,18 @@ USER_POLICIES_EOF
     _xkeen_prev_wan=$(cat "$_xkeen_wan_state" 2>/dev/null)
 
     if [ -n "$_xkeen_cur_wan" ] && [ "$_xkeen_cur_wan" = "$_xkeen_prev_wan" ] && _xkeen_rules_intact; then
-        _xkeen_sync_deny_mac_ipset
+        # IP тот же, цепочки целы: deny-MAC обновляет schedule.d —
+        # здесь curl под lock только мешает соседним событиям NDM.
+        _xkeen_release_nf_lock
         exit 0
     fi
 
     if _xkeen_rules_intact; then
         [ "$iptables_supported" = "true" ] && configure_route 4
         [ "$ip6tables_supported" = "true" ] && configure_route 6
-        _xkeen_sync_deny_mac_ipset
         [ -n "$_xkeen_cur_wan" ] && printf '%s' "$_xkeen_cur_wan" > "$_xkeen_wan_state"
+        _xkeen_release_nf_lock
+        _xkeen_sync_deny_mac_ipset
         exit 0
     fi
 
@@ -2907,8 +2933,9 @@ USER_POLICIES_EOF
         [ "$iptables_supported" = "true" ] && configure_route 4
         [ "$ip6tables_supported" = "true" ] && configure_route 6
         _xkeen_apply
-        _xkeen_sync_deny_mac_ipset
         [ -n "$_xkeen_cur_wan" ] && printf '%s' "$_xkeen_cur_wan" > "$_xkeen_wan_state"
+        _xkeen_release_nf_lock
+        _xkeen_sync_deny_mac_ipset
         exit 0
     fi
 
@@ -2961,12 +2988,24 @@ USER_POLICIES_EOF
     _xkeen_cache_save
 
     # Медленная часть (curl к hotspot API) — строго после восстановления
-    # правил: см. комментарий у _xkeen_sync_deny_mac_ipset.
-    _xkeen_sync_deny_mac_ipset
+    # правил и после снятия nf-lock: см. комментарий у _xkeen_sync_deny_mac_ipset.
     [ -n "$_xkeen_cur_wan" ] && printf '%s' "$_xkeen_cur_wan" > "$_xkeen_wan_state"
+    _xkeen_release_nf_lock
+    _xkeen_sync_deny_mac_ipset
 else
-    [ -f "/tmp/xkeen_starting.lock" ] && exit 0
-    touch "/tmp/xkeen_starting.lock"
+    # mkdir-lock с PID: обычный touch-файл залипал навсегда после OOM
+    # посреди respawn mihomo из хука — следующие события NDM тихо no-op.
+    _xkeen_start_lock="/tmp/xkeen_starting.lock.d"
+    if ! mkdir "$_xkeen_start_lock" 2>/dev/null; then
+        _sl_pid=$(cat "$_xkeen_start_lock/pid" 2>/dev/null)
+        if [ -n "$_sl_pid" ] && kill -0 "$_sl_pid" 2>/dev/null; then
+            exit 0
+        fi
+        rm -rf "$_xkeen_start_lock" 2>/dev/null
+        mkdir "$_xkeen_start_lock" 2>/dev/null || exit 0
+    fi
+    printf '%s' "$$" > "$_xkeen_start_lock/pid"
+    trap 'rm -rf /tmp/xkeen_starting.lock.d' EXIT INT TERM
 
     fd_limit="$other_fd"
     [ "$arm_cpu" = "true" ] && fd_limit="$arm64_fd"
@@ -2997,7 +3036,8 @@ else
         usleep 100000
     done
     unset _probe
-    rm -f "/tmp/xkeen_starting.lock"
+    rm -rf "$_xkeen_start_lock"
+    trap - EXIT INT TERM
     if pidof "$name_client" >/dev/null; then
         restart_script "$@"
     else
@@ -3007,6 +3047,13 @@ fi
 EOL
     sed -i '1,2!{/^[[:space:]]*#/d; /^[[:space:]]*$/d}' "$file_netfilter_hook"
     chmod 700 "$file_netfilter_hook"
+    mv -f "$file_netfilter_hook" "$_hook_live" || {
+        rm -f "$file_netfilter_hook"
+        file_netfilter_hook="$_hook_live"
+        log_error_router "Не удалось атомарно обновить netfilter-хук"
+        return 1
+    }
+    file_netfilter_hook="$_hook_live"
 
     # Schedule.d-хук: NDM вызывает scripts/schedule.d при start/stop расписаний
     # (родительский контроль). Хук дёргает netfilter.d/proxy.sh, который
@@ -3426,21 +3473,22 @@ proxy_start() {
                     # См. alive-branch: marker до configure_firewall.
                     touch "/tmp/xkeen_ready"
                     [ "$mode_proxy" != "Other" ] && configure_firewall
-                    _pids=""
-                    [ "$iptables_supported" = "true" ] && [ -f "$ru_exclude_ipv4" ] && { load_ipset geo_exclude "$ru_exclude_ipv4" inet & _pids="$_pids $!"; }
-                    [ "$ip6tables_supported" = "true" ] && [ -f "$ru_exclude_ipv6" ] && { load_ipset geo_exclude6 "$ru_exclude_ipv6" inet6 & _pids="$_pids $!"; }
-                    load_user_ipset & _pids="$_pids $!"
-                    [ -n "$_pids" ] && wait $_pids
-                    unset _pids
+                    # Последовательно: параллельный ipset restore больших RU-списков
+                    # сразу после fork mihomo даёт пик RAM / OOM на слабых роутерах.
+                    [ "$iptables_supported" = "true" ] && [ -f "$ru_exclude_ipv4" ] && load_ipset geo_exclude "$ru_exclude_ipv4" inet
+                    [ "$ip6tables_supported" = "true" ] && [ -f "$ru_exclude_ipv6" ] && load_ipset geo_exclude6 "$ru_exclude_ipv6" inet6
+                    load_user_ipset
                     echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${light_blue}${mode_proxy}${reset}"
                     (
                         # Даём ядру прокси время полностью инициализироваться
                         # Это защищает от ситуаций, когда xray/mihomo
                         # успевает создать PID, но затем аварийно завершается,
                         # например, из-за битой конфигурации
+                        _crash_pid=$(pidof "$name_client" 2>/dev/null | awk '{print $1}')
                         sleep 3
 
-                        if ! proxy_status; then
+                        if [ -n "$_crash_pid" ] && ! kill -0 "$_crash_pid" 2>/dev/null \
+                           && ! proxy_status; then
                             echo
                             echo -e "  Прокси-клиент ${red}аварийно завершился${reset}"
                             echo -e "  ${green}Выполняется очистка${reset} правил прозрачного проксирования"
