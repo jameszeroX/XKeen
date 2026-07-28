@@ -31,7 +31,7 @@ _xray_perform_install() {
     fi
 
     printf "  ${yellow}Выполняется загрузка${reset} Xray %s\n" "$version"
-    if ! _network_download "$download_url" "$tmp_ram/xray.$extension" "Xray" "$max_attempts" "$delay"; then
+    if ! _network_download "$download_url" "$tmp_ram/xray.$extension" "Xray" "$max_attempts" "$delay" 1048576; then
         return 1
     fi
 
