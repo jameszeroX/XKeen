@@ -1,0 +1,5 @@
+# 04_register_init.sh — самостоятельный standalone-скрипт, не подгружает модули и по этой причине
+# содержит собственные копии функций, которые так же есть в файле 01_info_variable.sh
+# Исключаем 04_register_init.sh из анализа CodeFactor на дублирование кода
+IgnorePatterns:
+  - scripts/_xkeen/02_install/07_install_register/04_register_init.sh
