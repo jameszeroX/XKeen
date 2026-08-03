@@ -224,11 +224,11 @@ load_gomemlimit_settings() {
     command -v jq >/dev/null 2>&1 || return 0
 
     _gml_json=$(strip_json_comments "$xkeen_config")
-    _gml_v=$(printf '%s' "$_gml_json" | jq -r '.xkeen.gomemlimit_percent // empty' 2>/dev/null)
+    _gml_v=$(printf '%s' "$_gml_json" | jq -r '.xkeen.mihomo.gomemlimit_percent // empty' 2>/dev/null)
     if [ -n "$_gml_v" ] && [ "$_gml_v" -ge 1 ] 2>/dev/null && [ "$_gml_v" -le 90 ] 2>/dev/null; then
         gomemlimit_percent="$_gml_v"
     fi
-    _gml_v=$(printf '%s' "$_gml_json" | jq -r '.xkeen.gomemlimit_mb // empty' 2>/dev/null)
+    _gml_v=$(printf '%s' "$_gml_json" | jq -r '.xkeen.mihomo.gomemlimit_mb // empty' 2>/dev/null)
     if [ -n "$_gml_v" ] && [ "$_gml_v" -ge 64 ] 2>/dev/null; then
         gomemlimit_mb="$_gml_v"
     fi

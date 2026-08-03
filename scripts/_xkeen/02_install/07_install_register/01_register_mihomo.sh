@@ -60,9 +60,6 @@ add_mihomo_config() {
             cat << EOF > "$mihomo_conf_dir/config.yaml"
 tproxy-port: 1181
 redir-port: 1182
-# Автообновление GeoSite/GeoIP/ASN (XKeen -ug этими файлами не управляет)
-geo-auto-update: true
-geo-update-interval: 24
 # Не открывайте external-controller в LAN без secret — это полный контроль над ядром
 # Руководство по конфигурации Mihomo - https://wiki.metacubex.one/ru/config/
 EOF

@@ -14,12 +14,21 @@ sb_xray_running() {
     pidof xray >/dev/null 2>&1
 }
 
-# Заменить объект .xkeen.speed_balancer его новой версией ($1), сохранив ВЕСЬ
+# Заменить объект .xkeen.xray.speed_balancer его новой версией ($1), сохранив ВЕСЬ
 # остальной текст файла ($2) побайтово — включая комментарии на чужих ключах.
 # Скобки считаются от '{' самого блока с учётом строк и escape, поэтому фигурные
 # скобки в чужих комментариях/строках счёт не сбивают. На stdout — результат.
-# Код возврата: 0 — заменено; 3 — ключа speed_balancer нет (нужна вставка);
-# иное — блок найден, но не удалось сматчить скобки (повреждён).
+#
+# Ключ ищется НЕ по всему файлу, а строго внутри объекта .xkeen.xray: если у
+# кого-то остался легаси-вариант с speed_balancer прямо в .xkeen (старое место,
+# до переноса под xray), эта функция его не увидит и не тронет — считается,
+# что актуального блока нет, и вызывающий код пойдёт по цепочке вставки в
+# .xkeen.xray, как для нового конфига. Легаси-блок при этом остаётся в файле
+# нетронутым (осиротевшим); авточистка не выполняется — это осознанное решение.
+#
+# Код возврата: 0 — заменено; 3 — нет .xkeen, нет .xray внутри него, или нет
+# speed_balancer внутри .xray (в любом из этих случаев нужна вставка); иное —
+# блок найден, но не удалось сматчить скобки (повреждён).
 _sb_replace_block() {
     SB_NEW="$1" awk '
     # Многострочный блок от jq выравниваем по отступу самого ключа: без этого
@@ -31,22 +40,40 @@ _sb_replace_block() {
       for (i = 2; i <= n; i++) out = out "\n" pad parts[i]
       return out
     }
-    { buf = buf $0 "\n" }
-    END {
-      new = ENVIRON["SB_NEW"]; key = "\"speed_balancer\""
-      kp = index(buf, key)
-      if (kp == 0) { printf "%s", buf; exit 3 }
+    # Найти объект по ключу key, начиная поиск не раньше позиции from и не
+    # позже позиции to (обе — абсолютные индексы в buf). out[1]/out[2] —
+    # позиции открывающей и закрывающей скобки объекта, out[3] — позиция
+    # начала самого ключа (с кавычкой). Возвращает 1 при успехе, 0 если ключ
+    # не найден в границах [from,to] или скобки не сматчились.
+    function locate_obj(buf, key, from, to, out,   kp, i, n, depth, instr, esc, c, ai) {
+      kp = index(substr(buf, from, to - from + 1), key)
+      if (kp == 0) return 0
+      kp = from + kp - 1
       i = kp + length(key); n = length(buf)
       while (i <= n && substr(buf,i,1) != "{") i++
-      if (i > n) { printf "%s", buf; exit 4 }
-      depth=0; instr=0; esc=0
+      if (i > n) return 2
+      depth=0; instr=0; esc=0; ai = i
       for (; i <= n; i++) {
         c = substr(buf,i,1)
         if (instr) { if (esc) esc=0; else if (c=="\\") esc=1; else if (c=="\"") instr=0 }
         else { if (c=="\"") instr=1; else if (c=="{") depth++;
-               else if (c=="}") { depth--; if (depth==0) { ve=i; break } } }
+               else if (c=="}") { depth--; if (depth==0) { out[1]=ai; out[2]=i; out[3]=kp; return 1 } } }
       }
-      if (depth != 0) { printf "%s", buf; exit 5 }
+      return 2
+    }
+    { buf = buf $0 "\n" }
+    END {
+      new = ENVIRON["SB_NEW"]; n = length(buf)
+      r = locate_obj(buf, "\"xkeen\"", 1, n, xk)
+      if (r == 0) { printf "%s", buf; exit 3 }
+      if (r == 2) { printf "%s", buf; exit 5 }
+      r = locate_obj(buf, "\"xray\"", xk[1], xk[2], xr)
+      if (r == 0) { printf "%s", buf; exit 3 }
+      if (r == 2) { printf "%s", buf; exit 5 }
+      r = locate_obj(buf, "\"speed_balancer\"", xr[1], xr[2], sb)
+      if (r == 0) { printf "%s", buf; exit 3 }
+      if (r == 2) { printf "%s", buf; exit 5 }
+      kp = sb[3]; ve = sb[2]; key = "\"speed_balancer\""
       # Отступ строки, на которой стоит ключ. Если перед ключом есть что-то кроме
       # пробелов (файл записан в одну строку) — блок тоже пишем одной строкой,
       # чтобы не ломать компактный формат.
@@ -58,10 +85,11 @@ _sb_replace_block() {
     }' "$2"
 }
 
-# Вставить блок speed_balancer ($1) в существующий объект .xkeen файла ($2),
+# Вставить блок speed_balancer ($1) в существующий объект .xkeen.xray файла ($2),
 # сразу после его открывающей '{'. Прочий текст сохраняется. Код возврата:
-# 0 — вставлено; 3 — объекта .xkeen нет (нужен jq-fallback).
-_sb_insert_block() {
+# 0 — вставлено; 3 — объекта .xkeen.xray нет (нужно сначала создать сам xray,
+# см. _sb_insert_xray_into_xkeen).
+_sb_insert_into_xray() {
     SB_NEW="$1" awk '
     function reindent(s, pad,   n, i, parts, out) {
       n = split(s, parts, "\n")
@@ -70,19 +98,37 @@ _sb_insert_block() {
       for (i = 2; i <= n; i++) out = out "\n" pad parts[i]
       return out
     }
+    # Найти .xkeen и вернуть [open,close] его скобок в out. 0 — нет .xkeen.
+    function locate_xkeen(buf, out,   kp, i, n, depth, instr, esc, c, ai) {
+      kp = index(buf, "\"xkeen\"")
+      if (kp == 0) return 0
+      i = kp + length("\"xkeen\""); n = length(buf)
+      while (i <= n && substr(buf,i,1) != "{") i++
+      if (i > n) return 0
+      depth=0; instr=0; esc=0; ai = i
+      for (; i <= n; i++) {
+        c = substr(buf,i,1)
+        if (instr) { if (esc) esc=0; else if (c=="\\") esc=1; else if (c=="\"") instr=0 }
+        else { if (c=="\"") instr=1; else if (c=="{") depth++;
+               else if (c=="}") { depth--; if (depth==0) { out[1]=ai; out[2]=i; return 1 } } }
+      }
+      return 0
+    }
     { buf = buf $0 "\n" }
     END {
-      new = ENVIRON["SB_NEW"]; key = "\"xkeen\""
-      kp = index(buf, key)
+      new = ENVIRON["SB_NEW"]; key = "\"xray\""
+      if (!locate_xkeen(buf, xk)) { printf "%s", buf; exit 3 }
+      kp = index(substr(buf, xk[1], xk[2]-xk[1]+1), key)
       if (kp == 0) { printf "%s", buf; exit 3 }
+      kp = xk[1] + kp - 1
       i = kp + length(key); n = length(buf)
       while (i <= n && substr(buf,i,1) != "{") i++
       if (i > n) { printf "%s", buf; exit 3 }
       j = i + 1
       while (j <= n && substr(buf,j,1) ~ /[ \t\r\n]/) j++
-      # Отступ блока: как у соседнего ключа объекта .xkeen, чтобы вставка легла
+      # Отступ блока: как у соседнего ключа объекта .xkeen.xray, чтобы вставка легла
       # вровень с рукописными ключами при любом шаге отступа в файле. Если
-      # соседей нет (объект пуст) — отступ .xkeen плюс два пробела. Тем же
+      # соседей нет (объект пуст) — отступ .xray плюс два пробела. Тем же
       # отступом выравниваются перенесённые строки блока.
       ls = kp
       while (ls > 1 && substr(buf, ls - 1, 1) != "\n") ls--
@@ -103,14 +149,61 @@ _sb_insert_block() {
     }' "$2"
 }
 
-# Обновить ОДИН ключ .xkeen.speed_balancer.KEY = VALUE в xkeen.json, трогая ТОЛЬКО
-# блок балансера. Весь остальной файл (policy, geodata, комментарии) сохраняется
-# как есть — XKeen сам xkeen.json не переписывает, и балансер тоже не должен.
+# Вставить целиком объект "xray": { "speed_balancer": ... } в существующий
+# объект .xkeen файла ($2), сразу после его открывающей '{'. Нужна, когда в
+# конфиге ещё вовсе нет ключа xray (например апгрейд со старой версии, где
+# speed_balancer лежал прямо в .xkeen). Код возврата: 0 — вставлено;
+# 3 — объекта .xkeen нет (нужен jq-fallback).
+_sb_insert_xray_into_xkeen() {
+    SB_NEW="$1" awk '
+    function reindent(s, pad,   n, i, parts, out) {
+      n = split(s, parts, "\n")
+      if (n < 2) return s
+      out = parts[1]
+      for (i = 2; i <= n; i++) out = out "\n" pad parts[i]
+      return out
+    }
+    { buf = buf $0 "\n" }
+    END {
+      new = ENVIRON["SB_NEW"]; key = "\"xkeen\""
+      kp = index(buf, key)
+      if (kp == 0) { printf "%s", buf; exit 3 }
+      i = kp + length(key); n = length(buf)
+      while (i <= n && substr(buf,i,1) != "{") i++
+      if (i > n) { printf "%s", buf; exit 3 }
+      j = i + 1
+      while (j <= n && substr(buf,j,1) ~ /[ \t\r\n]/) j++
+      ls = kp
+      while (ls > 1 && substr(buf, ls - 1, 1) != "\n") ls--
+      base = substr(buf, ls, kp - ls)
+      if (base ~ /[^ \t]/) base = ""
+      pad = base "  "
+      if (substr(buf,j,1) != "}") {
+        ks = j
+        while (ks > 1 && substr(buf, ks - 1, 1) != "\n") ks--
+        cand = substr(buf, ks, j - ks)
+        if (cand != "" && cand !~ /[^ \t]/) pad = cand
+      }
+      pad2 = pad "  "
+      block = "{\n" pad2 "\"speed_balancer\": " reindent(new, pad2) "\n" pad "}"
+      before = substr(buf,1,i); after = substr(buf,i+1)
+      if (substr(buf,j,1) == "}")
+        printf "%s\n%s\"xray\": %s\n%s%s", before, pad, block, base, after
+      else
+        printf "%s\n%s\"xray\": %s,%s", before, pad, block, after
+    }' "$2"
+}
+
+# Обновить ОДИН ключ .xkeen.xray.speed_balancer.KEY = VALUE в xkeen.json, трогая
+# ТОЛЬКО блок балансера. Весь остальной файл (policy, geodata, комментарии)
+# сохраняется как есть — XKeen сам xkeen.json не переписывает, и балансер тоже
+# не должен.
 #
 # Как: новый блок собирается через jq (текущий speed_balancer + этот ключ, чтобы
 # сохранить значения прочих параметров), затем ТЕКСТОВО вставляется на место
-# старого блока (_sb_replace_block / _sb_insert_block). Комментарии/формат ВНУТРИ
-# блока балансера при этом нормализуются — блок машинный; всё вне блока цело.
+# старого блока (_sb_replace_block / _sb_insert_into_xray / _sb_insert_xray_into_xkeen).
+# Комментарии/формат ВНУТРИ блока балансера при этом нормализуются — блок
+# машинный; всё вне блока цело.
 #
 # Страховка: перед записью — реальный бэкап; результат проходит синтаксис (jq -e .)
 # и структуру (тем же критерием, что валидатор старта: policy, если есть, — массив
@@ -129,9 +222,10 @@ sb_write_setting() {
     [ -f "$xkeen_config" ] || printf '{}\n' > "$xkeen_config"
 
     # jq без -c: блок пишется в файл человекочитаемым, по ключу на строку —
-    # выравнивание по месту вставки делают _sb_replace_block/_sb_insert_block.
+    # выравнивание по месту вставки делают _sb_replace_block/_sb_insert_into_xray/
+    # _sb_insert_xray_into_xkeen.
     new=$(strip_json_comments "$xkeen_config" \
-        | jq --arg k "$key" --argjson v "$val" '(.xkeen.speed_balancer // {}) | .[$k] = $v' 2>/dev/null)
+        | jq --arg k "$key" --argjson v "$val" '(.xkeen.xray.speed_balancer // {}) | .[$k] = $v' 2>/dev/null)
     [ -n "$new" ] || { echo "  Не удалось разобрать xkeen.json — настройку не записать"; return 1; }
 
     bak="$xkeen_config.bak"
@@ -139,12 +233,15 @@ sb_write_setting() {
 
     tmp="$xkeen_config.sb.tmp"
     _sb_replace_block "$new" "$xkeen_config" > "$tmp"; rc=$?
-    if [ "$rc" = 3 ]; then                       # блока ещё нет — вставить в .xkeen
-        _sb_insert_block "$new" "$xkeen_config" > "$tmp"; rc=$?
+    if [ "$rc" = 3 ]; then                       # блока ещё нет — вставить в .xkeen.xray
+        _sb_insert_into_xray "$new" "$xkeen_config" > "$tmp"; rc=$?
+    fi
+    if [ "$rc" = 3 ]; then                       # нет и .xkeen.xray — вставить его в .xkeen
+        _sb_insert_xray_into_xkeen "$new" "$xkeen_config" > "$tmp"; rc=$?
     fi
     if [ "$rc" = 3 ]; then                        # нет и .xkeen (реально — только {})
         strip_json_comments "$xkeen_config" \
-            | jq --argjson sb "$new" '.xkeen.speed_balancer = $sb' > "$tmp" 2>/dev/null; rc=$?
+            | jq --argjson sb "$new" '.xkeen.xray.speed_balancer = $sb' > "$tmp" 2>/dev/null; rc=$?
     fi
 
     # Критерий структуры повторяет validate_xkeen_json (04_register_init.sh):
@@ -216,12 +313,29 @@ sb_ensure_api() {
     # api-блок + api-inbound + probe-inbound одним файлом (мержатся по tag)
     cat > "$sb_api_config" <<EOF
 {
-  "api": { "tag": "api", "services": ["RoutingService", "StatsService"] },
+  "api": {
+    "services": [
+      "RoutingService",
+      "StatsService"
+    ],
+    "tag": "api"
+  },
   "inbounds": [
-    { "tag": "api", "listen": "127.0.0.1", "port": 10085,
-      "protocol": "dokodemo-door", "settings": { "address": "127.0.0.1" } },
-    { "tag": "probe", "listen": "127.0.0.1", "port": 10808,
-      "protocol": "http", "settings": {} }
+    {
+      "protocol": "tunnel",
+      "listen": "127.0.0.1",
+      "port": 10085,
+      "settings": {
+        "address": "127.0.0.1"
+      },
+      "tag": "api"
+    },
+    {
+      "protocol": "http",
+      "listen": "127.0.0.1",
+      "port": 10808,
+      "tag": "probe"
+    }
   ]
 }
 EOF
@@ -255,7 +369,7 @@ EOF
     fi
 
     echo -e "  ${yellow}Перезапуск${reset} XKeen для применения api..."
-    "$initd_file" restart >/dev/null 2>&1 || "$install_dir/xkeen" -restart >/dev/null 2>&1
+    "$install_dir/xkeen" -restart >/dev/null 2>&1
 
     local i=0
     while [ "$i" -lt 20 ]; do
@@ -319,12 +433,14 @@ sb_enable() {
         echo
         echo -e "  Балансировка по скорости уже ${green}включена${reset} (замер каждые ${yellow}$sb_interval${reset} мин)."
         echo -e "  Текущая нода: ${yellow}$(sb_current_target)${reset}"
-        sb_ask_measure
+        # при автоустановке с использованием нескольких параметров приведет остановке до выбора ответа
+        # sb_ask_measure
         return 0
     fi
 
     sb_write_setting enabled true || return 1
     sb_install_cron
+    echo
     echo -e "  ${green}✔${reset} Балансировка по скорости включена (замер каждые ${yellow}$sb_interval${reset} мин)."
     echo -e "  Первый замер выполняется сейчас..."
     speed_balancer_settings
@@ -343,6 +459,7 @@ sb_disable() {
     xray api bo -s "$sb_api_addr" -b "$sb_balancer" -r >/dev/null 2>&1
     sb_remove_cron
     sb_write_setting enabled false || return 1
+    echo
     echo -e "  ${green}✔${reset} Балансировка по скорости выключена, override снят."
 }
 

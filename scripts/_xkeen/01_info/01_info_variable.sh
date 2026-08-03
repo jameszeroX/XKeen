@@ -86,6 +86,7 @@ verify_downloads_settings() {
     case "$_vd_value" in strict|warn|off) verify_downloads="$_vd_value" ;; esac
     unset _vd_value
 }
+
 # -------------------------------------
 # Балансировка по фактической скорости (xkeen -sb)
 # -------------------------------------
@@ -326,7 +327,7 @@ curl_with_timeout() {
     fi
 }
 
-# Настройки балансировки по скорости (.xkeen.speed_balancer.*).
+# Настройки балансировки по скорости (.xkeen.xray.speed_balancer.*).
 # Вызывается по требованию из модуля -sb, а не глобально: несвязанным командам
 # xkeen лишний разбор xkeen.json не нужен. Значения по умолчанию — рабочие,
 # файл настроек не обязателен.
@@ -337,8 +338,8 @@ speed_balancer_settings() {
     sb_hysteresis="25"
     sb_balancer="balancer"
     sb_maxtime="8"
-    # 50 МБ: endpoint Cloudflare __down отдаёт 403 на запрос больше ~50 МБ
-    sb_test_url="https://speed.cloudflare.com/__down?bytes=50000000"
+    # 10 МБ: endpoint Cloudflare __down отдаёт 403 на запрос больше ~50 МБ
+    sb_test_url="https://speed.cloudflare.com/__down?bytes=10000000"
     # Имена файлов конфигурации Xray переопределяемы: ядро генерирует их с этими
     # именами, но нигде их не enforce'ит — у пользователя раскладка может отличаться.
     sb_routing_file="$xray_conf_dir/05_routing.json"
@@ -349,37 +350,37 @@ speed_balancer_settings() {
         json_clean=$(strip_json_comments "$xkeen_config")
 
         local v
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.enabled // empty' 2>/dev/null)
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.xray.speed_balancer.enabled // empty' 2>/dev/null)
         [ "$v" = "true" ] && sb_enabled="true"
 
-        # Логирование замеров/переключений можно отключить (.speed_balancer.log:
+        # Логирование замеров/переключений можно отключить (.xray.speed_balancer.log:
         # false) — по умолчанию включено. Лог и так усечён до 200 строк, но кому-то
         # он не нужен вовсе (запрос из issue #103). Читаем БЕЗ `// empty`: для
         # булева false оператор // считает его пустым и вернул бы empty, из-за чего
         # log:false никогда бы не срабатывал. Отсутствующий ключ даёт "null".
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.log' 2>/dev/null)
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.xray.speed_balancer.log' 2>/dev/null)
         [ "$v" = "false" ] && sb_log_enabled="false"
 
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.interval // empty' 2>/dev/null)
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.xray.speed_balancer.interval // empty' 2>/dev/null)
         [ -n "$v" ] && [ "$v" -gt 0 ] 2>/dev/null && sb_interval="$v"
 
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.hysteresis // empty' 2>/dev/null)
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.xray.speed_balancer.hysteresis // empty' 2>/dev/null)
         [ -n "$v" ] && [ "$v" -ge 0 ] 2>/dev/null && sb_hysteresis="$v"
 
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.balancer // empty' 2>/dev/null)
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.xray.speed_balancer.balancer // empty' 2>/dev/null)
         [ -n "$v" ] && sb_balancer="$v"
 
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.max_time // empty' 2>/dev/null)
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.xray.speed_balancer.max_time // empty' 2>/dev/null)
         [ -n "$v" ] && [ "$v" -gt 0 ] 2>/dev/null && sb_maxtime="$v"
 
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.test_url // empty' 2>/dev/null)
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.xray.speed_balancer.test_url // empty' 2>/dev/null)
         [ -n "$v" ] && sb_test_url="$v"
 
         # Имена файлов задаются базовыми — каталог остаётся xray_conf_dir.
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.routing_file // empty' 2>/dev/null)
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.xray.speed_balancer.routing_file // empty' 2>/dev/null)
         [ -n "$v" ] && sb_routing_file="$xray_conf_dir/$v"
 
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.outbounds_file // empty' 2>/dev/null)
+        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.xray.speed_balancer.outbounds_file // empty' 2>/dev/null)
         [ -n "$v" ] && sb_outbounds_file="$xray_conf_dir/$v"
     fi
 }

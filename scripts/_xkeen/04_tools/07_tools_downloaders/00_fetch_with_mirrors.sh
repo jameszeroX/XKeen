@@ -212,7 +212,7 @@ fetch_release_tags() {
 
     api_attempt=1
     while [ "$api_attempt" -le "$max_attempts" ]; do
-        RELEASE_TAGS=$(curl_with_timeout -s "${api_url}?per_page=${per_page}" 2>/dev/null | jq -re 'if type == "array" then .[] | .tag_name else empty end' | grep -ivE 'Prerelease-Alpha' | head -n 8)
+        RELEASE_TAGS=$(curl_with_timeout -s "${api_url}?per_page=${per_page}" 2>/dev/null | jq -re 'if type == "array" then .[] | .tag_name else empty end' 2>/dev/null | grep -ivE 'Prerelease-Alpha' | head -n 8)
 
         if [ -z "$RELEASE_TAGS" ]; then
             if [ "$api_attempt" -eq 1 ]; then
@@ -220,7 +220,7 @@ fetch_release_tags() {
                 printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
             fi
 
-            RELEASE_TAGS=$(curl_with_timeout -s "$jsd_url" 2>/dev/null | jq -r '.versions[]' | grep -ivE 'Prerelease-Alpha' | head -n 8)
+            RELEASE_TAGS=$(curl_with_timeout -s "$jsd_url" 2>/dev/null | jq -r '.versions[]' 2>/dev/null | grep -ivE 'Prerelease-Alpha' | head -n 8)
 
             if [ -n "$RELEASE_TAGS" ]; then
                 USE_JSDELIVR="true"

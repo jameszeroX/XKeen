@@ -1,3 +1,13 @@
+geofiles_update_state() {
+    geofile_update="true"
+    [ ! -f "$xkeen_config" ] && return 0
+    local json_clean
+    json_clean=$(strip_json_comments "$xkeen_config")
+    local val
+    val=$(printf '%s' "$json_clean" | sed -n 's/.*"geofile_update": *\([a-zA-Z]*\).*/\1/p' | xargs 2>/dev/null)
+    [ "$val" = "false" ] && geofile_update="false"
+}
+
 # Функция для загрузки и обработки геофайлов
 process_geo_file() {
     local url="$1"
@@ -69,6 +79,7 @@ process_geo_file() {
 
 # Функция для установки и обновления GeoSite
 install_geosite() {
+    [ "$geofile_update" = "true" ] || return 0
     mkdir -p "$geo_dir" || { echo "Ошибка: Не удалось создать директорию $geo_dir"; exit 1; }
 
     local zkeen_datfile=""
@@ -110,6 +121,7 @@ install_geosite() {
 
 # Функция для установки и обновления GeoIP
 install_geoip() {
+    [ "$geofile_update" = "true" ] || return 0
     mkdir -p "$geo_dir" || { echo "Ошибка: Не удалось создать директорию $geo_dir"; exit 1; }
 
     local zkeenip_datfile=""
@@ -151,6 +163,7 @@ install_geoip() {
 
 # Функция для обновления пользовательских геофайлов
 update_user_geofiles() {
+    [ "$geofile_update" = "true" ] || return 0
     mkdir -p "$geo_dir" || { echo "Ошибка: Не удалось создать директорию $geo_dir"; exit 1; }
 
     [ -f "$xkeen_config" ] || return 0
@@ -166,7 +179,7 @@ update_user_geofiles() {
     fi
 
     local tmp_list="${geo_dir}/.geofile_list.$$"
-    strip_json_comments "$xkeen_config" | jq -c '.xkeen.geodata[]?' > "$tmp_list" 2>/dev/null
+    strip_json_comments "$xkeen_config" | jq -c '.xkeen.xray.geodata[]?' > "$tmp_list" 2>/dev/null
 
     if [ ! -s "$tmp_list" ]; then
         rm -f "$tmp_list"
