@@ -61,14 +61,16 @@
 ```json
 {
   "xkeen": {
-    "speed_balancer": {
-      "enabled": true,
-      "log": true,
-      "interval": 15,
-      "hysteresis": 25,
-      "balancer": "balancer",
-      "max_time": 8,
-      "test_url": "https://speed.cloudflare.com/__down?bytes=50000000"
+    "xray": {
+      "speed_balancer": {
+        "enabled": true,
+        "log": true,
+        "interval": 15,
+        "hysteresis": 25,
+        "balancer": "balancer",
+        "max_time": 8,
+        "test_url": "https://speed.cloudflare.com/__down?bytes=50000000"
+      }
     }
   }
 }
