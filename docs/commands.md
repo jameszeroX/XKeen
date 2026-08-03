@@ -78,7 +78,7 @@
 
 ## Управление прокси-клиентом
 
-| &nbsp;&nbsp;&nbsp;&nbsp;Флаг&nbsp;&nbsp;&nbsp;&nbsp; | Действие |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Флаг&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Действие |
 | --- | --- |
 | `-start` | Запуск |
 | `-stop` | Остановка |
