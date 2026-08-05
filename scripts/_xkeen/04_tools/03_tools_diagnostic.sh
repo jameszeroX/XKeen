@@ -20,6 +20,20 @@ diagnostic() {
     iptables_supported=$([ "$ip4_supported" = "true" ] && command -v iptables >/dev/null 2>&1 && echo true || echo false)
     ip6tables_supported=$([ "$ip6_supported" = "true" ] && command -v ip6tables >/dev/null 2>&1 && echo true || echo false)
 
+    get_exclude_ip4() {
+        [ "$iptables_supported" != "true" ] && return
+        ipv4_eth=$(ip -o route get 195.208.4.1 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p' || \
+                   ip -o route get 77.88.8.8 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
+    }
+    get_exclude_ip4
+
+    get_exclude_ip6() {
+        [ "$ip6tables_supported" != "true" ] && return
+        ipv6_eth=$(ip -o -6 route get 2a0c:a9c7:8::1 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p' || \
+                   ip -o -6 route get 2a02:6b8::feed:0ff 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
+    }
+    get_exclude_ip6
+
     echo
     echo "  Выполняется диагностика. Пожалуйста, подождите..."
 
@@ -68,6 +82,33 @@ diagnostic() {
             -e 's/^([[:space:]]*(- )?(obfs-password|encryption|token|secret|psk):).*/\1 ***MASKED***/i'
     }
 
+    # Функция маскировки пользовательских IP-адресов
+    mask_ips() {
+        local input
+        local masked="***MASKED***"
+
+        # Если аргумент передан, обрабатываем его как строку
+        if [ $# -gt 0 ]; then
+            input="$*"
+        else
+            # Иначе читаем из stdin (для потоковой обработки)
+            input=$(cat)
+        fi
+
+        # Маскируем IPv4, если получен
+        if [ -n "$ipv4_eth" ]; then
+            input=$(echo "$input" | sed "s/$ipv4_eth/$masked/g")
+        fi
+
+        # Маскируем IPv6, если получен (включая квадратные скобки)
+        if [ -n "$ipv6_eth" ]; then
+            input=$(echo "$input" | sed "s/$ipv6_eth/$masked/g")
+            input=$(echo "$input" | sed "s/\[$ipv6_eth\]/\[$masked\]/g")
+        fi
+
+        echo "$input"
+    }
+
     # Функция логирования файлов
     log_file() {
         local file="$1"
@@ -84,10 +125,10 @@ diagnostic() {
         local cmd="$1"
         local ver="$2"
         for chain in PREROUTING xkeen xkeen_force xkeen_out OUTPUT; do
-            $cmd -w -t nat -nvL "$chain" 2>&1 | log_block "Результат таблицы NAT цепи $chain $ver"
-            $cmd -w -t mangle -nvL "$chain" 2>&1 | log_block "Результат таблицы MANGLE цепи $chain $ver"
+            $cmd -w -t nat -nvL "$chain" 2>&1 | mask_ips | log_block "Результат таблицы NAT цепи $chain $ver"
+            $cmd -w -t mangle -nvL "$chain" 2>&1 | mask_ips | log_block "Результат таблицы MANGLE цепи $chain $ver"
         done
-        $cmd -w -t nat -nvL "_NDM_HOTSPOT_DNSREDIR" 2>&1 | log_block "Результат таблицы NAT цепи _NDM_HOTSPOT_DNSREDIR $ver"
+        $cmd -w -t nat -nvL "_NDM_HOTSPOT_DNSREDIR" 2>&1 | mask_ips | log_block "Результат таблицы NAT цепи _NDM_HOTSPOT_DNSREDIR $ver"
     }
 
     # Сбор данных
@@ -124,15 +165,15 @@ diagnostic() {
 
     if [ -f "$xkeen_ndm" ]; then
         write_header "Файл $xkeen_ndm"
-        mask_xkeen_sensitive_data < "$xkeen_ndm" >> "$diagnostic"
+        mask_xkeen_sensitive_data < "$xkeen_ndm" | mask_ips >> "$diagnostic"
         echo >> "$diagnostic"; echo >> "$diagnostic"
     fi
 
     curl_api "127.0.0.1:79/rci/ip/http/ssl" | jq -r '.port' | log_block "Проверка использования SSL порта"
-    curl_api "127.0.0.1:79/rci/show/ip/policy" | jq -r '.[] | select(.description | ascii_downcase == "xkeen")' | log_block "Данные о политике доступа"
+    mask_ips "$(curl_api "127.0.0.1:79/rci/show/ip/policy" | jq -r '.[] | select(.description | ascii_downcase == "xkeen")')" | log_block "Данные о политике доступа"
 
-    ip rule show | log_block "Результат команды ip rule show"
-    ip route show table main | log_block "Результат команды ip route show table main"
+    mask_ips "$(ip rule show)" | log_block "Результат команды ip rule show"
+    mask_ips "$(ip route show table main)" | log_block "Результат команды ip route show table main"
 
     {
         curl_api "127.0.0.1:79/rci/show/version" | jq -r '.title, .model, .region'

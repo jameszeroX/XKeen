@@ -204,12 +204,15 @@ get_rci_token
 
 # Fail closed is deliberately opt-in.  Old configurations remain fail-open.
 load_killswitch_settings() {
+    local _ks_v
     killswitch="off"
+
     [ -f "$xkeen_config" ] || return 0
     command -v jq >/dev/null 2>&1 || return 0
-    _ks_v=$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.killswitch.enabled // false' 2>/dev/null)
-    [ "$_ks_v" = "true" ] && killswitch="on"
-    unset _ks_v
+
+    _ks_v=$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.killswitch // "off"' 2>/dev/null)
+
+    [ "$_ks_v" = "on" ] && killswitch="on"
 }
 load_killswitch_settings
 
