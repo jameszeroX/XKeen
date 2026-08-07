@@ -340,61 +340,106 @@ _network_download() {
     fi
 }
 
-# Reference files are deliberately fetched directly, never through the mirror
-# that delivered the executable.  This makes a compromised mirror insufficient
-# to forge both the payload and its independent SHA-256 reference.
-verify_download_sha256() {
-    _vds_file="$1"
-    _vds_asset="$2"
-    _vds_ref_url="$3"
-    _vds_format="$4" # dgst | checksums | github-api
+# Универсальная проверка SHA-256 для файлов, загруженных из GitHub Release
+#
+# Reference сначала пробуем получить напрямую с api.github.com, в обход
+# прокси, через который загружался файл. Если прямой доступ к GitHub
+# недоступен, используем цепочку прокси через fetch_with_mirrors.
+# Гарантия успеха при этом слабее, но это лучше, чем отказ от проверки
+#
+# $1 = путь к уже скачанному файлу
+# $2 = полный URL, с которого он был загружен (нужен для basename -
+#      имени ассета и, если $3 не задан)
+# $3 = готовый API URL релиза
+#      Если задан — используется как есть, без попытки разобрать $2
+verify_github_sha256() {
+    _vgs_file="$1"
+    _vgs_url="$2"
+    _vgs_api_url="$3"
     [ "$verify_downloads" = "off" ] && return 0
+
+    _vgs_asset=$(basename "$_vgs_url")
+
+    if [ -z "$_vgs_api_url" ]; then
+        _vgs_api_url=$(printf '%s' "$_vgs_url" | \
+            sed -n 's#^https://github\.com/\([^/]*\)/\([^/]*\)/releases/download/\([^/]*\)/.*#https://api.github.com/repos/\1/\2/releases/tags/\3#p')
+        if [ -z "$_vgs_api_url" ]; then
+            _vgs_api_url=$(printf '%s' "$_vgs_url" | \
+                sed -n 's#^https://github\.com/\([^/]*\)/\([^/]*\)/releases/latest/download/.*#https://api.github.com/repos/\1/\2/releases/latest#p')
+        fi
+    fi
+
+    if [ -z "$_vgs_api_url" ]; then
+        if [ "$verify_downloads" = "strict" ]; then
+            printf "  ${red}Ошибка${reset}: не удалось определить GitHub API URL для проверки SHA-256 %s\n" "$_vgs_asset"
+            return 1
+        fi
+        printf "  ${yellow}Предупреждение${reset}: не удалось определить GitHub API URL для проверки SHA-256 %s\n" "$_vgs_asset"
+        return 0
+    fi
+
     if ! command -v sha256sum >/dev/null 2>&1; then
         if [ "$verify_downloads" = "strict" ]; then
-            printf "  ${red}Ошибка${reset}: sha256sum не установлен; невозможно проверить %s\n" "$_vds_asset"
+            printf "  ${red}Ошибка${reset}: sha256sum не установлен; невозможно проверить %s\n" "$_vgs_asset"
             return 1
         fi
-        printf "  ${yellow}ВНИМАНИЕ${reset}: бинарь %s установлен БЕЗ проверки целостности (sha256sum не установлен)\n" "$_vds_asset"
+        printf "  ${yellow}ВНИМАНИЕ${reset}: файл %s установлен БЕЗ проверки целостности (sha256sum не установлен)\n" "$_vgs_asset"
         return 0
     fi
-    _vds_ref="${_vds_file}.sha256ref.$$"
-    _vds_expected=""
-    if ! curl_with_timeout -fLsS -o "$_vds_ref" "$_vds_ref_url"; then
-        rm -f "$_vds_ref"
-        if [ "$verify_downloads" = "strict" ]; then
-            printf "  ${red}Ошибка${reset}: нет независимой SHA-256 reference для %s\n" "$_vds_asset"
-            return 1
-        fi
-        if [ -n "$_last_download_mirror" ]; then
-            printf "  ${yellow}ВНИМАНИЕ${reset}: бинарь %s установлен БЕЗ проверки целостности (зеркало + недоступен независимый reference)\n" "$_vds_asset"
+
+    _vgs_ref="${_vgs_file}.sha256ref.$$"
+    _vgs_via_mirror=""
+    if curl_with_timeout -fLsS -o "$_vgs_ref" "$_vgs_api_url"; then
+        :
+    else
+        get_user_proxy
+        if fetch_with_mirrors "$_vgs_api_url" "$_vgs_ref" 2; then
+            _vgs_via_mirror=1
         else
-            printf "  ${yellow}ВНИМАНИЕ${reset}: бинарь %s установлен БЕЗ проверки целостности (независимый reference недоступен)\n" "$_vds_asset"
+            rm -f "$_vgs_ref"
+            if [ "$verify_downloads" = "strict" ]; then
+                printf "  ${red}Ошибка${reset}: GitHub API недоступен ни напрямую, ни через зеркало; независимая SHA-256 reference для %s не получена\n" "$_vgs_asset"
+                return 1
+            fi
+            printf "  ${yellow}ВНИМАНИЕ${reset}: файл %s установлен БЕЗ проверки целостности (GitHub API недоступен ни напрямую, ни через зеркало)\n" "$_vgs_asset"
+            return 0
         fi
-        return 0
     fi
-    case "$_vds_format" in
-        dgst) _vds_expected=$(awk 'tolower($0) ~ /sha256/ {for (i=1;i<=NF;i++) if (length($i) == 64 && $i ~ /^[0-9a-fA-F]+$/) {print $i; exit}}' "$_vds_ref") ;;
-        checksums) _vds_expected=$(awk -v asset="$_vds_asset" '$NF == asset && length($1) == 64 && $1 ~ /^[0-9a-fA-F]+$/ {print $1; exit}' "$_vds_ref") ;;
-        github-api) _vds_expected=$(jq -r --arg asset "$_vds_asset" '.assets[]? | select(.name == $asset) | (.digest // "") | sub("^sha256:"; "")' "$_vds_ref" 2>/dev/null | head -n 1) ;;
+
+    # Получаем значение digest
+    _vgs_expected=$(jq -r --arg asset "$_vgs_asset" '.assets[]? | select(.name == $asset) | .digest // ""' "$_vgs_ref" 2>/dev/null | head -n 1)
+    
+    # Удаляем префикс "sha256:"
+    case "$_vgs_expected" in
+        sha256:*)
+            _vgs_expected="${_vgs_expected#sha256:}"
+            ;;
     esac
-    rm -f "$_vds_ref"
-    case "$_vds_expected" in
+
+    rm -f "$_vgs_ref"
+
+    case "$_vgs_expected" in
         [0-9a-fA-F][0-9a-fA-F]*) ;;
         *)
             if [ "$verify_downloads" = "strict" ]; then
-                printf "  ${red}Ошибка${reset}: SHA-256 для %s не найдена в reference\n" "$_vds_asset"
+                printf "  ${red}Ошибка${reset}: SHA-256 для %s не найдена в GitHub API (старый релиз без digest?)\n" "$_vgs_asset"
                 return 1
             fi
-            printf "  ${yellow}Предупреждение${reset}: SHA-256 для %s не найдена в reference\n" "$_vds_asset"
+            printf "  ${yellow}Предупреждение${reset}: SHA-256 для %s не найдена в GitHub API (старый релиз без digest?)\n" "$_vgs_asset"
             return 0
             ;;
     esac
-    _vds_actual=$(sha256sum "$_vds_file" 2>/dev/null | awk '{print $1}')
-    if [ "$_vds_actual" = "$_vds_expected" ]; then
-        printf "  SHA-256 %s ${green}проверена${reset}\n" "$_vds_asset"
+
+    _vgs_actual=$(sha256sum "$_vgs_file" 2>/dev/null | awk '{print $1}')
+    if [ "$_vgs_actual" = "$_vgs_expected" ]; then
+        if [ -n "$_vgs_via_mirror" ]; then
+            printf "  SHA-256 %s ${green}проверена${reset} ${yellow}(эталон получен через зеркало)${reset}\n" "$_vgs_asset"
+        else
+            printf "  SHA-256 %s ${green}проверена${reset}\n" "$_vgs_asset"
+        fi
         return 0
     fi
-    printf "  ${red}Ошибка${reset}: SHA-256 %s не совпадает\n" "$_vds_asset"
+    printf "  ${red}Ошибка${reset}: SHA-256 %s не совпадает\n" "$_vgs_asset"
     [ "$verify_downloads" = "strict" ] && return 1
     return 0
 }
