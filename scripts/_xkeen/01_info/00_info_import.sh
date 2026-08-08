@@ -2,6 +2,7 @@
 
 # Модуль информации
 . "$xinfo_dir/01_info_variable.sh"
+. "$xinfo_dir/01_info_common.sh"
 . "$xinfo_dir/02_info_packages.sh"
 . "$xinfo_dir/03_info_xkeen.sh"
 . "$xinfo_dir/04_info_mihomo.sh"

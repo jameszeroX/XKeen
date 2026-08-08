@@ -259,22 +259,32 @@ change_pbr_strict() {
 }
 
 change_killswitch() {
+    local state tmp bak rc
     state="$1"
     [ "$state" = "on" ] || [ "$state" = "off" ] || return 1
-
     [ -f "$xkeen_config" ] || { echo -e "  ${red}Ошибка${reset}: не найден xkeen.json"; return 1; }
     command -v jq >/dev/null 2>&1 || { echo -e "  ${red}Ошибка${reset}: требуется jq"; return 1; }
 
-    local tmp="${xkeen_config}.tmp.$$"
-
     echo
-    if strip_json_comments "$xkeen_config" | jq --arg state "$state" \
-        '.xkeen = (.xkeen // {}) | .xkeen.killswitch = $state' > "$tmp" \
+
+    bak="${xkeen_config}.bak"
+    cp "$xkeen_config" "$bak" 2>/dev/null
+
+    # jc_set_path правит только ключ .xkeen.killswitch текстовой хирургией —
+    # весь остальной файл, включая комментарии, остаётся побайтово нетронутым
+    # (в отличие от прежнего варианта через голый jq, который комментарии
+    # молча стирал целиком по всему файлу).
+    tmp="${xkeen_config}.tmp.$$"
+    jc_set_path "xkeen.killswitch" "\"$state\"" "$xkeen_config" > "$tmp"; rc=$?
+
+    if { [ "$rc" = 0 ] || [ "$rc" = 1 ]; } \
+        && strip_json_comments "$tmp" | jq -e . >/dev/null 2>&1 \
         && chmod 600 "$tmp" && mv -f "$tmp" "$xkeen_config"; then
         echo -e "  Kill-switch ${green}${state}${reset}"
         register_xkeen_initd
     else
         rm -f "$tmp"
+        [ -f "$bak" ] && cp "$bak" "$xkeen_config" 2>/dev/null
         echo -e "  ${red}Ошибка${reset}: не удалось сохранить настройку kill-switch"
         return 1
     fi
