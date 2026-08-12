@@ -265,6 +265,8 @@ change_killswitch() {
     [ -f "$xkeen_config" ] || { echo -e "  ${red}Ошибка${reset}: не найден xkeen.json"; return 1; }
     command -v jq >/dev/null 2>&1 || { echo -e "  ${red}Ошибка${reset}: требуется jq"; return 1; }
 
+    validate_xkeen_json_syntax || return 1
+
     echo
 
     bak="${xkeen_config}.bak"

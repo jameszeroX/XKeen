@@ -293,6 +293,22 @@ jc_set_path() {
     }' "$3"
 }
 
+# Функция синтаксической валидации xkeen.json
+# Возвращает 0, если файл — валидный JSON (после вырезания комментариев).
+# При ошибке печатает текст ошибки jq (с номером строки/столбца — они
+# соответствуют номерам строк в исходном файле, т.к. strip_json_comments
+# построчно сохраняет их количество) и возвращает 1.
+validate_xkeen_json_syntax() {
+    local err
+    err=$(strip_json_comments "$xkeen_config" | jq . 2>&1 >/dev/null)
+    if [ -n "$err" ]; then
+        echo -e "  ${red}Ошибка${reset}: файл ${yellow}xkeen.json${reset} содержит синтаксические ошибки JSON:\n"
+        echo "$err" | sed 's/^/    /'
+        return 1
+    fi
+    return 0
+}
+
 # Параметры повтора загрузок
 retries_download_settings() {
     retries_download=1

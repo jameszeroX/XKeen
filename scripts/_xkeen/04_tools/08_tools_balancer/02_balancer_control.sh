@@ -41,6 +41,8 @@ sb_write_setting() {
     command -v jq >/dev/null 2>&1 || { echo "  jq не найден — настройку не записать"; return 1; }
     [ -f "$xkeen_config" ] || printf '{}\n' > "$xkeen_config"
 
+    validate_xkeen_json_syntax || return 1
+
     # jq без -c: блок пишется в файл человекочитаемым, по ключу на строку —
     # выравнивание по месту вставки делает сама jc_set_path.
     new=$(strip_json_comments "$xkeen_config" \
