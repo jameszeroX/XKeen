@@ -105,9 +105,9 @@ dscp_exclude="62"
 dscp_proxy="63"
 
 ipv4_proxy="127.0.0.1"
-ipv4_exclude="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 255.255.255.255 78.47.125.180"
+ipv4_exclude="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 255.255.255.255 78.47.125.180 198.51.100.11 198.51.100.37"
 ipv6_proxy="::1"
-ipv6_exclude="::/128 ::1/128 64:ff9b::/96 2001::/32 2002::/16 fd00::/8 ff00::/8 fe80::/10"
+ipv6_exclude="::/128 ::1/128 64:ff9b::/96 2001::/32 2002::/16 fd00::/8 ff00::/8 fe80::/10 2001:2:7847:1251:feee:ed78:4712:5180 2001:2::c633:640b 2001:2::c633:6425"
 
 # Перехват DNS в прокси
 proxy_dns="off"
@@ -288,28 +288,15 @@ wait_for_rci_token() {
         200) return 0 ;;
         401|403)
             log_error_router "Отсутствует или недействителен токен доступа к RCI роутера"
-            if [ "$rci_token_fatal" = "true" ]; then
-                log_error_terminal "Отсутствует или недействителен токен доступа к RCI роутера"
-            fi
+            log_error_terminal "Отсутствует или недействителен токен доступа к RCI роутера"
             ;;
         *)
             log_error_router "RCI не отвечает (http_code=$http_code)"
-            if [ "$rci_token_fatal" = "true" ]; then
-                log_error_terminal "RCI не отвечает (http_code=$http_code)"
-            fi
+            log_error_terminal "RCI не отвечает (http_code=$http_code)"
             ;;
     esac
 }
-case "$1" in
-    stop|status)
-        rci_token_fatal="false"
-        wait_for_rci_token || log_warning_router "RCI недоступен: выполняется $1 без проверки политик"
-        ;;
-    *)
-        rci_token_fatal="true"
-        wait_for_rci_token
-        ;;
-esac
+wait_for_rci_token
 
 # Параметры curl
 curl_api() {
