@@ -398,10 +398,10 @@ verify_github_sha256() {
         else
             rm -f "$_vgs_ref"
             if [ "$verify_downloads" = "strict" ]; then
-                printf "  ${red}Ошибка${reset}: GitHub API недоступен ни напрямую, ни через зеркало; независимая SHA-256 reference для %s не получена\n" "$_vgs_asset"
+                printf "  ${red}Ошибка${reset}: GitHub API недоступен ни напрямую, ни через прокси; независимая SHA-256 reference для %s не получена\n" "$_vgs_asset"
                 return 1
             fi
-            printf "  ${yellow}ВНИМАНИЕ${reset}: файл %s установлен БЕЗ проверки целостности (GitHub API недоступен ни напрямую, ни через зеркало)\n" "$_vgs_asset"
+            printf "  ${yellow}ВНИМАНИЕ${reset}: файл %s установлен БЕЗ проверки целостности (GitHub API недоступен ни напрямую, ни через прокси)\n" "$_vgs_asset"
             return 0
         fi
     fi
@@ -433,7 +433,7 @@ verify_github_sha256() {
     _vgs_actual=$(sha256sum "$_vgs_file" 2>/dev/null | awk '{print $1}')
     if [ "$_vgs_actual" = "$_vgs_expected" ]; then
         if [ -n "$_vgs_via_mirror" ]; then
-            printf "  SHA-256 %s ${green}проверена${reset} ${yellow}(эталон получен через зеркало)${reset}\n" "$_vgs_asset"
+            printf "  SHA-256 %s ${green}проверена${reset} ${yellow}(эталон получен через прокси)${reset}\n" "$_vgs_asset"
         else
             printf "  SHA-256 %s ${green}проверена${reset}\n" "$_vgs_asset"
         fi

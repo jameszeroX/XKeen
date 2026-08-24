@@ -1235,7 +1235,7 @@ get_xray_transparent_inbounds() {
                 [
                     (if $tproxy == "tproxy" then "tproxy" else "redirect" end),
                     (.port // ""),
-                    (.settings.network // ""),
+                    (.settings.allowedNetwork // .settings.network // ""),
                     (.tag // ""),
                     $file
                 ] | @tsv

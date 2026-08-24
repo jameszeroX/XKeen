@@ -4,7 +4,7 @@
       "port": 1181,
       "protocol": "tunnel",
       "settings": {
-        "network": "tcp",
+        "allowedNetwork": "tcp",
         "followRedirect": true
       },
       "sniffing": {
@@ -18,7 +18,7 @@
       "port": 1181,
       "protocol": "tunnel",
       "settings": {
-        "network": "udp",
+        "allowedNetwork": "udp",
         "followRedirect": true
       },
       "streamSettings": {
@@ -35,7 +35,7 @@
       "port": 1191,
       "protocol": "tunnel",
       "settings": {
-        "network": "tcp",
+        "allowedNetwork": "tcp",
         "followRedirect": true
       },
       "tag": "force-proxy-redirect"
@@ -44,7 +44,7 @@
       "port": 1191,
       "protocol": "tunnel",
       "settings": {
-        "network": "udp",
+        "allowedNetwork": "udp",
         "followRedirect": true
       },
       "streamSettings": {
