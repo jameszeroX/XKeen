@@ -1,8 +1,8 @@
 {
   "inbounds": [
     {
-      "port": 1181,
       "protocol": "tunnel",
+      "port": 1181,
       "settings": {
         "allowedNetwork": "tcp",
         "followRedirect": true
@@ -15,8 +15,8 @@
       "tag": "redirect"
     },
     {
-      "port": 1181,
       "protocol": "tunnel",
+      "port": 1181,
       "settings": {
         "allowedNetwork": "udp",
         "followRedirect": true
@@ -32,8 +32,8 @@
       "tag": "tproxy"
     },
     {
-      "port": 1191,
       "protocol": "tunnel",
+      "port": 1191,
       "settings": {
         "allowedNetwork": "tcp",
         "followRedirect": true
@@ -41,8 +41,8 @@
       "tag": "force-proxy-redirect"
     },
     {
-      "port": 1191,
       "protocol": "tunnel",
+      "port": 1191,
       "settings": {
         "allowedNetwork": "udp",
         "followRedirect": true
