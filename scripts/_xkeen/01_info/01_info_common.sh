@@ -426,6 +426,19 @@ curl_with_timeout() {
     fi
 }
 
+# Функция проверки IPv6
+check_ipv6_active() {
+    local iface
+    for iface in /sys/class/net/*; do
+        iface="${iface##*/}"
+        case "$iface" in
+            ezcfg0|t2s*) continue ;;
+        esac
+        ip -6 addr show dev "$iface" 2>/dev/null | grep -q "inet6 fe80::" && return 0
+    done
+    return 1
+}
+
 # Настройки балансировки по скорости (.xkeen.xray.speed_balancer.*).
 # Вызывается по требованию из модуля -sb, а не глобально: несвязанным командам
 # xkeen лишний разбор xkeen.json не нужен. Значения по умолчанию — рабочие,

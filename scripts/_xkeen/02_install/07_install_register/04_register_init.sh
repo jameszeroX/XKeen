@@ -267,7 +267,7 @@ wait_for_webui() {
 
     while [ "$i" -lt "$max_wait" ]; do
         pidof nginx >/dev/null 2>&1 && return 0
-        sleep 1
+        sleep 2
         i=$((i + 1))
     done
 
@@ -282,19 +282,31 @@ wait_for_rci_token() {
         return 1
     }
 
-    http_code=$(curl -ksS -o /dev/null -w "%{http_code}" -H "X-Ndma-Tkn: $rci_token" "${url_server}/${url_policy}")
+    # nginx-процесс может подняться раньше, чем сам RCI-демон начнёт
+    # отвечать на запросы (асинхронная инициализация служб NDM), поэтому
+    # даём RCI до ~20 сек на "прогрев" и ретраим именно код 000 / прочие
+    # временные коды. 401/403 — это уже реальная проблема токена, здесь
+    # ретраить бессмысленно, выходим сразу.
+    _rci_wait_attempts=20
+    _rci_wait_i=0
+    while [ "$_rci_wait_i" -lt "$_rci_wait_attempts" ]; do
+        http_code=$(curl -ksS -o /dev/null -w "%{http_code}" --connect-timeout 2 -m 5 -H "X-Ndma-Tkn: $rci_token" "${url_server}/${url_policy}")
 
-    case "$http_code" in
-        200) return 0 ;;
-        401|403)
-            log_error_router "Отсутствует или недействителен токен доступа к RCI роутера"
-            log_error_terminal "Отсутствует или недействителен токен доступа к RCI роутера"
-            ;;
-        *)
-            log_error_router "RCI не отвечает (http_code=$http_code)"
-            log_error_terminal "RCI не отвечает (http_code=$http_code)"
-            ;;
-    esac
+        case "$http_code" in
+            200) return 0 ;;
+            401|403)
+                log_error_router "Отсутствует или недействителен токен доступа к RCI роутера"
+                log_error_terminal "Отсутствует или недействителен токен доступа к RCI роутера"
+                ;;
+        esac
+
+        _rci_wait_i=$((_rci_wait_i + 1))
+        sleep 1
+
+    done
+
+    log_error_router "RCI не отвечает (http_code=$http_code)"
+    log_error_terminal "RCI не отвечает (http_code=$http_code)"
 }
 wait_for_rci_token
 
@@ -453,6 +465,18 @@ get_keenetic_port() {
     return 0
 }
 
+check_ipv6_active() {
+    local iface
+    for iface in /sys/class/net/*; do
+        iface="${iface##*/}"
+        case "$iface" in
+            ezcfg0|t2s*) continue ;;
+        esac
+        ip -6 addr show dev "$iface" 2>/dev/null | grep -q "inet6 fe80::" && return 0
+    done
+    return 1
+}
+
 apply_ipv6_state() {
     ipv6_disabled=
     ipv6_disabled=$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null || echo "0")
@@ -461,7 +485,7 @@ apply_ipv6_state() {
 
     [ "$ipv6_support" != "off" ] && return 0
 
-    ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::" || return 0
+    check_ipv6_active || return 0
 
     sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
 
@@ -489,7 +513,7 @@ apply_ipv6_state() {
 
 get_ipver_support() {
     ip4_supported=$(ip -4 addr show 2>/dev/null | grep -q "inet " && echo true || echo false)
-    ip6_supported=$(ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::" && echo true || echo false)
+    ip6_supported=$(check_ipv6_active && echo true || echo false)
 
     iptables_supported=$([ "$ip4_supported" = "true" ] && command -v iptables >/dev/null 2>&1 && echo true || echo false)
     ip6tables_supported=$([ "$ip6_supported" = "true" ] && command -v ip6tables >/dev/null 2>&1 && echo true || echo false)

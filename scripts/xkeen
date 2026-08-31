@@ -661,6 +661,7 @@ while [ $# -gt 0 ]; do
                     logs_delete_register_xray_info_console
 
                     info_xray
+                    init_directories
                     echo -e "  Выполняется регистрация новой версии ${yellow}Xray${reset}"
                     register_xray_list
                     logs_register_xray_list_info_console
@@ -688,6 +689,7 @@ while [ $# -gt 0 ]; do
                         fi
 
                         delete_register_xray
+                        init_directories
                         echo
                         echo -e "  Выполняется регистрация ${yellow}Xray${reset}"
                         register_xray_list
@@ -878,7 +880,6 @@ while [ $# -gt 0 ]; do
         -dgc)    # Удалить задачу автообновления баз GeoFile/GeoIPSET
             info_cron
             smart_clear
-            echo
             choice_for_remove="задачу автообновления баз GeoFile/GeoIPSET"
             choice_remove
             smart_clear
@@ -894,7 +895,6 @@ while [ $# -gt 0 ]; do
 
         -dx)    # Удалить Xray
             smart_clear
-            echo
             choice_for_remove="Xray"
             choice_remove
             smart_clear
@@ -919,7 +919,6 @@ while [ $# -gt 0 ]; do
 
         -dm)    # Удалить Mihomo и Yq
             smart_clear
-            echo
             choice_for_remove="Mihomo"
             choice_remove
             smart_clear
@@ -940,7 +939,6 @@ while [ $# -gt 0 ]; do
 
         -dk)    # Удалить XKeen
             smart_clear
-            echo
             choice_for_remove="XKeen"
             choice_remove
 

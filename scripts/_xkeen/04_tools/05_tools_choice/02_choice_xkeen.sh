@@ -65,7 +65,7 @@ change_channel_xkeen() {
 }
 
 change_ipv6_support() {
-    ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::" && ip6_supported="true" || ip6_supported="false"
+    check_ipv6_active && ip6_supported="true" || ip6_supported="false"
 
     if [ "$1" = "on" ]; then
         if [ "$ip6_supported" = "true" ]; then
@@ -145,7 +145,7 @@ change_ipv6_support() {
         # Проверка и вывод результата
         if [ "$desired_state" = "off" ]; then
             echo
-            if ! ip -6 addr show 2>/dev/null | grep -q "inet6 fe80::"; then
+            if ! check_ipv6_active; then
                 echo -e "  Поддержка IPv6 в KeeneticOS ${green}отключена${reset}"
                 echo -e "  ${red}Дополнительно убедитесь, что IPv6 отключен в веб-интерфейсе роутера${reset}"
             else
