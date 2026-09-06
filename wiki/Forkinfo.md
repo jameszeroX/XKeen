@@ -2,7 +2,7 @@
 
 Добавлено:
 
-- Совместимость с прошивкой KeeneticOS 5+
+- Совместимость с актуальными версиями KeeneticOS
 - Поддержка ядра Mihomo и смена ядра проксирования (Xray/Mihomo) параметрами запуска `-xray` и `-mihomo`
 - Реализована работа с пользовательскими политиками [подробнее](https://github.com/jameszeroX/XKeen/wiki/Configuration#пользовательские-политики)
 - Реализовано проксирование DNS [подробнее](https://github.com/jameszeroX/XKeen/wiki/Configuration#Проксирование-dns) (параметр запуска `-dns`)
@@ -78,3 +78,7 @@
 - Логирование процесса установки XKeen в директорию `/opt/var/log/xkeen` (на практике не использовалось)
 - Задачи планировщика по автообновлению XKeen/Xray. В связи с этим упразднены параметры запуска `-uac`, `-ukc`, `-uxc`, `-dac`, `-dkc` и `-dxc`
 - Неиспользуемые параметры запуска `-x`, `-rk`, `-rx`, `-rc` `-rrk`, `-rrx`, `-rrm`, `-drk`, `-drx`, `-drm`, `-modules`, `-delmodules`
+
+--
+
+[И многое другое](https://github.com/jameszeroX/XKeen/releases)
