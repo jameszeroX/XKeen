@@ -437,30 +437,15 @@ api_cache_init() {
     api_static_json=$(curl_api "${url_server}/${url_redirect_port}" 2>/dev/null)
 }
 
-refresh_port_cache() { api_port_json=$(curl_api "${url_server}/${url_keenetic_port}" 2>/dev/null); }
-
-json_get_ports() { [ -n "$api_port_json" ] && printf '%s' "$api_port_json" | jq -r '.port, (.ssl.port // empty)' 2>/dev/null; }
+json_get_ports() { [ -n "$api_port_json" ] && printf '%s' "$api_port_json" | jq -r '.port, (.ssl.port // 443)' 2>/dev/null; }
 
 # Получение портов Keenetic
 get_keenetic_port() {
     ports=""
-    ports=$(json_get_ports)
-
+    ports=$(json_get_ports | tr '\n' ' ' | xargs)
     case " $ports " in
         *" 443 "*) return 1 ;;
     esac
-
-    if [ -z "$ports" ]; then
-        ndmc -c 'ip http port 8080' >/dev/null 2>&1
-        ndmc -c 'ip http port 80' >/dev/null 2>&1
-        ndmc -c 'system configuration save' >/dev/null 2>&1
-        sleep 2
-        refresh_port_cache
-        ports=$(json_get_ports)
-    fi
-
-    [ -n "$ports" ] || return 1
-
     echo "$ports"
     return 0
 }
@@ -3651,7 +3636,7 @@ proxy_start() {
             if [ "$mode_proxy" = "TProxy" ]; then
                 keenetic_ssl="$(get_keenetic_port)" || {
                     proxy_stop
-                    log_error_router "Порт 443 занят сервисами Keenetic"
+                    log_error_router "Порт 443 занят сервисами Keenetic. Запуск в режиме TProxy невозможен"
                     log_error_terminal "
   Необходимый для режима ${light_blue}TProxy${reset} ${red}443 порт занят${reset} сервисами Keenetic
 
