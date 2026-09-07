@@ -50,41 +50,10 @@ ru_exclude_ipv4="$ipset_cfg/ru_exclude_ipv4.lst"
 ru_exclude_ipv6="$ipset_cfg/ru_exclude_ipv6.lst"
 ru_override="$ipset_cfg/ru_exclude_override.lst"
 
-# Runtime state must stay in tmpfs, but must never be created in a
-# world-writable location.  Recreate a squatted or incorrectly-modeled dir.
-_xkeen_secure_rundir() {
-    d="/tmp/.xkeen"
-    if [ -e "$d" ] && [ ! -d "$d" ]; then
-        rm -f "$d" 2>/dev/null
-    fi
-    if [ -d "$d" ]; then
-        set -- $(ls -ld "$d" 2>/dev/null)
-        mode="$1"
-        owner="$3"
-        if [ "$owner" != "root" ] || [ "$mode" != "drwx------" ]; then
-            rm -rf "$d" 2>/dev/null
-        fi
-    fi
-    [ -d "$d" ] || mkdir -m 700 "$d" 2>/dev/null || return 1
-    chmod 700 "$d" 2>/dev/null || return 1
-    printf '%s' "$d"
-}
-if ! xkeen_rundir=$(_xkeen_secure_rundir); then
-    case "$1" in
-        stop|status)
-            xkeen_rundir="/tmp/.xkeen-unavailable"
-            logger -p warning -t XKeen "Недоступен runtime-каталог; продолжаем $1 без runtime-state"
-            ;;
-        *)
-            exit 1
-            ;;
-    esac
-fi
-
 # URL
 url_server="127.0.0.1:79"
 url_policy="rci/show/ip/policy"
-url_keenetic_port="rci/ip/http"
+url_keenetic_port="rci/ip/http/ssl"
 url_redirect_port="rci/ip/static"
 url_hotspot="rci/show/ip/hotspot"
 
@@ -99,8 +68,8 @@ custom_mark=""
 
 # DSCP-метки
 dscp_enable="on"
-dscp_force_proxy="61"
 dscp_force_proxy_tag="force-proxy"
+dscp_force_proxy="61"
 dscp_exclude="62"
 dscp_proxy="63"
 
@@ -143,6 +112,12 @@ backup="on"
 ## Клиенты XKeen под своими IP в журнале AdGuard Home
 aghfix="off"
 
+if [ "$dscp_enable" = "off" ]; then
+    dscp_force_proxy=""
+    dscp_exclude=""
+    dscp_proxy=""
+fi
+
 # Функции журналирования
 log_info_router() { logger -p notice -t "$name_app" "$1"; }
 log_warning_router() { logger -p warning -t "$name_app" "$1"; }
@@ -152,10 +127,35 @@ log_info_terminal() { echo -e "\n${green}Информация${reset}: $1" >&2; 
 log_warning_terminal() { echo -e "\n${yellow}Предупреждение${reset}: $1" >&2; }
 log_error_terminal() { echo -e "\n${red}Ошибка${reset}: $1" >&2; exit 1; }
 
-if [ "$dscp_enable" = "off" ]; then
-    dscp_force_proxy=""
-    dscp_exclude=""
-    dscp_proxy=""
+# Runtime state must stay in tmpfs, but must never be created in a
+# world-writable location.  Recreate a squatted or incorrectly-modeled dir.
+_xkeen_secure_rundir() {
+    d="/tmp/.xkeen"
+    if [ -e "$d" ] && [ ! -d "$d" ]; then
+        rm -f "$d" 2>/dev/null
+    fi
+    if [ -d "$d" ]; then
+        set -- $(ls -ld "$d" 2>/dev/null)
+        mode="$1"
+        owner="$3"
+        if [ "$owner" != "root" ] || [ "$mode" != "drwx------" ]; then
+            rm -rf "$d" 2>/dev/null
+        fi
+    fi
+    [ -d "$d" ] || mkdir -m 700 "$d" 2>/dev/null || return 1
+    chmod 700 "$d" 2>/dev/null || return 1
+    printf '%s' "$d"
+}
+if ! xkeen_rundir=$(_xkeen_secure_rundir); then
+    case "$1" in
+        stop|status)
+            xkeen_rundir="/tmp/.xkeen-unavailable"
+            logger -p warning -t XKeen "Недоступен runtime-каталог; продолжаем $1 без runtime-state"
+            ;;
+        *)
+            exit 1
+            ;;
+    esac
 fi
 
 # Дубль функции из 01_info_variable.sh: этот файл побайтово копируется в
@@ -188,7 +188,7 @@ strip_json_comments() {
     }' "$@"
 }
 
-# Функция извлечения rci-токена
+# Функция извлечения rci-токена из xkeen.json
 get_rci_token() {
     rci_token=""
     [ ! -f "$xkeen_config" ] && return 1
@@ -437,15 +437,16 @@ api_cache_init() {
     api_static_json=$(curl_api "${url_server}/${url_redirect_port}" 2>/dev/null)
 }
 
-json_get_ports() { [ -n "$api_port_json" ] && printf '%s' "$api_port_json" | jq -r '.port, (.ssl.port // 443)' 2>/dev/null; }
+json_get_ports() { [ -n "$api_port_json" ] && printf '%s' "$api_port_json" | jq -r '(.port // 443)' 2>/dev/null; }
 
-# Получение портов Keenetic
+# Получение ssl порта Keenetic
 get_keenetic_port() {
     ports=""
-    ports=$(json_get_ports | tr '\n' ' ' | xargs)
+    ports=$(json_get_ports)
     case " $ports " in
         *" 443 "*) return 1 ;;
     esac
+    [ -n "$ports" ] || return 1
     echo "$ports"
     return 0
 }
