@@ -133,13 +133,11 @@ listeners:
   - name: force-proxy-tproxy
     type: tproxy
     port: 1191
-    listen: 0.0.0.0
     udp: true
     proxy: ProxyUDP
   - name: force-proxy-redirect
     type: redir
     port: 1192
-    listen: 0.0.0.0
     proxy: ProxyTCP
 ```
 
@@ -150,12 +148,10 @@ listeners:
   - name: force-proxy-tproxy
     type: tproxy
     port: 1191
-    listen: 0.0.0.0
     udp: true
   - name: force-proxy-redirect
     type: redir
     port: 1192
-    listen: 0.0.0.0
 
 rules:
   - IN-NAME,force-proxy-tproxy,ProxyUDP
@@ -169,7 +165,6 @@ listeners:
   - name: force-proxy
     type: tproxy
     port: 1191
-    listen: 0.0.0.0
     udp: true
     proxy: ProxyTCPUDP
 ```
@@ -181,7 +176,6 @@ listeners:
   - name: force-proxy
     type: tproxy
     port: 1191
-    listen: 0.0.0.0
     udp: true
 
 rules:
