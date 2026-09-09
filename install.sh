@@ -21,7 +21,7 @@ echo -e "  ${yellow}Опции${reset}"
 echo -e "    -s, --stable	${italic}Установить стабильную версию${reset}"
 echo -e "    -b, --beta		${italic}Установить бета-версию${reset}"
 echo -e "    -l, --legacy ВЕРСИЯ	${italic}Установить предыдущую версию (например, 1.1.3.9)${reset}"
-echo -e "    -p, --patch		${italic}Пропатчить установленную версию для совместимости с KeeneticOS 5.1.2+${reset}"
+echo -e "    -p, --patch		${italic}Пропатчить установленную версию для совместимости с KeeneticOS 5.1.2${reset}"
 echo -e "    -h, --help		${italic}Показать эту справку${reset}"
 echo
 echo -e "  ${yellow}Примеры${reset}"
@@ -88,7 +88,7 @@ download_xkeen_release() {
     return 1
 }
 
-# Функция патча установленной версии для совместимости с KeeneticOS 5.1.2+
+# Функция патча установленной версии для совместимости с KeeneticOS 5.1.2
 # (замена "localhost" на "127.0.0.1" в rci-запросах)
 patch_localhost_compat() {
     local target_init_dir="/opt/etc/init.d"
@@ -100,7 +100,7 @@ patch_localhost_compat() {
     local init_path
 
     echo
-    printf "  Патчим файлы для совместимости с ${yellow}KeeneticOS 5.1.2+${reset}...\n\n"
+    printf "  Патчим файлы для совместимости с ${yellow}KeeneticOS 5.1.2${reset}...\n\n"
 
     for init_file in $target_init_files; do
         init_path="$target_init_dir/$init_file"
@@ -134,7 +134,7 @@ patch_localhost_compat() {
     if [ "$patched" -eq 1 ]; then
         printf "  ${green}Патч успешно применён${reset}\n"
     else
-        printf "  Патч не потребовался. XKeen совместим с ${yellow}KeeneticOS 5.1.2+${reset} либо не установлен\n"
+        printf "  Патч не потребовался. XKeen совместим с ${yellow}KeeneticOS 5.1.2${reset} либо не установлен\n"
     fi
 }
 
@@ -188,7 +188,7 @@ if [ -z "$VERSION_TYPE" ]; then
         printf "  1) Стабильную версию (${light_blue}Stable${reset}) только для ${yellow}KeeneticOS${reset} ${green}до${reset} ${yellow}5.1.2${reset}\n"
         printf "  2) Новую Бета-версию (${light_blue}Beta${reset})\n"
         printf "  3) Предыдущую версию (${light_blue}Legacy${reset})\n"
-        printf "  4) Пропатчить установленную версию для совместимости с ${yellow}KeeneticOS 5.1.2+${reset}\n\n"
+        printf "  4) Пропатчить установленную версию для совместимости с ${yellow}KeeneticOS 5.1.2${reset}\n\n"
         printf "  0) Отмена\n\n"
         printf "  Выберите пункт меню [по умолчанию 1]: "
         read -r version_choice
