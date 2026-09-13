@@ -425,7 +425,7 @@ for cmd in $utils; do
     command -v "$cmd" >/dev/null 2>&1 || log_error_terminal "Не найдена необходимая утилита: ${yellow}$cmd${reset}"
 done
 
-if readlink $(which ip) | grep -q 'busybox'; then
+if readlink "$(which ip)" | grep -q 'busybox'; then
     log_error_terminal "Обнаружена урезанная версия ip (BusyBox). Необходим пакет: ${yellow}ip-full${reset}"
 fi
 
@@ -2370,11 +2370,13 @@ if pidof "$name_client" >/dev/null; then
         [ "$_family" = "ip6tables" ] && _restore_cmd="ip6tables-restore"
 
         # Отказ restore = таблица осталась без правил xkeen до следующего
-        # события netfilter, молча. Одна повторная попытка закрывает гонку
-        # с параллельной модификацией таблицы (delete-list строится по
-        # снапшоту iptables-save); стойкий отказ уходит в syslog — иначе
-        # диагностировать «прокси молча перестал перехватывать» нечем.
+        # события netfilter, молча. До двух повторных попыток с нарастающей
+        # паузой закрывают гонку с параллельной модификацией таблицы
+        # (delete-list строится по снапшоту iptables-save); стойкий отказ
+        # уходит в syslog — иначе диагностировать «прокси молча перестал
+        # перехватывать» нечем.
         _attempt=1
+        _max_attempts=3
         while :; do
             _restore_err=$(printf '%s\n' "$_blob" | "$_restore_cmd" --noflush 2>&1) && {
                 [ "$_attempt" -gt 1 ] && command -v logger >/dev/null 2>&1 && \
@@ -2382,14 +2384,14 @@ if pidof "$name_client" >/dev/null; then
                         "$_restore_cmd $_table: applied on retry $_attempt"
                 break
             }
-            if [ "$_attempt" -ge 2 ]; then
+            if [ "$_attempt" -ge "$_max_attempts" ]; then
                 command -v logger >/dev/null 2>&1 && \
                     logger -p daemon.err -t xkeen \
-                        "$_restore_cmd --noflush failed for $_table: $(printf '%s' "$_restore_err" | head -n1)"
+                        "$_restore_cmd --noflush failed for $_table after $_attempt attempts: $(printf '%s' "$_restore_err" | head -n1)"
                 return 1
             fi
+            usleep $((200000 * _attempt)) 2>/dev/null || sleep "$_attempt"
             _attempt=$((_attempt + 1))
-            usleep 200000 2>/dev/null || sleep 1
         done
         return 0
     }
@@ -3273,17 +3275,22 @@ monitor_fd() {
         client_pid=$(pidof "$name_client" | awk '{print $1}')
         if [ -n "$client_pid" ] && [ -d "/proc/$client_pid/fd" ]; then
             limit=$(awk '/Max open files/ {print $4}' "/proc/$client_pid/limits")
-            set -- /proc/$client_pid/fd/*
-            [ -e "$1" ] || set --
-            current=$#
-            if [ "$limit" -gt 0 ] && [ "$current" -gt $((limit * 90 / 100)) ]; then
-                log_warning_router "$name_client открыл $current из $limit файловых дескрипторов, инициирован перезапуск"
-                rm -f "$file_pid_fd"
-                fd_out=true
-                proxy_stop
-                proxy_start "on"
-                exit 0
-            fi
+            case "$limit" in
+                ''|*[!0-9]*) ;;
+                *)
+                    set -- /proc/$client_pid/fd/*
+                    [ -e "$1" ] || set --
+                    current=$#
+                    if [ "$limit" -gt 0 ] && [ "$current" -gt $((limit * 90 / 100)) ]; then
+                        log_warning_router "$name_client открыл $current из $limit файловых дескрипторов, инициирован перезапуск"
+                        rm -f "$file_pid_fd"
+                        fd_out=true
+                        proxy_stop
+                        proxy_start "on"
+                        exit 0
+                    fi
+                    ;;
+            esac
         fi
         sleep "$delay_fd"
     done
