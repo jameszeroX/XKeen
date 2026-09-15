@@ -26,7 +26,7 @@ _xray_perform_install() {
     fi
     mkdir -p "$tmp_ram"
 
-    if ! _network_probe "$download_url" "версии $version"; then
+    if ! _network_probe "$download_url" "Xray $version"; then
         return 1
     fi
 

@@ -776,7 +776,6 @@ while [ $# -gt 0 ]; do
                     add_mihomo_config
                     delete_register_mihomo
                     delete_register_yq
-                    echo
                     echo -e "  Выполняется регистрация ${yellow}Mihomo${reset}"
                     register_mihomo_list
                     logs_register_mihomo_list_info_console
@@ -812,9 +811,9 @@ while [ $# -gt 0 ]; do
             smart_clear
             download_yq
             info_version_yq
-
+            echo -e "  ${yellow}Выполняется установка${reset} Yq. Пожалуйста, подождите..."
+            echo
             delete_register_yq
-            logs_delete_register_yq_info_console
             info_version_yq
             echo -e "  Выполняется регистрация новой версии ${yellow}Yq${reset}"
             register_yq_list

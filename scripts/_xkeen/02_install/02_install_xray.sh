@@ -110,7 +110,7 @@ install_xray() {
     fi
 
     rm -f "$install_dir/xray_bak"
-    echo -e "  Xray ${green}успешно установлен${reset}"
+    echo
 
     rm -f "$xray_archive"
     rm -rf "$xtmp_dir"

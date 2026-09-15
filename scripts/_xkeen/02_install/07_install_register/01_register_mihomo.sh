@@ -64,9 +64,9 @@ redir-port: 1182
 # Руководство по конфигурации Mihomo - https://wiki.metacubex.one/ru/config/
 EOF
 
-        echo
         echo "  Добавлен шаблон конфигурационного файла Mihomo:"
         echo -e "  ${yellow}config.yaml${reset}"
+        echo
         sleep 2
     fi
 }

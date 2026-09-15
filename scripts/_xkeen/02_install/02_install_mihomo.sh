@@ -110,7 +110,7 @@ install_mihomo() {
     fi
 
     rm -f "$install_dir/mihomo_bak"
-    echo -e "  Mihomo ${green}успешно установлен${reset}"
+    echo
 
     return 0
 }

@@ -87,7 +87,7 @@ download_mihomo() {
         mkdir -p "$tmp_ram"
         yq_available="false"
 
-        if ! _network_probe "$download_url" "версии Mihomo $version_selected"; then
+        if ! _network_probe "$download_url" "Mihomo $version_selected"; then
             continue
         fi
 
@@ -95,13 +95,13 @@ download_mihomo() {
             yq_available="true"
             printf "  ${yellow}Используется${reset} установленный парсер конфигурационных файлов Mihomo - Yq\n"
         else
-            printf "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - Yq"
-            if _network_probe "$download_yq" "Yq"; then
+            if _network_probe "$download_yq" "актуальной версии Yq"; then
+                printf "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - Yq\n"
                 if _network_download "$download_yq" "$install_dir/yq" "Yq" "$max_attempts" "$delay"; then
                     verify_github_sha256 "$install_dir/yq" "$download_yq" "$(get_yq_api_url)" || return 1
                     chmod +x "$install_dir/yq"
                     yq_available="true"
-                    printf "  Yq ${green}успешно загружен и установлен${reset}\n"
+                    printf "  Yq ${green}успешно загружен${reset}\n"
                 fi
             fi
         fi
@@ -155,7 +155,7 @@ download_yq() {
     if _network_download "$download_url" "$install_dir/yq" "Yq" "$yq_max_attempts" "$yq_delay"; then
         verify_github_sha256 "$install_dir/yq" "$download_url" "$(get_yq_api_url)" || return 1
         chmod +x "$install_dir/yq"
-        printf "  Yq ${green}успешно обновлен/установлен${reset}\n"
+        printf "  Yq ${green}успешно загружен${reset}\n"
         return 0
     else
         return 1
