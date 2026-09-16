@@ -2443,6 +2443,10 @@ if pidof "$name_client" >/dev/null; then
         ipset create "$set_name" "$set_type" family "$ipset_family" -exist || return
 
         ipt -I "$chain" 1 -m set --match-set "$set_name" dst $comment -j RETURN >/dev/null 2>&1
+
+        if [ "$base_set" = "user_exclude" ]; then
+            ipt -I "$chain" 1 -m set --match-set "$set_name" src $comment -j RETURN >/dev/null 2>&1
+        fi
     }
 
     add_geo_exclude() {
