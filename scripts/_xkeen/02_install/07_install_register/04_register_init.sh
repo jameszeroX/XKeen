@@ -83,6 +83,8 @@ proxy_dns="off"
 
 # Проксирование трафика Entware
 proxy_router="off"
+# Cовместимость проксирования Entware с nfqws2
+nfqws_mark="0x40000000"
 
 # Строгая PBR-проверка mark / routing-mark
 pbr_strict="off"
@@ -1055,15 +1057,18 @@ process_user_ports() {
 }
 
 # Функция нормализации сторонних политик
-process_custom_mark() {
-    [ -n "$custom_mark" ] || return
-
+process_mark_var() {
+    local var_name="$1"
+    local current_marks
     local clean_mark=""
     local val
     local mark
     local IFS=', '
 
-    for mark in $custom_mark; do
+    eval "current_marks=\"\$$var_name\""
+    [ -n "$current_marks" ] || return
+
+    for mark in $current_marks; do
         [ -n "$mark" ] || continue
 
         val=${mark#0x}
@@ -1078,7 +1083,8 @@ process_custom_mark() {
         esac
     done
 
-    custom_mark=${clean_mark# }
+    clean_mark=${clean_mark# }
+    eval "$var_name=\"\$clean_mark\""
 }
 
 # Проверка статуса прокси-клиента
@@ -2151,6 +2157,7 @@ EOL
     inject_var comment_tag "$comment_tag"
     inject_var comment "$comment"
     inject_var custom_mark "$custom_mark"
+    inject_var nfqws_mark "$nfqws_mark"
     inject_var dscp_exclude "$dscp_exclude"
     inject_var dscp_proxy "$dscp_proxy"
     inject_var dscp_force_proxy "$dscp_force_proxy"
@@ -2828,6 +2835,10 @@ USER_POLICIES_EOF
 
         for bypass_mark in $policy_bypass_marks; do
             [ -n "$bypass_mark" ] && ipt -A "$out_chain" -m mark --mark "$bypass_mark" $comment -j RETURN >/dev/null 2>&1
+        done
+
+        for nfqws_bypass_mark in $nfqws_mark; do
+            [ -n "$nfqws_bypass_mark" ] && ipt -A "$out_chain" -m mark --mark "$nfqws_bypass_mark" $comment -j RETURN >/dev/null 2>&1
         done
 
         add_exclude_rules "$out_chain"
@@ -3607,7 +3618,8 @@ proxy_start() {
         log_clean
         sync_deny_mac_ipset
         process_user_ports
-        process_custom_mark
+        process_mark_var custom_mark
+        process_mark_var nfqws_mark
         detect_architecture
         port_redirect=$(get_port_redirect)
         network_redirect=$(get_network_redirect)

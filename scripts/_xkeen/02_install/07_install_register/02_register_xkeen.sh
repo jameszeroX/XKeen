@@ -47,7 +47,7 @@ register_xkeen_initd() {
     old_start_file="${initd_dir}/S99xkeenstart"
     script_file="${xinstall_dir}/07_install_register/04_register_init.sh" 
     current_datetime=$(date "+%Y-%m-%d_%H-%M-%S")
-    variables_to_extract="name_client name_policy name_policy_full table_id table_mark custom_mark dscp_enable dscp_force_proxy dscp_force_proxy_tag dscp_exclude dscp_proxy ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude proxy_dns proxy_router pbr_strict start_verbose start_attempts init_delay check_fd arm64_fd other_fd delay_fd ipv6_support extended_msg backup aghfix"
+    variables_to_extract="name_client name_policy name_policy_full table_id table_mark custom_mark dscp_enable dscp_force_proxy dscp_force_proxy_tag dscp_exclude dscp_proxy ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude proxy_dns proxy_router nfqws_mark pbr_strict start_verbose start_attempts init_delay check_fd arm64_fd other_fd delay_fd ipv6_support extended_msg backup aghfix"
     source_main_backup=""
     source_start_backup=""
 
@@ -127,10 +127,11 @@ create_xkeen_cfg() {
         mv "/opt/etc/xkeen_exclude.lst" "$file_ip_exclude"
     elif [ ! -f "$file_ip_exclude" ]; then
         cat << EOF > "$file_ip_exclude"
-#192.168.0.0/16
-#2001:db8::/32
+#77.88.8.8
+#2a02:6b8::feed:0ff
 
-# Добавьте необходимые IP и подсети без комментария # для исключения их из проксирования
+# Укажите внешние IP-адреса и подсети (БЕЗ СИМВОЛА #) для исключения их из проксирования
+# Не добавляйте в этот файл локальные адреса и подсети
 EOF
     fi
 
@@ -149,7 +150,7 @@ EOF
 #443
 #596:599
 
-# (Раскомментируйте/добавьте по образцу) единичные порты и диапазоны для проскирования
+# Добавьте по образцу (БЕЗ СИМВОЛА #) единичные порты и диапазоны для их проскирования
 EOF
     fi
     if [ ! -f "$xkeen_config" ]; then
