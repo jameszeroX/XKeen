@@ -1062,6 +1062,7 @@ process_mark_var() {
     local current_marks
     local clean_mark=""
     local val
+    local mask
     local mark
     local IFS=', '
 
@@ -1071,19 +1072,29 @@ process_mark_var() {
     for mark in $current_marks; do
         [ -n "$mark" ] || continue
 
-        val=${mark#0x}
+        case "$mark" in
+            */*) val=${mark%%/*}; mask=${mark#*/} ;;
+            *)   val="$mark";     mask="" ;;
+        esac
+
+        val=${val#0x}
         val=${val#0X}
+        mask=${mask#0x}
+        mask=${mask#0X}
 
         case "$val" in
-            ''|*[!0-9a-fA-F]*)
-                ;;
-            *)
-                clean_mark="$clean_mark 0x$val"
-                ;;
+            ''|*[!0-9a-fA-F]*) continue ;;
+        esac
+
+        case "$mask" in
+            '')             clean_mark="$clean_mark 0x$val" ;;
+            *[!0-9a-fA-F]*) continue ;;
+            *)              clean_mark="$clean_mark 0x$val/0x$mask" ;;
         esac
     done
 
     clean_mark=${clean_mark# }
+    [ -n "$clean_mark" ] || log_warning_router "Значение $var_name отброшено при нормализации, правила для этой метки не создаются"
     eval "$var_name=\"\$clean_mark\""
 }
 
@@ -2838,7 +2849,12 @@ USER_POLICIES_EOF
         done
 
         for nfqws_bypass_mark in $nfqws_mark; do
-            [ -n "$nfqws_bypass_mark" ] && ipt -A "$out_chain" -m mark --mark "$nfqws_bypass_mark" $comment -j RETURN >/dev/null 2>&1
+            [ -n "$nfqws_bypass_mark" ] || continue
+            case "$nfqws_bypass_mark" in
+                */*) ;;
+                *) nfqws_bypass_mark="$nfqws_bypass_mark/$nfqws_bypass_mark" ;;
+            esac
+            ipt -A "$out_chain" -m mark --mark "$nfqws_bypass_mark" $comment -j RETURN >/dev/null 2>&1
         done
 
         add_exclude_rules "$out_chain"
