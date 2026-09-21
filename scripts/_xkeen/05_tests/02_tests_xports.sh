@@ -21,7 +21,7 @@ tests_ports_client() {
 
     if [ -n "$listening_ports_tcp" ] || [ -n "$listening_ports_udp" ]; then
         printed=false
-        IFS='
+        local IFS='
 '
         for line in $listening_ports_tcp $listening_ports_udp; do
             gateway=
