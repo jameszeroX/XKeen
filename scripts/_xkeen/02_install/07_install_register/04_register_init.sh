@@ -2180,6 +2180,45 @@ EOL
 
     cat >> "$file_netfilter_hook" <<'EOL'
 
+# Ресинхронизация iptables_supported/ip6tables_supported с "$type" от NDM.
+# Выше эти флаги — литералы, запечённые в момент последней configure_firewall().
+# NDM же зовёт netfilter.d на каждую пересобранную пару (type, table), и между
+# явными xkeen -start/-restart состояние IPv6 может смениться в обход
+# `xkeen -ipv6` (веб-интерфейс/CLI роутера) либо не успеть определиться на
+# cold start до первого proxy_start — тогда трафик соответствующей IP-семьи
+# идёт мимо xkeen-правил без единой ошибки в логе, пока пользователь не
+# выполнит `xkeen -restart` руками. Пересчитываем только ту половину (v4/v6),
+# что пришла в этом конкретном вызове, и только если она разошлась с
+# запечённой — in-memory, на время текущего запуска хука, на диск не пишем.
+# Дублирует check_ipv6_active()/get_ipver_support() (01_info_common.sh):
+# хук исполняется как отдельный файл на диске, внешние функции ему не видны.
+# Прецедент того же риска уже закрыт для другого пути переключения IPv6 —
+# см. change_ipv6_support() в 04_tools/05_tools_choice/02_choice_xkeen.sh.
+case "${type:-}" in
+    ip6tables)
+        _xkeen_ip6_active=false
+        for _xkeen_iface in /sys/class/net/*; do
+            _xkeen_iface="${_xkeen_iface##*/}"
+            case "$_xkeen_iface" in
+                ezcfg0|t2s*) continue ;;
+            esac
+            if ip -6 addr show dev "$_xkeen_iface" 2>/dev/null | grep -q "inet6 fe80::"; then
+                _xkeen_ip6_active=true
+                break
+            fi
+        done
+        _xkeen_ip6tables_now=$([ "$_xkeen_ip6_active" = "true" ] && command -v ip6tables >/dev/null 2>&1 && echo true || echo false)
+        [ "$_xkeen_ip6tables_now" = "$ip6tables_supported" ] || ip6tables_supported="$_xkeen_ip6tables_now"
+        unset _xkeen_ip6_active _xkeen_iface _xkeen_ip6tables_now
+        ;;
+    iptables)
+        _xkeen_ip4_active=$(ip -4 addr show 2>/dev/null | grep -q "inet " && echo true || echo false)
+        _xkeen_iptables_now=$([ "$_xkeen_ip4_active" = "true" ] && command -v iptables >/dev/null 2>&1 && echo true || echo false)
+        [ "$_xkeen_iptables_now" = "$iptables_supported" ] || iptables_supported="$_xkeen_iptables_now"
+        unset _xkeen_ip4_active _xkeen_iptables_now
+        ;;
+esac
+
 # Перезапуск скрипта
 restart_script() {
     exec /bin/sh "$0" "$@"
