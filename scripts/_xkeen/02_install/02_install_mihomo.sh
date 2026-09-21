@@ -28,6 +28,7 @@ install_mihomo() {
         [ -n "$_err" ] && echo -e "  Подробности: $_err"
         [ -f "$install_dir/mihomo_bak" ] && mv "$install_dir/mihomo_bak" "$install_dir/mihomo" && \
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Mihomo"
+        rm -rf "$mtmp_dir"
         return 1
     fi
     rm -f "$gzip_err"
@@ -45,6 +46,7 @@ install_mihomo() {
         esac
         [ -f "$install_dir/mihomo_bak" ] && mv "$install_dir/mihomo_bak" "$install_dir/mihomo" && \
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Mihomo"
+        rm -rf "$mtmp_dir"
         return 1
     fi
 
@@ -55,6 +57,7 @@ install_mihomo() {
         echo -e "  ${red}Ошибка${reset}: Распакованный файл Mihomo не является ELF-бинарником (повреждён или не докачан)"
         [ -f "$install_dir/mihomo_bak" ] && mv "$install_dir/mihomo_bak" "$install_dir/mihomo" && \
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Mihomo"
+        rm -rf "$mtmp_dir"
         return 1
     fi
 
@@ -66,6 +69,7 @@ install_mihomo() {
         echo -e "  ${red}Ошибка${reset}: Распакованный файл Mihomo подозрительно мал ($sz B)"
         [ -f "$install_dir/mihomo_bak" ] && mv "$install_dir/mihomo_bak" "$install_dir/mihomo" && \
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Mihomo"
+        rm -rf "$mtmp_dir"
         return 1
     fi
 
@@ -76,6 +80,7 @@ install_mihomo() {
         echo -e "  ${red}Ошибка${reset}: Не удалось распаковать архив или файл отсутствует"
         [ -f "$install_dir/mihomo_bak" ] && mv "$install_dir/mihomo_bak" "$install_dir/mihomo" && \
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Mihomo"
+        rm -rf "$mtmp_dir"
         return 1
     fi
 
@@ -94,6 +99,7 @@ install_mihomo() {
         esac
         [ -f "$install_dir/mihomo_bak" ] && mv "$install_dir/mihomo_bak" "$install_dir/mihomo" && \
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Mihomo"
+        rm -rf "$mtmp_dir"
         return 1
     fi
     rm -f "$mv_err"
@@ -106,11 +112,13 @@ install_mihomo() {
         rm -f "$install_dir/mihomo"
         [ -f "$install_dir/mihomo_bak" ] && mv "$install_dir/mihomo_bak" "$install_dir/mihomo" && \
             echo -e "  ${yellow}Восстановлен${reset} предыдущий бинарник Mihomo"
+        rm -rf "$mtmp_dir"
         return 1
     fi
 
     rm -f "$install_dir/mihomo_bak"
     echo
 
+    rm -rf "$mtmp_dir"
     return 0
 }
