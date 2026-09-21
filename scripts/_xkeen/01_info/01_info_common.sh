@@ -39,7 +39,7 @@ verify_downloads_settings() {
     verify_downloads="warn"
     [ -f "$xkeen_config" ] || return 0
     command -v jq >/dev/null 2>&1 || return 0
-    _vd_value=$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.verify_downloads // "warn"' 2>/dev/null)
+    _vd_value=$(printf '%s' "$_xkeen_json_clean" | jq -r '.xkeen.verify_downloads // "warn"' 2>/dev/null)
     case "$_vd_value" in strict|warn|off) verify_downloads="$_vd_value" ;; esac
     unset _vd_value
 }
@@ -98,6 +98,10 @@ strip_json_comments() {
         print line
     }' "$@"
 }
+# Разобранный без комментариев xkeen.json — считается один раз на инвокейшн
+# и переиспользуется verify_downloads_settings/retries_download_settings/
+# get_rci_token, чтобы не форкать awk трижды на один и тот же файл.
+[ -f "$xkeen_config" ] && _xkeen_json_clean=$(strip_json_comments "$xkeen_config" 2>/dev/null)
 verify_downloads_settings
 
 # Заменить/вставить ЗНАЧЕНИЕ (объект, массив ИЛИ скаляр — строка, число,
@@ -320,18 +324,15 @@ retries_download_settings() {
     retry_delay_download=2
 
     if [ -f "$xkeen_config" ] && command -v jq >/dev/null 2>&1; then
-        local json_clean
-        json_clean=$(strip_json_comments "$xkeen_config")
-
         local parsed_val
-        parsed_val=$(printf '%s' "$json_clean" | jq -r '.xkeen.retries_download // empty' 2>/dev/null)
+        parsed_val=$(printf '%s' "$_xkeen_json_clean" | jq -r '.xkeen.retries_download // empty' 2>/dev/null)
 
         if [ -n "$parsed_val" ] && [ "$parsed_val" -gt 0 ] 2>/dev/null; then
             retries_download="$parsed_val"
         fi
 
         local parsed_delay
-        parsed_delay=$(printf '%s' "$json_clean" | jq -r '.xkeen.retry_delay_download // empty' 2>/dev/null)
+        parsed_delay=$(printf '%s' "$_xkeen_json_clean" | jq -r '.xkeen.retry_delay_download // empty' 2>/dev/null)
         if [ -n "$parsed_delay" ] && [ "$parsed_delay" -gt 0 ] 2>/dev/null; then
             retry_delay_download="$parsed_delay"
         fi
@@ -344,10 +345,7 @@ get_rci_token() {
     rci_token=""
     [ ! -f "$xkeen_config" ] && return 1
 
-    local json_clean
-    json_clean=$(strip_json_comments "$xkeen_config")
-
-    rci_token=$(printf '%s' "$json_clean" | sed -n 's/.*"rci_token": *"\([^"]*\)".*/\1/p' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' 2>/dev/null)
+    rci_token=$(printf '%s' "$_xkeen_json_clean" | sed -n 's/.*"rci_token": *"\([^"]*\)".*/\1/p' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' 2>/dev/null)
 
     [ "$rci_token" = "null" ] && rci_token=""
 }
