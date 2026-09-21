@@ -11,7 +11,7 @@ _validate_geoipset_v4() {
 
 _validate_geoipset_v6() {
     _validate_default "$1" "$2" || return 1
-    if ! grep -q ":" "$1"; then
+    if ! grep -q "^[0-9a-fA-F]" "$1"; then
         _last_error="content_v6"
         return 1
     fi
