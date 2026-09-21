@@ -209,6 +209,8 @@ while [ $# -gt 0 ]; do
             if [ "$mihomo_installed" != "installed" ] && [ "$xray_installed" != "installed" ]; then
                 echo
                 echo -e "  ${red}Ошибка${reset}: Установка прервана. Не установлено ни одного ядра проксирования (Xray или Mihomo)"
+                # shellcheck disable=SC2154 # yq_installed задаётся в info_version_yq() (01_info/04_info_mihomo.sh)
+                [ "$yq_installed" = "broken" ] && echo -e "  ${red}Причина${reset}: бинарник Yq повреждён или несовместим с процессором вашего роутера"
                 exit 1
             fi
 
@@ -744,7 +746,11 @@ while [ $# -gt 0 ]; do
                 if [ "$mihomo_installed" != "installed" ]; then
                     echo
                     delete_tmp
-                    echo -e "  ${red}Ошибка${reset}: Mihomo не установлен (отсутствует обязательный Yq или бинарник Mihomo)"
+                    case "$yq_installed" in
+                        not_installed) echo -e "  ${red}Ошибка${reset}: Mihomo не установлен (отсутствует обязательный Yq)" ;;
+                        broken)        echo -e "  ${red}Ошибка${reset}: Mihomo не установлен (бинарник Yq повреждён или несовместим с процессором)" ;;
+                        *)             echo -e "  ${red}Ошибка${reset}: Mihomo не установлен (бинарник Mihomo повреждён, несовместим с процессором или отсутствует)" ;;
+                    esac
                     exit 1
                 elif [ "$mihomo_was_installed" = "installed" ]; then
                     echo -e "  Выполняется отмена регистрации предыдущей версии ${yellow}Mihomo${reset}"
