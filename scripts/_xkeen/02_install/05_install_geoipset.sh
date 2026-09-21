@@ -43,9 +43,16 @@ install_geoipset_lst() {
 
     local tmp_file="${dest_file}.tmp.$$"
 
-    if _download_and_validate_loop "$url" "$tmp_file" "$expected_size" "$_validator_name" "$display_name"; then
+    # geoipv4_url/geoipv6_url всегда указывают на GitHub Release — проверка
+    # безусловна (в отличие от process_geo_file(), которая обслуживает ещё и
+    # произвольные пользовательские URL)
+    if _download_and_validate_loop "$url" "$tmp_file" "$expected_size" "$_validator_name" "$display_name" && verify_github_sha256 "$tmp_file" "$url"; then
         mv -f "$tmp_file" "$dest_file"
     else
+        if [ -f "$tmp_file" ]; then
+            rm -f "$tmp_file"
+            _last_error="sha256_mismatch"
+        fi
         # Обработка ошибок, если все попытки провалились
         case "$_last_error" in
             html_stub)
@@ -59,6 +66,9 @@ install_geoipset_lst() {
                 ;;
             size|size_mismatch)
                 printf "  ${red}Ошибка${reset}: Размер загруженного файла не соответствует ожидаемому\n"
+                ;;
+            sha256_mismatch)
+                printf "  ${red}Ошибка${reset}: Контрольная сумма SHA-256 файла %s не подтверждена\n" "$display_name"
                 ;;
             *)
                 local max_attempts=${retries_download:-1}
