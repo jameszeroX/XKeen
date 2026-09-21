@@ -104,7 +104,10 @@ done
 # Без этого <img src="images/..."> на страницах guides отдаёт 404.
 if [ -d "$ROOT/wiki/images" ]; then
     mkdir -p "$SRC/guides/images"
-    cp "$ROOT"/wiki/images/* "$SRC/guides/images/"
+    for img in "$ROOT"/wiki/images/*; do
+        [ -f "$img" ] || continue
+        cp "$img" "$SRC/guides/images/"
+    done
 fi
 
 # docs/*.md → авто-цикл. Исключения те же (_*.md, .gitignore — release-notes/ авто-скип).
