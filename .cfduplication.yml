@@ -1,5 +1,6 @@
-# 04_register_init.sh — самостоятельный standalone-скрипт, не подгружает модули и по этой причине
-# содержит собственные копии функций, которые так же есть в файле 01_info_common.sh
-# Исключаем 04_register_init.sh из анализа CodeFactor на дублирование кода
+# 04_register_init.sh и install.sh — самостоятельные standalone-скрипты, не подгружают модули
+# и по этой причине содержат собственные копии функций, которые так же есть в файле 01_info_common.sh
+# Исключаем их из анализа CodeFactor на дублирование кода
 IgnorePatterns:
   - scripts/_xkeen/02_install/07_install_register/04_register_init.sh
+  - install.sh

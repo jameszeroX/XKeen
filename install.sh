@@ -33,16 +33,44 @@ echo  "    $0 --help"
 echo  "    curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh | sh -s -- --stable"
 }
 
+# Дубль функции из scripts/_xkeen/01_info/01_info_common.sh: install.sh
+# запускается до установки модулей и своих копий-файлов не подключает,
+# поэтому правки нужны в обоих местах. Разбор состоянием, а не регуляркой —
+# регулярка не отличает комментарий от строкового значения (см. обоснование
+# в оригинале).
+strip_json_comments() {
+    awk '
+    {
+        line = ""; i = 1; n = length($0); instr = 0; esc = 0
+        while (i <= n) {
+            c = substr($0, i, 1)
+            if (inblk) {
+                if (c == "*" && substr($0, i + 1, 1) == "/") { inblk = 0; i += 2 } else i++
+                continue
+            }
+            if (instr) {
+                line = line c
+                if (esc) esc = 0
+                else if (c == "\\") esc = 1
+                else if (c == "\"") instr = 0
+                i++
+                continue
+            }
+            if (c == "\"") { instr = 1; line = line c; i++; continue }
+            if (c == "/" && substr($0, i + 1, 1) == "*") { inblk = 1; i += 2; continue }
+            if (c == "/" && substr($0, i + 1, 1) == "/") break
+            line = line c; i++
+        }
+        print line
+    }' "$@"
+}
+
 # Функция извлечения пользовательского прокси из /opt/etc/xkeen/xkeen.json
 get_user_proxy() {
     gh_proxy_user=""
     [ ! -f "$xkeen_config" ] && return 1
 
-    gh_proxy_user=$(sed \
-        -e ':a; s:/\*[^*]*\*[^/]*\*/::g; ta' \
-        -e 's/^[[:space:]]*\/\/.*$//' \
-        -e 's/[[:space:]]\{1,\}\/\/.*$//' \
-        "$xkeen_config" | \
+    gh_proxy_user=$(strip_json_comments "$xkeen_config" | \
         sed -n 's/.*"gh_proxy"[[:space:]]*: *"\([^"]*\)".*/\1/p' | \
         sed 's/^[[:space:]]*//; s/[[:space:]]*$//' 2>/dev/null)
 
