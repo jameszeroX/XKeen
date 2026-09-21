@@ -428,14 +428,20 @@ curl_with_timeout() {
 
 # Функция проверки IPv6
 check_ipv6_active() {
-    local iface
-    for iface in /sys/class/net/*; do
-        iface="${iface##*/}"
-        case "$iface" in
+    local addr
+    local ifindex
+    local prefixlen
+    local scope
+    local flags
+    local ifname
+    [ -r /proc/net/if_inet6 ] || return 1
+    # shellcheck disable=SC2034
+    while read -r addr ifindex prefixlen scope flags ifname; do
+        case "$ifname" in
             ezcfg0|t2s*) continue ;;
         esac
-        ip -6 addr show dev "$iface" 2>/dev/null | grep -q "inet6 fe80::" && return 0
-    done
+        [ "$scope" = "20" ] && return 0
+    done < /proc/net/if_inet6
     return 1
 }
 
