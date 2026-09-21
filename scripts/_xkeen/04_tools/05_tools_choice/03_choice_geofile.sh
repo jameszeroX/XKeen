@@ -64,6 +64,36 @@ choice_geodata() {
             fi
         done
 
+        # Пункты "0. Пропустить" и "6. Удалить..." взаимоисключают друг друга и пункты 1-5:
+        # совместный выбор (например "1 6" или "1 0") иначе даёт скрытые delete+reinstall
+        # или ложное "Выполнен пропуск" при реально активных install_*/update_*.
+        has_choice_skip=false
+        has_choice_delete=false
+        has_choice_install_or_update=false
+
+        for scan_choice in $data_choices; do
+            case "$scan_choice" in
+                0) has_choice_skip=true ;;
+                6) has_choice_delete=true ;;
+                1|2|3|4|5) has_choice_install_or_update=true ;;
+            esac
+        done
+
+        if [ "$has_choice_skip" = true ] && [ "$has_choice_delete" = true ]; then
+            echo -e "  ${red}Пункт «0. Пропустить» нельзя выбирать вместе с другими пунктами.${reset} Пожалуйста, выберите снова"
+            continue
+        fi
+
+        if [ "$has_choice_skip" = true ] && [ "$has_choice_install_or_update" = true ]; then
+            echo -e "  ${red}Пункт «0. Пропустить» нельзя выбирать вместе с другими пунктами.${reset} Пожалуйста, выберите снова"
+            continue
+        fi
+
+        if [ "$has_choice_delete" = true ] && [ "$has_choice_install_or_update" = true ]; then
+            echo -e "  ${red}Пункт «6. Удалить установленные ${type_name}» нельзя выбирать вместе с пунктами 1-5.${reset} Пожалуйста, выберите снова"
+            continue
+        fi
+
         for choice in $data_choices; do
             case "$choice" in
                 1)
