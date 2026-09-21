@@ -18,7 +18,7 @@
 - [`wiki/Configuration.md`](../wiki/Configuration.md) — внешние списки портов/IP, fd-контроль, Self-Hosted прокси, OffLine-установка.
 - [`wiki/Forkinfo.md`](../wiki/Forkinfo.md) — отличия форка от оригинала Skrill0/XKeen.
 - [`wiki/Knownissues.md`](../wiki/Knownissues.md) — известные ограничения. Читать перед триажом багов.
-- [`test/README.md`](../test/README.md) — release-notes 2.0 Beta, новые параметры и инварианты.
+- [`test/README.md`](../test/README.md) — release-notes 2.0.1 Beta, новые параметры и инварианты.
 
 ## Wiki
 
