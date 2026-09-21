@@ -3167,25 +3167,41 @@ fi
 EOL
     sed -i '1,2!{/^[[:space:]]*#/d; /^[[:space:]]*$/d}' "$file_netfilter_hook"
     chmod 700 "$file_netfilter_hook"
-    mv -f "$file_netfilter_hook" "$_hook_live" || {
+    # Пропускаем перезапись, если итоговое содержимое не отличается от live:
+    # экономим запись на flash при повторных S05xkeen start от NDM.
+    if [ -f "$_hook_live" ] && [ "$(cat "$file_netfilter_hook")" = "$(cat "$_hook_live")" ]; then
         rm -f "$file_netfilter_hook"
-        file_netfilter_hook="$_hook_live"
-        log_error_router "Не удалось атомарно обновить netfilter-хук"
-        return 1
-    }
+    else
+        mv -f "$file_netfilter_hook" "$_hook_live" || {
+            rm -f "$file_netfilter_hook"
+            file_netfilter_hook="$_hook_live"
+            log_error_router "Не удалось атомарно обновить netfilter-хук"
+            return 1
+        }
+    fi
     file_netfilter_hook="$_hook_live"
 
     # Schedule.d-хук: NDM вызывает scripts/schedule.d при start/stop расписаний
     # (родительский контроль). Хук дёргает netfilter.d/proxy.sh, который
     # ре-синхронизирует ipset deny-MAC из актуального hotspot API.
+    # Тот же tmp+сравнение+atomic-mv паттерн, что и у proxy.sh выше: heredoc
+    # статичен, но голый exists-check "застынет" на старом содержимом после
+    # апгрейда XKeen, поэтому сравниваем содержимое, а не факт наличия файла.
     mkdir -p "$(dirname "$file_schedule_hook")" 2>/dev/null
-    cat > "$file_schedule_hook" <<'SCHEDULE_EOL'
+    _schedule_hook_tmp="${file_schedule_hook}.tmp.$$"
+    rm -f "$_schedule_hook_tmp"
+    cat > "$_schedule_hook_tmp" <<'SCHEDULE_EOL'
 #!/bin/sh
 # XKeen: re-sync deny MAC ipset on schedule start/stop. Auto-generated. DO NOT EDIT!
 [ "$1" = "start" ] || [ "$1" = "stop" ] || exit 0
 [ -x /opt/etc/ndm/netfilter.d/proxy.sh ] && /opt/etc/ndm/netfilter.d/proxy.sh
 SCHEDULE_EOL
-    chmod 755 "$file_schedule_hook"
+    if [ -f "$file_schedule_hook" ] && [ "$(cat "$_schedule_hook_tmp")" = "$(cat "$file_schedule_hook")" ]; then
+        rm -f "$_schedule_hook_tmp"
+    else
+        chmod 755 "$_schedule_hook_tmp"
+        mv -f "$_schedule_hook_tmp" "$file_schedule_hook"
+    fi
 
     return 0
 }
