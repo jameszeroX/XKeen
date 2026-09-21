@@ -47,9 +47,13 @@ inject_fm() {
     target="$1"
     source_path="$2"
     tmp="$target.tmp"
+    # Оборачиваем значение в одинарные YAML-кавычки (спецсимволы вроде ':'
+    # иначе ломают парсинг front-matter), предварительно экранируя
+    # вложенные одинарные кавычки удвоением по правилу YAML.
+    esc_path=$(printf '%s' "$source_path" | sed "s/'/''/g")
     {
         echo '---'
-        echo "edit_url: $REPO_EDIT/$source_path"
+        echo "edit_url: '$REPO_EDIT/$esc_path'"
         echo '---'
         echo ''
         cat "$target"
