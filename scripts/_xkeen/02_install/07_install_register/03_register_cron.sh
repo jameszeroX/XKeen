@@ -97,11 +97,7 @@ exit 0'
 update_cron_geofile_task() {
     if [ -f "$cron_dir/$cron_file" ]; then
         tmp_file="$cron_dir/${cron_file}.tmp.$$"
-        if [ -z "$choice_cancel_cron_select" ]; then
-            grep -v -E "($install_dir/xkeen[[:space:]]+-(ug|ux|uk))" "$cron_dir/$cron_file" > "$tmp_file"
-        else
-            grep -v -E "($install_dir/xkeen[[:space:]]+-(ugi|ugs|ux|uk))" "$cron_dir/$cron_file" > "$tmp_file"
-        fi
+        grep -v -E "($install_dir/xkeen[[:space:]]+-(ugi|ugs|ux|uk))" "$cron_dir/$cron_file" > "$tmp_file"
         mv -f "$tmp_file" "$cron_dir/$cron_file" || rm -f "$tmp_file"
     fi
 }
