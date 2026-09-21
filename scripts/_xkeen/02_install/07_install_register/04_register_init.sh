@@ -2124,6 +2124,7 @@ configure_firewall() {
     cat > "$file_netfilter_hook" <<'EOL'
 #!/bin/sh
 # XKeen: Auto-generated file. DO NOT EDIT!
+PATH="/opt/bin:/opt/sbin:/sbin:/bin:/usr/sbin:/usr/bin"
 _xkeen_secure_rundir() {
     d="/tmp/.xkeen"
     if [ -e "$d" ] && [ ! -d "$d" ]; then rm -f "$d" 2>/dev/null; fi
