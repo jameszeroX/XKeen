@@ -11,9 +11,11 @@
 | Массивы (`arr=(a b c)`, `${arr[i]}`) | Позиционные параметры, IFS-split строки |
 | `<<<` (here-string) | `echo "…" \| cmd` или `<< EOF` |
 | `function name()` | `name()` |
-| `local var` | Не использовать — `local` не POSIX |
+| `local var` | Разрешено на целевом BusyBox ash (shellcheck SC3043 — ожидаемый шум для POSIX sh) |
 | `(( … ))` арифметика | `$(( … ))` или `expr` |
-| `read -p` | `printf '...'; read var` |
+| `read -p` | Разрешено на целевом BusyBox ash (shellcheck SC3045 — ожидаемый шум для POSIX sh) |
+
+**Примечание:** SC3043 и SC3045 в выводе `shellcheck` по `local` и `read -p` — ожидаемый шум при анализе POSIX sh. Это не баги и не повод переписывать существующий код.
 
 Проверка перед PR:
 
