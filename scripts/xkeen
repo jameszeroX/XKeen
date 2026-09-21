@@ -543,14 +543,18 @@ while [ $# -gt 0 ]; do
 
             info_geosite
             info_geoip
-            if 
+            # $has_user_geodata выставляет has_user_geodata() (02_install/04_install_geofile.sh),
+            # как и шесть $update_* выше — их выставляют info_geosite/info_geoip.
+            has_user_geodata
+            if
                 [ "$update_refilter_geosite" = "true" ] || \
                 [ "$update_v2fly_geosite" = "true" ] || \
                 [ "$update_zkeen_geosite" = "true" ] || \
                 [ "$update_refilter_geoip" = "true" ] || \
                 [ "$update_v2fly_geoip" = "true" ] || \
                 [ "$update_zkeenip_geoip" = "true" ] || \
-                [ -f "$ru_exclude_ipv4" ]; then
+                [ -f "$ru_exclude_ipv4" ] || \
+                [ "$has_user_geodata" = "true" ]; then
 
                 echo
                 geofiles_update_state

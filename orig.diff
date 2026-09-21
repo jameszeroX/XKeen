@@ -1,0 +1,51 @@
+diff --git a/scripts/_xkeen/02_install/04_install_geofile.sh b/scripts/_xkeen/02_install/04_install_geofile.sh
+index 892d3fd..b8e7a16 100644
+--- a/scripts/_xkeen/02_install/04_install_geofile.sh
++++ b/scripts/_xkeen/02_install/04_install_geofile.sh
+@@ -8,6 +8,22 @@ geofiles_update_state() {
+     [ "$val" = "false" ] && geofile_update="false"
+ }
+ 
++# Проверяет, настроены ли у пользователя собственные geodata-записи
++# (.xkeen.xray.geodata[] в xkeen.json). Нужна как отдельный гейт входа
++# в блок -ug: update_user_geofiles() сама корректно обрабатывает
++# geodata, но до неё поток управления не доходит, если ни один из
++# стандартных флагов обновления не выставлен.
++has_user_geodata() {
++    # shellcheck disable=SC2034 # используется в scripts/xkeen, блок -ug
++    has_user_geodata="false"
++    [ -f "$xkeen_config" ] || return 0
++    command -v jq >/dev/null 2>&1 || return 0
++    if strip_json_comments "$xkeen_config" | jq -e '(.xkeen.xray.geodata // []) | length > 0' >/dev/null 2>&1; then
++        # shellcheck disable=SC2034 # используется в scripts/xkeen, блок -ug
++        has_user_geodata="true"
++    fi
++}
++
+ # Функция для загрузки и обработки геофайлов
+ process_geo_file() {
+     local url="$1"
+diff --git a/scripts/xkeen b/scripts/xkeen
+index adc8e66..536cfc8 100644
+--- a/scripts/xkeen
++++ b/scripts/xkeen
+@@ -521,14 +521,17 @@ while [ $# -gt 0 ]; do
+ 
+             info_geosite
+             info_geoip
+-            if 
++            has_user_geodata
++            # shellcheck disable=SC2154 # has_user_geodata задаётся в has_user_geodata() (02_install/04_install_geofile.sh)
++            if
+                 [ "$update_refilter_geosite" = "true" ] || \
+                 [ "$update_v2fly_geosite" = "true" ] || \
+                 [ "$update_zkeen_geosite" = "true" ] || \
+                 [ "$update_refilter_geoip" = "true" ] || \
+                 [ "$update_v2fly_geoip" = "true" ] || \
+                 [ "$update_zkeenip_geoip" = "true" ] || \
+-                [ -f "$ru_exclude_ipv4" ]; then
++                [ -f "$ru_exclude_ipv4" ] || \
++                [ "$has_user_geodata" = "true" ]; then
+ 
+                 echo
+                 geofiles_update_state
