@@ -609,7 +609,7 @@ while [ $# -gt 0 ]; do
             fi
 
             # Перезапуск скрипта
-            grep -E "^\s*-uk_post_update\s*\)" "$0" > /dev/null && exec sh "$0" -uk_post_update
+            grep -E "^[[:space:]]*-uk_post_update[[:space:]]*\)" "$0" > /dev/null && exec sh "$0" -uk_post_update
         ;;
 
 
@@ -1165,7 +1165,7 @@ while [ $# -gt 0 ]; do
             fi
 
             # Перезапуск скрипта
-            grep -E "^\s*-k_post_install\s*\)" "$0" > /dev/null && exec sh "$0" -k_post_install
+            grep -E "^[[:space:]]*-k_post_install[[:space:]]*\)" "$0" > /dev/null && exec sh "$0" -k_post_install
         ;;
 
 
