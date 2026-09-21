@@ -131,6 +131,13 @@ xkeen_set_info() {
 # Проверяем запущен ли прокси-клиент
 is_proxy_running() { pidof xray >/dev/null 2>&1 || pidof mihomo >/dev/null 2>&1; }
 
+# Запуск без аргументов эквивалентен -h: показываем справку вместо тихого выхода
+if [ $# -eq 0 ]; then
+    smart_clear
+    help_xkeen
+    exit 0
+fi
+
 xkeen_rc=0
 
 while [ $# -gt 0 ]; do
