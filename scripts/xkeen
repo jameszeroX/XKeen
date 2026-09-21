@@ -5,10 +5,10 @@ script_dir="$(cd "$(dirname "$0")" && pwd)"
 
 # Скрываем основную директорию xkeen
 install_xkeen_rename() {
-    source_dir="_xkeen"
-    target_dir=".xkeen"
-    source_path="$script_dir/$source_dir"
-    target_path="$script_dir/$target_dir"
+    local source_dir="_xkeen"
+    local target_dir=".xkeen"
+    local source_path="$script_dir/$source_dir"
+    local target_path="$script_dir/$target_dir"
 
     if [ -d "$source_path" ]; then
         if [ -d "$target_path" ]; then
