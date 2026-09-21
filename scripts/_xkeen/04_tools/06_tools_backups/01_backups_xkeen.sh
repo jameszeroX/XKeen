@@ -40,6 +40,7 @@ restore_backup_xkeen() {
             
             echo -e "  XKeen ${green}успешно восстановлен${reset} из: $(basename "$latest_backup_dir")"
         else
+            rm -rf "${install_dir:?}/_xkeen"
             echo -e "  ${red}Ошибка:${reset} Не удалось скопировать файлы из резервной копии"
         fi
     else
