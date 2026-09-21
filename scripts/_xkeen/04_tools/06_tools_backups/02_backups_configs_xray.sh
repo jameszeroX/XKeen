@@ -22,11 +22,19 @@ restore_backup_configs_xray() {
     done
 
     if [ -n "$latest_backup" ]; then
-        rm -rf "${xray_conf_dir:?}"/*
+        # Копируем бэкап во временную директорию рядом с целевой и заменяем
+        # текущую конфигурацию только при успешном копировании, чтобы сбой
+        # cp -r (диск заполнен, обрыв сессии) не оставил xray_conf_dir пустой
+        restore_tmp_dir="${xray_conf_dir}.restore_tmp"
+        rm -rf "${restore_tmp_dir:?}"
+        mkdir -p "$restore_tmp_dir"
 
-        if cp -r "$latest_backup"/* "$xray_conf_dir/"; then
+        if cp -r "$latest_backup"/* "$restore_tmp_dir/"; then
+            rm -rf "${xray_conf_dir:?}"
+            mv "$restore_tmp_dir" "$xray_conf_dir"
             echo -e "  Конфигурация Xray ${green}успешно восстановлена${reset} из: $(basename "$latest_backup")"
         else
+            rm -rf "${restore_tmp_dir:?}"
             echo -e "  ${red}Ошибка${reset} при восстановлении файлов"
         fi
     else
