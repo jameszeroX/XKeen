@@ -1590,7 +1590,16 @@ resolve_dscp_force_proxy() {
     port_dscp_force_proxy_tproxy=""
     network_dscp_force_proxy_tproxy=""
 
-    if [ ! -n "$dscp_force_proxy" ] && [ ! -n "$name_policy_full" ]; then
+    # Регрессия a889bf3: тут был name_policy_full (константа "xkeen_full",
+    # никогда не пустая) вместо policy_mark_full (реальный runtime-mark
+    # политики) — условие было математически недостижимо.
+    # Известное ограничение: в ветке `case "$1" in dscp)` (команда
+    # `xkeen -dscp`) policy_mark_full не вычисляется (там нет api_cache_init
+    # и get_policy_mark, они есть только внутри proxy_start) — в редком
+    # сценарии dscp_enable=on + dscp_force_proxy вручную обнулён в конфиге +
+    # активна политика xkeen_full статус в этой ветке CLI может быть
+    # неточным. Это существующее ограничение, а не новая регрессия.
+    if [ -z "$dscp_force_proxy" ] && [ -z "$policy_mark_full" ]; then
         dscp_force_proxy_status="disabled"
         dscp_force_proxy_reason="метка и политика отключены в конфиге XKeen"
         return 1
