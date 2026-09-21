@@ -22,4 +22,4 @@
 
 ## Wiki
 
-Исходники GitHub Wiki лежат в [`../wiki/`](../wiki) и автоматически синхронизируются в `<repo>.wiki.git` через workflow `.github/workflows/wiki-sync.yaml`. См. [build-and-release.md](build-and-release.md#workflow-wiki-syncyaml).
+Исходники GitHub Wiki лежат в [`../wiki/`](../wiki) и автоматически синхронизируются в `<repo>.wiki.git` через workflow `.github/workflows/wiki-sync.yaml`. См. [build-and-release.md](build-and-release.md#wiki-syncyaml).
