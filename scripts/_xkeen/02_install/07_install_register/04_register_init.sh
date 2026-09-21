@@ -3439,6 +3439,10 @@ _acquire_coldstart_guard() {
     # PID is written together with mkdir.  A guard without it is stale, not a
     # permanent denial of service.
     # PID exists but its process died → reclaim stale guard.
+    # Реcheck перед rm -rf: между чтением протухшего pid выше и этой строкой
+    # другой процесс мог успеть сделать свой mkdir+printf — не сносим чужой
+    # свежий lock.
+    [ "$(cat "$xkeen_rundir/coldstart.lock.d/pid" 2>/dev/null)" = "$_gpid" ] || return 1
     rm -rf "$xkeen_rundir/coldstart.lock.d"
     mkdir "$xkeen_rundir/coldstart.lock.d" 2>/dev/null || return 1
     printf '%s\n' "$$" > "$xkeen_rundir/coldstart.lock.d/pid"
@@ -3474,6 +3478,10 @@ _acquire_proxy_mutex() {
     if [ -n "$_mpid" ] && kill -0 "$_mpid" 2>/dev/null; then
         return 1
     fi
+    # Реcheck перед rm -rf: между чтением протухшего pid выше и этой строкой
+    # другой процесс мог успеть сделать свой mkdir+printf — не сносим чужой
+    # свежий lock.
+    [ "$(cat "$xkeen_rundir/proxy.mutex.d/pid" 2>/dev/null)" = "$_mpid" ] || return 1
     rm -rf "$xkeen_rundir/proxy.mutex.d"
     mkdir "$xkeen_rundir/proxy.mutex.d" 2>/dev/null || return 1
     printf '%s\n' "$$" > "$xkeen_rundir/proxy.mutex.d/pid"
