@@ -5,8 +5,11 @@ delete_geoipset() {
         printf "     1. Да. Загруженные файлы подсетей будут удалены, а списки очищены\n"
         printf "     0. Нет. Отмена удаления\n\n"
         printf "  Ваш выбор: "
-        read -r choice
-        
+        # Без TTY (cron, ssh без -t) read получает EOF: код возврата ненулевой,
+        # choice остаётся пустым, попадает в ветку * — while true крутится
+        # без блокировки на read, CPU-spin. Трактуем EOF как явный ввод 0.
+        read -r choice || choice=0
+
         case "$choice" in
             0)
                 echo
