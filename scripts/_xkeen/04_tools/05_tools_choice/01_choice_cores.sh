@@ -59,6 +59,12 @@ choice_xray_core() {
         if grep -q 'name_client="xray"' $initd_file; then
             echo -e " Смена ядра ${red}не выполнена${reset}. Устройство уже работает на ядре ${yellow}Xray${reset}"
         elif grep -q 'name_client="mihomo"' $initd_file; then
+            # pidof-гейт намеренно: вызывать $initd_file stop безусловно здесь бессмысленно —
+            # proxy_stop() (04_register_init.sh, ветка `if ! proxy_status`) сам содержит
+            # идентичный pidof-гейт вокруг clean_firewall и для уже мёртвого mihomo его всё равно
+            # не выполнит. Остаточные xkeen-tagged правила старого ядра безусловно вычищаются и
+            # пересобираются _xkeen_apply_table (04_register_init.sh) при следующем `xkeen -start`,
+            # который сообщение об успешной смене ядра ниже и так предписывает выполнить.
             if pidof "mihomo" >/dev/null; then
                 $initd_file stop
             fi
@@ -84,6 +90,12 @@ choice_mihomo_core() {
         if grep -q 'name_client="mihomo"' $initd_file; then
             echo -e " Смена ядра ${red}не выполнена${reset}. Устройство уже работает на ядре ${yellow}Mihomo${reset}"
         elif [ -f "$install_dir/mihomo" ] && [ -f "$install_dir/yq" ] && grep -q 'name_client="xray"' $initd_file; then
+            # pidof-гейт намеренно: вызывать $initd_file stop безусловно здесь бессмысленно —
+            # proxy_stop() (04_register_init.sh, ветка `if ! proxy_status`) сам содержит
+            # идентичный pidof-гейт вокруг clean_firewall и для уже мёртвого xray его всё равно
+            # не выполнит. Остаточные xkeen-tagged правила старого ядра безусловно вычищаются и
+            # пересобираются _xkeen_apply_table (04_register_init.sh) при следующем `xkeen -start`,
+            # который сообщение об успешной смене ядра ниже и так предписывает выполнить.
             if pidof "xray" >/dev/null; then
                 $initd_file stop
             fi
