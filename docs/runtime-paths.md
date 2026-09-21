@@ -37,20 +37,24 @@
 
 | Путь | Назначение |
 | --- | --- |
-| `/opt/var/log/xkeen/` | Логи самого XKeen |
 | `/opt/var/log/xray/access.log` | Access-лог Xray |
 | `/opt/var/log/xray/error.log` | Error-лог Xray |
 | `/opt/var/log/xkeen-detached.log` | Лог фоновых запусков (self-detach из `-start/-stop/-restart` без TTY) |
+
+**Примечание:** `/opt/var/log/xkeen/` — legacy директория, удаляется при каждой установке функцией `install_xkeen()` (см. `03_install_xkeen.sh:42`), не используется для текущих логов.
 
 ## Runtime-state
 
 | Путь | Назначение |
 | --- | --- |
-| `/opt/var/run/` | PID-файлы (`xkeen.pid`, `xray.pid`, `mihomo.pid`) |
+| `/tmp/.xkeen/` | Защищённая рабочая директория (mode 700, root-only, self-healing): временные файлы процесса, блокировки сетевых правил, кэш зеркал, состояние hotspot-черного списка MAC. Пересоздаётся при обнаружении изменения владельца/прав. |
+| `/var/run/xkeen_fd.pid` | PID-файл FD-watchdog демона (проверка открытых файловых дескрипторов); существует только при `check_fd=on` |
 | `/opt/tmp/xkeen/` | Временная директория XKeen |
 | `/opt/tmp/xray/`, `/opt/tmp/mihomo/` | Временные директории ядер |
 | `/opt/backups/` | Архивы резервных копий (флаги `-kb`, `-xb`, `-mb`) |
 | `/opt/var/spool/cron/crontabs/root` | Cron-задачи (создаются флагом `-ugc`) |
+
+**Примечание:** Статус процессов проверяется через `pidof` (функция `proxy_status()` в `04_register_init.sh:1102`), а не через файлы `xkeen.pid`/`xray.pid`/`mihomo.pid`.
 
 ## Хуки в netfilter.d / schedule.d
 
@@ -61,7 +65,7 @@
 
 ## Маркеры
 
-| Файл | Что значит |
+| Маркер | Что значит |
 | --- | --- |
-| `/tmp/toff` | Маркер сессии: отключает таймаут `curl -m 180`. Создаётся флагом `-toff`, очищается trap-ом INT/TERM |
-| `/opt/etc/ndm/netfilter.d/aghfix.sh` | Опциональный фикс отображения клиентов в AdGuard Home (флаг `-aghfix`) |
+| `XKEEN_TIMEOUT_OFF` | Переменная окружения, выставляется при запуске с флагом `-toff` (см. `scripts/xkeen:44`). Отключает таймаут `curl -m 180` в текущем процессе и потомках. Действует только в одной сессии (per-process env var); это намеренное security-исправление (см. комментарий `scripts/xkeen:80-82`), заменившее прежний общий файл-маркер в `/tmp/`, чтобы non-root пользователь не мог отключать таймауты для других пользователей. |
+| `aghfix` | Переменная-флаг (default `off`, см. `04_register_init.sh:115`), встраиваемая через `inject_var` в генерируемый хук `proxy.sh` (`:2197`). Используется на `:2893` и `:2936` для фикса отображения клиентов в AdGuard Home (флаг `-aghfix`). Отдельного файла `aghfix.sh` не существует. |
