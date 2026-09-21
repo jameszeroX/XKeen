@@ -109,14 +109,6 @@ register_xkeen_initd() {
     rm -f "$old_initd_file" "$old_start_file" "$pre_initd_file"
 }
 
-# Миграция скрипта
-register_xray_initd() {
-    register_xkeen_initd
-}
-register_autostart() {
-    :
-}
-
 # Создание конфигурации XKeen
 create_xkeen_cfg() {
     previous_umask=$(umask)

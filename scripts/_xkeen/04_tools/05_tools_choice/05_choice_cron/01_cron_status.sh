@@ -42,7 +42,6 @@ choice_update_cron() {
     while true; do
         choice_cancel_cron_select=false
         choice_geofile_cron_select=false
-        choice_delete_all_cron_select=false
         invalid_choice=false
 
         echo

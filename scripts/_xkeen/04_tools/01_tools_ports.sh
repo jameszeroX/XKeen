@@ -317,8 +317,6 @@ migrate_ports_from_initd() {
     port_donor_val=$(normalize_ports "$port_donor_val")
     port_exclude_val=$(normalize_ports "$port_exclude_val")
 
-    migrated=0
-
     # Миграция port_donor
     if [ -n "$port_donor_val" ]; then
 
