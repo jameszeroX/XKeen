@@ -58,6 +58,11 @@ if [ -n "$detach_eligible" ] && [ -z "$XKEEN_DETACHED" ] \
     log_dir="/opt/var/log"
     [ -d "$log_dir" ] || mkdir -p "$log_dir"
     log="$log_dir/xkeen-detached.log"
+    # Усечение по образцу sb_log_trim (01_balancer_core.sh) — общий хелпер
+    # тут недоступен, модули импортируются позже (строка ~79).
+    if [ -f "$log" ]; then
+        tail -n 500 "$log" >"$log.tmp" 2>/dev/null && mv "$log.tmp" "$log" 2>/dev/null
+    fi
     {
         echo
         echo "=== $(date '+%F %T') $0 $* ==="

@@ -39,7 +39,7 @@
 | --- | --- |
 | `/opt/var/log/xray/access.log` | Access-лог Xray |
 | `/opt/var/log/xray/error.log` | Error-лог Xray |
-| `/opt/var/log/xkeen-detached.log` | Лог фоновых запусков (self-detach из `-start/-stop/-restart` без TTY) |
+| `/opt/var/log/xkeen-detached.log` | Лог фоновых запусков (self-detach из `-start/-stop/-restart` без TTY); усекается до последних 500 строк при каждом self-detach |
 
 **Примечание:** `/opt/var/log/xkeen/` — legacy директория, удаляется при каждой установке функцией `install_xkeen()` (см. `03_install_xkeen.sh:42`), не используется для текущих логов.
 
