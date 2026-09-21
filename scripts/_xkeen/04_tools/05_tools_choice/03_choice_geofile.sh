@@ -52,7 +52,6 @@ choice_geodata() {
         [ "$has_updatable_bases" = true ] && echo && echo "     6. Удалить установленные ${type_name}"
 
         echo
-        valid_input=true
 
         while true; do
             read -r -p "  Ваш выбор: " data_choices
