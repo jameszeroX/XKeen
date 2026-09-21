@@ -2692,11 +2692,19 @@ if pidof "$name_client" >/dev/null; then
 
         [ -z "$ports" ] && return
 
-        num_ports=$(echo "$ports" | tr ',' '\n' | wc -l)
-        i=1
-        while [ "$i" -le "$num_ports" ]; do
-            end=$((i + 6))
-            chunk=$(echo "$ports" | tr ',' '\n' | sed -n "${i},${end}p" | tr '\n' ',' | sed 's/,$//')
+        remaining="$ports"
+        while [ -n "$remaining" ]; do
+            chunk=""
+            chunk_len=0
+            while [ "$chunk_len" -lt 7 ] && [ -n "$remaining" ]; do
+                port="${remaining%%,*}"
+                case "$remaining" in
+                    *,*) remaining="${remaining#*,}" ;;
+                    *) remaining="" ;;
+                esac
+                chunk="${chunk:+$chunk,}$port"
+                chunk_len=$((chunk_len + 1))
+            done
             [ -z "$chunk" ] && break
             if [ -n "$mark" ]; then
                 set -- -m connmark --mark "$mark" -m conntrack ! --ctstate INVALID -p "$net" -m multiport --dports "$chunk" $comment -j "$target"
@@ -2704,7 +2712,6 @@ if pidof "$name_client" >/dev/null; then
                 set -- -m conntrack ! --ctstate INVALID -p "$net" -m multiport --dports "$chunk" $comment -j "$target"
             fi
             ipt -A PREROUTING "$@" >/dev/null 2>&1
-            i=$((i + 7))
         done
     }
 
