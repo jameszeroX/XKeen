@@ -74,8 +74,8 @@ sb_write_setting() {
     # Валидируем через strip: в tmp теперь СОХРАНЕНЫ комментарии, и голый jq на
     # них упал бы, ложно забраковав корректный результат.
     if { [ "$rc" = 0 ] || [ "$rc" = 1 ]; } && strip_json_comments "$tmp" | jq -e . >/dev/null 2>&1 \
-       && strip_json_comments "$tmp" | jq -e "$struct_ok" >/dev/null 2>&1; then
-        mv "$tmp" "$xkeen_config"
+       && strip_json_comments "$tmp" | jq -e "$struct_ok" >/dev/null 2>&1 \
+       && chmod 600 "$tmp" && mv "$tmp" "$xkeen_config"; then
         return 0
     fi
 
