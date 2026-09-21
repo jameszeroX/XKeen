@@ -19,6 +19,14 @@ Invariants:
   aside) to catch plugin layout changes. Randomized element ids in the
   highlighted markup do not matter — only text is extracted.
 - Two runs over the same HTML must produce byte-identical output.
+- Before writing, the newly converted block is compared against the content
+  currently between the faq-sync markers: if it is disproportionately
+  smaller (SIZE_RATIO_GUARD), splice() raises instead of splicing. The
+  threshold is deliberately conservative — it catches near-total page
+  degradation (maintenance stub, empty CMS post, interstitial), not
+  legitimate FAQ trimming. Mirrors the min-size/stub-detection pattern
+  already used for geo-file downloads in
+  scripts/_xkeen/04_tools/07_tools_downloaders/00_fetch_with_mirrors.sh.
 """
 
 import re
@@ -36,6 +44,9 @@ GENERATED_NOTE = (
     "Не редактировать вручную: блок перезаписывается workflow faq-sync\n"
     "(.github/scripts/faq-html2md.py)."
 )
+# A new block under this fraction of the previous block's size is treated as
+# a degraded/placeholder page rather than a legitimate content change.
+SIZE_RATIO_GUARD = 0.5
 
 
 def extract_content(html):
@@ -111,6 +122,21 @@ def splice(wiki_text, block):
         )
     head = wiki_text[: begin + len(BEGIN_MARKER)]
     tail = wiki_text[end:]
+
+    # Old content, with the previous run's GENERATED_NOTE stripped so the
+    # note's fixed length does not skew the ratio.
+    old_content = wiki_text[begin + len(BEGIN_MARKER) : end].strip("\n")
+    if old_content.startswith(GENERATED_NOTE):
+        old_content = old_content[len(GENERATED_NOTE) :].strip("\n")
+    # Multiplying (rather than dividing) keeps a first sync — old_content
+    # empty — from ever tripping the guard, with no division-by-zero.
+    if len(block) < SIZE_RATIO_GUARD * len(old_content):
+        raise ValueError(
+            "converted content is suspiciously small (%d bytes vs %d bytes "
+            "previously) — source page may be degraded/placeholder"
+            % (len(block), len(old_content))
+        )
+
     return head + "\n" + GENERATED_NOTE + "\n\n" + block + "\n\n" + tail
 
 
