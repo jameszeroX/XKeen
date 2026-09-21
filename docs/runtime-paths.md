@@ -56,7 +56,7 @@
 
 | Путь | Назначение |
 | --- | --- |
-| `/opt/etc/ndm/netfilter.d/proxy.sh` | Хук при пересборке правил межсетевого экрана Keenetic — переставляет iptables-правила прокси |
+| `/opt/etc/ndm/netfilter.d/proxy.sh` | Хук при пересборке правил межсетевого экрана Keenetic — переставляет iptables-правила прокси; при рассинхронизации с `$type` от NDM самостоятельно перепроверяет ip6tables_supported/iptables_supported вместо слепого доверия флагам, запечённым на момент configure_firewall() |
 | `/opt/etc/ndm/schedule.d/00-xkeen-hotspot-sync.sh` | Хук на смену клиентов hotspot — обновляет ipset `xkeen_deny_mac` |
 
 ## Маркеры
