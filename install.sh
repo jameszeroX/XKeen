@@ -116,6 +116,84 @@ download_xkeen_release() {
     return 1
 }
 
+# Best-effort проверка SHA-256 скачанного архива через GitHub Releases API.
+# Только для --stable/--legacy: URL распознаётся по шаблону releases/latest
+# или releases/download/<тег> — это настоящие GitHub Release assets, у
+# которых API отдаёт digest. Для --beta (raw.githubusercontent.com/.../test/)
+# шаблон не совпадает, функция тихо возвращает успех — как и self-update
+# (см. 02_downloaders_xkeen.sh: dev-канал раздаётся сырым файлом, без тега
+# и без API digest, проверять там нечего).
+#
+# Деградирует в предупреждение (не блокирует установку), если недоступны
+# jq, GitHub API (напрямую и через оба зеркала) или сам digest в ответе —
+# тот же дух, что verify_downloads=warn по умолчанию в 00_fetch_with_mirrors.sh.
+# jq устанавливается позже, внутри xkeen -i — на первой чистой установке его
+# ещё нет, автоустановку через opkg здесь сознательно не делаем.
+verify_install_sha256() {
+    _vis_file="$1"
+    _vis_url="$2"
+    _vis_asset=$(basename "$_vis_url")
+
+    _vis_api_url=$(printf '%s' "$_vis_url" | \
+        sed -n 's#^https://github\.com/\([^/]*\)/\([^/]*\)/releases/download/\([^/]*\)/.*#https://api.github.com/repos/\1/\2/releases/tags/\3#p')
+    if [ -z "$_vis_api_url" ]; then
+        _vis_api_url=$(printf '%s' "$_vis_url" | \
+            sed -n 's#^https://github\.com/\([^/]*\)/\([^/]*\)/releases/latest/download/.*#https://api.github.com/repos/\1/\2/releases/latest#p')
+    fi
+
+    # URL не похож на GitHub Release asset (--beta) — проверка не для нас
+    [ -z "$_vis_api_url" ] && return 0
+
+    if ! command -v jq >/dev/null 2>&1; then
+        printf "  ${yellow}Предупреждение${reset}: jq не установлен, проверка контрольной суммы ${light_blue}SHA-256${reset} пропущена\n"
+        return 0
+    fi
+
+    _vis_ref="${_vis_file}.sha256ref.$$"
+    if ! curl -fLsS --connect-timeout 10 -m 15 -o "$_vis_ref" "$_vis_api_url"; then
+        if [ -n "$gh_proxy_user" ] && curl -fLsS --connect-timeout 10 -m 15 -o "$_vis_ref" "$gh_proxy_user/$_vis_api_url"; then
+            :
+        elif curl -fLsS --connect-timeout 10 -m 15 -o "$_vis_ref" "https://gh-proxy.com/$_vis_api_url"; then
+            :
+        elif curl -fLsS --connect-timeout 10 -m 15 -o "$_vis_ref" "https://ghfast.top/$_vis_api_url"; then
+            :
+        else
+            rm -f "$_vis_ref"
+            printf "  ${yellow}Предупреждение${reset}: GitHub API недоступен, проверка контрольной суммы ${light_blue}SHA-256${reset} пропущена\n"
+            return 0
+        fi
+    fi
+
+    _vis_expected=$(jq -r --arg asset "$_vis_asset" '.assets[]? | select(.name == $asset) | .digest // ""' "$_vis_ref" 2>/dev/null | head -n 1)
+    rm -f "$_vis_ref"
+
+    case "$_vis_expected" in
+        sha256:*) _vis_expected="${_vis_expected#sha256:}" ;;
+    esac
+
+    case "$_vis_expected" in
+        [0-9a-fA-F][0-9a-fA-F]*) ;;
+        *)
+            printf "  ${yellow}Предупреждение${reset}: контрольная сумма ${light_blue}SHA-256${reset} не найдена в GitHub API, проверка пропущена\n"
+            return 0
+            ;;
+    esac
+
+    if ! command -v sha256sum >/dev/null 2>&1; then
+        printf "  ${yellow}Предупреждение${reset}: sha256sum не установлен, проверка контрольной суммы ${light_blue}SHA-256${reset} пропущена\n"
+        return 0
+    fi
+
+    _vis_actual=$(sha256sum "$_vis_file" 2>/dev/null | awk '{print $1}')
+    if [ "$_vis_actual" = "$_vis_expected" ]; then
+        printf "  Контрольная сумма ${light_blue}SHA-256${reset} файла %s ${green}проверена${reset}\n" "$_vis_asset"
+        return 0
+    fi
+
+    printf "  ${red}Ошибка${reset}: контрольная сумма ${light_blue}SHA-256${reset} файла %s не совпала с ожидаемой\n" "$_vis_asset"
+    return 1
+}
+
 # Функция патча установленной версии для совместимости с KeeneticOS 5.1.2
 # (замена "localhost" на "127.0.0.1" в rci-запросах)
 patch_localhost_compat() {
@@ -320,6 +398,11 @@ fi
 echo
 
 if ! download_xkeen_release "$url"; then
+    exit 1
+fi
+
+if ! verify_install_sha256 "$archive_name" "$url"; then
+    rm -f "$archive_name"
     exit 1
 fi
 
