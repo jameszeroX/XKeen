@@ -49,6 +49,11 @@ jobs:
           sed -i "s/^build_timestamp=\".*\"/build_timestamp=\"$BUILD_TIMESTAMP\"/" \
             scripts_for_release/_xkeen/01_info/01_info_variable.sh
 
+      - name: Validate script syntax
+        run: |
+          find scripts_for_release -name '*.sh' -print0 | xargs -0 -n1 sh -n
+          sh -n scripts_for_release/xkeen
+
       - name: Create release archive
         run: |
           mkdir -p dist
@@ -56,6 +61,9 @@ jobs:
           chmod +x xkeen
 
           find . -type f -o -type l | sed 's|^\./||' | tar -czf "../dist/${ARCHIVE_NAME}" -T -
+
+      - name: Verify archive integrity
+        run: tar -tzf "dist/${ARCHIVE_NAME}" >/dev/null
 
       - name: Clean up temporary files
         run: rm -rf scripts_for_release
