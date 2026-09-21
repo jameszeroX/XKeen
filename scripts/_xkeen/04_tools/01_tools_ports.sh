@@ -19,7 +19,7 @@ write_ports_file() {
     file="$1"
     ports="$2"
 
-    tmpfile=$(mktemp)
+    tmpfile="${file}.tmp.$$"
 
     echo "# XKeen ports list" > "$tmpfile"
     echo "$ports" | tr ',' '\n' >> "$tmpfile"
@@ -327,7 +327,7 @@ migrate_ports_from_initd() {
         combined=$(normalize_ports "$current_proxy,$port_donor_val")
 
         if [ "$combined" != "$current_proxy" ]; then
-            tmpfile=$(mktemp)
+            tmpfile="${file_port_proxying}.tmp.$$"
             echo "# XKeen port proxying list (migrated)" > "$tmpfile"
             echo "$combined" | tr ',' '\n' >> "$tmpfile"
             mv "$tmpfile" "$file_port_proxying"
@@ -342,7 +342,7 @@ migrate_ports_from_initd() {
         combined=$(normalize_ports "$current_exclude,$port_exclude_val")
 
         if [ "$combined" != "$current_exclude" ]; then
-            tmpfile=$(mktemp)
+            tmpfile="${file_port_exclude}.tmp.$$"
             echo "# XKeen port exclude list (migrated)" > "$tmpfile"
             echo "$combined" | tr ',' '\n' >> "$tmpfile"
             mv "$tmpfile" "$file_port_exclude"

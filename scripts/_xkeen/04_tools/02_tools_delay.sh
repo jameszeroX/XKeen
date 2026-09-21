@@ -38,7 +38,7 @@ _manage_delay() {
     fi
 
     local tmpfile
-    tmpfile=$(mktemp) || return 1
+    tmpfile="${initd_file}.tmp.$$"
 
     awk -v d="$new_delay" -v p="$param_name" '
     $0 ~ "^[[:space:]]*" p "=" && !done {
