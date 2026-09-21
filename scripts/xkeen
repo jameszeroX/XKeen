@@ -83,6 +83,19 @@ get_state_arg() {
 # Импортируем модули
 . "$script_dir/.xkeen/import.sh"
 
+# Self-heal пакетов (opkg-форк + опциональная установка curl/jq/ip-full/
+# iptables/ipset/ca-bundle/coreutils-uname/coreutils-nohup) пропускается для
+# команд, не зависящих от статуса пакетов: -sbt — тик балансировщика по
+# расписанию cron, может вызываться раз в минуту — и help/meta-ключей. Для
+# всех остальных команд поведение не изменилось.
+case "$1" in
+    -sbt|-h|-help|-v|-version|-about|-ad|-donate|-af|-feedback) ;;
+    *)
+        _load_packages_info
+        _ensure_installed_packages
+        ;;
+esac
+
 # -toff действует только в этом процессе и его потомках: пользователь без
 # root больше не может отключить curl timeouts общим файлом в /tmp.
 trap 'exit 1' INT TERM

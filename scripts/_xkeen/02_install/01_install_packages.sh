@@ -17,11 +17,15 @@ install_packages() {
     fi
 }
 
-install_packages "$info_packages_curl" "curl"
-install_packages "$info_packages_jq" "jq"
-install_packages "$info_packages_ip_full" "ip-full"
-install_packages "$info_packages_iptables" "iptables"
-install_packages "$info_packages_ipset" "ipset"
-install_packages "$info_packages_cabundle" "ca-bundle"
-install_packages "$info_packages_uname" "coreutils-uname"
-install_packages "$info_packages_nohup" "coreutils-nohup"
+# Устанавливает отсутствующие пакеты по данным _load_packages_info().
+# Вызывается явно из scripts/xkeen вместе с _load_packages_info() — см. commit.
+_ensure_installed_packages() {
+    install_packages "$info_packages_curl" "curl"
+    install_packages "$info_packages_jq" "jq"
+    install_packages "$info_packages_ip_full" "ip-full"
+    install_packages "$info_packages_iptables" "iptables"
+    install_packages "$info_packages_ipset" "ipset"
+    install_packages "$info_packages_cabundle" "ca-bundle"
+    install_packages "$info_packages_uname" "coreutils-uname"
+    install_packages "$info_packages_nohup" "coreutils-nohup"
+}
