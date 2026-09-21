@@ -98,6 +98,14 @@ load_geoipset() {
     local file="$2"
     local family="$3"
     local tmp="${set}_tmp"
+    local addr_regex
+
+    # Тот же паттерн, что и в load_user_ipset_family (04_register_init.sh)
+    if [ "$family" = "inet6" ]; then
+        addr_regex='([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?'
+    else
+        addr_regex='([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?'
+    fi
 
     # Сериализация: cron `xkeen -ug`, ручной `xkeen -i/-gips` и new_features()
     # (-uk_post_update/-k_post_install) сходятся здесь на общем tmp-наборе
@@ -145,7 +153,9 @@ load_geoipset() {
     ipset create "$tmp" hash:net family "$family" -exist
     ipset flush "$tmp"
 
-    if [ -f "$file" ] && awk '/^[0-9a-fA-F]/ {print "add '"$tmp"' "$1}' "$file" | ipset restore -exist; then
+    if [ -f "$file" ] && sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file" |
+       grep -Eo "$addr_regex" |
+       awk -v s="$tmp" '{print "add "s" "$1}' | ipset restore -exist; then
         ipset swap "$set" "$tmp"
     fi
     ipset destroy "$tmp"
