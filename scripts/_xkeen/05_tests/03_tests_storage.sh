@@ -31,7 +31,7 @@ preinstall_warn() {
 
             case $choice in
                 1)
-                    clear
+                    [ -t 1 ] && clear
                     break
                     ;;
                 2)
