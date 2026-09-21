@@ -48,7 +48,7 @@ choice_xray_core() {
     if [ -f "$initd_file" ]; then
         if grep -q 'name_client="xray"' $initd_file; then
             echo -e " Смена ядра ${red}не выполнена${reset}. Устройство уже работает на ядре ${yellow}Xray${reset}"
-        elif grep -q 'name_client="mihomo"' $initd_file; then
+        elif [ -f "$install_dir/xray" ] && grep -q 'name_client="mihomo"' $initd_file; then
             # pidof-гейт намеренно: вызывать $initd_file stop безусловно здесь бессмысленно —
             # proxy_stop() (04_register_init.sh, ветка `if ! proxy_status`) сам содержит
             # идентичный pidof-гейт вокруг clean_firewall и для уже мёртвого mihomo его всё равно
