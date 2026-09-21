@@ -3452,6 +3452,8 @@ _set_coldstart_pid() {
 }
 
 _release_coldstart_guard() {
+    _gpid=$(cat "$xkeen_rundir/coldstart.lock.d/pid" 2>/dev/null)
+    [ -z "$_gpid" ] || [ "$_gpid" = "$$" ] || return 0
     rm -rf "$xkeen_rundir/coldstart.lock.d"
     rm -f "$xkeen_rundir/coldstart.lock"
 }
