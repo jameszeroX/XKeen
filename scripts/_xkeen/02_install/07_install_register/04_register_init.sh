@@ -310,7 +310,16 @@ wait_for_rci_token() {
     log_error_router "RCI не отвечает (http_code=$http_code)"
     log_error_terminal "RCI не отвечает (http_code=$http_code)"
 }
-wait_for_rci_token
+# stop/status не используют curl_api (proxy_stop/proxy_status/clean_firewall
+# работают только с pidof/iptables), поэтому недействительный rci_token не
+# должен блокировать аварийную остановку и проверку статуса (killswitch-
+# инвариант из wiki/Конфигурационный-файл.md). restart/start/cold_start
+# зависят от RCI через proxy_start -> api_cache_init -> curl_api, там
+# проверка остаётся обязательной.
+case "$1" in
+    stop|status) : ;;
+    *) wait_for_rci_token ;;
+esac
 
 # Параметры curl
 curl_api() {
