@@ -4,8 +4,9 @@ install_packages() {
     package_name="$2"
 
     if [ "${package_status}" = "not_installed" ]; then
-        if [ ! -e "/tmp/.xkeen_opkg_updated" ]; then
-            opkg update >/dev/null 2>&1 && touch "/tmp/.xkeen_opkg_updated"
+        _xkeen_rundir=$(_xkeen_secure_rundir) || _xkeen_rundir=""
+        if [ -z "$_xkeen_rundir" ] || [ ! -e "$_xkeen_rundir/opkg_updated" ]; then
+            opkg update >/dev/null 2>&1 && [ -n "$_xkeen_rundir" ] && touch "$_xkeen_rundir/opkg_updated"
         fi
         opkg install "$package_name" >/dev/null 2>&1
         opkg_rc=$?
