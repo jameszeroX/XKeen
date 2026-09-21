@@ -8,6 +8,21 @@ geofiles_update_state() {
     [ "$val" = "false" ] && geofile_update="false"
 }
 
+# Проверяет, что URL — стандартный GitHub Release asset-URL
+# (.../releases/latest/download/FILE или .../releases/download/TAG/FILE).
+# Нужна для process_geo_file(): она обслуживает не только фиксированные
+# GitHub-источники (geosite/geoip), но и произвольные пользовательские
+# URL из update_user_geofiles() (xkeen.json: .xkeen.xray.geodata[].url),
+# для которых verify_github_sha256 неприменима.
+_is_github_release_url() {
+    case "$1" in
+        https://github.com/*/releases/latest/download/*|https://github.com/*/releases/download/*/*)
+            return 0 ;;
+        *)
+            return 1 ;;
+    esac
+}
+
 # Функция для загрузки и обработки геофайлов
 process_geo_file() {
     local url="$1"
@@ -40,9 +55,17 @@ process_geo_file() {
 
     local tmp_file="${geo_dir}/${filename}.tmp.$$"
 
-    if _download_and_validate_loop "$url" "$tmp_file" "$expected_size" "" "$display_name"; then
+    # verify_github_sha256 запускаем только для стандартных GitHub Release
+    # URL: process_geo_file() вызывается и для произвольных пользовательских
+    # geofile-источников (update_user_geofiles()), для которых SHA-256 из
+    # GitHub API недоступна
+    if _download_and_validate_loop "$url" "$tmp_file" "$expected_size" "" "$display_name" && { ! _is_github_release_url "$url" || verify_github_sha256 "$tmp_file" "$url"; }; then
         mv -f "$tmp_file" "$geo_dir/$filename"
     else
+        if [ -f "$tmp_file" ]; then
+            rm -f "$tmp_file"
+            _last_error="sha256_mismatch"
+        fi
         # Обработка ошибок, если все попытки провалились
         case "$_last_error" in
             html_stub)
@@ -50,6 +73,9 @@ process_geo_file() {
                 ;;
             size|size_mismatch)
                 printf "  ${red}Ошибка${reset}: Размер загруженного файла не соответствует ожидаемому\n"
+                ;;
+            sha256_mismatch)
+                printf "  ${red}Ошибка${reset}: Контрольная сумма SHA-256 файла %s не подтверждена\n" "$display_name"
                 ;;
             *)
                 local max_attempts=${retries_download:-1}
