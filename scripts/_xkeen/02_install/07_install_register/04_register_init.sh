@@ -1425,17 +1425,42 @@ get_xray_network_by_tag_mode() {
     echo "$network"
 }
 
+# Кэш разбора config.yaml Mihomo (listeners+rules) с mtime-инвалидацией
+# по единственному файлу конфига — тот же паттерн, что у get_xray_transparent_inbounds,
+# но без проекции: горячему пути resolve_dscp_force_proxy() нужны разные поля
+# разных listener'ов, поэтому кэшируется весь JSON, а выборки идут через jq.
+_invalidate_mihomo_config_cache() { rm -f "$xkeen_rundir/mihomo-config-cache"; }
+
+get_mihomo_config_cache() {
+    cache_file="$xkeen_rundir/mihomo-config-cache"
+    cache_valid=0
+    if [ -f "$cache_file" ]; then
+        newer=$(find "$mihomo_config" -newer "$cache_file" 2>/dev/null | head -n 1)
+        [ -z "$newer" ] && cache_valid=1
+    fi
+    if [ "$cache_valid" = "1" ]; then
+        cat "$cache_file"
+        return 0
+    fi
+    cache_tmp="${cache_file}.tmp.$$"
+    yq -o=json '.' "$mihomo_config" >"$cache_tmp" 2>/dev/null
+    mv "$cache_tmp" "$cache_file"
+    cat "$cache_file"
+}
+
 get_mihomo_listener_field_by_name() {
     listener_name="$1"
     field_name="$2"
 
-    DSCP_FORCE_LISTENER="$listener_name" yq ".listeners[] | select(.name == strenv(DSCP_FORCE_LISTENER)) | .$field_name // \"\"" "$mihomo_config" 2>/dev/null | sed -n '1p'
+    get_mihomo_config_cache | jq -r --arg name "$listener_name" --arg field "$field_name" '
+        .listeners[]? | select(.name == $name) | .[$field] // ""
+    ' 2>/dev/null | sed -n '1p'
 }
 
 get_mihomo_listener_rule_proxy_by_name() {
     listener_name="$1"
 
-    yq '.rules[] // ""' "$mihomo_config" 2>/dev/null | awk -F',' -v tag="$listener_name" '
+    get_mihomo_config_cache | jq -r '.rules[]? // empty' 2>/dev/null | awk -F',' -v tag="$listener_name" '
         {
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", $1)
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2)
@@ -1445,9 +1470,15 @@ get_mihomo_listener_rule_proxy_by_name() {
     '
 }
 
+# listener_type вторым аргументом — если вызывающий код (find_dscp_force_listener)
+# уже получил type тем же get_mihomo_listener_field_by_name, повторный запрос не нужен.
 get_mihomo_listener_network_by_name() {
     listener_name="$1"
-    listener_type=$(get_mihomo_listener_field_by_name "$listener_name" "type")
+    if [ "$#" -ge 2 ]; then
+        listener_type="$2"
+    else
+        listener_type=$(get_mihomo_listener_field_by_name "$listener_name" "type")
+    fi
 
     case "$listener_type" in
         redir)
@@ -1604,7 +1635,7 @@ resolve_dscp_force_proxy() {
             port_lookup=$(get_mihomo_listener_field_by_name "$listener_name" "port")
             mode_lookup=$(get_mihomo_listener_field_by_name "$listener_name" "type")
             proxy_lookup=$(get_mihomo_listener_field_by_name "$listener_name" "proxy")
-            network_lookup=$(normalize_network_list "$(get_mihomo_listener_network_by_name "$listener_name")")
+            network_lookup=$(normalize_network_list "$(get_mihomo_listener_network_by_name "$listener_name" "$mode_lookup")")
             if [ -n "$port_lookup" ] || [ -n "$mode_lookup" ] || [ -n "$proxy_lookup" ]; then
                 dscp_force_found_tag="$listener_name"
                 dscp_force_found_port="$port_lookup"
@@ -3709,6 +3740,7 @@ proxy_start() {
     start_manual="$1"
     if [ "$start_manual" = "on" ] || [ "$start_auto" = "on" ]; then
         _invalidate_inbounds_cache
+        _invalidate_mihomo_config_cache
         apply_ipv6_state
         get_ipver_support
         info_health_binary
