@@ -10,7 +10,7 @@
 extract() {
     awk '/^strip_json_comments\(\) \{/,/^\}/' "$1"
 }
-eval "$(extract /repo/scripts/_xkeen/01_info/01_info_variable.sh)"
+eval "$(extract /repo/scripts/_xkeen/01_info/01_info_common.sh)"
 
 pass=0; fail=0
 check() {
@@ -72,7 +72,7 @@ check "пустой объект"               "$(norm '{}')"                  
 extract() {
     awk '/^strip_json_comments\(\) \{/,/^\}/' "$1"
 }
-a=$(extract /repo/scripts/_xkeen/01_info/01_info_variable.sh)
+a=$(extract /repo/scripts/_xkeen/01_info/01_info_common.sh)
 b=$(extract /repo/scripts/_xkeen/02_install/07_install_register/04_register_init.sh)
 check "копии функции идентичны" "$([ "$a" = "$b" ] && echo да || echo нет)" "да"
 check "функция вообще найдена" "$([ -n "$a" ] && echo да || echo нет)" "да"

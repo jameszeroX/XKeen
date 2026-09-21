@@ -27,10 +27,15 @@ sb_outbounds_file="$xray_conf_dir/04_outbounds.json"
 cron_dir="$WORK/cron"; cron_file="root"
 install_dir="$WORK/sbin"
 
-# strip_json_comments берём из реального кода, а не копией: модуль целиком не
-# подключить (на верхнем уровне он ходит curl'ом в RCI роутера), а копия
-# разъезжается с оригиналом. Тот же приём, что в test_strip_json.sh.
-eval "$(awk '/^strip_json_comments\(\) \{/,/^\}/' /repo/scripts/_xkeen/01_info/01_info_variable.sh)"
+# strip_json_comments/jc_set_path/validate_xkeen_json_syntax берём из реального
+# кода, а не копией: модуль целиком не подключить (на верхнем уровне он ходит
+# curl'ом в RCI роутера), а копия разъезжается с оригиналом. Тот же приём, что
+# в test_strip_json.sh. Все три функции живут в 01_info_common.sh (перенесены
+# туда из 01_info_variable.sh), sb_write_setting (02_balancer_control.sh)
+# зовёт jc_set_path/validate_xkeen_json_syntax, поэтому их тоже нужно сорсить.
+eval "$(awk '/^strip_json_comments\(\) \{/,/^\}/' /repo/scripts/_xkeen/01_info/01_info_common.sh)"
+eval "$(awk '/^jc_set_path\(\) \{/,/^\}/' /repo/scripts/_xkeen/01_info/01_info_common.sh)"
+eval "$(awk '/^validate_xkeen_json_syntax\(\) \{/,/^\}/' /repo/scripts/_xkeen/01_info/01_info_common.sh)"
 
 # speed_balancer_settings копируется сюда в упрощённом виде — тот же разбор,
 # что в 01_info_variable.sh, но без прочего содержимого файла переменных.
