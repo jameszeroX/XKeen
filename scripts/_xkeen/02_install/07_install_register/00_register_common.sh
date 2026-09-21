@@ -42,9 +42,19 @@ write_opkg_status() {
         echo "Installed-Time: $(date +%s)"
     } > "$status_entry"
 
-    echo "" >> "$status_file"
-    cat "$status_entry" >> "$status_file"
-    echo "" >> "$status_file"
+    # Атомарная запись: новое содержимое (старый status_file, если он есть,
+    # + строфа) собирается целиком во временном файле в той же директории,
+    # затем одним mv -f подменяет status_file — исключает состояние, когда
+    # обрыв между несколькими >> оставляет строфу без Installed-Time: и
+    # следующий delete_register_* стирает чужую соседнюю запись opkg.
+    status_tmp="${status_file}.tmp.$$"
+    {
+        [ -f "$status_file" ] && cat "$status_file"
+        echo ""
+        cat "$status_entry"
+        echo ""
+    } > "$status_tmp"
     rm -f "$status_entry"
-    sed -i '/^$/{N;/^\n$/D}' "$status_file"
+    sed -i '/^$/{N;/^\n$/D}' "$status_tmp"
+    mv -f "$status_tmp" "$status_file"
 }
