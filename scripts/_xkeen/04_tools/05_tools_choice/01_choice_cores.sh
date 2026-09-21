@@ -75,6 +75,7 @@ choice_xray_core() {
             echo -e "  И запустите проксирование командой ${yellow}xkeen -start${reset}"
         else
             echo -e " Произошла ${red}ошибка${reset} при смене ядра проксирования"
+            return 1
         fi
     else
         echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S05xkeen${reset}"
@@ -106,6 +107,7 @@ choice_mihomo_core() {
             echo -e "  И запустите проксирование командой ${yellow}xkeen -start${reset}"
         else
             echo -e " Произошла ${red}ошибка${reset} при смене ядра проксирования"
+            return 1
         fi
     else
         echo -e "  ${red}Ошибка${reset}: Не найден файл автозапуска ${yellow}S05xkeen${reset}"

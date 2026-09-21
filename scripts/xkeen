@@ -1462,12 +1462,12 @@ while [ $# -gt 0 ]; do
 
 
         -xray)    # Смена ядра проксирования на Xray
-            choice_xray_core
+            choice_xray_core || exit 1
         ;;
 
 
         -mihomo)    # Смена ядра проксирования на Mihomo
-            choice_mihomo_core
+            choice_mihomo_core || exit 1
         ;;
 
 
