@@ -349,16 +349,18 @@ get_rci_token() {
 get_rci_token
 
 http_code=$(
-    curl -ksS -o /dev/null -w "%{http_code}" -H "X-Ndma-Tkn: $rci_token" "127.0.0.1:79/rci/show/version"
+    curl --connect-timeout 2 -m 5 -ksS -o /dev/null -w "%{http_code}" -H "X-Ndma-Tkn: $rci_token" "127.0.0.1:79/rci/show/version"
 )
 
-if [ "$http_code" = "403" ]; then
-    printf "  ${red}Ошибка${reset}: Отсутствует или недействителен ${light_blue}токен доступа${reset} к RCI
+case "$http_code" in
+    401|403)
+        printf "  ${red}Ошибка${reset}: Отсутствует или недействителен ${light_blue}токен доступа${reset} к RCI
 
   Для ${green}KeeneticOS 5.2${reset} и выше требуется ${light_blue}токен доступа${reset}
   Создайте его в веб-интерфейсе и укажите в ${yellow}xkeen.json${reset}\n"
-    exit 1
-fi
+        exit 1
+        ;;
+esac
 
 # Параметры curl
 curl_api() {
