@@ -2006,17 +2006,20 @@ sync_deny_mac_ipset() {
         unset _xkeen_deny_tmp _xkeen_hotspot_json
         return 0
     fi
-    printf '%s' "$_xkeen_hotspot_json" | jq -r '
+    if printf '%s' "$_xkeen_hotspot_json" | jq -r '
         ((.host // . // []) |
          (if type == "array" then .[] else . end)) |
         select((.access // "") == "deny" and (.mac // "") != "") |
         .mac
-    ' 2>/dev/null | tr '[:lower:]' '[:upper:]' | while IFS= read -r _xkeen_mac; do
-        [ -n "$_xkeen_mac" ] && ipset add "$_xkeen_deny_tmp" "$_xkeen_mac" -exist 2>/dev/null
-    done
-    ipset swap "$_xkeen_deny_tmp" "$name_ipset_deny_mac" 2>/dev/null
+    ' 2>/dev/null | tr '[:lower:]' '[:upper:]' | \
+         awk -v set="$_xkeen_deny_tmp" '/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/ {print "add " set " " $0 " -exist"}' | \
+         ipset restore -exist; then
+        ipset swap "$_xkeen_deny_tmp" "$name_ipset_deny_mac" 2>/dev/null
+    else
+        logger -p daemon.warning -t xkeen "не удалось восстановить $name_ipset_deny_mac из hotspot API"
+    fi
     ipset destroy "$_xkeen_deny_tmp" 2>/dev/null
-    unset _xkeen_deny_tmp _xkeen_hotspot_json _xkeen_mac
+    unset _xkeen_deny_tmp _xkeen_hotspot_json
 }
 
 # Получаем пользовательские политики
@@ -2278,15 +2281,18 @@ if pidof "$name_client" >/dev/null; then
             ipset destroy "$_tmp" 2>/dev/null
             return 0
         fi
-        printf '%s' "$_hjson" | jq -r '
+        if printf '%s' "$_hjson" | jq -r '
             ((.host // . // []) |
              (if type == "array" then .[] else . end)) |
             select((.access // "") == "deny" and (.mac // "") != "") |
             .mac
-        ' 2>/dev/null | tr '[:lower:]' '[:upper:]' | while IFS= read -r _m; do
-            [ -n "$_m" ] && ipset add "$_tmp" "$_m" -exist 2>/dev/null
-        done
-        ipset swap "$_tmp" "$name_ipset_deny_mac" 2>/dev/null
+        ' 2>/dev/null | tr '[:lower:]' '[:upper:]' | \
+             awk -v set="$_tmp" '/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/ {print "add " set " " $0 " -exist"}' | \
+             ipset restore -exist; then
+            ipset swap "$_tmp" "$name_ipset_deny_mac" 2>/dev/null
+        else
+            logger -p daemon.warning -t xkeen "не удалось восстановить $name_ipset_deny_mac из hotspot API"
+        fi
         ipset destroy "$_tmp" 2>/dev/null
     }
     command -v ipset >/dev/null 2>&1 && ipset create "$name_ipset_deny_mac" hash:mac -exist 2>/dev/null
