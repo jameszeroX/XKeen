@@ -190,13 +190,31 @@ strip_json_comments() {
     }' "$@"
 }
 
+# Кэш разобранного xkeen.json на время одного запуска процесса: файл за
+# время работы S05xkeen не меняется, поэтому strip_json_comments достаточно
+# выполнить один раз, а не при каждом обращении к xkeen.json.
+_xkeen_json_cache=""
+_xkeen_json_cache_set=0
+_xkeen_cached_json() {
+    [ "$_xkeen_json_cache_set" = 1 ] && { printf '%s' "$_xkeen_json_cache"; return; }
+    _xkeen_json_cache=$(strip_json_comments "$xkeen_config")
+    _xkeen_json_cache_set=1
+    printf '%s' "$_xkeen_json_cache"
+}
+# Прогреваем кэш бэровым (не в $()/пайпе) вызовом: все обращения к
+# _xkeen_cached_json ниже идут через $(...) или пайп, а это отдельный
+# subshell — переменные, выставленные внутри него, наружу не попадают.
+# Без этого прогрева каждый вызов ниже видел бы _xkeen_json_cache_set=0
+# из родительского процесса и заново форкал strip_json_comments.
+[ -f "$xkeen_config" ] && _xkeen_cached_json >/dev/null 2>&1
+
 # Функция извлечения rci-токена из xkeen.json
 get_rci_token() {
     rci_token=""
     [ ! -f "$xkeen_config" ] && return 1
 
     local json_clean
-    json_clean=$(strip_json_comments "$xkeen_config")
+    json_clean=$(_xkeen_cached_json)
 
     rci_token=$(printf '%s' "$json_clean" | sed -n 's/.*"rci_token": *"\([^"]*\)".*/\1/p' | xargs 2>/dev/null)
 
@@ -212,7 +230,7 @@ load_killswitch_settings() {
     [ -f "$xkeen_config" ] || return 0
     command -v jq >/dev/null 2>&1 || return 0
 
-    _ks_v=$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.killswitch // "off"' 2>/dev/null)
+    _ks_v=$(_xkeen_cached_json | jq -r '.xkeen.killswitch // "off"' 2>/dev/null)
 
     [ "$_ks_v" = "on" ] && killswitch="on"
 }
@@ -228,7 +246,7 @@ load_gomemlimit_settings() {
     [ ! -f "$xkeen_config" ] && return 0
     command -v jq >/dev/null 2>&1 || return 0
 
-    _gml_json=$(strip_json_comments "$xkeen_config")
+    _gml_json=$(_xkeen_cached_json)
     _gml_v=$(printf '%s' "$_gml_json" | jq -r '.xkeen.mihomo.gomemlimit_percent // empty' 2>/dev/null)
     if [ -n "$_gml_v" ] && [ "$_gml_v" -ge 1 ] 2>/dev/null && [ "$_gml_v" -le 90 ] 2>/dev/null; then
         gomemlimit_percent="$_gml_v"
@@ -536,7 +554,7 @@ format_routing_mark_items() {
 validate_xkeen_json() {
     [ ! -f "$xkeen_config" ] && return 0
 
-    if ! strip_json_comments "$xkeen_config" | jq -e . >/dev/null 2>&1; then
+    if ! _xkeen_cached_json | jq -e . >/dev/null 2>&1; then
         log_error_terminal "
   Валидация JSON: файл '${yellow}xkeen.json${reset}' содержит синтаксические ошибки
   Запуск прокси невозможен
@@ -556,7 +574,7 @@ validate_xkeen_json() {
       end
     '
 
-    if ! strip_json_comments "$xkeen_config" | jq -e "$jq_check" >/dev/null 2>&1; then
+    if ! _xkeen_cached_json | jq -e "$jq_check" >/dev/null 2>&1; then
         log_error_terminal "
   Файл '${yellow}xkeen.json${reset}' имеет неверную структуру
   Запуск прокси невозможен
@@ -2022,13 +2040,13 @@ sync_deny_mac_ipset() {
 # Получаем пользовательские политики
 get_user_policies() {
     [ ! -f "$xkeen_config" ] && return
-    strip_json_comments "$xkeen_config" | jq -r '.xkeen.policy[]? | "\(.name)|\(.port // "")" ' 2>/dev/null
+    _xkeen_cached_json | jq -r '.xkeen.policy[]? | "\(.name)|\(.port // "")" ' 2>/dev/null
 }
 
 # Проверка на конфликт имен политик
 check_policy_name_conflict() {
     if [ -f "$xkeen_config" ]; then
-        conflict=$(strip_json_comments "$xkeen_config" | jq -r \
+        conflict=$(_xkeen_cached_json | jq -r \
           --arg main "$name_policy" \
           --arg full "$name_policy_full" \
           '[ .xkeen.policy[] | select((.name | ascii_downcase) == ($main | ascii_downcase) or (.name | ascii_downcase) == ($full | ascii_downcase)) | .name ] | join(", ")' 2>/dev/null)
@@ -2052,7 +2070,7 @@ resolve_user_policies() {
     api_exclude_ports=$(get_api_exclude_ports)
 
     # Получаем сопоставленные политики одним вызовом jq
-    matched_policies=$(printf '%s' "$api_policy_json" | jq -r --argjson user_cfg "$(strip_json_comments "$xkeen_config")" '
+    matched_policies=$(printf '%s' "$api_policy_json" | jq -r --argjson user_cfg "$(_xkeen_cached_json)" '
         ($user_cfg.xkeen.policy // []) as $up |
         .[] as $api |
         $up[] | 
