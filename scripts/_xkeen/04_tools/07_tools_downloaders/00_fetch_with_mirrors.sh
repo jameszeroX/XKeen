@@ -195,6 +195,26 @@ EOF
     return 1
 }
 
+# Путь кэш-файла со списком релизов GitHub для repo API URL.
+#
+# Принимает произвольный API URL репозитория GitHub (список релизов,
+# .../releases/tags/VERSION или .../releases/latest) и строит один и тот же
+# детерминированный путь для одного репозитория независимо от суффикса —
+# fetch_release_tags() и verify_github_sha256() всегда сходятся на одном
+# файле. Разные репозитории (xray_api_url, mihomo_api_url) дают разные
+# файлы, поэтому один -install прогон (xray затем mihomo) не может
+# затереть чужой кэш.
+#
+# $1 = GitHub API URL. stdout = путь в $tmp_ram, rc = 1 если URL не похож
+# на api.github.com/repos/OWNER/REPO/... — кэш в этом случае не используется.
+_release_cache_path() {
+    _rcp_repo=$(printf '%s' "$1" | \
+        sed -n 's#^https://api\.github\.com/repos/\([^/][^/]*\)/\([^/][^/]*\)/releases.*#\1_\2#p')
+    [ -n "$_rcp_repo" ] || return 1
+    # shellcheck disable=SC2154 # tmp_ram задаётся в 01_info_common.sh, подключаемом раньше
+    printf '%s/.xkeen_release_cache_%s' "$tmp_ram" "$_rcp_repo"
+}
+
 # Получение списка тегов релизов (GitHub API -> jsDelivr)
 fetch_release_tags() {
     api_url="$1"
@@ -204,6 +224,12 @@ fetch_release_tags() {
     USE_JSDELIVR=""
     RELEASE_TAGS=""
 
+    # Кэш сырого JSON списка релизов (только прямой GitHub API, не
+    # jsDelivr) — переиспользуется verify_github_sha256() вместо второго
+    # независимого GET-а за digest'ом. Очистка — на стороне вызывающих
+    # download_xray/_xray_perform_install/download_mihomo.
+    _frt_cache=$(_release_cache_path "$api_url") || _frt_cache=""
+
     max_attempts=1
     if [ -n "$retries_download" ] && [ "$retries_download" -gt 1 ] 2>/dev/null; then
         max_attempts=$retries_download
@@ -212,7 +238,16 @@ fetch_release_tags() {
 
     api_attempt=1
     while [ "$api_attempt" -le "$max_attempts" ]; do
-        RELEASE_TAGS=$(curl_with_timeout -s "${api_url}?per_page=${per_page}" 2>/dev/null | jq -re 'if type == "array" then .[] | .tag_name else empty end' 2>/dev/null | grep -ivE 'Prerelease-Alpha' | head -n 8)
+        if [ -n "$_frt_cache" ]; then
+            # shellcheck disable=SC2154 # tmp_ram задаётся в 01_info_common.sh, подключаемом раньше
+            mkdir -p "$tmp_ram" 2>/dev/null
+            # Перезаписываем файл целиком на каждой попытке (не дописываем),
+            # чтобы после неудачной попытки не остался частичный JSON.
+            curl_with_timeout -s "${api_url}?per_page=${per_page}" > "$_frt_cache" 2>/dev/null
+            RELEASE_TAGS=$(jq -re 'if type == "array" then .[] | .tag_name else empty end' "$_frt_cache" 2>/dev/null | grep -ivE 'Prerelease-Alpha' | head -n 8)
+        else
+            RELEASE_TAGS=$(curl_with_timeout -s "${api_url}?per_page=${per_page}" 2>/dev/null | jq -re 'if type == "array" then .[] | .tag_name else empty end' 2>/dev/null | grep -ivE 'Prerelease-Alpha' | head -n 8)
+        fi
 
         if [ -z "$RELEASE_TAGS" ]; then
             if [ "$api_attempt" -eq 1 ]; then
@@ -224,6 +259,10 @@ fetch_release_tags() {
 
             if [ -n "$RELEASE_TAGS" ]; then
                 USE_JSDELIVR="true"
+                # jsDelivr не публикует digest; если в кэше остался JSON от
+                # неудачной попытки прямого API — он не должен быть принят
+                # verify_github_sha256() за валидный источник для этой версии.
+                [ -n "$_frt_cache" ] && rm -f "$_frt_cache"
                 break
             fi
         else
@@ -342,9 +381,14 @@ _network_download() {
 
 # Универсальная проверка SHA-256 для файлов, загруженных из GitHub Release
 #
-# Reference сначала пробуем получить напрямую с api.github.com, в обход
-# прокси, через который загружался файл. Если прямой доступ к GitHub
-# недоступен, используем цепочку прокси через fetch_with_mirrors.
+# Reference сначала пробуем достать из кэша списка релизов, оставленного
+# предшествующим fetch_release_tags() для того же репозитория (там digest
+# уже есть в assets[] — второй GET не нужен). Промах (версия введена
+# вручную вне полученного списка, кэша нет/это jsDelivr-путь, либо для
+# репозитория вовсе не было fetch_release_tags — self-update, yq) —
+# как и раньше, идём напрямую в api.github.com, в обход прокси, через
+# который загружался файл. Если прямой доступ к GitHub недоступен,
+# используем цепочку прокси через fetch_with_mirrors.
 # Гарантия успеха при этом слабее, но это лучше, чем отказ от проверки
 #
 # $1 = путь к уже скачанному файлу
@@ -387,36 +431,52 @@ verify_github_sha256() {
         return 0
     fi
 
-    _vgs_ref="${_vgs_file}.sha256ref.$$"
     _vgs_via_mirror=""
-    if curl_with_timeout -fLsS -o "$_vgs_ref" "$_vgs_api_url"; then
-        :
-    else
-        get_user_proxy
-        if fetch_with_mirrors "$_vgs_api_url" "$_vgs_ref" 2; then
-            _vgs_via_mirror=1
-        else
-            rm -f "$_vgs_ref"
-            if [ "$verify_downloads" = "strict" ]; then
-                printf "  ${red}Ошибка${reset}: GitHub API недоступен ни напрямую, ни через прокси; независимая контрольная сумма ${light_blue}SHA-256${reset} для %s не получена\n" "$_vgs_asset"
-                return 1
-            fi
-            printf "  ${yellow}ВНИМАНИЕ${reset}: файл %s установлен БЕЗ проверки целостности (GitHub API недоступен ни напрямую, ни через прокси)\n" "$_vgs_asset"
-            return 0
+    _vgs_expected=""
+
+    # Кэш-попытка: если fetch_release_tags() для этого же репозитория уже
+    # сохранил список релизов и версия попадает в этот список — берём
+    # digest оттуда, без сетевого запроса.
+    _vgs_cache=$(_release_cache_path "$_vgs_api_url") || _vgs_cache=""
+    if [ -n "$_vgs_cache" ] && [ -s "$_vgs_cache" ]; then
+        _vgs_version=$(printf '%s' "$_vgs_api_url" | sed -n 's#.*/tags/##p')
+        if [ -n "$_vgs_version" ]; then
+            _vgs_expected=$(jq -r --arg version "$_vgs_version" --arg asset "$_vgs_asset" \
+                '.[]? | select(.tag_name == $version) | .assets[]? | select(.name == $asset) | .digest // ""' \
+                "$_vgs_cache" 2>/dev/null | head -n 1)
         fi
     fi
 
-    # Получаем значение digest
-    _vgs_expected=$(jq -r --arg asset "$_vgs_asset" '.assets[]? | select(.name == $asset) | .digest // ""' "$_vgs_ref" 2>/dev/null | head -n 1)
-    
+    if [ -z "$_vgs_expected" ]; then
+        _vgs_ref="${_vgs_file}.sha256ref.$$"
+        if curl_with_timeout -fLsS -o "$_vgs_ref" "$_vgs_api_url"; then
+            :
+        else
+            get_user_proxy
+            if fetch_with_mirrors "$_vgs_api_url" "$_vgs_ref" 2; then
+                _vgs_via_mirror=1
+            else
+                rm -f "$_vgs_ref"
+                if [ "$verify_downloads" = "strict" ]; then
+                    printf "  ${red}Ошибка${reset}: GitHub API недоступен ни напрямую, ни через прокси; независимая контрольная сумма ${light_blue}SHA-256${reset} для %s не получена\n" "$_vgs_asset"
+                    return 1
+                fi
+                printf "  ${yellow}ВНИМАНИЕ${reset}: файл %s установлен БЕЗ проверки целостности (GitHub API недоступен ни напрямую, ни через прокси)\n" "$_vgs_asset"
+                return 0
+            fi
+        fi
+
+        # Получаем значение digest
+        _vgs_expected=$(jq -r --arg asset "$_vgs_asset" '.assets[]? | select(.name == $asset) | .digest // ""' "$_vgs_ref" 2>/dev/null | head -n 1)
+        rm -f "$_vgs_ref"
+    fi
+
     # Удаляем префикс "sha256:"
     case "$_vgs_expected" in
         sha256:*)
             _vgs_expected="${_vgs_expected#sha256:}"
             ;;
     esac
-
-    rm -f "$_vgs_ref"
 
     case "$_vgs_expected" in
         [0-9a-fA-F][0-9a-fA-F]*) ;;

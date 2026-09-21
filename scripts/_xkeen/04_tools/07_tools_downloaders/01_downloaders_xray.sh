@@ -20,23 +20,34 @@ _xray_build_url() {
 # $1 = version_selected
 _xray_perform_install() {
     local version="$1"
+    # Кэш списка релизов (см. fetch_release_tags/_release_cache_path в
+    # 00_fetch_with_mirrors.sh) - удаляется на каждом пути выхода отсюда,
+    # использован он verify_github_sha256() или нет.
+    local xpi_cache
+    xpi_cache=$(_release_cache_path "$xray_api_url") || xpi_cache=""
+
     if ! _xray_build_url "$version"; then
         printf "  ${red}Ошибка${reset}: Не удалось получить URL для загрузки Xray\n"
+        [ -n "$xpi_cache" ] && rm -f "$xpi_cache"
         return 1
     fi
     mkdir -p "$tmp_ram"
 
     if ! _network_probe "$download_url" "Xray $version"; then
+        [ -n "$xpi_cache" ] && rm -f "$xpi_cache"
         return 1
     fi
 
     printf "  ${yellow}Выполняется загрузка${reset} Xray %s\n" "$version"
     if ! _network_download "$download_url" "$tmp_ram/xray.$extension" "Xray" "$max_attempts" "$delay" 1048576; then
+        [ -n "$xpi_cache" ] && rm -f "$xpi_cache"
         return 1
     fi
     if ! verify_github_sha256 "$tmp_ram/xray.$extension" "$download_url" "${xray_api_url}/tags/$version"; then
+        [ -n "$xpi_cache" ] && rm -f "$xpi_cache"
         return 1
     fi
+    [ -n "$xpi_cache" ] && rm -f "$xpi_cache"
 
     printf "  Xray ${green}успешно загружен${reset}\n"
     return 0
@@ -47,6 +58,7 @@ download_xray() {
     USE_JSDELIVR=""
     printf "\n  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
     fetch_release_tags "$xray_api_url" "$xray_jsd_url" "10"
+    _dlx_cache=$(_release_cache_path "$xray_api_url") || _dlx_cache=""
 
     # --- АВТОМАТИЧЕСКИЙ РЕЖИМ ---
     if [ "$autoinstall_mode" = "true" ]; then
@@ -84,6 +96,7 @@ download_xray() {
 
         if [ "$choice" = "0" ]; then
             bypass_xray="true"
+            [ -n "$_dlx_cache" ] && rm -f "$_dlx_cache"
             printf "  Загрузка Xray ${yellow}пропущена${reset}\n"
             return
         fi

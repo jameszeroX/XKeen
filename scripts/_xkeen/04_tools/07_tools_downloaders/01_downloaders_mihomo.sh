@@ -3,6 +3,9 @@ download_mihomo() {
     USE_JSDELIVR=""
     printf "\n  ${green}Запрос информации${reset} о релизах ${yellow}Mihomo${reset}\n"
     fetch_release_tags "$mihomo_api_url" "$mihomo_jsd_url" "10"
+    # Кэш списка релизов (см. fetch_release_tags/_release_cache_path в
+    # 00_fetch_with_mirrors.sh) - удаляется на каждом пути выхода отсюда.
+    _dlm_cache=$(_release_cache_path "$mihomo_api_url") || _dlm_cache=""
 
     while true; do
         echo
@@ -26,6 +29,7 @@ download_mihomo() {
 
         if [ "$choice" = "0" ]; then
             bypass_mihomo="true"
+            [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
             printf "  Загрузка Mihomo ${yellow}пропущена${reset}\n"
             return 0
         fi
@@ -79,6 +83,7 @@ download_mihomo() {
 
         if [ -z "$download_url" ] || [ -z "$download_yq" ]; then
             printf "  ${red}Ошибка${reset}: Не удалось получить URL для загрузки Mihomo\n"
+            [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
             exit 1
         fi
 
@@ -98,7 +103,10 @@ download_mihomo() {
             if _network_probe "$download_yq" "актуальной версии Yq"; then
                 printf "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - Yq\n"
                 if _network_download "$download_yq" "$install_dir/yq" "Yq" "$max_attempts" "$delay"; then
-                    verify_github_sha256 "$install_dir/yq" "$download_yq" "$(get_yq_api_url)" || return 1
+                    if ! verify_github_sha256 "$install_dir/yq" "$download_yq" "$(get_yq_api_url)"; then
+                        [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
+                        return 1
+                    fi
                     chmod +x "$install_dir/yq"
                     yq_available="true"
                     printf "  Yq ${green}успешно загружен${reset}\n"
@@ -108,6 +116,7 @@ download_mihomo() {
 
         if [ "$yq_available" != "true" ]; then
             printf "  ${red}Ошибка${reset}: Для работы Mihomo требуется Yq. Установка прервана\n"
+            [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
             return 1
         fi
 
@@ -117,8 +126,10 @@ download_mihomo() {
             continue
         fi
         if ! verify_github_sha256 "$tmp_ram/mihomo.$extension" "$download_url" "${mihomo_api_url}/tags/$VERSION_ARG"; then
+            [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
             continue
         fi
+        [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
 
         printf "  Mihomo ${green}успешно загружен${reset}\n"
         return 0
