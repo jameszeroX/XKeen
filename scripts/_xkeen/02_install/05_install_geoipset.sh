@@ -89,6 +89,47 @@ load_geoipset() {
     local family="$3"
     local tmp="${set}_tmp"
 
+    # Сериализация: cron `xkeen -ug`, ручной `xkeen -i/-gips` и new_features()
+    # (-uk_post_update/-k_post_install) сходятся здесь на общем tmp-наборе
+    # "${set}_tmp" — без лока параллельный create/flush/restore/swap/destroy
+    # молча теряет записи geo_exclude/geo_exclude6 у обоих участников.
+    # Тот же mkdir+pid-lock паттерн, что у _acquire_nf_lock в
+    # 04_register_init.sh: kill -0 снимает лок мёртвого держателя, короткое
+    # ограниченное ожидание уместно — restore идёт по уже скачанному
+    # локальному файлу, в отличие от многоминутной загрузки install/upgrade.
+    local _gi_rundir="" _gi_lockdir="" _gi_lock_owned="" _gi_try=0 _gi_lock_pid
+    _gi_rundir=$(_xkeen_secure_rundir)
+    if [ -n "$_gi_rundir" ]; then
+        _gi_lockdir="$_gi_rundir/geoipset.lock.d"
+        while [ "$_gi_try" -lt 50 ]; do
+            if mkdir "$_gi_lockdir" 2>/dev/null; then
+                _gi_lock_owned=1
+                printf '%s' "$$" > "$_gi_lockdir/pid"
+                break
+            fi
+            _gi_lock_pid=$(cat "$_gi_lockdir/pid" 2>/dev/null)
+            if [ -n "$_gi_lock_pid" ] && ! kill -0 "$_gi_lock_pid" 2>/dev/null; then
+                rm -rf "$_gi_lockdir" 2>/dev/null
+                continue
+            fi
+            _gi_try=$((_gi_try + 1))
+            usleep 100000 2>/dev/null || sleep 1
+        done
+        if [ -z "$_gi_lock_owned" ]; then
+            # Держатель лока жив и всё ещё внутри критической секции ~5с
+            # спустя (kill -0 проходил на каждой попытке выше — иначе лок
+            # был бы снят как stale и цикл продолжился бы). Не отбираем
+            # лок силой: это воссоздаёт ровно ту гонку (два живых процесса
+            # одновременно работают над одним "${set}_tmp"), которую лок
+            # должен закрывать. Пропускаем это обновление, оставляя
+            # текущий "$set" нетронутым.
+            printf "GeoIPSET: не удалось получить лок для '%s' — другой процесс ещё выполняет загрузку, обновление пропущено\n" "$set" >&2
+            return 1
+        fi
+        trap 'rm -rf "$_gi_lockdir" 2>/dev/null; exit 1' INT TERM
+        trap 'rm -rf "$_gi_lockdir" 2>/dev/null' EXIT
+    fi
+
     # Заполняем tmp; основной набор подменяется только после успешного restore
     ipset create "$set" hash:net family "$family" -exist
     ipset create "$tmp" hash:net family "$family" -exist
@@ -98,6 +139,11 @@ load_geoipset() {
         ipset swap "$set" "$tmp"
     fi
     ipset destroy "$tmp"
+
+    if [ -n "$_gi_lock_owned" ]; then
+        trap - EXIT
+        rm -rf "$_gi_lockdir" 2>/dev/null
+    fi
 }
 
 install_geoipset() {
