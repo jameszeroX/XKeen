@@ -113,6 +113,8 @@ xkeen_set_info() {
 # Проверяем запущен ли прокси-клиент
 is_proxy_running() { pidof xray >/dev/null 2>&1 || pidof mihomo >/dev/null 2>&1; }
 
+xkeen_rc=0
+
 while [ $# -gt 0 ]; do
     case "$1" in
 
@@ -1307,24 +1309,24 @@ while [ $# -gt 0 ]; do
 
         -start)    # Запуск XKeen
             add_chmod_init
-            "$initd_file" start on
+            "$initd_file" start on || xkeen_rc=1
         ;;
 
 
         -stop)    # Остановка XKeen
             add_chmod_init
-            "$initd_file" stop
+            "$initd_file" stop || xkeen_rc=1
         ;;
 
 
         -restart)    # Перезапуск XKeen
             add_chmod_init
-            "$initd_file" restart on
+            "$initd_file" restart on || xkeen_rc=1
         ;;
 
 
         -status)    # Состояние XKeen
-            "$initd_file" status
+            "$initd_file" status || xkeen_rc=1
         ;;
 
 
@@ -1599,7 +1601,10 @@ while [ $# -gt 0 ]; do
         *)
             echo -e "     Неизвестный ключ: ${red}$1${reset}"
             echo -e "     Список доступных ключей: ${yellow}xkeen -h${reset}"
+            xkeen_rc=1
         ;;
     esac
     shift
 done
+
+exit "$xkeen_rc"
