@@ -87,10 +87,12 @@ esac
 exit 0'
     
     # Создание или замена файла, если версия скрипта не соответствует требуемой версии 
-    if [ "${script_version}" != "${required_script_version}" ]; then 
-        echo -e "${script_content}" > "${initd_cron}" 
-        chmod +x "${initd_cron}" 
-    fi 
+    if [ "${script_version}" != "${required_script_version}" ]; then
+        tmp_initd_cron="${initd_cron}.tmp.$$"
+        echo -e "${script_content}" > "${tmp_initd_cron}"
+        mv -f "${tmp_initd_cron}" "${initd_cron}" || rm -f "${tmp_initd_cron}"
+        chmod +x "${initd_cron}"
+    fi
 }
 
 # Обновление cron задач
