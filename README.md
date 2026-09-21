@@ -57,7 +57,7 @@ XKeen работает полностью на стороне роутера, н
 - [OffLine](https://github.com/jameszeroX/XKeen/wiki/Configuration#offline-установка)‑установка
 - [Self-Hosted](https://github.com/jameszeroX/XKeen/wiki/Configuration#self-hosted-прокси-для-загрузки)-прокси для загрузки компонентов
 - работа с [пользовательскими политиками](https://github.com/jameszeroX/XKeen/wiki/Configuration#пользовательские-политики)
-- возможность [проксирования DNS](https://github.com/jameszeroX/XKeen/wiki/Configuration#Проксирование-dns)
+- возможность [проксирования DNS](https://github.com/jameszeroX/XKeen/wiki/Configuration#проксирование-dns)
 - возможность [работы с IPSET](https://github.com/jameszeroX/XKeen/wiki/Configuration#описание-работы-ipset-в-xkeen)
 - поддержка [DSCP-меток QoS](https://jameszero.net/4509.htm)
 - возможность ([проксирования трафика Entware](https://github.com/jameszeroX/XKeen/wiki/Configuration#проксирование-трафика-entware))
