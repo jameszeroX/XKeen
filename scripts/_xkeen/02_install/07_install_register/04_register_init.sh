@@ -160,7 +160,7 @@ if ! xkeen_rundir=$(_xkeen_secure_rundir); then
     esac
 fi
 
-# Дубль функции из 01_info_variable.sh: этот файл побайтово копируется в
+# Дубль функции из 01_info_common.sh: этот файл побайтово копируется в
 # init.d/S05xkeen и модули не подключает, поэтому правки нужны в обоих местах.
 # Обоснование разбора состоянием — там же.
 strip_json_comments() {
@@ -313,6 +313,8 @@ wait_for_rci_token() {
 wait_for_rci_token
 
 # Параметры curl
+# Дубль функции: см. также строку ~2221 этого файла (heredoc proxy.sh) и
+# 01_info_common.sh:curl_api — правь все три места синхронно.
 curl_api() {
     if [ -n "$rci_token" ]; then
         curl --connect-timeout 2 -m 5 -kfsS -H "X-Ndma-Tkn: $rci_token" "$@"
@@ -2159,6 +2161,8 @@ restart_script() {
     exec /bin/sh "$0" "$@"
 }
 
+# Дубль функции: см. также top-level копию (~316) в 04_register_init.sh и
+# 01_info_common.sh:curl_api — правь все три места синхронно.
 curl_api() {
     if [ -n "$rci_token" ]; then
         curl --connect-timeout 2 -m 5 -kfsS -H "X-Ndma-Tkn: $rci_token" "$@"
