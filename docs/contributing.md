@@ -19,7 +19,7 @@
 
 В `$(( … ))` пользовательское числовое значение с ведущим нулём (`"08"`) ash разбирает как восьмеричное и падает с `arithmetic syntax error` — оборачивать такие значения в `10#`, например `$(( 10#${var:-0} ))`.
 
-Проверка перед PR:
+Проверка перед PR (правила подавления — в [`.shellcheckrc`](../.shellcheckrc): SC3037/SC3043/SC3045 отключены как ложные для BusyBox ash):
 
 ```sh
 shellcheck scripts/xkeen scripts/_xkeen/**/*.sh
@@ -53,7 +53,7 @@ shellcheck scripts/xkeen scripts/_xkeen/**/*.sh
 
 ## Проверка перед PR
 
-1. `shellcheck scripts/xkeen scripts/_xkeen/**/*.sh` — нулевая толерантность к новым warning-ам.
+1. `shellcheck scripts/xkeen scripts/_xkeen/**/*.sh` — нулевая толерантность к новым warning-ам. Дополнительно проверяется автоматически в CI ([`.github/workflows/lint.yaml`](../.github/workflows/lint.yaml)) на каждый `pull_request`: джоба падает только на находках, которых нет в закоммиченном [`.github/shellcheck-baseline.txt`](../.github/shellcheck-baseline.txt) (~819 старых находок, не устранённых в этой ветке). Ручной прогон перед PR остаётся — CI ловит то же самое позже и без сетевого доступа к роутеру.
 2. Деплой архива на тестовый роутер и прогон сценариев: `xkeen -i`, `-start`, `-stop`, `-restart`, `-uk`, `-diag`.
 3. Если правились флаги управления (`-ap`, `-dp`, `-ape`, `-dpe`) или режимы проксирования — отдельно прогнать с обоими ядрами (Xray и Mihomo) и в каждом из режимов TProxy/Hybrid/Redirect.
 4. `xkeen -diag` — единственный поддерживаемый канал для отчёта о проблеме.
