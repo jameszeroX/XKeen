@@ -4,7 +4,7 @@ geofiles_update_state() {
     local json_clean
     json_clean=$(strip_json_comments "$xkeen_config")
     local val
-    val=$(printf '%s' "$json_clean" | sed -n 's/.*"geofile_update": *\([a-zA-Z]*\).*/\1/p' | xargs 2>/dev/null)
+    val=$(printf '%s' "$json_clean" | sed -n 's/.*"geofile_update": *\([a-zA-Z]*\).*/\1/p' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' 2>/dev/null)
     [ "$val" = "false" ] && geofile_update="false"
 }
 
