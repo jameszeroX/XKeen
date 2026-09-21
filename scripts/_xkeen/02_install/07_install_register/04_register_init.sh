@@ -3910,7 +3910,10 @@ proxy_start() {
 # подгружает асинхронно уже после ndmc-ready). $start_delay сохранён
 # как safety cap (FAQ #12).
 wait_for_ready() {
-    _max=$(( ${start_delay:-60} * 2 ))
+    # 10# форсирует base-10: ведущий ноль в $start_delay ("08"/"09")
+    # иначе трактуется ash как восьмеричный разбор и валит арифметику.
+    # shellcheck disable=SC3052 # 10# поддержан BusyBox ash (целевая среда), проверено вживую
+    _max=$(( 10#${start_delay:-60} * 2 ))
     _attempt=0
     _probe_ko=$(find_module_path "xt_TPROXY.ko")
 
