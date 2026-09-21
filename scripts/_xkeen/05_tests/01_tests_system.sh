@@ -150,7 +150,7 @@ test_github() {
         _gh_probed=1
         if [ -n "$gh_proxy_user" ]; then
             printf "  Используется ${green}пользовательский прокси${reset}: ${yellow}$gh_proxy_user${reset}\n"
-        elif [ -r /tmp/.xkeen_mirror_cache ] && grep -q "__direct__" /tmp/.xkeen_mirror_cache 2>/dev/null; then
+        elif [ -n "$_mirror_cache" ] && [ -r "$_mirror_cache" ] && grep -q "__direct__" "$_mirror_cache" 2>/dev/null; then
             printf "  GitHub ${green}доступен${reset}. Продолжаем...\n"
         else
             printf "  GitHub ${green}доступен через прокси${reset}. Продолжаем...\n"

@@ -12,7 +12,13 @@
 # глобальных переменных _last_error / _last_size (для fetch) и
 # _last_http (для probe), чтобы напечатать осмысленное сообщение.
 
-_mirror_cache="/tmp/.xkeen_mirror_cache"
+# Кэш лежит в защищённой root-only rundir (см. _xkeen_secure_rundir в
+# 01_info_common.sh), а не по предсказуемому пути в мировом /tmp: иначе
+# локальный атакующий может подложить future-dated запись со своим URL и
+# подменить источник всех загрузок бинарников. При сбое хелпера
+# _mirror_cache остаётся пустым, а не мусорным путём вроде "/mirror_cache".
+_mirror_cache_dir="$(_xkeen_secure_rundir)" || _mirror_cache_dir=""
+_mirror_cache="${_mirror_cache_dir:+$_mirror_cache_dir/mirror_cache}"
 _mirror_ttl=60
 _DIRECT_TOKEN="__direct__"
 
@@ -27,6 +33,7 @@ _mirror_cache_read() {
         ''|*[!0-9]*) return 1 ;;
     esac
     _cache_now=$(date +%s 2>/dev/null) || return 1
+    [ "$_cache_ts" -le "$_cache_now" ] || return 1
     [ $((_cache_now - _cache_ts)) -lt "$_mirror_ttl" ] || return 1
     [ "$_cache_pfx" = "$_DIRECT_TOKEN" ] && _cache_pfx=""
     printf '%s' "$_cache_pfx"
