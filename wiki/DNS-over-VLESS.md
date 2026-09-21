@@ -29,9 +29,9 @@
   "inbounds": [
     {
       "port": 1181,
-      "protocol": "dokodemo-door",
+      "protocol": "tunnel",
       "settings": {
-        "network": "tcp,udp",
+        "allowedNetwork": "tcp,udp",
         "followRedirect": true
       },
       "sniffing": {
