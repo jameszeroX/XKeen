@@ -1,6 +1,3 @@
-# Кэшируем список установленных пакетов один раз вместо opkg-форка на каждую проверку
-_packages_cache=$(opkg list-installed 2>/dev/null)
-
 # Функция для проверки наличия необходимых пакетов
 info_packages() {
     package_name="$1"
@@ -14,34 +11,42 @@ $package_name "*) package_status="installed" ;;
     esac
 }
 
-# Проверка наличия пакета "coreutils-uname"
-info_packages "coreutils-uname"
-info_packages_uname=$package_status
+# Кэширует список установленных пакетов один раз вместо opkg-форка на каждую
+# проверку и определяет статус нужных пакетов. Вызывается явно из scripts/xkeen
+# для команд, которым self-heal пакетов действительно нужен, а не безусловно
+# на этапе source — см. commit.
+_load_packages_info() {
+    _packages_cache=$(opkg list-installed 2>/dev/null)
 
-# Проверка наличия пакета "coreutils-nohup"
-info_packages "coreutils-nohup"
-info_packages_nohup=$package_status
+    # Проверка наличия пакета "coreutils-uname"
+    info_packages "coreutils-uname"
+    info_packages_uname=$package_status
 
-# Проверка наличия пакета "curl"
-info_packages "curl"
-info_packages_curl=$package_status
+    # Проверка наличия пакета "coreutils-nohup"
+    info_packages "coreutils-nohup"
+    info_packages_nohup=$package_status
 
-# Проверка наличия пакета "jq"
-info_packages "jq"
-info_packages_jq=$package_status
+    # Проверка наличия пакета "curl"
+    info_packages "curl"
+    info_packages_curl=$package_status
 
-# Проверка наличия пакета "ip-full"
-info_packages "ip-full"
-info_packages_ip_full=$package_status
+    # Проверка наличия пакета "jq"
+    info_packages "jq"
+    info_packages_jq=$package_status
 
-# Проверка наличия пакета "ca-bundle"
-info_packages "ca-bundle"
-info_packages_cabundle=$package_status
+    # Проверка наличия пакета "ip-full"
+    info_packages "ip-full"
+    info_packages_ip_full=$package_status
 
-# Проверка наличия пакета "iptables"
-info_packages "iptables"
-info_packages_iptables=$package_status
+    # Проверка наличия пакета "ca-bundle"
+    info_packages "ca-bundle"
+    info_packages_cabundle=$package_status
 
-# Проверка наличия пакета "ipset"
-info_packages "ipset"
-info_packages_ipset=$package_status
+    # Проверка наличия пакета "iptables"
+    info_packages "iptables"
+    info_packages_iptables=$package_status
+
+    # Проверка наличия пакета "ipset"
+    info_packages "ipset"
+    info_packages_ipset=$package_status
+}
