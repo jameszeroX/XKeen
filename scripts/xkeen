@@ -1237,6 +1237,7 @@ while [ $# -gt 0 ]; do
 
 
         -kbr)    # Восстановление XKeen из резервной копии
+            choice_menu "Восстановить XKeen из резервной копии? Текущая установка будет перезаписана" "Да" "Нет" || exit 0
             echo -e "  Восстановление ${yellow}XKeen${reset} из резервной копии"
             restore_backup_xkeen
         ;;
@@ -1250,6 +1251,7 @@ while [ $# -gt 0 ]; do
 
 
         -xbr)    # Восстановление конфигурации Xray из резервной копии
+            choice_menu "Восстановить конфигурацию Xray из резервной копии? Текущая установка будет перезаписана" "Да" "Нет" || exit 0
             command -v xray >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Xray"; exit 1; }
             echo -e "  Восстановление ${yellow}конфигурации Xray${reset} из резервной копии"
             restore_backup_configs_xray
@@ -1264,6 +1266,7 @@ while [ $# -gt 0 ]; do
 
 
         -mbr)    # Восстановление конфигурации Mihomo из резервной копии
+            choice_menu "Восстановить конфигурацию Mihomo из резервной копии? Текущая установка будет перезаписана" "Да" "Нет" || exit 0
             command -v mihomo >/dev/null 2>&1 || { echo -e "  ${red}Не обнаружено${reset} ядро проксирования Mihomo"; exit 1; }
             echo -e "  Восстановление ${yellow}конфигурации Mihomo${reset} из резервной копии"
             restore_backup_configs_mihomo
