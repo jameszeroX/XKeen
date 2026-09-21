@@ -1374,25 +1374,43 @@ while [ $# -gt 0 ]; do
 
         -ap)    # Добавить порт проксирования
             shift
-            add_ports_donor "$@"
-            shift $#
+            ports_args=""
+            while [ $# -gt 0 ]; do
+                case "$1" in
+                    -*) break ;;
+                esac
+                ports_args="${ports_args:+$ports_args }$1"
+                shift
+            done
+            # shellcheck disable=SC2086 # намеренный word-split: ports_args — пробел-разделённые числа/диапазоны
+            add_ports_donor $ports_args
             sleep 2
             add_chmod_init
             if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
+            continue
         ;;
 
 
         -dp)    # Удалить порт проксирования
             shift
-            del_ports_donor "$@"
-            shift $#
+            ports_args=""
+            while [ $# -gt 0 ]; do
+                case "$1" in
+                    -*) break ;;
+                esac
+                ports_args="${ports_args:+$ports_args }$1"
+                shift
+            done
+            # shellcheck disable=SC2086 # намеренный word-split: ports_args — пробел-разделённые числа/диапазоны
+            del_ports_donor $ports_args
             sleep 2
             add_chmod_init
             if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
+            continue
         ;;
 
 
@@ -1403,25 +1421,43 @@ while [ $# -gt 0 ]; do
 
         -ape)    # Добавить порт-исключение проксирования
             shift
-            add_ports_exclude "$@"
-            shift $#
+            ports_args=""
+            while [ $# -gt 0 ]; do
+                case "$1" in
+                    -*) break ;;
+                esac
+                ports_args="${ports_args:+$ports_args }$1"
+                shift
+            done
+            # shellcheck disable=SC2086 # намеренный word-split: ports_args — пробел-разделённые числа/диапазоны
+            add_ports_exclude $ports_args
             sleep 2
             add_chmod_init
             if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
+            continue
         ;;
 
 
         -dpe)    # Удалить порт-исключение проксирования
             shift
-            del_ports_exclude "$@"
-            shift $#
+            ports_args=""
+            while [ $# -gt 0 ]; do
+                case "$1" in
+                    -*) break ;;
+                esac
+                ports_args="${ports_args:+$ports_args }$1"
+                shift
+            done
+            # shellcheck disable=SC2086 # намеренный word-split: ports_args — пробел-разделённые числа/диапазоны
+            del_ports_exclude $ports_args
             sleep 2
             add_chmod_init
             if is_proxy_running; then
                 "$initd_file" restart on >/dev/null 2>&1
             fi
+            continue
         ;;
 
 
