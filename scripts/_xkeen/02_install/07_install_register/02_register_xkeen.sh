@@ -50,25 +50,28 @@ register_xkeen_initd() {
     variables_to_extract="name_client name_policy name_policy_full table_id table_mark custom_mark dscp_enable dscp_force_proxy dscp_force_proxy_tag dscp_exclude dscp_proxy ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude proxy_dns proxy_router nfqws_mark pbr_strict start_verbose start_attempts init_delay check_fd arm64_fd other_fd delay_fd ipv6_support extended_msg backup aghfix"
     source_main_backup=""
     source_start_backup=""
+    # Временный файл в $initd_dir: mv в конце — атомарный rename на одном
+    # mountpoint, боевой $initd_file ни на миг не остаётся без содержимого
+    initd_tmp_file="${initd_file}.tmp.$$"
 
     if [ -f "$initd_file" ]; then
         source_main_backup="${backups_dir}/${current_datetime}_$(basename "$initd_file")"
-        mv "$initd_file" "$source_main_backup"
+        cp "$initd_file" "$source_main_backup"
     elif [ -f "$pre_initd_file" ]; then
         source_main_backup="${backups_dir}/${current_datetime}_$(basename "$pre_initd_file")"
-        mv "$pre_initd_file" "$source_main_backup"
+        cp "$pre_initd_file" "$source_main_backup"
     elif [ -f "$old_initd_file" ] || [ -f "$old_start_file" ]; then
         if [ -f "$old_initd_file" ]; then
             source_main_backup="${backups_dir}/${current_datetime}_$(basename "$old_initd_file")"
-            mv "$old_initd_file" "$source_main_backup"
+            cp "$old_initd_file" "$source_main_backup"
         fi
         if [ -f "$old_start_file" ]; then
             source_start_backup="${backups_dir}/${current_datetime}_$(basename "$old_start_file")"
-            mv "$old_start_file" "$source_start_backup"
+            cp "$old_start_file" "$source_start_backup"
         fi
     fi
 
-    cp "$script_file" "$initd_file" || exit 1
+    cp "$script_file" "$initd_tmp_file" || { rm -f "$initd_tmp_file"; exit 1; }
 
     if [ -n "$source_main_backup" ] || [ -n "$source_start_backup" ]; then
         autostart_val=""
@@ -85,23 +88,25 @@ register_xkeen_initd() {
         fi
 
         if [ -n "$autostart_val" ]; then
-             sed -i "s|^start_auto=.*|start_auto=$autostart_val|" "$initd_file"
+             sed -i "s|^start_auto=.*|start_auto=$autostart_val|" "$initd_tmp_file"
         fi
         if [ -n "$start_delay_val" ]; then
-             sed -i "s|^start_delay=.*|start_delay=$start_delay_val|" "$initd_file"
+             sed -i "s|^start_delay=.*|start_delay=$start_delay_val|" "$initd_tmp_file"
         fi
 
         if [ -n "$source_main_backup" ] && [ -f "$source_main_backup" ]; then
             for var in $variables_to_extract; do
                 value=$(grep -m1 "^${var}=" "$source_main_backup") || continue
                 escaped_value=$(printf '%s\n' "$value" | sed 's:[&#/]:\\&:g')
-                position=$(grep -n "^${var}=" "$initd_file" | head -n 1 | cut -d: -f1)
-                [ -n "$position" ] && sed -i "${position}s#.*#${escaped_value}#" "$initd_file"
+                position=$(grep -n "^${var}=" "$initd_tmp_file" | head -n 1 | cut -d: -f1)
+                [ -n "$position" ] && sed -i "${position}s#.*#${escaped_value}#" "$initd_tmp_file"
             done
         fi
     fi
 
-    chmod +x "$initd_file"
+    chmod +x "$initd_tmp_file"
+    mv -f "$initd_tmp_file" "$initd_file" || { rm -f "$initd_tmp_file"; exit 1; }
+
     if choice_backup_xkeen; then
         rm -f "$source_main_backup" "$source_start_backup"
     fi
