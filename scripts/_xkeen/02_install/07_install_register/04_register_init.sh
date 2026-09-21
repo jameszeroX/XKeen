@@ -1866,7 +1866,13 @@ get_port_exclude() {
     echo "$port_exclude_result"
 }
 
-# Получение исключений IPv4
+# Получение исключений IPv4.
+# Этот файл — standalone-генератор: не sourcer'ится, копируется целиком
+# в /opt/etc/init.d/S05xkeen (cp в 02_register_xkeen.sh). Контракт: echo
+# объединённого списка /32-CIDR (провайдерский IP + $ipv4_exclude).
+# В 03_tools_diagnostic.sh есть одноимённая, но семантически независимая
+# функция (side-effect без CIDR, для маскировки IP) — тело между файлами
+# не копировать.
 get_exclude_ip4() {
     [ "$iptables_supported" != "true" ] && return
 
@@ -1877,7 +1883,13 @@ get_exclude_ip4() {
     echo "${ipv4_eth} ${ipv4_exclude}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
 }
 
-# Получение исключений IPv6
+# Получение исключений IPv6.
+# Этот файл — standalone-генератор: не sourcer'ится, копируется целиком
+# в /opt/etc/init.d/S05xkeen (cp в 02_register_xkeen.sh). Контракт: echo
+# объединённого списка /128-CIDR (провайдерский IP + $ipv6_exclude).
+# В 03_tools_diagnostic.sh есть одноимённая, но семантически независимая
+# функция (side-effect без CIDR, для маскировки IP) — тело между файлами
+# не копировать.
 get_exclude_ip6() {
     [ "$ip6tables_supported" != "true" ] && return
 
