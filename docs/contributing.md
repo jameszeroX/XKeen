@@ -53,6 +53,7 @@ shellcheck scripts/xkeen scripts/_xkeen/**/*.sh
 2. Деплой архива на тестовый роутер и прогон сценариев: `xkeen -i`, `-start`, `-stop`, `-restart`, `-uk`, `-diag`.
 3. Если правились флаги управления (`-ap`, `-dp`, `-ape`, `-dpe`) или режимы проксирования — отдельно прогнать с обоими ядрами (Xray и Mihomo) и в каждом из режимов TProxy/Hybrid/Redirect.
 4. `xkeen -diag` — единственный поддерживаемый канал для отчёта о проблеме.
+5. При правках `strip_json_comments`, `jc_set_path`, `speed_balancer_settings` или логики разбора `xkeen.json` — прогнать `spec/*.sh` (нужен podman + jq): `podman run --rm -v "$PWD:/repo:ro,Z" localhost/xkeen-spec:alpine sh /repo/spec/test_balancer.sh` (аналогично для `test_strip_json.sh`). На момент написания сьют содержит pre-existing failures, не связанные с вашей правкой (0/18 в `test_strip_json.sh`, 46/50 в `test_balancer.sh` на `main`) — если после вашего diff число FAIL не увеличилось относительно этой базовой линии, это ожидаемо.
 
 ## CI-файлы — не трогать руками
 
