@@ -66,8 +66,14 @@ choice_cron_time() {
         cron_expression="$minute $hour * * $dow"
     fi
 
-    formatted_hour=$(printf "%02d" "$hour")
-    formatted_minute=$(printf "%02d" "$minute")
+    case "$hour" in
+        [0-9]) formatted_hour="0$hour" ;;
+        *) formatted_hour="$hour" ;;
+    esac
+    case "$minute" in
+        [0-9]) formatted_minute="0$minute" ;;
+        *) formatted_minute="$minute" ;;
+    esac
 
     echo
     echo -e "  Выбранное время обновления ${yellow}геофайлов${reset}: $day_name в $formatted_hour:$formatted_minute"
