@@ -835,7 +835,11 @@ while [ $# -gt 0 ]; do
             info_cpu
             sleep 2
             smart_clear
-            download_yq
+            if ! download_yq; then
+                echo
+                delete_tmp
+                exit 1
+            fi
             info_version_yq
             echo -e "  ${yellow}Выполняется установка${reset} Yq. Пожалуйста, подождите..."
             echo

@@ -102,12 +102,15 @@ download_mihomo() {
         else
             if _network_probe "$download_yq" "актуальной версии Yq"; then
                 printf "  ${yellow}Выполняется загрузка${reset} парсера конфигурационных файлов Mihomo - Yq\n"
-                if _network_download "$download_yq" "$install_dir/yq" "Yq" "$max_attempts" "$delay"; then
-                    if ! verify_github_sha256 "$install_dir/yq" "$download_yq" "$(get_yq_api_url)"; then
+                yq_tmp_file="$tmp_ram/yq.$$"
+                if _network_download "$download_yq" "$yq_tmp_file" "Yq" "$max_attempts" "$delay"; then
+                    if ! verify_github_sha256 "$yq_tmp_file" "$download_yq" "$(get_yq_api_url)"; then
+                        rm -f "$yq_tmp_file"
                         [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
                         return 1
                     fi
-                    chmod +x "$install_dir/yq"
+                    chmod +x "$yq_tmp_file"
+                    mv -f "$yq_tmp_file" "$install_dir/yq" || { rm -f "$yq_tmp_file"; [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"; return 1; }
                     yq_available="true"
                     printf "  Yq ${green}успешно загружен${reset}\n"
                 fi
@@ -163,12 +166,20 @@ download_yq() {
         return 1
     fi
 
-    if _network_download "$download_url" "$install_dir/yq" "Yq" "$yq_max_attempts" "$yq_delay"; then
-        verify_github_sha256 "$install_dir/yq" "$download_url" "$(get_yq_api_url)" || return 1
-        chmod +x "$install_dir/yq"
+    mkdir -p "$tmp_ram"
+    local yq_tmp_file="$tmp_ram/yq.$$"
+
+    if _network_download "$download_url" "$yq_tmp_file" "Yq" "$yq_max_attempts" "$yq_delay"; then
+        if ! verify_github_sha256 "$yq_tmp_file" "$download_url" "$(get_yq_api_url)"; then
+            rm -f "$yq_tmp_file"
+            return 1
+        fi
+        chmod +x "$yq_tmp_file"
+        mv -f "$yq_tmp_file" "$install_dir/yq" || { rm -f "$yq_tmp_file"; return 1; }
         printf "  Yq ${green}успешно загружен${reset}\n"
         return 0
     else
+        rm -f "$yq_tmp_file"
         return 1
     fi
 }
