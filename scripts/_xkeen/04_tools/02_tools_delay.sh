@@ -32,6 +32,16 @@ _manage_delay() {
         ;;
     esac
 
+    case "$new_delay" in
+        0|[1-9]*)
+        ;;
+        *)
+            echo -e "  ${red}Ошибка${reset}"
+            echo "  Новая задержка не должна начинаться с нуля (введите, например, 8 вместо 08)"
+            return 1
+        ;;
+    esac
+
     if [ "$current_delay" = "$new_delay" ]; then
         echo "  Обновление задержки ${display_name} не требуется"
         return 0
