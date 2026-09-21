@@ -109,17 +109,6 @@ diagnostic() {
         echo "$input"
     }
 
-    # Функция логирования файлов
-    log_file() {
-        local file="$1"
-        local title="$2"
-        if [ -f "$file" ]; then
-            cat "$file" | log_block "$title"
-        else
-            echo "Файл $file не найден" | log_block "$title"
-        fi
-    }
-
     # Функция дампа iptables/ip6tables
     dump_tables() {
         local cmd="$1"

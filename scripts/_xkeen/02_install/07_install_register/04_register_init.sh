@@ -1331,21 +1331,6 @@ get_xray_network_by_mode() {
     echo "$network"
 }
 
-get_xray_port_by_tag() {
-    tag="$1"
-    port=$(
-        get_xray_transparent_inbounds |
-        awk -F '\t' -v tag="$tag" '
-            $4 == tag && $2 != "" {
-                print $2
-                exit
-            }
-        '
-    )
-
-    echo "$port"
-}
-
 get_xray_port_by_tag_mode() {
     tag="$1"
     mode="$2"
@@ -1360,21 +1345,6 @@ get_xray_port_by_tag_mode() {
     )
 
     echo "$port"
-}
-
-get_xray_mode_by_tag() {
-    tag="$1"
-    mode=$(
-        get_xray_transparent_inbounds |
-        awk -F '\t' -v tag="$tag" '
-            $4 == tag && $1 != "" {
-                print $1
-                exit
-            }
-        '
-    )
-
-    echo "$mode"
 }
 
 get_xray_network_by_tag_mode() {
@@ -1400,42 +1370,6 @@ get_xray_network_by_tag_mode() {
             }
 
             $4 == tag && $1 == mode {
-                add_networks($3)
-            }
-
-            END {
-                for (i = 1; i <= order_count; i++) {
-                    printf "%s%s", order[i], (i < order_count ? " " : "")
-                }
-            }
-        '
-    )
-
-    echo "$network"
-}
-
-get_xray_network_by_tag() {
-    tag="$1"
-    network=$(
-        get_xray_transparent_inbounds |
-        awk -F '\t' -v tag="$tag" '
-            function add_networks(value, count, i, item) {
-                gsub(/,/, " ", value)
-                gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-                if (value == "") {
-                    return
-                }
-
-                count = split(value, items, /[[:space:]]+/)
-                for (i = 1; i <= count; i++) {
-                    item = items[i]
-                    if (item != "" && !seen[item]++) {
-                        order[++order_count] = item
-                    }
-                }
-            }
-
-            $4 == tag {
                 add_networks($3)
             }
 
@@ -3674,7 +3608,7 @@ proxy_start() {
             fi
             configure_dscp_force_proxy
             if [ "$mode_proxy" = "TProxy" ]; then
-                keenetic_ssl="$(get_keenetic_port)" || {
+                get_keenetic_port >/dev/null || {
                     proxy_stop
                     log_error_router "Порт 443 занят сервисами Keenetic. Запуск в режиме TProxy невозможен"
                     log_error_terminal "
