@@ -362,7 +362,7 @@ case "$http_code" in
         printf "  ${red}Ошибка${reset}: Отсутствует или недействителен ${light_blue}токен доступа${reset} к RCI
 
   Для ${green}KeeneticOS 5.2${reset} и выше требуется ${light_blue}токен доступа${reset}
-  Создайте его в веб-интерфейсе и укажите в ${yellow}xkeen.json${reset}\n"
+  Создайте его в веб-интерфейсе и укажите в ${yellow}xkeen.json${reset}\n" >&2
         exit 1
         ;;
 esac
