@@ -142,6 +142,11 @@ _xkeen_secure_rundir() {
         owner="$3"
         if [ "$owner" != "root" ] || [ "$mode" != "drwx------" ]; then
             rm -rf "$d" 2>/dev/null
+        else
+            # Каталог уже существовал и прошёл проверку owner/mode —
+            # chmod не нужен, права и так верны.
+            printf '%s' "$d"
+            return 0
         fi
     fi
     [ -d "$d" ] || mkdir -m 700 "$d" 2>/dev/null || return 1
@@ -2102,7 +2107,11 @@ _xkeen_secure_rundir() {
     if [ -e "$d" ] && [ ! -d "$d" ]; then rm -f "$d" 2>/dev/null; fi
     if [ -d "$d" ]; then
         set -- $(ls -ld "$d" 2>/dev/null)
-        [ "$3" = "root" ] && [ "$1" = "drwx------" ] || rm -rf "$d" 2>/dev/null
+        if [ "$3" = "root" ] && [ "$1" = "drwx------" ]; then
+            printf '%s' "$d"
+            return 0
+        fi
+        rm -rf "$d" 2>/dev/null
     fi
     [ -d "$d" ] || mkdir -m 700 "$d" 2>/dev/null || return 1
     chmod 700 "$d" 2>/dev/null || return 1
