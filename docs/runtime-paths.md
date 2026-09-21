@@ -40,7 +40,7 @@
 | `/opt/var/log/xkeen/` | Логи самого XKeen |
 | `/opt/var/log/xray/access.log` | Access-лог Xray |
 | `/opt/var/log/xray/error.log` | Error-лог Xray |
-| `/opt/var/log/xkeen-detached.log` | Лог фоновых запусков (self-detach из `-start/-stop/-restart` без TTY) |
+| `/opt/var/log/xkeen-detached.log` | Лог фоновых запусков (self-detach из `-start/-stop/-restart` без TTY); усекается до последних 500 строк при каждом self-detach |
 
 ## Runtime-state
 
