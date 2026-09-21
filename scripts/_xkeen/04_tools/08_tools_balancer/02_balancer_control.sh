@@ -14,6 +14,77 @@ sb_xray_running() {
     pidof xray >/dev/null 2>&1
 }
 
+# Версия установленного Xray-core: второе поле первой строки `xray version`
+# (формат 'Xray X.Y.Z ...', тот же вызов уже используется в diagnostic.sh).
+# Пусто, если распарсить не удалось — это не ошибка сама по себе, вызывающий
+# код обязан трактовать пустой результат как fail-open.
+_sb_xray_version() {
+    xray version 2>/dev/null | awk 'NR==1 { print $2 }'
+}
+
+# Сравнение версий вида X.Y.Z без sort -V/массивов/regex/[[ ]]: разбор по
+# точкам через IFS, сравнение полей арифметикой sh. $1 — фактическая версия,
+# $2 — минимально требуемая. Возврат: 0 — фактическая >= минимальной,
+# 1 — фактическая < минимальной, 2 — $1 не в ожидаемом формате (только цифры
+# и точки, например суффикс вида "-beta" или совсем другой вывод в будущих
+# версиях) — вызывающий код обязан трактовать это как fail-open, а не как «старая».
+_sb_version_ge() {
+    local ver min v1 v2 v3 m1 m2 m3
+
+    ver="$1"; min="$2"
+    case "$ver" in
+        ''|*[!0-9.]*) return 2 ;;
+    esac
+
+    # разбиение по точкам здесь намеренное: версия вида X.Y.Z раскладывается по IFS
+    IFS='.'
+    # shellcheck disable=SC2086
+    set -- $ver
+    unset IFS
+    v1=${1:-0}; v2=${2:-0}; v3=${3:-0}
+    IFS='.'
+    # shellcheck disable=SC2086
+    set -- $min
+    unset IFS
+    m1=${1:-0}; m2=${2:-0}; m3=${3:-0}
+
+    [ "$v1" -gt "$m1" ] && return 0
+    [ "$v1" -lt "$m1" ] && return 1
+    [ "$v2" -gt "$m2" ] && return 0
+    [ "$v2" -lt "$m2" ] && return 1
+    [ "$v3" -ge "$m3" ] && return 0
+    return 1
+}
+
+# Гейт минимальной версии Xray-core перед первой попыткой lsrules: подкоманда
+# `xray api lsrules`, на которой держится sb_api_alive, появилась только в
+# $sb_min_xray_version (RPC ListRule); на более старом ядре она падает с
+# ошибкой разбора аргументов, а не просто отвечает «не жив» — без гейта
+# sb_ensure_api все 20с крутит цикл ожидания и sb_status показывает generic
+# «api недоступен», хотя причина известна и не требует ожидания.
+# Fail-open: если версию не удалось разобрать (неожиданный или будущий формат
+# вывода `xray version`), гейт не блокирует — лучше сохранить прежнее
+# поведение, чем ложно отказать на исправной версии.
+sb_check_xray_version() {
+    local ver rc min
+
+    # sb_min_xray_version — SSoT-константа из 01_info_variable.sh (как и
+    # sb_api_addr выше); при линтинге модуля по отдельности shellcheck об этом
+    # не знает.
+    # shellcheck disable=SC2154
+    min="$sb_min_xray_version"
+    ver=$(_sb_xray_version)
+    [ -n "$ver" ] || return 0
+
+    _sb_version_ge "$ver" "$min"; rc=$?
+    if [ "$rc" = "1" ]; then
+        echo
+        echo -e "  ${red}✗${reset} Xray-core ${yellow}$ver${reset} слишком старый для балансировки по скорости (нужен ${yellow}$min${reset}+ — используется \`xray api lsrules\`)."
+        return 1
+    fi
+    return 0
+}
+
 # Обновить ОДИН ключ .xkeen.xray.speed_balancer.KEY = VALUE в xkeen.json, трогая
 # ТОЛЬКО блок балансера. Весь остальной файл (policy, geodata, комментарии)
 # сохраняется как есть — XKeen сам xkeen.json не переписывает, и балансер тоже
@@ -111,6 +182,8 @@ sb_ensure_api() {
         fi
         return 1
     fi
+
+    sb_check_xray_version || return 1
 
     sb_api_alive && return 0
 
@@ -295,7 +368,19 @@ sb_status() {
     elif ! sb_xray_running; then
         echo -e "  Xray не запущен — текущая нода неизвестна"
     else
-        echo -e "  api Xray (${yellow}$sb_api_addr${reset}) недоступен"
+        local sb_ver sb_ver_rc sb_min
+        # sb_min_xray_version — SSoT-константа из 01_info_variable.sh, см.
+        # пояснение в sb_check_xray_version.
+        # shellcheck disable=SC2154
+        sb_min="$sb_min_xray_version"
+        sb_ver=$(_sb_xray_version)
+        sb_ver_rc=1
+        [ -n "$sb_ver" ] && { _sb_version_ge "$sb_ver" "$sb_min"; sb_ver_rc=$?; }
+        if [ -n "$sb_ver" ] && [ "$sb_ver_rc" = "1" ]; then
+            echo -e "  api Xray (${yellow}$sb_api_addr${reset}) недоступен — Xray-core ${yellow}$sb_ver${reset} старее требуемых ${yellow}$sb_min${reset}"
+        else
+            echo -e "  api Xray (${yellow}$sb_api_addr${reset}) недоступен"
+        fi
     fi
     if [ "$sb_log_enabled" != "false" ] && [ -f "$sb_log_file" ]; then
         echo "  Последние события:"
