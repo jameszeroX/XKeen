@@ -28,12 +28,20 @@ install_xkeen() {
         fi
         chmod +x "$stage_dir/xkeen"
         mv "$stage_dir/xkeen" "$install_dir/xkeen.new" || { rm -rf "$stage_dir"; return 1; }
-        mv "$install_dir/xkeen.new" "$install_dir/xkeen" || { rm -rf "$stage_dir"; return 1; }
+        rm -f "$install_dir/xkeen.old"
+        [ -f "$install_dir/xkeen" ] && mv "$install_dir/xkeen" "$install_dir/xkeen.old"
+        if ! mv "$install_dir/xkeen.new" "$install_dir/xkeen"; then
+            [ -f "$install_dir/xkeen.old" ] && mv "$install_dir/xkeen.old" "$install_dir/xkeen"
+            rm -rf "$stage_dir"
+            return 1
+        fi
         rm -rf "$install_dir/.xkeen.old"
         [ -d "$install_dir/.xkeen" ] && mv "$install_dir/.xkeen" "$install_dir/.xkeen.old"
         if mv "$stage_dir/_xkeen" "$install_dir/.xkeen"; then
+            rm -f "$install_dir/xkeen.old"
             rm -rf "$install_dir/.xkeen.old" "$stage_dir"
         else
+            [ -f "$install_dir/xkeen.old" ] && mv "$install_dir/xkeen.old" "$install_dir/xkeen"
             [ -d "$install_dir/.xkeen.old" ] && mv "$install_dir/.xkeen.old" "$install_dir/.xkeen"
             rm -rf "$stage_dir"
             return 1
