@@ -27,36 +27,18 @@ sb_outbounds_file="$xray_conf_dir/04_outbounds.json"
 cron_dir="$WORK/cron"; cron_file="root"
 install_dir="$WORK/sbin"
 
-# strip_json_comments/jc_set_path/validate_xkeen_json_syntax берём из реального
-# кода, а не копией: модуль целиком не подключить (на верхнем уровне он ходит
-# curl'ом в RCI роутера), а копия разъезжается с оригиналом. Тот же приём, что
-# в test_strip_json.sh. Все три функции живут в 01_info_common.sh (перенесены
-# туда из 01_info_variable.sh), sb_write_setting (02_balancer_control.sh)
-# зовёт jc_set_path/validate_xkeen_json_syntax, поэтому их тоже нужно сорсить.
+# strip_json_comments/jc_set_path/validate_xkeen_json_syntax/speed_balancer_settings
+# берём из реального кода, а не копией: модуль целиком не подключить (на
+# верхнем уровне он ходит curl'ом в RCI роутера), а копия разъезжается с
+# оригиналом (так и вышло: рукописная копия speed_balancer_settings отстала от
+# схемы .xkeen.xray.speed_balancer, введённой коммитом 2b7276d). Тот же приём,
+# что в test_strip_json.sh. Все четыре функции живут в 01_info_common.sh,
+# sb_write_setting (02_balancer_control.sh) зовёт jc_set_path/
+# validate_xkeen_json_syntax, поэтому их тоже нужно сорсить.
 eval "$(awk '/^strip_json_comments\(\) \{/,/^\}/' /repo/scripts/_xkeen/01_info/01_info_common.sh)"
 eval "$(awk '/^jc_set_path\(\) \{/,/^\}/' /repo/scripts/_xkeen/01_info/01_info_common.sh)"
 eval "$(awk '/^validate_xkeen_json_syntax\(\) \{/,/^\}/' /repo/scripts/_xkeen/01_info/01_info_common.sh)"
-
-# speed_balancer_settings копируется сюда в упрощённом виде — тот же разбор,
-# что в 01_info_variable.sh, но без прочего содержимого файла переменных.
-speed_balancer_settings() {
-    sb_enabled="false"; sb_log_enabled="true"; sb_interval="15"; sb_hysteresis="25"
-    sb_balancer="balancer"; sb_maxtime="8"
-    sb_test_url="https://speed.cloudflare.com/__down?bytes=50000000"
-    if [ -f "$xkeen_config" ] && command -v jq >/dev/null 2>&1; then
-        json_clean=$(strip_json_comments "$xkeen_config")
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.enabled // empty' 2>/dev/null)
-        [ "$v" = "true" ] && sb_enabled="true"
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.log' 2>/dev/null)
-        [ "$v" = "false" ] && sb_log_enabled="false"
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.interval // empty' 2>/dev/null)
-        [ -n "$v" ] && [ "$v" -gt 0 ] 2>/dev/null && sb_interval="$v"
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.hysteresis // empty' 2>/dev/null)
-        [ -n "$v" ] && [ "$v" -ge 0 ] 2>/dev/null && sb_hysteresis="$v"
-        v=$(printf '%s' "$json_clean" | jq -r '.xkeen.speed_balancer.balancer // empty' 2>/dev/null)
-        [ -n "$v" ] && sb_balancer="$v"
-    fi
-}
+eval "$(awk '/^speed_balancer_settings\(\) \{/,/^\}/' /repo/scripts/_xkeen/01_info/01_info_common.sh)"
 
 . /repo/scripts/_xkeen/04_tools/08_tools_balancer/01_balancer_core.sh
 . /repo/scripts/_xkeen/04_tools/08_tools_balancer/02_balancer_control.sh
