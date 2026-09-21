@@ -1,6 +1,6 @@
 # Сборка и релиз
 
-Локальной сборки нет. Всё делает CI на GitHub Actions. В этом разделе — три workflow-а и две схемы каналов обновлений.
+Локальной сборки нет. Всё делает CI на GitHub Actions. В этом разделе — пять workflow-ов и две схемы каналов обновлений.
 
 ## Workflow-ы
 
@@ -66,6 +66,41 @@
 - В Wiki создана хотя бы одна страница через UI (иначе `<repo>.wiki.git` отдаёт 404).
 - В Settings → Actions → General → Workflow permissions: `Read and write permissions`.
 - Secret `GPG_PRIVATE_KEY` (passphrase не используется).
+
+### `deploy.yaml`
+
+[`.github/workflows/deploy.yaml`](../.github/workflows/deploy.yaml)
+
+| Параметр | Значение |
+| --- | --- |
+| Триггер | `push` в `main` с изменениями в `README.md`, `docs/**`, `wiki/**`, `test/README.md`, `mkdocs.yml`, `requirements-docs.txt`, `.github/scripts/stage-docs.sh` или `hooks/**`, либо `workflow_dispatch` |
+| Результат | Сайт mkdocs опубликован на GitHub Pages |
+
+Шаги:
+
+1. Checkout.
+2. Установка Python и зависимостей из `requirements-docs.txt`.
+3. Подготовка источников документации: `.github/scripts/stage-docs.sh`.
+4. Сборка `mkdocs build --strict`.
+5. `actions/configure-pages@v5`, затем загрузка артефакта `actions/upload-pages-artifact@v3`.
+6. Отдельная джоба `deploy`: пауза 60 с (ожидание параллельных деплоев), публикация через `actions/deploy-pages@v4`.
+
+### `faq-sync.yaml`
+
+[`.github/workflows/faq-sync.yaml`](../.github/workflows/faq-sync.yaml)
+
+| Параметр | Значение |
+| --- | --- |
+| Триггер | Cron `0 6 * * *` (UTC), либо `workflow_dispatch` |
+| Результат | `wiki/FAQ.md` синхронизирован с `https://jameszero.net/faq-xkeen.htm`, подписанный автокоммит |
+
+Шаги:
+
+1. Checkout.
+2. Скачивание `https://jameszero.net/faq-xkeen.htm` через `curl`.
+3. Конвертация HTML в Markdown: `.github/scripts/faq-html2md.py` → `wiki/FAQ.md`.
+4. Если в `wiki/FAQ.md` есть diff — импорт GPG-ключа и подписанный `git commit -S` + push в `main`.
+5. Программный запуск `gh workflow run wiki-sync.yaml` и `gh workflow run deploy.yaml`: push с `GITHUB_TOKEN` не триггерит push-workflow-ы, поэтому синхронизация Wiki и публикация Pages запускаются явно.
 
 ## Каналы обновлений
 
