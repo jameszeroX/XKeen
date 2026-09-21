@@ -23,6 +23,22 @@ _is_github_release_url() {
     esac
 }
 
+# Проверяет, настроены ли у пользователя собственные geodata-записи
+# (.xkeen.xray.geodata[] в xkeen.json). Нужна как отдельный гейт входа
+# в блок -ug: update_user_geofiles() сама корректно обрабатывает
+# geodata, но до неё поток управления не доходит, если ни один из
+# стандартных флагов обновления не выставлен.
+has_user_geodata() {
+    # shellcheck disable=SC2034 # используется в scripts/xkeen, блок -ug
+    has_user_geodata="false"
+    [ -f "$xkeen_config" ] || return 0
+    command -v jq >/dev/null 2>&1 || return 0
+    if strip_json_comments "$xkeen_config" | jq -e '(.xkeen.xray.geodata // []) | length > 0' >/dev/null 2>&1; then
+        # shellcheck disable=SC2034 # используется в scripts/xkeen, блок -ug
+        has_user_geodata="true"
+    fi
+}
+
 # Функция для загрузки и обработки геофайлов
 process_geo_file() {
     local url="$1"
