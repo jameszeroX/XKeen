@@ -48,19 +48,6 @@ download_xray() {
     printf "\n  ${green}Запрос информации${reset} о релизах ${yellow}Xray${reset}\n"
     fetch_release_tags "$xray_api_url" "$xray_jsd_url" "10"
 
-    # --- АВТОМАТИЧЕСКИЙ РЕЖИМ ---
-    if [ "$autoinstall_mode" = "true" ]; then
-        version_selected=$(echo "$RELEASE_TAGS" | head -1)
-        [ "$USE_JSDELIVR" = "true" ] && version_selected="v$version_selected"
-        printf "  ${green}Авто-режим${reset}: выбрана последняя версия ${yellow}%s${reset}\n" "$version_selected"
-
-        if _xray_perform_install "$version_selected"; then
-            return 0
-        else
-            exit 1
-        fi
-    fi
-
     # --- ИНТЕРАКТИВНЫЙ РЕЖИМ ---
     while true; do
         echo
