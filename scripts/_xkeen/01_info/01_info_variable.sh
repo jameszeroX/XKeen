@@ -93,7 +93,7 @@ yq_workaround_dist_url="https://github.com/jameszeroX/yq/releases/latest/downloa
 gh_proxy1="https://gh-proxy.com"								# 1 прокси для загрузок с GitHub
 gh_proxy2="https://ghfast.top"									# 2 прокси для загрузок с GitHub
 
-yq_use_workaround="false"									# включить при возникноверии пробелем, подобных issue 2609
+yq_use_workaround="false"									# включить при возникновении проблем, подобных issue 2609
 yq_workaround_issue_url="https://github.com/mikefarah/yq/issues/2609"				# issue с поломанным релизом Yq
 
 # url для загрузки геофайлов
