@@ -308,7 +308,15 @@ fi
 rm -f "$archive_name"
 
 chmod +x "$stage_dir/xkeen"
-if ! mv "$stage_dir/xkeen" /opt/sbin/xkeen.new || ! mv /opt/sbin/xkeen.new /opt/sbin/xkeen; then
+if ! mv "$stage_dir/xkeen" /opt/sbin/xkeen.new; then
+    rm -rf "$stage_dir" /opt/sbin/xkeen.new
+    printf "  ${red}Ошибка${reset}: после распаковки не найден исполняемый файл ${yellow}/opt/sbin/xkeen${reset}\n"
+    exit 1
+fi
+rm -f /opt/sbin/xkeen.old
+[ -f /opt/sbin/xkeen ] && mv /opt/sbin/xkeen /opt/sbin/xkeen.old
+if ! mv /opt/sbin/xkeen.new /opt/sbin/xkeen; then
+    [ -f /opt/sbin/xkeen.old ] && mv /opt/sbin/xkeen.old /opt/sbin/xkeen
     rm -rf "$stage_dir" /opt/sbin/xkeen.new
     printf "  ${red}Ошибка${reset}: после распаковки не найден исполняемый файл ${yellow}/opt/sbin/xkeen${reset}\n"
     exit 1
@@ -316,11 +324,13 @@ fi
 rm -rf /opt/sbin/.xkeen.old
 [ -d /opt/sbin/.xkeen ] && mv /opt/sbin/.xkeen /opt/sbin/.xkeen.old
 if ! mv "$stage_dir/_xkeen" /opt/sbin/.xkeen; then
+    [ -f /opt/sbin/xkeen.old ] && mv /opt/sbin/xkeen.old /opt/sbin/xkeen
     [ -d /opt/sbin/.xkeen.old ] && mv /opt/sbin/.xkeen.old /opt/sbin/.xkeen
     rm -rf "$stage_dir"
     printf "  ${red}Ошибка${reset}: не удалось установить модули XKeen\n"
     exit 1
 fi
+rm -f /opt/sbin/xkeen.old
 rm -rf /opt/sbin/.xkeen.old "$stage_dir"
 
 exec /opt/sbin/xkeen -i
