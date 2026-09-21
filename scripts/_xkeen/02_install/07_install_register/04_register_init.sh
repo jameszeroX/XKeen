@@ -2186,6 +2186,12 @@ curl_api() {
     fi
 }
 
+# Весь сгенерированный netfilter-хук (proxy.sh) — один compound-оператор
+# if/then/else/fi (открытие здесь, `else` и `fi` на нулевом уровне
+# вложенности ниже, обе ветки целиком, все функции внутри). ash обязан
+# полностью разобрать его на каждое событие netfilter.d/schedule.d,
+# прежде чем начать что-либо исполнять — в т.ч. fast-path выход
+# _xkeen_rules_intact ниже: он экономит только исполнение, не разбор.
 if pidof "$name_client" >/dev/null; then
 
     # Сериализация прогонов хука. NDM вызывает netfilter.d конкурентно —
@@ -2899,6 +2905,10 @@ USER_POLICIES_EOF
         return 0
     }
 
+    # Этот fast-path сокращает только время выполнения ниже по коду —
+    # к моменту вызова ash уже полностью разобрал весь if/fi выше
+    # (см. комментарий у открывающего `if pidof`), включая ~700 строк
+    # full-rebuild-функций, определённых раньше этой точки.
     _xkeen_rules_intact() {
         [ -n "$_xkeen_hook_tables" ] || return 1
         if [ "$iptables_supported" = "true" ]; then
