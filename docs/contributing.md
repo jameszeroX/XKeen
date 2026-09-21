@@ -36,7 +36,7 @@ shellcheck scripts/xkeen scripts/_xkeen/**/*.sh
 
 ## Добавление новой команды
 
-1. Case-ветка в [`scripts/xkeen`](../scripts/xkeen) в большом `while/case` (начинается со строки 119).
+1. Case-ветка в [`scripts/xkeen`](../scripts/xkeen) в большом `while/case` (имеет условие `while [ $# -gt 0 ]`).
 2. Если команда из `{-start, -stop, -restart}` или другая, требующая self-detach в фоне — добавить в проверку на строках 43-48 (`detach_eligible=true`).
 3. Описание флага — в `help_xkeen()` функции [`scripts/_xkeen/about.sh`](../scripts/_xkeen/about.sh) под подходящим разделом.
 4. Если команда деструктивная — обязательно интерактивное подтверждение перед действием. Не делать «тихие» деструктивные операции.
