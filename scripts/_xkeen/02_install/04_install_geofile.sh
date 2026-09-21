@@ -107,8 +107,8 @@ install_geosite() {
         process_geo_file "$zkeen_url" "$zkeen_datfile" "GeoSite ZKeen" "$update_zkeen_geosite"
     fi
 
-    # Симлинки zkeen после успешной загрузки
-    if [ -n "$zkeen_datfile" ]; then
+    # Симлинки zkeen, если целевой файл присутствует (успешная загрузка либо уже был на диске)
+    if [ -n "$zkeen_datfile" ] && [ -f "$geo_dir/$zkeen_datfile" ]; then
         if [ "$zkeen_datfile" = "geosite_zkeen.dat" ]; then
             rm -f "$geo_dir/zkeen.dat"
             ln -sf "$geo_dir/geosite_zkeen.dat" "$geo_dir/zkeen.dat"
@@ -149,8 +149,8 @@ install_geoip() {
         process_geo_file "$zkeenip_url" "$zkeenip_datfile" "GeoIP ZKeenIP" "$update_zkeenip_geoip"
     fi
 
-    # Симлинки zkeenip после успешной загрузки
-    if [ -n "$zkeenip_datfile" ]; then
+    # Симлинки zkeenip, если целевой файл присутствует (успешная загрузка либо уже был на диске)
+    if [ -n "$zkeenip_datfile" ] && [ -f "$geo_dir/$zkeenip_datfile" ]; then
         if [ "$zkeenip_datfile" = "geoip_zkeenip.dat" ]; then
             rm -f "$geo_dir/zkeenip.dat"
             ln -sf "$geo_dir/geoip_zkeenip.dat" "$geo_dir/zkeenip.dat"
