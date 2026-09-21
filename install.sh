@@ -173,7 +173,7 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-clear
+[ -t 1 ] && clear
 echo
 
 # Проверяем наличие пользовательского прокси в конфиге
@@ -245,7 +245,7 @@ if [ -z "$VERSION_TYPE" ]; then
                 exit 0
                 ;;
             *)
-                clear
+                [ -t 1 ] && clear
                 printf "\n  ${red}Неверный выбор.${reset} Пожалуйста, выберите пункт от 0 до 4.\n\n"
                 ;;
         esac

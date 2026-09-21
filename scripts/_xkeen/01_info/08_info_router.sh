@@ -43,7 +43,7 @@ info_firmware() {
     fi
 
     if ! echo "$major_version" | grep -Eq '^[0-9]+$'; then
-        clear
+        [ -t 1 ] && clear
         echo
         echo -e "  ${yellow}Предупреждение${reset}: Не удалось определить версию KeeneticOS"
         major_version=0
@@ -51,7 +51,7 @@ info_firmware() {
 
     # Вывод варнинга для старых версий Keenetic OS с возможностью продолжить установку
     if [ "$major_version" -lt 4 ]; then
-        [ "$major_version" = 0 ] || clear
+        [ "$major_version" = 0 ] || [ ! -t 1 ] || clear
         echo
         echo -e "  ${red}=============================================${reset}"
         echo -e "  ${red}ВНИМАНИЕ${reset}: Обнаружена KeeneticOS версии $major_version"
