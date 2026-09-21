@@ -119,7 +119,7 @@ install_xray() {
     if [ -d "$xray_conf_dir" ]; then
         for file in "$xray_conf_dir"/*.json; do
             [ -f "$file" ] || continue
-            grep -qE '"transport"\s*:' "$file" && mv "$file" "${file}.obsolete"
+            grep -qE '"transport"[[:space:]]*:' "$file" && mv "$file" "${file}.obsolete"
         done
     fi
 
