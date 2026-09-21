@@ -1,0 +1,2 @@
+shell=sh
+disable=SC3037,SC3043,SC3045
