@@ -44,7 +44,7 @@ get_user_proxy() {
         -e 's/[[:space:]]\{1,\}\/\/.*$//' \
         "$xkeen_config" | \
         sed -n 's/.*"gh_proxy"[[:space:]]*: *"\([^"]*\)".*/\1/p' | \
-        xargs 2>/dev/null)
+        sed 's/^[[:space:]]*//; s/[[:space:]]*$//' 2>/dev/null)
 
     [ "$gh_proxy_user" = "null" ] && gh_proxy_user=""
     [ -z "$gh_proxy_user" ] && return 1

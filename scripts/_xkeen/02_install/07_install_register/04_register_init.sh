@@ -198,7 +198,7 @@ get_rci_token() {
     local json_clean
     json_clean=$(strip_json_comments "$xkeen_config")
 
-    rci_token=$(printf '%s' "$json_clean" | sed -n 's/.*"rci_token": *"\([^"]*\)".*/\1/p' | xargs 2>/dev/null)
+    rci_token=$(printf '%s' "$json_clean" | sed -n 's/.*"rci_token": *"\([^"]*\)".*/\1/p' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' 2>/dev/null)
 
     [ "$rci_token" = "null" ] && rci_token=""
 }
