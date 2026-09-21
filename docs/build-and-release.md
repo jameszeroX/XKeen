@@ -38,10 +38,12 @@
 1. Checkout с `fetch-depth: 0`.
 2. Импорт GPG-ключа.
 3. Подмена `build_timestamp` (как в `package-folder.yaml`).
-4. Упаковка: `find . -type f -o -type l | sed 's|^\./||' | tar -czf "dist/${ARCHIVE_NAME}" -T -` (`ARCHIVE_NAME=xkeen.tar.gz`).
-5. Удаление существующего тега, создание подписанного `git tag -s "$VERSION"`, push.
-6. `gh release create` с архивом `dist/*.tar.gz`. При `prerelease=true` — флаг `--prerelease`.
-7. Верификация подписи `git tag -v`.
+4. Проверка синтаксиса: `sh -n` по всем `*.sh` в `scripts_for_release/` и по `scripts_for_release/xkeen`.
+5. Упаковка: `find . -type f -o -type l | sed 's|^\./||' | tar -czf "dist/${ARCHIVE_NAME}" -T -` (`ARCHIVE_NAME=xkeen.tar.gz`).
+6. Проверка целостности архива: `tar -tzf` по собранному `dist/xkeen.tar.gz`.
+7. Удаление существующего тега, создание подписанного `git tag -s "$VERSION"`, push.
+8. `gh release create` с архивом `dist/*.tar.gz`. При `prerelease=true` — флаг `--prerelease`.
+9. Верификация подписи `git tag -v`.
 
 ### `wiki-sync.yaml`
 
