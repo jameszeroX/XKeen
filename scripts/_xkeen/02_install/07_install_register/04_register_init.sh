@@ -2141,6 +2141,9 @@ case "${table:-}" in filter|raw) exit 0 ;; esac
 EOL
 
     # Securely inject variables into the script
+    # ${val//\'/...} — намеренная bash-совместимая экспансия: busybox ash по умолчанию собран с CONFIG_ASH_BASH_COMPAT=y и в upstream (shell/ash.c), и в Entware (Config-defaults.in).
+    # POSIX-замена printf|sed уже пробовалась и дважды откатывалась апстримом (e3c0d54→c28e73d, PR #44): лишний форк на каждый из ~40 вызовов за генерацию хука (KN-3812: 5.01s→4.78s без него), плюс command substitution обрезает trailing \n, чего parameter expansion не делает.
+    # Не переоткрывать без багрепорта с реального устройства, где expansion фактически не работает.
     inject_var() {
         local name="$1"
         local val="$2"
