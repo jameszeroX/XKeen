@@ -99,16 +99,16 @@ remove_ports_from_list() {
     current_ports="$1"
     ports_to_del="$2"
 
-    result="$current_ports"
+    echo "$current_ports" | tr ',' '\n' | awk -v del="$ports_to_del" '
+    BEGIN {
+        n = split(del, d, ",")
+        for (i = 1; i <= n; i++) delset[d[i]] = 1
+    }
 
-    for port in $(echo "$ports_to_del" | tr ',' '\n'); do
-        result=$(echo "$result" | tr ',' '\n' |
-            grep -vFx "$port" |
-            tr '\n' ',' |
-            sed 's/,$//')
-    done
-
-    echo "$result"
+    {
+        if (!($0 in delset)) print
+    }
+    ' | tr '\n' ',' | sed 's/,$//'
 }
 
 merge_ports_lists() {
