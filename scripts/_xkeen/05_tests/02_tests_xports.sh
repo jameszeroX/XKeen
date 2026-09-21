@@ -16,8 +16,9 @@ tests_ports_client() {
     listening_ports_udp=
     output="  $name_client ${green}слушает${reset}"
 
-    listening_ports_tcp=$(netstat -ltunp | grep "$name_client" | grep "tcp")
-    listening_ports_udp=$(netstat -ltunp | grep "$name_client" | grep "udp")
+    netstat_raw=$(netstat -ltunp 2>/dev/null | grep "$name_client")
+    listening_ports_tcp=$(printf '%s\n' "$netstat_raw" | grep "tcp")
+    listening_ports_udp=$(printf '%s\n' "$netstat_raw" | grep "udp")
 
     if [ -n "$listening_ports_tcp" ] || [ -n "$listening_ports_udp" ]; then
         printed=false
@@ -27,38 +28,53 @@ tests_ports_client() {
             gateway=
             port=
             protocol=
-            
-            if [ -n "$(echo "$line" | grep "tcp")" ]; then
-                protocol="TCP"
-            fi
-            if [ -n "$(echo "$line" | grep "udp")" ]; then
-                if [ -n "$protocol" ]; then
-                    protocol="$protocol и UDP"
-                else
-                    protocol="UDP"
-                fi
-            fi
-            
-            full_address=$(echo "$line" | awk '{print $4}')
-            
-            if echo "$full_address" | grep -q '^:::[0-9]'; then
-                # Если IPv4 отображается как :::port
-                gateway="0.0.0.0"
-                port=$(echo "$full_address" | awk -F':::' '{print $2}')
-            elif echo "$full_address" | grep -q '^\[::\]'; then
-                # Явный IPv6 [::]:port
-                gateway="[::]"
-                port=$(echo "$full_address" | awk -F'\\]:' '{print $2}')
-            elif echo "$full_address" | grep -q '\\]:'; then
-                # Обычный IPv6 [addr]:port
-                gateway=$(echo "$full_address" | awk -F'\\]:' '{print $1}')"]"
-                port=$(echo "$full_address" | awk -F'\\]:' '{print $2}')
-            elif echo "$full_address" | grep -q ':'; then
-                # Обычный IPv4
-                gateway=$(echo "$full_address" | cut -d':' -f1)
-                port=$(echo "$full_address" | cut -d':' -f2)
-            fi
-            
+
+            case "$line" in
+                tcp*) protocol="TCP" ;;
+            esac
+            case "$line" in
+                udp*)
+                    if [ -n "$protocol" ]; then
+                        protocol="$protocol и UDP"
+                    else
+                        protocol="UDP"
+                    fi
+                    ;;
+            esac
+
+            # Разбор шлюза и порта одним awk-вызовом: field 4 netstat-строки
+            # покрывает форматы 0.0.0.0:port, :::port, [::]:port, [addr]:port, addr:port
+            gateway_port=$(printf '%s\n' "$line" | awk '{
+                addr = $4
+                if (addr ~ /^:::[0-9]/) {
+                    # Если IPv4 отображается как :::port
+                    gw = "0.0.0.0"
+                    sub(/^:::/, "", addr)
+                    pt = addr
+                } else if (addr ~ /^\[::\]:/) {
+                    # Явный IPv6 [::]:port
+                    gw = "[::]"
+                    sub(/^\[::\]:/, "", addr)
+                    pt = addr
+                } else if (addr ~ /^\[.*\]:/) {
+                    # Обычный IPv6 [addr]:port
+                    n = index(addr, "]:")
+                    gw = substr(addr, 1, n)
+                    pt = substr(addr, n + 2)
+                } else if (addr ~ /:/) {
+                    # Обычный IPv4
+                    n = index(addr, ":")
+                    gw = substr(addr, 1, n - 1)
+                    pt = substr(addr, n + 1)
+                } else {
+                    gw = ""
+                    pt = ""
+                }
+                print gw, pt
+            }')
+            gateway=${gateway_port%% *}
+            port=${gateway_port#* }
+
             if [ "$printed" = false ]; then
                 printf "%b\n" "$output"
                 printed=true
