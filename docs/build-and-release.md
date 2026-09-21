@@ -31,16 +31,16 @@
 | Параметр | Значение |
 | --- | --- |
 | Триггер | `workflow_dispatch` с входами `version` (string) и `prerelease` (boolean) |
-| Результат | `dist/xkeen.tar.gz` + `dist/xkeen.tar` + GitHub Release + подписанный GPG-тег |
+| Результат | `dist/xkeen.tar.gz` + GitHub Release + подписанный GPG-тег |
 
 Шаги:
 
 1. Checkout с `fetch-depth: 0`.
 2. Импорт GPG-ключа.
 3. Подмена `build_timestamp` (как в `package-folder.yaml`).
-4. Двойная упаковка: `.tar.gz` (для роутеров с `tar`+gzip) и `.tar` (для альтернативных распаковщиков).
+4. Упаковка: `find . -type f -o -type l | sed 's|^\./||' | tar -czf "dist/${ARCHIVE_NAME}" -T -` (`ARCHIVE_NAME=xkeen.tar.gz`).
 5. Удаление существующего тега, создание подписанного `git tag -s "$VERSION"`, push.
-6. `gh release create` с обоими архивами. При `prerelease=true` — флаг `--prerelease`.
+6. `gh release create` с архивом `dist/*.tar.gz`. При `prerelease=true` — флаг `--prerelease`.
 7. Верификация подписи `git tag -v`.
 
 ### `wiki-sync.yaml`
