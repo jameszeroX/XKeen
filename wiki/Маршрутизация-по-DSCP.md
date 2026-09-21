@@ -68,7 +68,7 @@ Windows Registry Editor Version 5.00
       "port": 1191,
       "protocol": "tunnel",
       "settings": {
-        "network": "tcp",
+        "allowedNetwork": "tcp",
         "followRedirect": true
       },
       "tag": "force-proxy-redirect"
@@ -77,7 +77,7 @@ Windows Registry Editor Version 5.00
       "port": 1191,
       "protocol": "tunnel",
       "settings": {
-        "network": "udp",
+        "allowedNetwork": "udp",
         "followRedirect": true
       },
       "streamSettings": {
@@ -101,7 +101,7 @@ Windows Registry Editor Version 5.00
       "port": 1191,
       "protocol": "tunnel",
       "settings": {
-        "network": "tcp,udp",
+        "allowedNetwork": "tcp,udp",
         "followRedirect": true
       },
       "streamSettings": {
