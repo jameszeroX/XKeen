@@ -38,7 +38,7 @@
 | Путь | Назначение |
 | --- | --- |
 | `/opt/var/log/xkeen/` | Логи самого XKeen |
-| `/opt/var/log/xray/access.log` | Access-лог Xray |
+| `/opt/var/log/xray/access.log` | Access-лог Xray. На свежих установках пуст: `01_log.json` задаёт `"access": "none"` (Xray-лог отключён по умолчанию). Путь остаётся в переменных — включить логирование можно вручную правкой `access` в своей копии `$xray_conf_dir/01_log.json` |
 | `/opt/var/log/xray/error.log` | Error-лог Xray |
 | `/opt/var/log/xkeen-detached.log` | Лог фоновых запусков (self-detach из `-start/-stop/-restart` без TTY) |
 

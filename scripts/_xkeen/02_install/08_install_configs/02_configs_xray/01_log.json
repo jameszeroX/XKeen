@@ -1,6 +1,6 @@
 {
   "log": {
-    "access": "/opt/var/log/xray/access.log",
+    "access": "none",
     "error": "/opt/var/log/xray/error.log",
     "dnsLog": true,
     "loglevel": "none"
