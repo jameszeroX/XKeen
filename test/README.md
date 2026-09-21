@@ -28,6 +28,7 @@
 - Занятый proxy-mutex у stop/restart теперь либо ретраится, либо явно возвращает ошибку «занято» вместо молчаливого кода 0; proxy_start считает успех только после удачного применения netfilter-хука [#121](https://github.com/jameszeroX/XKeen/pull/121) - [@dmiales](https://github.com/dmiales)
 - Добавлен опциональный kill-switch (.xkeen.killswitch, xkeen -killswitch on|off|status) — при аварии ядра дропает только помеченный политикой трафик вместо прямой утечки в обход прокси; дефолт off, xkeen -stop снимает блокировку полностью. Добавлен кэш последнего успешного policy mark на случай сбоя RCI (вместо отката к «прокси для всех»). На реальном железе матчинг DROP-правила переведён с connmark на packet-mark (fwmark) — connmark не срабатывал после сноса save-mark цепочки [#122](https://github.com/jameszeroX/XKeen/pull/122) - [@dmiales](https://github.com/dmiales)
 - Точечное восстановление сета geo_exclude, если он опустел после OOM при живом .lst-файле (включая fast-path «WAN не менялся»); wait_for_ready теперь принимает от RCI и объект, и массив, не гоняя полный таймаут на пустом наборе [#123](https://github.com/jameszeroX/XKeen/pull/123) - [@dmiales](https://github.com/dmiales)
+- `xkeen -start`/`-stop`/`-restart`/`-status` теперь возвращают код возврата, отражающий реальный результат команды, а не всегда 0 — скрипты, полагавшиеся на код возврата этих ключей (например `xkeen -start && ...`), могли считать команду успешной даже при сбое
 
 ### Порядок установки/обновления
 

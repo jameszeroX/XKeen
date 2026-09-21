@@ -3920,6 +3920,7 @@ proxy_stop() {
 }
 
 # Менеджер команд
+_cmd_rc=0
 case "$1" in
     start)
         ipset create ext_exclude hash:ip family inet -exist
@@ -3937,8 +3938,9 @@ case "$1" in
             exit 0
         fi
         proxy_start "$2"
+        _cmd_rc=$?
     ;;
-    stop) proxy_stop ;;
+    stop) proxy_stop; _cmd_rc=$? ;;
     status)
         if proxy_status; then
             mode_proxy=""
@@ -3947,8 +3949,10 @@ case "$1" in
             fi
             [ -z "$mode_proxy" ] && mode_proxy="Other"
             echo -e "  Прокси-клиент ${yellow}$name_client${reset} ${green}запущен${reset} в режиме ${light_blue}$mode_proxy${reset}"
+            _cmd_rc=0
         else
             echo -e "  Прокси-клиент ${red}не запущен${reset}"
+            _cmd_rc=1
         fi
         ;;
     dscp)
@@ -3957,7 +3961,7 @@ case "$1" in
             print_dscp_force_proxy_status
         fi
         ;;
-    restart) proxy_stop; proxy_start "$2" ;;
+    restart) proxy_stop; proxy_start "$2"; _cmd_rc=$? ;;
     cold_start)
         # Подстраховка: переписываем PID guard'а на свой ($$) на случай,
         # если caller-S05xkeen умер до того, как успел _set_coldstart_pid "$!".
@@ -3972,7 +3976,10 @@ case "$1" in
         wait_for_ready
         proxy_start ""
         ;;
-    *) echo -e "  Команды: ${green}start${reset} | ${red}stop${reset} | ${yellow}restart${reset} | status" ;;
+    *)
+        echo -e "  Команды: ${green}start${reset} | ${red}stop${reset} | ${yellow}restart${reset} | status"
+        _cmd_rc=1
+        ;;
 esac
 
-exit 0
+exit "$_cmd_rc"
