@@ -58,6 +58,10 @@ sb_probe_intag="probe"					 # tag probe-inbound
 sb_rule_tag="xkeen-sb-probe"				 # ruleTag временного правила замера
 sb_rule_tmp="$tmp_dir/sb_probe_rule.json"		 # временный файл правила замера
 sb_log_file="$xray_log_dir/speed_balancer.log"		 # лог замеров и переключений
+# читается в 02_balancer_control.sh (SSoT); при линтинге файла переменных
+# по отдельности shellcheck не видит использования в другом файле.
+# shellcheck disable=SC2034
+sb_min_xray_version="26.1.23"				 # мин. версия Xray-core с `api lsrules` (RPC ListRule)
 
 # -------------------------------------
 # Ресурсы для проверки доступа в интернет
