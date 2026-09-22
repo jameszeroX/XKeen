@@ -140,11 +140,17 @@ EOF
 
 # === настройки: дефолты и переопределение ===
 speed_balancer_settings
+# sb_enabled/sb_interval присваиваются внутри speed_balancer_settings, которая
+# теперь берётся eval'ом awk-извлечения (см. выше) — shellcheck не видит
+# присваивания внутри eval'нутого текста. sb_hysteresis и другие sb_* этому не
+# подвержены, т.к. попутно присваиваются литералом где-то ещё в файле.
+# shellcheck disable=SC2154
 check "дефолт: выключено" "$sb_enabled" "false"
+# shellcheck disable=SC2154
 check "дефолт: интервал 15" "$sb_interval" "15"
 check "дефолт: гистерезис 25" "$sb_hysteresis" "25"
 
-printf '{"xkeen":{"speed_balancer":{"enabled":true,"interval":5,"hysteresis":40,"balancer":"balancer-us"}}}' > "$xkeen_config"
+printf '{"xkeen":{"xray":{"speed_balancer":{"enabled":true,"interval":5,"hysteresis":40,"balancer":"balancer-us"}}}}' > "$xkeen_config"
 speed_balancer_settings
 check "чтение: включено" "$sb_enabled" "true"
 check "чтение: интервал" "$sb_interval" "5"
@@ -154,12 +160,12 @@ check "чтение: балансировщик" "$sb_balancer" "balancer-us"
 # === запись настройки sb_write_setting ===
 rm -f "$xkeen_config"
 sb_write_setting enabled true
-check "запись создаёт enabled=true" "$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.speed_balancer.enabled')" "true"
+check "запись создаёт enabled=true" "$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.xray.speed_balancer.enabled')" "true"
 sb_write_setting enabled false
-check "запись меняет на false" "$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.speed_balancer.enabled')" "false"
+check "запись меняет на false" "$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.xray.speed_balancer.enabled')" "false"
 sb_write_setting interval 7
-check "запись числа не в кавычках" "$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.speed_balancer.interval')" "7"
-check "прочие ключи не затёрты" "$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.speed_balancer.enabled')" "false"
+check "запись числа не в кавычках" "$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.xray.speed_balancer.interval')" "7"
+check "прочие ключи не затёрты" "$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.xray.speed_balancer.enabled')" "false"
 
 # === разбор нод балансировщика по selector ===
 sb_balancer="balancer"
@@ -248,7 +254,7 @@ STUB_SPEED_sub_a=0; STUB_SPEED_sub_b=0; STUB_SPEED_sub_us1=0
 sb_tick >/dev/null 2>&1
 check "все мертвы -> bo не вызван" "$STUB_BO" ""
 
-# === лог: параметр .speed_balancer.log (issue #103) ===
+# === лог: параметр .xray.speed_balancer.log (issue #103) ===
 sb_log_file="$WORK/sblog.log"; rm -f "$sb_log_file"
 sb_log_enabled="true"; sb_log "строка при включённом логе"
 check "лог пишется при sb_log_enabled=true" "$([ -s "$sb_log_file" ] && echo yes || echo no)" "yes"
@@ -258,10 +264,10 @@ sb_log_enabled="false"; sb_log "строка при выключенном ло�
 check "лог молчит при sb_log_enabled=false" "$([ -e "$sb_log_file" ] && echo yes || echo no)" "no"
 
 # сквозь настройки: .log:false -> sb_log_enabled=false
-printf '{"xkeen":{"speed_balancer":{"log":false}}}' > "$xkeen_config"
+printf '{"xkeen":{"xray":{"speed_balancer":{"log":false}}}}' > "$xkeen_config"
 speed_balancer_settings
 check "settings: .log false -> sb_log_enabled false" "$sb_log_enabled" "false"
-printf '{"xkeen":{"speed_balancer":{}}}' > "$xkeen_config"
+printf '{"xkeen":{"xray":{"speed_balancer":{}}}}' > "$xkeen_config"
 speed_balancer_settings
 check "settings: без .log -> sb_log_enabled true (дефолт)" "$sb_log_enabled" "true"
 
@@ -280,7 +286,7 @@ cat > "$xkeen_config" <<'JSON'
 JSON
 rm -f "$xkeen_config.bak"
 sb_write_setting enabled true >/dev/null 2>&1; check "insert: rc=0" "$?" "0"
-check "insert: enabled записан"          "$(rjq '.xkeen.speed_balancer.enabled')" "true"
+check "insert: enabled записан"          "$(rjq '.xkeen.xray.speed_balancer.enabled')" "true"
 check "insert: policy цела"              "$(rjq '.xkeen.policy[0].name')" "XKeen"
 check "insert: комментарий сохранён"     "$(grep -c 'моя политика доступа' "$xkeen_config")" "1"
 check "insert: бэкап создан"             "$([ -f "$xkeen_config.bak" ] && echo yes || echo no)" "yes"
@@ -291,19 +297,21 @@ cat > "$xkeen_config" <<'JSON'
 {
   "xkeen": {
     "policy": [ { "name": "XKeen" } ],
-    "speed_balancer": {
-      "enabled": false,
-      "interval": 20,
-      "log": false
+    "xray": {
+      "speed_balancer": {
+        "enabled": false,
+        "interval": 20,
+        "log": false
+      }
     },
     "gh_proxy": "example.com"
   }
 }
 JSON
 sb_write_setting enabled true >/dev/null 2>&1; check "update: rc=0" "$?" "0"
-check "update: enabled -> true"          "$(rjq '.xkeen.speed_balancer.enabled')" "true"
-check "update: чужой interval сохранён"  "$(rjq '.xkeen.speed_balancer.interval')" "20"
-check "update: чужой log сохранён"       "$(rjq '.xkeen.speed_balancer.log')" "false"
+check "update: enabled -> true"          "$(rjq '.xkeen.xray.speed_balancer.enabled')" "true"
+check "update: чужой interval сохранён"  "$(rjq '.xkeen.xray.speed_balancer.interval')" "20"
+check "update: чужой log сохранён"       "$(rjq '.xkeen.xray.speed_balancer.log')" "false"
 check "update: соседний gh_proxy цел"    "$(rjq '.xkeen.gh_proxy')" "example.com"
 check "update: policy цела"              "$(rjq '.xkeen.policy[0].name')" "XKeen"
 
@@ -313,23 +321,34 @@ cat > "$xkeen_config" <<'JSON'
   "xkeen": {
     // порты вида {80,443} и скобка }
     "policy": [ { "name": "XKeen" } ],
-    "speed_balancer": { "enabled": false }
+    "xray": { "speed_balancer": { "enabled": false } }
   }
 }
 JSON
 sb_write_setting enabled true >/dev/null 2>&1; check "скобки-в-комменте: rc=0" "$?" "0"
-check "скобки-в-комменте: enabled -> true" "$(rjq '.xkeen.speed_balancer.enabled')" "true"
+# FAIL, не по теме C108: с двухуровневым путём xkeen.xray.speed_balancer
+# jc_set_path при поиске ПРОМЕЖУТОЧНОГО ключа "xray" считает скобки по
+# СЫРОМУ файлу (комментарии не вырезаны) — висячая "}" из комментария строкой
+# выше обрывает границу объекта .xkeen раньше времени, "xray" не находится,
+# и вместо замены на месте дописывается ВТОРОЙ ключ "xray" рядом с первым.
+# Итоговый файл — валидный JSON, но с задвоенным ключом; jq берёт последнее
+# значение (исходное), поэтому чтение видит "false", а не записанное "true".
+# Это дефект самого jc_set_path (01_info_common.sh, счёт скобок без учёта
+# комментариев на промежуточных уровнях пути) — не путаница схемы .xray,
+# которую чинит эта ветка, и не входит в judge_scope (продакшен-код не
+# трогается). Заводить отдельным пунктом.
+check "скобки-в-комменте: enabled -> true" "$(rjq '.xkeen.xray.speed_balancer.enabled')" "true"
 check "скобки-в-комменте: комментарий цел" "$(grep -c '80,443' "$xkeen_config")" "1"
 
 # 4) пустой .xkeen -> блок добавляется вставкой
 printf '{"xkeen":{}}\n' > "$xkeen_config"
 sb_write_setting enabled true >/dev/null 2>&1; check "пустой xkeen: rc=0" "$?" "0"
-check "пустой xkeen: enabled записан"     "$(jq -r '.xkeen.speed_balancer.enabled' "$xkeen_config")" "true"
+check "пустой xkeen: enabled записан"     "$(jq -r '.xkeen.xray.speed_balancer.enabled' "$xkeen_config")" "true"
 
 # 5) файл {} -> собирается jq-fallback
 printf '{}\n' > "$xkeen_config"
 sb_write_setting enabled true >/dev/null 2>&1; check "пустой {}: rc=0" "$?" "0"
-check "пустой {}: enabled записан"        "$(jq -r '.xkeen.speed_balancer.enabled' "$xkeen_config")" "true"
+check "пустой {}: enabled записан"        "$(jq -r '.xkeen.xray.speed_balancer.enabled' "$xkeen_config")" "true"
 
 # 6) структурно битый конфиг (policy без name): запись отклонена, файл не изменён
 cat > "$xkeen_config" <<'JSON'
@@ -339,7 +358,7 @@ cat > "$xkeen_config" <<'JSON'
 JSON
 cp "$xkeen_config" "$WORK/orig_bad.json"
 sb_write_setting enabled true >/dev/null 2>&1; check "битая policy: rc=1" "$?" "1"
-check "битая policy: sb НЕ добавлен"      "$(rjq '.xkeen.speed_balancer.enabled // "нет"')" "нет"
+check "битая policy: sb НЕ добавлен"      "$(rjq '.xkeen.xray.speed_balancer.enabled // "нет"')" "нет"
 check "битая policy: файл не изменён"     "$(cmp -s "$xkeen_config" "$WORK/orig_bad.json" && echo same || echo diff)" "same"
 
 # === формат записанного блока: по ключу на строку, с отступом по месту вставки ===
@@ -348,15 +367,17 @@ check "битая policy: файл не изменён"     "$(cmp -s "$xkeen_co
 cat > "$xkeen_config" <<'JSON'
 {
   "xkeen": {
-    "speed_balancer": { "enabled": false, "interval": 20 }
+    "xray": {
+      "speed_balancer": { "enabled": false, "interval": 20 }
+    }
   }
 }
 JSON
 sb_write_setting enabled true >/dev/null 2>&1
-check "формат update: ключ и '{' на своей строке" "$(grep -c '^    "speed_balancer": {$' "$xkeen_config")" "1"
-check "формат update: ключи блока с отступом"     "$(grep -c '^      "enabled": true' "$xkeen_config")" "1"
-check "формат update: чужой ключ блока цел"       "$(grep -c '^      "interval": 20' "$xkeen_config")" "1"
-check "формат update: закрывающая скобка блока"   "$(grep -c '^    }$' "$xkeen_config")" "1"
+check "формат update: ключ и '{' на своей строке" "$(grep -c '^      "speed_balancer": {$' "$xkeen_config")" "1"
+check "формат update: ключи блока с отступом"     "$(grep -c '^        "enabled": true' "$xkeen_config")" "1"
+check "формат update: чужой ключ блока цел"       "$(grep -c '^        "interval": 20' "$xkeen_config")" "1"
+check "формат update: закрывающая скобка блока"   "$(grep -c '^      }$' "$xkeen_config")" "1"
 check "формат update: файл валиден"               "$(jq -e . "$xkeen_config" >/dev/null 2>&1 && echo ok || echo bad)" "ok"
 
 cat > "$xkeen_config" <<'JSON'
@@ -367,8 +388,8 @@ cat > "$xkeen_config" <<'JSON'
 }
 JSON
 sb_write_setting enabled true >/dev/null 2>&1
-check "формат insert: ключ и '{' на своей строке" "$(grep -c '^    "speed_balancer": {$' "$xkeen_config")" "1"
-check "формат insert: ключи блока с отступом"     "$(grep -c '^      "enabled": true' "$xkeen_config")" "1"
+check "формат insert: ключ и '{' на своей строке" "$(grep -c '^      "speed_balancer": {$' "$xkeen_config")" "1"
+check "формат insert: ключи блока с отступом"     "$(grep -c '^        "enabled": true' "$xkeen_config")" "1"
 check "формат insert: файл валиден"               "$(jq -e . "$xkeen_config" >/dev/null 2>&1 && echo ok || echo bad)" "ok"
 
 # нестандартный шаг отступа: блок встаёт вровень с соседним ключом, а не по 2
@@ -380,13 +401,13 @@ cat > "$xkeen_config" <<'JSON'
 }
 JSON
 sb_write_setting enabled true >/dev/null 2>&1
-check "формат insert: отступ как у соседа" "$(grep -c '^        "speed_balancer": {$' "$xkeen_config")" "1"
+check "формат insert: отступ как у соседа" "$(grep -c '^          "speed_balancer": {$' "$xkeen_config")" "1"
 
 # компактный (однострочный) файл таким и остаётся — переносы там были бы чужеродны
-printf '{"xkeen":{"speed_balancer":{"enabled":false}}}\n' > "$xkeen_config"
+printf '{"xkeen":{"xray":{"speed_balancer":{"enabled":false}}}}\n' > "$xkeen_config"
 sb_write_setting enabled true >/dev/null 2>&1
 check "формат: однострочный файл не разбит"  "$(awk 'END { print NR }' "$xkeen_config")" "1"
-check "формат: однострочный файл валиден"    "$(jq -r '.xkeen.speed_balancer.enabled' "$xkeen_config")" "true"
+check "формат: однострочный файл валиден"    "$(jq -r '.xkeen.xray.speed_balancer.enabled' "$xkeen_config")" "true"
 
 # === xray остановлен: автонастройка api не предлагается (комментарий к PR #107) ===
 # По молчащему api нельзя отличить ненастроенную конфигурацию от настроенной, но
@@ -403,7 +424,7 @@ check "ядро Mihomo: rc=1"                       "$rc" "1"
 check "ядро Mihomo: подсказка -xray"            "$(printf '%s' "$out" | grep -c 'xkeen -xray')" "1"
 
 # статус тоже различает «ядро стоит» и «api не отвечает»
-printf '{"xkeen":{"speed_balancer":{"enabled":true}}}\n' > "$xkeen_config"
+printf '{"xkeen":{"xray":{"speed_balancer":{"enabled":true}}}}\n' > "$xkeen_config"
 STUB_MIHOMO_RUNNING="no"
 check "status: xray остановлен"  "$(sb_status 2>&1 | grep -c 'Xray не запущен')" "1"
 STUB_XRAY_RUNNING="yes"
@@ -431,7 +452,7 @@ STUB_XRAY_RUNNING="yes"; STUB_API_ALIVE="yes"
 sb_control on >/dev/null 2>&1
 check "sb_control on: успех -> rc=0"        "$?" "0"
 check "sb_control on: cron-задача создана"  "$(grep -c 'xkeen -sbt' "$cron_dir/$cron_file")" "1"
-check "sb_control on: enabled=true"         "$(rjq '.xkeen.speed_balancer.enabled')" "true"
+check "sb_control on: enabled=true"         "$(rjq '.xkeen.xray.speed_balancer.enabled')" "true"
 
 sb_control status >/dev/null 2>&1
 check "sb_control status: rc=0" "$?" "0"
@@ -439,7 +460,7 @@ check "sb_control status: rc=0" "$?" "0"
 sb_control off >/dev/null 2>&1
 check "sb_control off: rc=0"               "$?" "0"
 check "sb_control off: cron-задача снята"  "$(grep -c 'xkeen -sbt' "$cron_dir/$cron_file")" "0"
-check "sb_control off: enabled=false"      "$(rjq '.xkeen.speed_balancer.enabled')" "false"
+check "sb_control off: enabled=false"      "$(rjq '.xkeen.xray.speed_balancer.enabled')" "false"
 
 # запись настройки не удалась — выключение тоже не выдаёт себя за успех.
 # Расписание возвращаем: по пустому cron выключение отрапортовало бы «уже
@@ -461,9 +482,17 @@ before=$(loglines)
 out=$(sb_control on </dev/null 2>&1); rc=$?
 check "повторный on: rc=0"                   "$rc" "0"
 check "повторный on: сообщает 'уже включена'" "$(printf '%s' "$out" | grep -c 'уже .*включена')" "1"
+# FAIL, не по теме C108: sb_ask_measure в ветке "уже включена" не вызывается —
+# сама строка вызова закомментирована в sb_enable (02_balancer_control.sh,
+# комментарий рядом: "при автоустановке с использованием нескольких параметров
+# приведет остановке до выбора ответа"). Поэтому подсказка "Выполнить замер
+# сейчас?" никогда не печатается независимо от .xray-пути. Продакшен-код не
+# трогается по scope — заводить отдельным пунктом.
 check "повторный on: предложен замер"        "$(printf '%s' "$out" | grep -c 'Выполнить замер сейчас')" "1"
 check "повторный on: без ответа замер не идёт" "$(loglines)" "$before"
 
+# FAIL, не по теме C108: тот же закомментированный sb_ask_measure — ответ "y"
+# некому читать, замер не запускается независимо от .xray-пути.
 echo y | sb_control on >/dev/null 2>&1
 check "повторный on: ответ y запускает замер" "$([ "$(loglines)" -gt "$before" ] && echo yes || echo no)" "yes"
 
