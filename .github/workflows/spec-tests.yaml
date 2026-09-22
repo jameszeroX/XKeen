@@ -1,0 +1,32 @@
+name: Spec tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/**'
+      - 'spec/**'
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'spec/**'
+
+jobs:
+  spec-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run spec tests (busybox ash + jq, alpine container)
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" alpine:latest sh -c '
+            apk add --no-cache jq curl >/dev/null
+            cd /repo
+            rc=0
+            for t in spec/test_*.sh; do
+              sh "$t" || rc=1
+            done
+            exit "$rc"
+          '
