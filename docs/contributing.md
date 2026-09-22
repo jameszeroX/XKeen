@@ -11,9 +11,11 @@
 | Массивы (`arr=(a b c)`, `${arr[i]}`) | Позиционные параметры, IFS-split строки |
 | `<<<` (here-string) | `echo "…" \| cmd` или `<< EOF` |
 | `function name()` | `name()` |
-| `local var` | Не использовать — `local` не POSIX |
+| `local var` | Разрешено на целевом BusyBox ash (shellcheck SC3043 — ожидаемый шум для POSIX sh) |
 | `(( … ))` арифметика | `$(( … ))` или `expr` |
-| `read -p` | `printf '...'; read var` |
+| `read -p` | Разрешено на целевом BusyBox ash (shellcheck SC3045 — ожидаемый шум для POSIX sh) |
+
+**Примечание:** SC3043 и SC3045 в выводе `shellcheck` по `local` и `read -p` — ожидаемый шум при анализе POSIX sh. Это не баги и не повод переписывать существующий код.
 
 Проверка перед PR:
 
@@ -53,12 +55,15 @@ shellcheck scripts/xkeen scripts/_xkeen/**/*.sh
 2. Деплой архива на тестовый роутер и прогон сценариев: `xkeen -i`, `-start`, `-stop`, `-restart`, `-uk`, `-diag`.
 3. Если правились флаги управления (`-ap`, `-dp`, `-ape`, `-dpe`) или режимы проксирования — отдельно прогнать с обоими ядрами (Xray и Mihomo) и в каждом из режимов TProxy/Hybrid/Redirect.
 4. `xkeen -diag` — единственный поддерживаемый канал для отчёта о проблеме.
+5. При правках `strip_json_comments`, `jc_set_path`, `speed_balancer_settings` или логики разбора `xkeen.json` — прогнать `spec/*.sh` (нужен podman + jq): `podman run --rm -v "$PWD:/repo:ro,Z" localhost/xkeen-spec:alpine sh /repo/spec/test_balancer.sh` (аналогично для `test_strip_json.sh`). На момент написания сьют содержит pre-existing failures, не связанные с вашей правкой (0/18 в `test_strip_json.sh`, 46/50 в `test_balancer.sh` на `main`) — если после вашего diff число FAIL не увеличилось относительно этой базовой линии, это ожидаемо.
 
 ## CI-файлы — не трогать руками
 
 - [`.github/workflows/package-folder.yaml`](../.github/workflows/package-folder.yaml) и сам артефакт [`test/xkeen.tar.gz`](../test/xkeen.tar.gz) — генерируются CI. Любые ручные правки будут перезаписаны при следующем push в `main` с изменениями `scripts/**`.
 - [`.github/workflows/release.yaml`](../.github/workflows/release.yaml) — менять только если действительно меняется процесс релиза.
 - [`.github/workflows/wiki-sync.yaml`](../.github/workflows/wiki-sync.yaml) — синхронизирует [`wiki/`](../wiki) в GitHub Wiki. Менять только при изменении логики синхронизации.
+- [`.github/workflows/deploy.yaml`](../.github/workflows/deploy.yaml) — публикует mkdocs-сайт на GitHub Pages. Менять только при изменении процесса сборки/публикации доки.
+- [`.github/workflows/faq-sync.yaml`](../.github/workflows/faq-sync.yaml) и [`wiki/FAQ.md`](../wiki/FAQ.md) — `FAQ.md` ежедневно (06:00 UTC) перезаписывается этим workflow из `jameszero.net`. Ручные правки `FAQ.md` будут потеряны при следующем синке.
 
 ## Документация
 

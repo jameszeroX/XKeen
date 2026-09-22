@@ -21,7 +21,7 @@ XKeen — POSIX-shell утилита (`sh`, не `bash`) для роутеров
 | Фаза | Каталог | Назначение |
 | --- | --- | --- |
 | 01 | [`01_info/`](../scripts/_xkeen/01_info) | Переменные (SSoT — `01_info_variable.sh`), детекция CPU, проверка установленных Xray/Mihomo/geofile, версии, консольный вывод, cron-статус |
-| 02 | [`02_install/`](../scripts/_xkeen/02_install) | Установка: opkg-пакеты → ядра (Xray, Mihomo) → XKeen → geofile/IPSET → cron → регистрация (`07_install_register/`) → шаблоны конфигов (`08_install_configs/02_configs_dir/`) |
+| 02 | [`02_install/`](../scripts/_xkeen/02_install) | Установка: opkg-пакеты → ядра (Xray, Mihomo) → XKeen → geofile/IPSET → cron → регистрация (`07_install_register/`) → шаблоны конфигов (`08_install_configs/02_configs_xray/`) |
 | 03 | [`03_delete/`](../scripts/_xkeen/03_delete) | Точечное удаление компонентов + полная деинсталляция (`-remove`) |
 | 04 | [`04_tools/`](../scripts/_xkeen/04_tools) | Сервис: управление портами, модули ядра, диагностика, задержка автозапуска, интерактивный выбор (`05_tools_choice/`), бэкапы (`06_tools_backups/`), загрузчики через GH-proxy fallback (`07_tools_downloaders/`) |
 | 05 | [`05_tests/`](../scripts/_xkeen/05_tests) | Runtime-проверки сети, портов, носителя |
@@ -47,7 +47,7 @@ XKeen — POSIX-shell утилита (`sh`, не `bash`) для роутеров
 
 С версии 2.0 Beta параметр `gh_proxy` из `/opt/etc/xkeen/xkeen.json` имеет приоритет над встроенными значениями.
 
-Маркер `/tmp/toff` (создаётся при запуске с флагом `-toff`) отключает `curl -m 180` на одну сессию — полезно для медленных каналов.
+Переменная окружения `XKEEN_TIMEOUT_OFF` (выставляется флагом `-toff`) отключает `curl -m 180` в одной сессии — полезно для медленных каналов. Это per-process флаг, действующий только в текущем процессе и потомках.
 
 ## Режимы проксирования
 
