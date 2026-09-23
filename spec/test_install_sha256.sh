@@ -1,5 +1,5 @@
 #!/bin/sh
-# Тесты verify_install_sha256() из install.sh (C12: bootstrap-установщик не
+# Тесты verify_install_sha256() из install.sh (bootstrap-установщик не
 # проверял SHA-256 скачанного архива ни в каком режиме).
 #
 # install.sh standalone (curl | sh, модули ещё не на диске), поэтому функцию

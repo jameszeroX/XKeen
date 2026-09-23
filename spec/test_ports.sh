@@ -1,7 +1,7 @@
 #!/bin/sh
 # Тесты диспетчеризации -ap/-dp/-ape/-dpe в scripts/xkeen
 #
-# Баг, ради которого написаны (C03): `shift; <func> "$@"; shift $#` в этих
+# Баг, ради которого написаны: `shift; <func> "$@"; shift $#` в этих
 # 4 case-ветках поглощал ВСЕ оставшиеся позиционные параметры, включая
 # следующий флаг командной строки (`xkeen -ap 8080 -status` терял -status
 # бесследно). Фикс — сбор портов в цикле до первого токена "-*" + `continue`,
@@ -12,7 +12,7 @@
 # воспроизводит структуру внешнего while-цикла оригинала (case; esac; shift;
 # done) — так тест бьёт по продовому коду, а не по переписанной копии.
 # Функции работы с портами (01_tools_ports.sh) подменены заглушками: их
-# внутренняя логика не входит в scope этой ветки и не меняется.
+# внутренняя логика не проверяется этим тестом и не меняется.
 
 extract() {
     awk '/^        -di\)/{exit} /^        -ap\)/{f=1} f{print}' "$1"
@@ -68,18 +68,18 @@ check "multi-port add: все 3 порта одним вызовом" "$res" "AD
 res=$(run_dispatch -dp 80 443 8080)
 check "multi-port del: все 3 порта одним вызовом" "$res" "DEL_DONOR:[80 443 8080] |rest=0"
 
-# --- port + следующий флаг (сам C03) ---
+# --- port + следующий флаг (сам баг) ---
 res=$(run_dispatch -ap 8080 -status)
-check "C03: -ap 8080 -status — оба эффекта" "$res" "ADD_DONOR:[8080] REACHED:[-status] |rest=0"
+check "-ap 8080 -status — оба эффекта" "$res" "ADD_DONOR:[8080] REACHED:[-status] |rest=0"
 
 res=$(run_dispatch -dp 8080 -status)
-check "C03: -dp 8080 -status — оба эффекта" "$res" "DEL_DONOR:[8080] REACHED:[-status] |rest=0"
+check "-dp 8080 -status — оба эффекта" "$res" "DEL_DONOR:[8080] REACHED:[-status] |rest=0"
 
 res=$(run_dispatch -ape 8080 -status)
-check "C03: -ape 8080 -status — оба эффекта" "$res" "ADD_EXCL:[8080] REACHED:[-status] |rest=0"
+check "-ape 8080 -status — оба эффекта" "$res" "ADD_EXCL:[8080] REACHED:[-status] |rest=0"
 
 res=$(run_dispatch -dpe 8080 -status)
-check "C03: -dpe 8080 -status — оба эффекта" "$res" "DEL_EXCL:[8080] REACHED:[-status] |rest=0"
+check "-dpe 8080 -status — оба эффекта" "$res" "DEL_EXCL:[8080] REACHED:[-status] |rest=0"
 
 # --- флаг сразу без портов (пустой список + следующий флаг не теряется) ---
 res=$(run_dispatch -ap -status)
