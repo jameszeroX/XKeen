@@ -31,6 +31,22 @@ check() {
     fi
 }
 
+# Заглушка _xkeen_secure_rundir(): с коммита 789ddde load_geoipset() зовёт
+# эту функцию напрямую, чтобы взять mkdir-лок против гонки на общем
+# tmp-наборе "${set}_tmp" (cron `xkeen -ug` поверх ручного `xkeen -i`).
+# Из 05_install_geoipset.sh awk'ом извлекается только сама load_geoipset
+# (см. выше), эта функция в извлечённый текст не входит — без заглушки
+# "_gi_rundir=$(_xkeen_secure_rundir)" получает пустую строку (в stderr
+# уходит "not found"), и весь лок-блок пропускается веткой
+# "if [ -n "$_gi_rundir" ]" — ни mkdir, ни pid-файл, ни trap ни разу не
+# выполняются. Реальная версия (01_info_common.sh) создаёт системный путь
+# /tmp/.xkeen с owner=root; в тесте вместо него отдаём каталог из
+# собственной песочницы, чтобы лок реально брался и снимался.
+rundir="$(mktemp -d)"
+_xkeen_secure_rundir() {
+    printf '%s' "$rundir"
+}
+
 # Заглушка ipset: реальный бинарь недоступен и не нужен — проверяется только
 # текстовый пайплайн санитизации, а не поведение ipset restore/swap/destroy.
 # ipset restore читает stdin последним звеном пайпа (сабшелл busybox ash), так
@@ -90,6 +106,7 @@ ipset_v6="$(cat "$capture_file")"
 check "load_geoipset и load_ipset совпадают (v6)" "$geoipset_v6" "$ipset_v6"
 
 rm -f "$capture_file" "$fixture"
+rm -rf "$rundir"
 
 printf '\n=== пройдено: %s, провалено: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
