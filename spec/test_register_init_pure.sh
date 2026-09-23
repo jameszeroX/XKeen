@@ -156,6 +156,20 @@ extract() {
 }
 eval "$(extract "$FILE")"
 
+# resolve_user_policies читает xkeen.json не напрямую, а через _xkeen_cached_json —
+# кэш разобранного конфига на один запуск процесса. Её тоже нужно извлечь, иначе
+# все фикстуры возвращают пустоту с "_xkeen_cached_json: not found".
+# Флаг кэша здесь намеренно оставлен в 0 и не прогревается: каждый вызов
+# resolve_user_policies идёт через $(...), то есть в своём subshell, и заново
+# читает текущую фикстуру. Прогрей мы кэш на верхнем уровне — все последующие
+# кейсы видели бы JSON первого.
+_xkeen_json_cache=""
+_xkeen_json_cache_set=0
+extract() {
+    awk '/^_xkeen_cached_json\(\) \{/,/^\}/' "$1"
+}
+eval "$(extract "$FILE")"
+
 WORK=/tmp/rip_test
 rm -rf "$WORK"; mkdir -p "$WORK"
 xkeen_config="$WORK/xkeen.json"
