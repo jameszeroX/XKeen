@@ -15,14 +15,22 @@
 | `(( … ))` арифметика | `$(( … ))` или `expr` |
 | `read -p` | Разрешено на целевом BusyBox ash (shellcheck SC3045 — ожидаемый шум для POSIX sh) |
 
-**Примечание:** SC3043 и SC3045 в выводе `shellcheck` по `local` и `read -p` — ожидаемый шум при анализе POSIX sh. Это не баги и не повод переписывать существующий код.
+**Примечание:** SC3037, SC3043 и SC3045 в выводе `shellcheck` по `echo` с флагами, `local` и `read -p` — ожидаемый шум при анализе POSIX sh. Это не баги и не повод переписывать существующий код.
 
-В `$(( … ))` пользовательское числовое значение с ведущим нулём (`"08"`) ash разбирает как восьмеричное и падает с `arithmetic syntax error` — оборачивать такие значения в `10#`, например `$(( 10#${var:-0} ))`.
-
-Проверка перед PR (правила подавления — в [`.shellcheckrc`](../.shellcheckrc): SC3037/SC3043/SC3045 отключены как ложные для BusyBox ash):
+В `$(( … ))` пользовательское числовое значение с ведущим нулём (`"08"`) ash разбирает как восьмеричное и падает с `arithmetic syntax error`. Префикс `10#` для этого использовать **нельзя**: поддержка `base#num` в BusyBox ash зависит от версии и опции сборки `FEATURE_SH_MATH_BASE`, поэтому на ash роутера её может не быть, а `$(( 10#08 ))` там фатален — ash завершает скрипт. Срезать ведущие нули строковой подстановкой, как в `wait_for_ready()` (`scripts/_xkeen/02_install/07_install_register/04_register_init.sh`):
 
 ```sh
-shellcheck scripts/xkeen scripts/_xkeen/**/*.sh
+val=${start_delay:-60}
+val=${val#"${val%%[!0]*}"}   # "008" → "8"
+val=${val:-0}                # "000" → "" → 0
+_max=$(( val * 2 ))
+```
+
+Проверка перед PR (`-s sh` обязателен — без него модули без shebang shellcheck разбирает как bash (SC2148 на каждом таком файле) и пропускает проблемы, специфичные для `sh`; `**` в целевом `sh` не рекурсивен, поэтому обход — через `find`):
+
+```sh
+shellcheck -s sh scripts/xkeen
+find scripts/_xkeen -name '*.sh' -exec shellcheck -s sh {} +
 ```
 
 ## Пути и URL — только из переменных
@@ -53,12 +61,26 @@ shellcheck scripts/xkeen scripts/_xkeen/**/*.sh
 
 ## Проверка перед PR
 
-1. `shellcheck scripts/xkeen scripts/_xkeen/**/*.sh` — нулевая толерантность к новым warning-ам. Дополнительно проверяется автоматически в CI ([`.github/workflows/lint.yaml`](../.github/workflows/lint.yaml)) на каждый `pull_request`: джоба падает только на находках, которых нет в закоммиченном [`.github/shellcheck-baseline.txt`](../.github/shellcheck-baseline.txt) (~819 старых находок, не устранённых в этой ветке). Ручной прогон перед PR остаётся — CI ловит то же самое позже и без сетевого доступа к роутеру.
+1. `shellcheck -s sh scripts/xkeen` и `find scripts/_xkeen -name '*.sh' -exec shellcheck -s sh {} +` — нулевая толерантность к новым warning-ам. Shellcheck-гейта в GitHub Actions нет — прогонять вручную перед PR.
 2. Деплой архива на тестовый роутер и прогон сценариев: `xkeen -i`, `-start`, `-stop`, `-restart`, `-uk`, `-diag`.
 3. Если правились флаги управления (`-ap`, `-dp`, `-ape`, `-dpe`) или режимы проксирования — отдельно прогнать с обоими ядрами (Xray и Mihomo) и в каждом из режимов TProxy/Hybrid/Redirect.
 4. `xkeen -diag` — единственный поддерживаемый канал для отчёта о проблеме.
-5. `spec/test_*.sh` гоняются автоматически в CI (`.github/workflows/spec-tests.yaml`) при push в `main` и в PR по путям `scripts/**`, `spec/**`; локально — `for t in spec/test_*.sh; do sh "$t"; done`.
-6. При правках `strip_json_comments`, `jc_set_path`, `speed_balancer_settings` или логики разбора `xkeen.json` — прогнать `spec/*.sh` (нужен podman + jq): `podman run --rm -v "$PWD:/repo:ro,Z" localhost/xkeen-spec:alpine sh /repo/spec/test_balancer.sh` (аналогично для `test_strip_json.sh`). На момент написания сьют содержит pre-existing failures, не связанные с вашей правкой (0/18 в `test_strip_json.sh`, 3/96 в `test_balancer.sh` на `main`) — если после вашего diff число FAIL не увеличилось относительно этой базовой линии, это ожидаемо.
+5. `spec/test_*.sh` гоняются автоматически в CI (`.github/workflows/spec-tests.yaml`) при push в `main` и в PR по путям `scripts/**`, `spec/**`; локально — командой из пункта 6 (тесты обращаются к путям `/repo/...`, поэтому запускаются в контейнере с репозиторием, смонтированным в `/repo`).
+6. При правках `strip_json_comments`, `jc_set_path`, `speed_balancer_settings` или логики разбора `xkeen.json` — прогнать `spec/*.sh` тем же способом, что и CI ([`.github/workflows/spec-tests.yaml`](../.github/workflows/spec-tests.yaml)):
+
+   ```sh
+   docker run --rm -v "$PWD:/repo:ro" alpine:latest sh -c '
+     apk add --no-cache jq curl >/dev/null
+     cd /repo
+     rc=0
+     for t in spec/test_*.sh; do
+       sh "$t" || rc=1
+     done
+     exit "$rc"
+   '
+   ```
+
+   (для podman — тот же вызов с `podman` вместо `docker`).
 
 ## CI-файлы — не трогать руками
 
