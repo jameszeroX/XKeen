@@ -58,11 +58,19 @@ add_mihomo_config() {
             mkdir "$mihomo_conf_dir"
         fi
             cat << EOF > "$mihomo_conf_dir/config.yaml"
-tproxy-port: 1181
-redir-port: 1182
 # find-process-mode: off снижает нагрузку на роутер (рекомендация MetaCubeX); верните strict/always, если добавите свои process-name/process-path правила
 find-process-mode: off
 # Не открывайте external-controller в LAN без secret — это полный контроль над ядром
+
+listeners:
+  - name: tproxy
+    type: tproxy
+    port: 1181
+    udp: true
+
+  - name: redir
+    type: redir
+    port: 1182
 # Руководство по конфигурации Mihomo - https://wiki.metacubex.one/ru/config/
 EOF
 

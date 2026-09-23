@@ -158,7 +158,7 @@ if ! xkeen_rundir=$(_xkeen_secure_rundir); then
     case "$1" in
         stop|status)
             xkeen_rundir="/tmp/.xkeen-unavailable"
-            logger -p warning -t XKeen "Недоступен runtime-каталог; продолжаем $1 без runtime-state"
+            log_warning_router "Недоступен runtime-каталог; продолжаем $1 без runtime-state"
             ;;
         *)
             exit 1
@@ -456,7 +456,7 @@ ${custom_details}"
     fi
 }
 
-utils="jq curl grep awk sed ipset ip"
+utils="jq curl grep awk sed ipset ip logger"
 [ "$name_client" = "mihomo" ] && utils="$utils yq"
 for cmd in $utils; do
     command -v "$cmd" >/dev/null 2>&1 || log_error_terminal "Не найдена необходимая утилита: ${yellow}$cmd${reset}"
@@ -489,21 +489,15 @@ get_keenetic_port() {
 }
 
 check_ipv6_active() {
-    local addr
-    local ifindex
-    local prefixlen
-    local scope
-    local flags
-    local ifname
     [ -r /proc/net/if_inet6 ] || return 1
-    # shellcheck disable=SC2034
-    while read -r addr ifindex prefixlen scope flags ifname; do
-        case "$ifname" in
-            ezcfg0|t2s*) continue ;;
-        esac
-        [ "$scope" = "20" ] && return 0
-    done < /proc/net/if_inet6
-    return 1
+    awk '
+        $4 == "20" {
+            name = $6
+            if (name ~ /^ezcfg0$/ || name ~ /^t2s/) next
+            found = 1
+        }
+        END { exit !found }
+    ' /proc/net/if_inet6
 }
 
 apply_ipv6_state() {
@@ -2043,7 +2037,7 @@ sync_deny_mac_ipset() {
          ipset restore -exist; then
         ipset swap "$_xkeen_deny_tmp" "$name_ipset_deny_mac" 2>/dev/null
     else
-        logger -p daemon.warning -t xkeen "не удалось восстановить $name_ipset_deny_mac из hotspot API"
+        log_warning_router "Не удалось восстановить $name_ipset_deny_mac из hotspot API"
     fi
     ipset destroy "$_xkeen_deny_tmp" 2>/dev/null
     unset _xkeen_deny_tmp _xkeen_hotspot_json
@@ -2251,45 +2245,6 @@ EOL
 
     cat >> "$file_netfilter_hook" <<'EOL'
 
-# Ресинхронизация iptables_supported/ip6tables_supported с "$type" от NDM.
-# Выше эти флаги — литералы, запечённые в момент последней configure_firewall().
-# NDM же зовёт netfilter.d на каждую пересобранную пару (type, table), и между
-# явными xkeen -start/-restart состояние IPv6 может смениться в обход
-# `xkeen -ipv6` (веб-интерфейс/CLI роутера) либо не успеть определиться на
-# cold start до первого proxy_start — тогда трафик соответствующей IP-семьи
-# идёт мимо xkeen-правил без единой ошибки в логе, пока пользователь не
-# выполнит `xkeen -restart` руками. Пересчитываем только ту половину (v4/v6),
-# что пришла в этом конкретном вызове, и только если она разошлась с
-# запечённой — in-memory, на время текущего запуска хука, на диск не пишем.
-# Дублирует check_ipv6_active()/get_ipver_support() (01_info_common.sh):
-# хук исполняется как отдельный файл на диске, внешние функции ему не видны.
-# Прецедент того же риска уже закрыт для другого пути переключения IPv6 —
-# см. change_ipv6_support() в 04_tools/05_tools_choice/02_choice_xkeen.sh.
-case "${type:-}" in
-    ip6tables)
-        _xkeen_ip6_active=false
-        for _xkeen_iface in /sys/class/net/*; do
-            _xkeen_iface="${_xkeen_iface##*/}"
-            case "$_xkeen_iface" in
-                ezcfg0|t2s*) continue ;;
-            esac
-            if ip -6 addr show dev "$_xkeen_iface" 2>/dev/null | grep -q "inet6 fe80::"; then
-                _xkeen_ip6_active=true
-                break
-            fi
-        done
-        _xkeen_ip6tables_now=$([ "$_xkeen_ip6_active" = "true" ] && command -v ip6tables >/dev/null 2>&1 && echo true || echo false)
-        [ "$_xkeen_ip6tables_now" = "$ip6tables_supported" ] || ip6tables_supported="$_xkeen_ip6tables_now"
-        unset _xkeen_ip6_active _xkeen_iface _xkeen_ip6tables_now
-        ;;
-    iptables)
-        _xkeen_ip4_active=$(ip -4 addr show 2>/dev/null | grep -q "inet " && echo true || echo false)
-        _xkeen_iptables_now=$([ "$_xkeen_ip4_active" = "true" ] && command -v iptables >/dev/null 2>&1 && echo true || echo false)
-        [ "$_xkeen_iptables_now" = "$iptables_supported" ] || iptables_supported="$_xkeen_iptables_now"
-        unset _xkeen_ip4_active _xkeen_iptables_now
-        ;;
-esac
-
 # Перезапуск скрипта
 restart_script() {
     exec /bin/sh "$0" "$@"
@@ -2373,7 +2328,7 @@ if pidof "$name_client" >/dev/null; then
              ipset restore -exist; then
             ipset swap "$_tmp" "$name_ipset_deny_mac" 2>/dev/null
         else
-            logger -p daemon.warning -t xkeen "не удалось восстановить $name_ipset_deny_mac из hotspot API"
+            logger -p daemon.warning -t XKeen "Не удалось восстановить $name_ipset_deny_mac из hotspot API"
         fi
         ipset destroy "$_tmp" 2>/dev/null
     }
@@ -2485,15 +2440,13 @@ if pidof "$name_client" >/dev/null; then
         _max_attempts=3
         while :; do
             _restore_err=$(printf '%s\n' "$_blob" | "$_restore_cmd" --noflush 2>&1) && {
-                [ "$_attempt" -gt 1 ] && command -v logger >/dev/null 2>&1 && \
-                    logger -p daemon.notice -t xkeen \
-                        "$_restore_cmd $_table: applied on retry $_attempt"
+                [ "$_attempt" -gt 1 ] && \
+                logger -p daemon.notice -t XKeen "$_restore_cmd $_table: applied on retry $_attempt"
                 break
             }
             if [ "$_attempt" -ge "$_max_attempts" ]; then
-                command -v logger >/dev/null 2>&1 && \
-                    logger -p daemon.err -t xkeen \
-                        "$_restore_cmd --noflush failed for $_table after $_attempt attempts: $(printf '%s' "$_restore_err" | head -n1)"
+                logger -p daemon.err -t XKeen \
+                "$_restore_cmd --noflush failed for $_table after $_attempt attempts: $(printf '%s' "$_restore_err" | head -n1)"
                 return 1
             fi
             usleep $((200000 * _attempt)) 2>/dev/null || sleep "$_attempt"
@@ -3064,7 +3017,7 @@ USER_POLICIES_EOF
              awk '{print "add '"$_rg_tmp"' "$1}' | ipset restore -exist; then
             ipset swap "$_rg_set" "$_rg_tmp" 2>/dev/null || return 1
         else
-            logger -p daemon.warning -t xkeen "не удалось восстановить $_rg_set из $_rg_file"
+            logger -p daemon.warning -t XKeen "Не удалось восстановить $_rg_set из $_rg_file"
         fi
         ipset destroy "$_rg_tmp" 2>/dev/null
     }
@@ -3992,10 +3945,12 @@ proxy_start() {
 # подгружает асинхронно уже после ndmc-ready). $start_delay сохранён
 # как safety cap (FAQ #12).
 wait_for_ready() {
-    # 10# форсирует base-10: ведущий ноль в $start_delay ("08"/"09")
-    # иначе трактуется ash как восьмеричный разбор и валит арифметику.
-    # shellcheck disable=SC3052 # 10# поддержан BusyBox ash (целевая среда), проверено вживую
-    _max=$(( 10#${start_delay:-60} * 2 ))
+    # Срезаем ведущий ноль в $start_delay ("08"/"09")
+    # иначе трактуется как восьмеричный разбор и валит арифметику
+    val=${start_delay:-60}
+    val=${val#"${val%%[!0]*}"}
+    val=${val:-0}
+    _max=$(( val * 2 ))
     _attempt=0
     _probe_ko=$(find_module_path "xt_TPROXY.ko")
 

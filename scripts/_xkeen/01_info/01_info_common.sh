@@ -433,21 +433,15 @@ curl_with_timeout() {
 
 # Функция проверки IPv6
 check_ipv6_active() {
-    local addr
-    local ifindex
-    local prefixlen
-    local scope
-    local flags
-    local ifname
     [ -r /proc/net/if_inet6 ] || return 1
-    # shellcheck disable=SC2034
-    while read -r addr ifindex prefixlen scope flags ifname; do
-        case "$ifname" in
-            ezcfg0|t2s*) continue ;;
-        esac
-        [ "$scope" = "20" ] && return 0
-    done < /proc/net/if_inet6
-    return 1
+    awk '
+        $4 == "20" {
+            name = $6
+            if (name ~ /^ezcfg0$/ || name ~ /^t2s/) next
+            found = 1
+        }
+        END { exit !found }
+    ' /proc/net/if_inet6
 }
 
 # Настройки балансировки по скорости (.xkeen.xray.speed_balancer.*).
