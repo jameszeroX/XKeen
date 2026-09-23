@@ -86,10 +86,11 @@ get_state_arg() {
 # Self-heal пакетов (opkg-форк + опциональная установка curl/jq/ip-full/
 # iptables/ipset/ca-bundle/coreutils-uname/coreutils-nohup) пропускается для
 # команд, не зависящих от статуса пакетов: -sbt — тик балансировщика по
-# расписанию cron, может вызываться раз в минуту — и help/meta-ключей. Для
+# расписанию cron, может вызываться раз в минуту — и help/meta-ключей.
+# Запуск без аргументов сюда же: он тоже лишь показывает справку. Для
 # всех остальных команд поведение не изменилось.
 case "$1" in
-    -sbt|-h|-help|-v|-version|-about|-ad|-donate|-af|-feedback) ;;
+    ""|-sbt|-h|-help|-v|-version|-about|-ad|-donate|-af|-feedback) ;;
     *)
         _load_packages_info
         _ensure_installed_packages
