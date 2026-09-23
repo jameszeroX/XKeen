@@ -9,17 +9,16 @@
 #
 # resolve_user_policies — НЕ чистая функция: аргументов не принимает, читает
 # файл $xkeen_config и глобальные $api_policy_json/$file_dns/$proxy_dns,
-# вызывает jq и три вспомогательные функции (strip_json_comments,
-# get_api_exclude_ports, validate_and_clean_ports). Тестируется через
-# временный JSON-фикстур и замоканные глобальные переменные, по образцу
-# spec/test_balancer.sh.
+# вызывает jq, get_api_exclude_ports, validate_and_clean_ports и
+# _xkeen_cached_json (а через неё strip_json_comments). Тестируется
+# через временный JSON-фикстур и замоканные глобальные переменные, по
+# образцу spec/test_balancer.sh.
 #
 # Модуль целиком не подключаем: на верхнем уровне он ходит curl'ом в RCI
 # роутера и парсит опции командной строки. Берём ровно проверяемые функции.
 #
-# spec/ сейчас не подключён ни к одному workflow в .github/workflows/ (grep
-# -rl "spec/" .github/workflows/ пуст), поэтому этот тест защищает только при
-# ручном/локальном прогоне, а не автоматически в CI.
+# Прогоняется в CI (.github/workflows/spec-tests.yaml) вместе с
+# остальными spec/test_*.sh.
 
 FILE=/repo/scripts/_xkeen/02_install/07_install_register/04_register_init.sh
 
