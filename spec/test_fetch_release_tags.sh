@@ -15,6 +15,21 @@ italic=""; reset=""; red=""; green=""; yellow=""; light_blue=""
 WORK=/tmp/frt_test
 rm -rf "$WORK"; mkdir -p "$WORK"
 
+# Заглушка _xkeen_secure_rundir(): 00_fetch_with_mirrors.sh на верхнем
+# уровне ("_mirror_cache_dir="$(_xkeen_secure_rundir)" || ...") зовёт эту
+# функцию, чтобы завести кэш зеркал _mirror_cache. Сама функция определена
+# в 01_info_common.sh, который этот тест не подключает, поэтому без
+# заглушки source модуля печатает "_xkeen_secure_rundir: not found" на
+# stderr, а $_mirror_cache_dir остаётся пустой строкой. fetch_release_tags()
+# этот кэш не читает и не пишет: её собственный файловый кэш строится
+# через _release_cache_path() из $tmp_ram (тоже из 01_info_common.sh,
+# здесь не задан) и для фейковых URL этого теста всегда возвращает rc=1.
+# Заглушка убирает постороннее сообщение при source, а не меняет путь,
+# по которому идёт проверяемый код.
+_xkeen_secure_rundir() {
+    printf '%s' "$WORK"
+}
+
 . /repo/scripts/_xkeen/04_tools/07_tools_downloaders/00_fetch_with_mirrors.sh
 
 # --- заглушка curl_with_timeout -------------------------------------------
