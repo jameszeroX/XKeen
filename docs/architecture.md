@@ -30,12 +30,12 @@ XKeen — POSIX-shell утилита (`sh`, не `bash`) для роутеров
 
 Файл [`scripts/_xkeen/01_info/01_info_variable.sh`](../scripts/_xkeen/01_info/01_info_variable.sh) — единственное место, где определены:
 
-- Версия и канал: `xkeen_current_version`, `xkeen_build`, `build_timestamp` (последнее — подставляется CI).
+- Версия и канал: `xkeen_current_version` и `xkeen_build` (правятся вручную), `build_timestamp` (в исходниках пуст).
 - Все runtime-каталоги: `xkeen_dir=/opt/sbin/.xkeen`, `xkeen_cfg=/opt/etc/xkeen`, `geo_dir=/opt/etc/xray/dat`, и др.
 - Все внешние URL: GitHub API для XKeen/Xray/Mihomo, прямые URL архивов, geofile-репозитории.
 - GitHub-прокси для регионов с ограничениями: `gh_proxy1=https://gh-proxy.com`, `gh_proxy2=https://ghfast.top`.
 
-При смене версии или URL правится только этот файл. Релизный workflow перезаписывает в нём только `build_timestamp`.
+При смене версии или URL правится только этот файл. Workflow [`package-folder.yaml`](../.github/workflows/package-folder.yaml) в сборочной копии дописывает к `xkeen_current_version` номер сборки (`2.0.1` → `2.0.1.N`) и пишет в `build_timestamp` дату `гггг.мм.дд`. Релизный workflow [`release.yaml`](../.github/workflows/release.yaml) подменяет только `build_timestamp` — на `гггг-мм-дд чч:мм:сс MSK`.
 
 ## GH-proxy fallback
 

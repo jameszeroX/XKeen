@@ -11,18 +11,35 @@
 | Параметр | Значение |
 | --- | --- |
 | Триггер | `push` в `main` с изменениями в `scripts/**`, либо `workflow_dispatch` |
-| Результат | `test/xkeen.tar.gz` — Beta-канал, упакован из `scripts/*` |
-| Подпись | GPG-подписанный автокоммит `[github-actions] automated compiling build` |
+| Результат | `test/xkeen.tar.gz` (Beta-канал, из `scripts/*`) и `test/changelogs/<версия>.md` |
+| Подпись | GPG-подписанный автокоммит `[github-actions] automated compiling build <версия>` |
 
 Шаги:
 
-1. Checkout с `fetch-depth: 0`.
+1. Checkout с `fetch-depth: 0` и `ref: ${{ github.ref_name }}` (вершина ветки).
 2. Импорт GPG-ключа через `crazy-max/ghaction-import-gpg@v7` с `git_config_global: true`.
-3. Подмена `build_timestamp="…"` в `scripts/_xkeen/01_info/01_info_variable.sh` на текущее MSK-время.
+3. Вычисление номера сборки; в сборочной копии `scripts_for_build/` подменяются `xkeen_current_version` → `<base>.<N>` и `build_timestamp` → дата `гггг.мм.дд` (MSK). Исходники не меняются: там остаются базовая версия и пустой `build_timestamp`.
 4. Упаковка: `cd scripts_for_build && find . -type f -o -type l | sed 's|^\./||' | tar -czf .../xkeen.tar.gz -T -`. На верхнем уровне архива — `xkeen` и `_xkeen/`, без вложенного `scripts/`.
-5. Перемещение архива в `test/` и подписанный коммит обратно в `main`.
+5. Перемещение архива в `test/`.
+6. Запись `test/changelogs/<версия>.md`: заголовок, ссылка на исходный коммит, ссылка на compare (если есть новые коммиты) и список коммитов в `scripts/` с прошлой сборки — от старых к новым, без merge-коммитов.
+7. Подписанный коммит архива вместе с changelog и push в `HEAD:refs/heads/<ветка>`.
 
-**Файл `test/xkeen.tar.gz` — артефакт CI, руками не редактировать.**
+Джоба запускается только из веток (`if: github.ref_type == 'branch'`): ручной запуск с тега завёл бы ветку с именем тега. Запуски идут по очереди (`concurrency`, `cancel-in-progress: false`), checkout берёт вершину ветки, поэтому запуск из очереди видит коммит предыдущей сборки.
+
+#### Номер сборки и changelog
+
+Версия — `<base>.<N>`:
+
+- `base` — значение `xkeen_current_version` в [`scripts/_xkeen/01_info/01_info_variable.sh`](../scripts/_xkeen/01_info/01_info_variable.sh), правится вручную.
+- `N` — наибольший номер среди файлов `test/changelogs/<base>.*.md`, когда-либо добавленных в историю git, плюс 1. После смены `base` счёт идёт с 1. Номер сборки, откаченной через `git revert`, повторно не выдаётся.
+
+Changelog перечисляет коммиты в `scripts/` после предыдущей сборки. Предыдущая сборка — последний коммит, чья тема начинается с `[github-actions] automated compiling build` и который менял `test/changelogs/` (если таких нет — `test/xkeen.tar.gz`). Ручные коммиты в `test/changelogs/` точкой отсчёта не становятся. Если предыдущей сборки нет совсем, в changelog пишется «Предыдущая сборка не найдена».
+
+Если новых коммитов в `scripts/` нет, запуск по `push` ничего не коммитит. Ручной запуск (`workflow_dispatch`) коммитит сборку, а в changelog вместо списка пишет «Изменений в `scripts/` нет (пересборка)».
+
+Метка канала берётся из `xkeen_build` в исходниках: если там `Stable`, тестовые сборки тоже помечены `Stable`.
+
+**`test/xkeen.tar.gz` и файлы в `test/changelogs/` пишет CI, руками не редактировать.** Удалённый файл из `test/changelogs/` нумерацию не сбивает: номер считается по истории git.
 
 ### `release.yaml`
 
@@ -37,7 +54,7 @@
 
 1. Checkout с `fetch-depth: 0`.
 2. Импорт GPG-ключа.
-3. Подмена `build_timestamp` (как в `package-folder.yaml`).
+3. Подмена `build_timestamp` на `гггг-мм-дд чч:мм:сс MSK`; номер сборки не добавляется.
 4. Проверка синтаксиса: `sh -n` по всем `*.sh` в `scripts_for_release/` и по `scripts_for_release/xkeen`.
 5. Упаковка: `find . -type f -o -type l | sed 's|^\./||' | tar -czf "dist/${ARCHIVE_NAME}" -T -` (`ARCHIVE_NAME=xkeen.tar.gz`).
 6. Проверка целостности архива: `tar -tzf` по собранному `dist/xkeen.tar.gz`.
@@ -106,12 +123,12 @@
 
 ## Каналы обновлений
 
-| Канал | Источник | Триггер |
-| --- | --- | --- |
-| Stable | GitHub Release с тегом, `xkeen_tar_url` | Прогон `release.yaml` |
-| Beta | `test/xkeen.tar.gz` в ветке `main`, `xkeen_dev_url` | Любой merge в `main` с изменениями `scripts/**` |
+| Канал | Источник | `xkeen -v` | Триггер |
+| --- | --- | --- | --- |
+| Stable | GitHub Release с тегом, `xkeen_tar_url` | `XKeen <версия> Stable (гггг-мм-дд чч:мм:сс MSK)` | Прогон `release.yaml` |
+| Beta | `test/xkeen.tar.gz` в ветке `main`, `xkeen_dev_url` | `XKeen <версия>.N Beta (гггг.мм.дд)` | Любой merge в `main` с изменениями `scripts/**` |
 
-На роутере переключение каналов — `xkeen -channel`. Текущая версия и канал хранятся в `01_info_variable.sh` (`xkeen_current_version`, `xkeen_build`).
+На роутере переключение каналов — `xkeen -channel`. Текущая версия и канал хранятся в `01_info_variable.sh` (`xkeen_current_version`, `xkeen_build`). После `xkeen -channel` на Stable команда `xkeen -uk` установит Stable-сборку: версия `2.0.1.N` не равна тегу релиза (сравнение строк на равенство).
 
 ## Воспроизвести локальную сборку
 
@@ -121,4 +138,4 @@
 cd scripts && find . -type f -o -type l | sed 's|^\./||' | tar -czf /tmp/xkeen.tar.gz -T -
 ```
 
-Результат идентичен тому, что генерирует `package-folder.yaml` (за исключением подменённого `build_timestamp`).
+Результат идентичен тому, что генерирует `package-folder.yaml` (за исключением подменённого `build_timestamp` и номера сборки). На локальной сборке из исходников (`build_timestamp` пуст) `xkeen -v` показывает `XKeen 2.0.1 Beta` — без номера сборки и даты.

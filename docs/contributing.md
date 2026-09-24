@@ -85,6 +85,7 @@ find scripts/_xkeen -name '*.sh' -exec shellcheck -s sh {} +
 ## CI-файлы — не трогать руками
 
 - [`.github/workflows/package-folder.yaml`](../.github/workflows/package-folder.yaml) и сам артефакт [`test/xkeen.tar.gz`](../test/xkeen.tar.gz) — генерируются CI. Любые ручные правки будут перезаписаны при следующем push в `main` с изменениями `scripts/**`.
+- `test/changelogs/` — списки коммитов тестовых сборок, их пишет `package-folder.yaml`. Руками не редактировать. Удалённый файл нумерацию не сбивает: номер считается по истории git.
 - [`.github/workflows/release.yaml`](../.github/workflows/release.yaml) — менять только если действительно меняется процесс релиза.
 - [`.github/workflows/wiki-sync.yaml`](../.github/workflows/wiki-sync.yaml) — синхронизирует [`wiki/`](../wiki) в GitHub Wiki. Менять только при изменении логики синхронизации.
 - [`.github/workflows/deploy.yaml`](../.github/workflows/deploy.yaml) — публикует mkdocs-сайт на GitHub Pages. Менять только при изменении процесса сборки/публикации доки.
@@ -99,6 +100,6 @@ find scripts/_xkeen -name '*.sh' -exec shellcheck -s sh {} +
 
 ## Каналы и версии
 
-- Ветка `main` → Beta-канал, `test/xkeen.tar.gz`, автоматически после push.
+- Ветка `main` → Beta-канал, `test/xkeen.tar.gz` с номером сборки и changelog `test/changelogs/<версия>.md`, автоматически после push.
 - GitHub Release с подписанным тегом → Stable-канал.
-- Версия и канал хранятся в [`scripts/_xkeen/01_info/01_info_variable.sh`](../scripts/_xkeen/01_info/01_info_variable.sh): `xkeen_current_version`, `xkeen_build`.
+- Версия и канал хранятся в [`scripts/_xkeen/01_info/01_info_variable.sh`](../scripts/_xkeen/01_info/01_info_variable.sh): `xkeen_current_version`, `xkeen_build`. На Beta `xkeen -v` показывает `XKeen 2.0.1.N Beta`, на Stable — без `.N`.

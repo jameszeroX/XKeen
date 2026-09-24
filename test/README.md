@@ -30,6 +30,7 @@
 - Точечное восстановление сета geo_exclude, если он опустел после OOM при живом .lst-файле (включая fast-path «WAN не менялся»); wait_for_ready теперь принимает от RCI и объект, и массив, не гоняя полный таймаут на пустом наборе [#123](https://github.com/jameszeroX/XKeen/pull/123) - [@dmiales](https://github.com/dmiales)
 - `xkeen -start`/`-stop`/`-restart`/`-status` теперь возвращают код возврата, отражающий реальный результат команды, а не всегда 0 — скрипты, полагавшиеся на код возврата этих ключей (например `xkeen -start && ...`), могли считать команду успешной даже при сбое
 - install.sh теперь сверяет SHA-256 скачанного архива с GitHub Releases API для каналов `--stable`/`--legacy` (best-effort, требует `jq`; при его отсутствии - предупреждение, установка не блокируется); `--beta` без проверки, как и раньше в self-update
+- Beta-сборки получают номер: `xkeen -v` и `xkeen -diag` показывают версию вида `2.0.1.N` и дату сборки. Список коммитов по сборкам — в [test/changelogs](https://github.com/jameszeroX/XKeen/tree/main/test/changelogs)
 
 ### Порядок установки/обновления
 
