@@ -8,8 +8,14 @@ on:
       - 'scripts/**'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-and-push-to-main-test-folder:
+    # запуск вручную с тега создал бы ветку с именем тега
+    if: github.ref_type == 'branch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -19,6 +25,8 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          # чтобы поставленный в очередь запуск увидел коммит предыдущего запуска
+          ref: ${{ github.ref_name }}
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v7
@@ -29,15 +37,76 @@ jobs:
           git_tag_gpgsign: true
           git_config_global: true
 
-      - name: Prepare scripts with build timestamp
+      - name: Prepare scripts with build version and timestamp
         run: |
           export TZ="Europe/Moscow"
-          BUILD_TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S MSK")
+          BUILD_DATETIME=$(date "+%Y-%m-%d %H:%M:%S MSK")
+          BUILD_DATE="${BUILD_DATETIME%% *}"
+          BUILD_DATE="${BUILD_DATE//-/.}"
+
+          VAR_FILE="scripts/_xkeen/01_info/01_info_variable.sh"
+
+          if [ "$(grep -c '^xkeen_current_version=' "$VAR_FILE")" -ne 1 ] || [ "$(grep -c '^xkeen_build=' "$VAR_FILE")" -ne 1 ]; then
+            echo "::error::в $VAR_FILE должно быть ровно по одной строке xkeen_current_version= и xkeen_build="
+            exit 1
+          fi
+          BASE_VERSION=$(sed -n 's/^xkeen_current_version="\([0-9A-Za-z._-]*\)"$/\1/p' "$VAR_FILE")
+          BUILD_LABEL=$(sed -n 's/^xkeen_build="\([0-9A-Za-z._-]*\)"$/\1/p' "$VAR_FILE")
+          if [ -z "$BASE_VERSION" ] || [ -z "$BUILD_LABEL" ]; then
+            echo "::error::xkeen_current_version или xkeen_build в $VAR_FILE пусты либо содержат символы вне [0-9A-Za-z._-]"
+            exit 1
+          fi
+
+          # максимальный N среди когда-либо добавленных test/changelogs/<BASE_VERSION>.N.md:
+          # берём из истории, чтобы номер откаченной (revert) сборки не выдавался повторно;
+          # --full-history — чтобы мерж не спрятал ветку, где файл добавили и откатили
+          added=$(git log --full-history --format= --name-only --diff-filter=A -- test/changelogs)
+          last=0
+          for f in $added; do
+            case "$f" in
+              test/changelogs/"$BASE_VERSION".*.md) ;;
+              *) continue ;;
+            esac
+            n="${f#test/changelogs/"$BASE_VERSION".}"
+            n="${n%.md}"
+            case "$n" in
+              # не число (например, 3.1 или x) и ведущие нули (bash читает их как восьмеричные) отбрасываем
+              ''|0*|*[!0-9]*) continue ;;
+            esac
+            if [ "$n" -gt "$last" ]; then
+              last="$n"
+            fi
+          done
+          VERSION="$BASE_VERSION.$((last + 1))"
+
+          if [ -e "test/changelogs/$VERSION.md" ]; then
+            echo "::error::test/changelogs/$VERSION.md уже существует"
+            exit 1
+          fi
+
           mkdir -p scripts_for_build
           cp -r scripts/* scripts_for_build/
 
-          sed -i "s/^build_timestamp=\".*\"/build_timestamp=\"$BUILD_TIMESTAMP\"/" \
+          sed -i \
+            -e "s/^xkeen_current_version=\".*\"/xkeen_current_version=\"$VERSION\"/" \
+            -e "s/^build_timestamp=\".*\"/build_timestamp=\"$BUILD_DATE\"/" \
             scripts_for_build/_xkeen/01_info/01_info_variable.sh
+
+          if ! grep -Fqx "xkeen_current_version=\"$VERSION\"" scripts_for_build/_xkeen/01_info/01_info_variable.sh; then
+            echo "::error::не удалось прописать xkeen_current_version=\"$VERSION\" в scripts_for_build"
+            exit 1
+          fi
+          if ! grep -Fqx "build_timestamp=\"$BUILD_DATE\"" scripts_for_build/_xkeen/01_info/01_info_variable.sh; then
+            echo "::error::не удалось прописать build_timestamp=\"$BUILD_DATE\" в scripts_for_build"
+            exit 1
+          fi
+
+          {
+            echo "VERSION=$VERSION"
+            echo "BUILD_DATE=$BUILD_DATE"
+            echo "BUILD_DATETIME=$BUILD_DATETIME"
+            echo "BUILD_LABEL=$BUILD_LABEL"
+          } >> "$GITHUB_ENV"
 
       - name: Create tar.gz archive
         run: |
@@ -51,12 +120,62 @@ jobs:
           mkdir -p test
           mv output/xkeen.tar.gz test/
 
+      - name: Write changelog
+        run: |
+          repo_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+
+          # предыдущая сборка — последний коммит, тема которого начинается с темы коммита бота,
+          # а не любой коммит в этих путях: ручная правка в test/changelogs не сдвигает начало
+          # списка. Тему сверяем сами: git log --grep смотрит и строки тела
+          find_prev() {
+            local log
+            log=$(git log --format='%H%x09%s' -- "$1") || return 1
+            printf '%s\n' "$log" | awk -F '\t' 'index($2, "[github-actions] automated compiling build") == 1 { print $1; exit }'
+          }
+          prev=$(find_prev test/changelogs)
+          if [ -z "$prev" ]; then
+            prev=$(find_prev test/xkeen.tar.gz)
+          fi
+          head=$(git rev-parse HEAD)
+
+          commits=$(git log --no-merges --reverse --abbrev=7 --format="- %s ([\`%h\`](${repo_url}/commit/%H)) — %an" "$prev..HEAD" -- scripts/)
+
+          # запуск из очереди, когда предыдущий уже собрал эти коммиты: пустую сборку не публикуем.
+          # Ручной workflow_dispatch собирает всегда
+          if [ -n "$prev" ] && [ -z "$commits" ] && [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            echo "::notice::новых коммитов в scripts/ с прошлой сборки нет, сборка $VERSION не публикуется"
+            echo "SKIP_COMMIT=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          mkdir -p test/changelogs
+          {
+            printf '# XKeen %s %s (%s)\n' "$VERSION" "$BUILD_LABEL" "$BUILD_DATE"
+            printf '\n'
+            printf "Сборка %s из [\`%s\`](%s/commit/%s).\n" "$BUILD_DATETIME" "$(git rev-parse --short=7 "$head")" "$repo_url" "$head"
+            if [ -n "$prev" ] && [ -n "$commits" ]; then
+              printf "Изменения с прошлой сборки: [\`%s...%s\`](%s/compare/%s...%s).\n" "$(git rev-parse --short=7 "$prev")" "$(git rev-parse --short=7 "$head")" "$repo_url" "$prev" "$head"
+            fi
+            printf '\n'
+            printf '## Коммиты\n'
+            printf '\n'
+            if [ -z "$prev" ]; then
+              printf 'Предыдущая сборка не найдена.\n'
+            elif [ -z "$commits" ]; then
+              # -- нужен: строка начинается с "-", иначе printf примет её за опцию
+              printf -- "- Изменений в \`scripts/\` нет (пересборка).\n"
+            else
+              printf '%s\n' "$commits"
+            fi
+          } > "test/changelogs/$VERSION.md"
+
       - name: Clean up temporary files
         run: |
           rm -rf scripts_for_build output
 
       - name: Commit and push signed archive to test folder
+        if: env.SKIP_COMMIT != 'true'
         run: |
-          git add test/xkeen.tar.gz
-          git commit -S -m "[github-actions] automated compiling build"
-          git push origin main
+          git add test/xkeen.tar.gz "test/changelogs/$VERSION.md"
+          git commit -S -m "[github-actions] automated compiling build $VERSION"
+          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
