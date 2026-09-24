@@ -2328,7 +2328,7 @@ if pidof "$name_client" >/dev/null; then
              ipset restore -exist; then
             ipset swap "$_tmp" "$name_ipset_deny_mac" 2>/dev/null
         else
-            logger -p daemon.warning -t XKeen "Не удалось восстановить $name_ipset_deny_mac из hotspot API"
+            logger -p warning -t XKeen "Не удалось восстановить $name_ipset_deny_mac из hotspot API"
         fi
         ipset destroy "$_tmp" 2>/dev/null
     }
@@ -2441,11 +2441,11 @@ if pidof "$name_client" >/dev/null; then
         while :; do
             _restore_err=$(printf '%s\n' "$_blob" | "$_restore_cmd" --noflush 2>&1) && {
                 [ "$_attempt" -gt 1 ] && \
-                logger -p daemon.notice -t XKeen "$_restore_cmd $_table: applied on retry $_attempt"
+                logger -p notice -t XKeen "$_restore_cmd $_table: applied on retry $_attempt"
                 break
             }
             if [ "$_attempt" -ge "$_max_attempts" ]; then
-                logger -p daemon.err -t XKeen \
+                logger -p error -t XKeen \
                 "$_restore_cmd --noflush failed for $_table after $_attempt attempts: $(printf '%s' "$_restore_err" | head -n1)"
                 return 1
             fi
@@ -3017,7 +3017,7 @@ USER_POLICIES_EOF
              awk '{print "add '"$_rg_tmp"' "$1}' | ipset restore -exist; then
             ipset swap "$_rg_set" "$_rg_tmp" 2>/dev/null || return 1
         else
-            logger -p daemon.warning -t XKeen "Не удалось восстановить $_rg_set из $_rg_file"
+            logger -p warning -t XKeen "Не удалось восстановить $_rg_set из $_rg_file"
         fi
         ipset destroy "$_rg_tmp" 2>/dev/null
     }
