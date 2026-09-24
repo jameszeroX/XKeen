@@ -190,7 +190,7 @@ diagnostic() {
         grep 'Max open files' "/proc/$(pidof ${name_client})/limits" | awk '{print $4}'
     } | log_block "Версия $name_client и файловые дескрипторы"
 
-    echo "XKeen $xkeen_current_version $xkeen_build (время сборки: $build_timestamp)" | log_block "Версия XKeen"
+    echo "XKeen $xkeen_current_version $xkeen_build${build_timestamp:+ ($build_timestamp)}" | log_block "Версия XKeen"
 
     if [ -f "$xkeen_config" ]; then
         write_header "Файл xkeen.json"
