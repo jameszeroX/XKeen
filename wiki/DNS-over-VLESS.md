@@ -48,6 +48,8 @@
 }
 ```
 
+Примечание: в инструкции используются параметры для актуального ядра Xray-core: `"protocol": "tunnel"`, `"allowedNetwork": "tcp,udp"`. Если используете старое ядро, замените их на совместимые: `"protocol": "dokodemo-door"`, `"network": "tcp,udp"`.
+
 ### outbounds.json
 
 ```json

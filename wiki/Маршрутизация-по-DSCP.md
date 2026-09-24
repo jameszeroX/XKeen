@@ -118,6 +118,8 @@ Windows Registry Editor Version 5.00
       }
 ```
 
+Примечание: в инструкции используются параметры для актуального ядра Xray-core: `"protocol": "tunnel"`, `"allowedNetwork": "tcp,udp"`. Если используете старое ядро, замените их на совместимые: `"protocol": "dokodemo-door"`, `"network": "tcp,udp"`.
+
 Порт `1191` приведён только для примера. XKeen не использует хардкод порта и определяет его автоматически по inbound'ам `force-proxy-redirect` и `force-proxy-tproxy`.
 
 Также поддерживается компактный вариант с общим тегом `force-proxy`, но раздельные теги проще для чтения и диагностики.
