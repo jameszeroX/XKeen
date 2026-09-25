@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.0.1 Beta (время сборки: 2026-09-25 14:35:05 MSK)
+
+Сборка из [`6fbfddc`](https://github.com/jameszeroX/XKeen/commit/6fbfddc47c186160fd05614bb78c3f31f3dff343).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/72bb57faafddf2df6db8e80186cd57e4659f2b6f/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`c4e1df7...6fbfddc`](https://github.com/jameszeroX/XKeen/compare/c4e1df7899c6b57f729dfb3b8da60a0b7e25d247...6fbfddc47c186160fd05614bb78c3f31f3dff343).
+
+###### Коммиты
+
+- Update routing rules, DNS warning, state colors ([`6fbfddc`](https://github.com/jameszeroX/XKeen/commit/6fbfddc47c186160fd05614bb78c3f31f3dff343)) — jameszeroX
+
+---
+
 #### XKeen 2.0.1 Beta (время сборки: 2026-09-25 14:23:48 MSK)
 
 Сборка из [`2bd74e1`](https://github.com/jameszeroX/XKeen/commit/2bd74e1515bb696c1d737c24f04f18edd124d7da).
