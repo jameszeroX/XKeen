@@ -195,6 +195,7 @@ find "$SRC/dev" -type f -name '*.md' -exec sed -i \
     -e "s|\.\./\.github/|$REPO_BLOB/.github/|g" \
     -e "s|\.\./install\.sh|$REPO_BLOB/install.sh|g" \
     -e "s|\.\./test/xkeen\.tar\.gz|$REPO_BLOB/test/xkeen.tar.gz|g" \
+    -e "s|\.\./test/changelog\.md|$REPO_BLOB/test/changelog.md|g" \
     -e "s|\.\./test/README\.md|beta-notes.md|g" \
     -e "s|\.\./wiki/FAQ\.md|../faq.md|g" \
     -e "s|\.\./wiki/Configuration\.md|../configuration.md|g" \
