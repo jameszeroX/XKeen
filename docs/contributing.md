@@ -89,6 +89,7 @@ find scripts/_xkeen -name '*.sh' -exec shellcheck -s sh {} +
 - [`.github/workflows/wiki-sync.yaml`](../.github/workflows/wiki-sync.yaml) — синхронизирует [`wiki/`](../wiki) в GitHub Wiki. Менять только при изменении логики синхронизации.
 - [`.github/workflows/deploy.yaml`](../.github/workflows/deploy.yaml) — публикует mkdocs-сайт на GitHub Pages. Менять только при изменении процесса сборки/публикации доки.
 - [`.github/workflows/faq-sync.yaml`](../.github/workflows/faq-sync.yaml) и [`wiki/FAQ.md`](../wiki/FAQ.md) — `FAQ.md` ежедневно (06:00 UTC) перезаписывается этим workflow из `jameszero.net`. Ручные правки `FAQ.md` будут потеряны при следующем синке.
+- [`test/changelog.md`](../test/changelog.md) — история изменений и списки коммитов тестовых сборок, их пишет `package-folder.yaml`. Руками не редактировать.
 
 ## Документация
 

@@ -11,18 +11,22 @@
 | Параметр | Значение |
 | --- | --- |
 | Триггер | `push` в `main` с изменениями в `scripts/**`, либо `workflow_dispatch` |
-| Результат | `test/xkeen.tar.gz` — Beta-канал, упакован из `scripts/*` |
-| Подпись | GPG-подписанный автокоммит `[github-actions] automated compiling build` |
+| Результат | `test/xkeen.tar.gz` (Beta-канал, из `scripts/*`) и `test/changelog.md` |
+| Подпись | Два GPG-подписанных автокоммита: `[github-actions] automated compiling build` (архив) и `[github-actions] update changelog` (changelog) |
 
 Шаги:
 
 1. Checkout с `fetch-depth: 0`.
 2. Импорт GPG-ключа через `crazy-max/ghaction-import-gpg@v7` с `git_config_global: true`.
-3. Подмена `build_timestamp="…"` в `scripts/_xkeen/01_info/01_info_variable.sh` на текущее MSK-время.
+3. Копирование `scripts/` в `scripts_for_build/` и подмена `build_timestamp="…"` в `scripts_for_build/_xkeen/01_info/01_info_variable.sh` на текущее MSK-время. Из этого же файла читаются (без изменения) `xkeen_current_version` и `xkeen_build` — только для заголовка в changelog.
 4. Упаковка: `cd scripts_for_build && find . -type f -o -type l | sed 's|^\./||' | tar -czf .../xkeen.tar.gz -T -`. На верхнем уровне архива — `xkeen` и `_xkeen/`, без вложенного `scripts/`.
-5. Перемещение архива в `test/` и подписанный коммит обратно в `main`.
+5. Перемещение архива в `test/`, удаление временных файлов (`scripts_for_build/`, `output/`).
+6. Определение предыдущей сборки — последний коммит с темой `[github-actions] automated compiling build`, менявший `test/xkeen.tar.gz`, и сбор списка коммитов в `scripts/` с прошлой сборки. Если коммитов нет и запуск триггернут `push` (а не `workflow_dispatch`), шаг завершается без коммита и пуша.
+7. Подписанный коммит архива (`[github-actions] automated compiling build`). Его хэш используется для прямой ссылки на скачивание (`.../raw/<хэш>/test/xkeen.tar.gz`), привязанной именно к этой сборке.
+8. Формирование новой записи в `test/changelog.md` (добавляется в начало файла, старые записи остаются ниже): заголовок `XKeen <версия> <метка> (время сборки: …)`, ссылка на коммит сборки, ссылка на скачивание архива, ссылка на GitHub compare «Изменения с прошлой сборки» (если предыдущая сборка найдена), список коммитов под заголовком «Коммиты» (или пометка «Предыдущая сборка не найдена» / «Изменений в `scripts/` нет (пересборка)»), разделитель `---` в конце записи. Все заголовки — уровня `######`.
+9. Подписанный коммит `test/changelog.md` (`[github-actions] update changelog`) и push обоих коммитов в `main`.
 
-**Файл `test/xkeen.tar.gz` — артефакт CI, руками не редактировать.**
+**Файл `test/xkeen.tar.gz` — артефакт CI, руками не редактировать. `test/changelog.md` ведётся автоматически, единым файлом, без ручных правок структуры записей.**
 
 ### `release.yaml`
 

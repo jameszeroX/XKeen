@@ -8,8 +8,15 @@ on:
       - 'scripts/**'
   workflow_dispatch:
 
+# запуски выполняются по очереди, чтобы каждый видел коммит предыдущей сборки
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-and-push-to-main-test-folder:
+    # запуск вручную с тега создал бы ветку с именем тега
+    if: github.ref_type == 'branch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -19,6 +26,8 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          # чтобы поставленный в очередь запуск увидел коммит предыдущего запуска
+          ref: ${{ github.ref_name }}
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v7
@@ -33,11 +42,32 @@ jobs:
         run: |
           export TZ="Europe/Moscow"
           BUILD_TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S MSK")
+
+          VAR_FILE="scripts_for_build/_xkeen/01_info/01_info_variable.sh"
+
           mkdir -p scripts_for_build
           cp -r scripts/* scripts_for_build/
 
-          sed -i "s/^build_timestamp=\".*\"/build_timestamp=\"$BUILD_TIMESTAMP\"/" \
-            scripts_for_build/_xkeen/01_info/01_info_variable.sh
+          sed -i "s/^build_timestamp=\".*\"/build_timestamp=\"$BUILD_TIMESTAMP\"/" "$VAR_FILE"
+
+          if ! grep -Fqx "build_timestamp=\"$BUILD_TIMESTAMP\"" "$VAR_FILE"; then
+            echo "::error::не удалось прописать build_timestamp=\"$BUILD_TIMESTAMP\" в $VAR_FILE"
+            exit 1
+          fi
+
+          # версия и метка сборки (например, 2.0.1 и Beta) — только для заголовка в changelog
+          XKEEN_VERSION=$(sed -n 's/^xkeen_current_version="\([0-9A-Za-z._-]*\)"$/\1/p' "$VAR_FILE")
+          XKEEN_BUILD=$(sed -n 's/^xkeen_build="\([0-9A-Za-z._-]*\)"$/\1/p' "$VAR_FILE")
+          if [ -z "$XKEEN_VERSION" ] || [ -z "$XKEEN_BUILD" ]; then
+            echo "::error::xkeen_current_version или xkeen_build в $VAR_FILE не найдены либо содержат недопустимые символы"
+            exit 1
+          fi
+
+          {
+            echo "BUILD_TIMESTAMP=$BUILD_TIMESTAMP"
+            echo "XKEEN_VERSION=$XKEEN_VERSION"
+            echo "XKEEN_BUILD=$XKEEN_BUILD"
+          } >> "$GITHUB_ENV"
 
       - name: Create tar.gz archive
         run: |
@@ -55,8 +85,72 @@ jobs:
         run: |
           rm -rf scripts_for_build output
 
-      - name: Commit and push signed archive to test folder
+      - name: Commit signed archive and changelog
         run: |
+          repo_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          changelog="test/changelog.md"
+
+          # предыдущая сборка — последний коммит бота, менявший архив.
+          # Тему сверяем сами: git log --grep смотрит и строки тела коммита.
+          # Определять нужно до коммита нового архива
+          prev=$(git log --format='%H%x09%s' -- test/xkeen.tar.gz \
+            | awk -F '\t' 'index($2, "[github-actions] automated compiling build") == 1 { print $1; exit }')
+          head=$(git rev-parse HEAD)
+
+          if [ -n "$prev" ]; then
+            commits=$(git log --no-merges --reverse --abbrev=7 \
+              --format="- %s ([\`%h\`](${repo_url}/commit/%H)) — %an" \
+              "$prev..HEAD" -- scripts/)
+          else
+            commits=""
+          fi
+
+          # запуск из очереди, когда предыдущий уже собрал эти коммиты: пустую сборку не публикуем.
+          # Ручной workflow_dispatch собирает всегда
+          if [ -n "$prev" ] && [ -z "$commits" ] && [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            echo "::notice::новых коммитов в scripts/ с прошлой сборки нет, сборка не публикуется"
+            exit 0
+          fi
+
+          # 1-й коммит: только архив. Его хэш нужен для ссылки, привязанной к этой сборке
           git add test/xkeen.tar.gz
           git commit -S -m "[github-actions] automated compiling build"
-          git push origin main
+          build_commit=$(git rev-parse HEAD)
+          download_url="$repo_url/raw/$build_commit/test/xkeen.tar.gz"
+
+          # новая запись — в начало файла (свежие сборки сверху)
+          entry=$(mktemp)
+          {
+            printf '#### XKeen %s %s (время сборки: %s)\n\n' "$XKEEN_VERSION" "$XKEEN_BUILD" "$BUILD_TIMESTAMP"
+            printf 'Сборка из [`%s`](%s/commit/%s).\n\n' "$(git rev-parse --short=7 "$head")" "$repo_url" "$head"
+            printf 'Скачать: [xkeen.tar.gz](%s)\n\n' "$download_url"
+            if [ -n "$prev" ]; then
+              printf "Изменения с прошлой сборки: [\`%s...%s\`](%s/compare/%s...%s).\n\n" "$(git rev-parse --short=7 "$prev")" "$(git rev-parse --short=7 "$head")" "$repo_url" "$prev" "$head"
+            fi
+            printf '###### Коммиты\n\n'
+            if [ -z "$prev" ]; then
+              printf 'Предыдущая сборка не найдена.\n'
+            elif [ -z "$commits" ]; then
+              # -- нужен: строка начинается с "-", иначе printf примет её за опцию
+              printf -- '- Изменений в `scripts/` нет (пересборка).\n'
+            else
+              printf '%s\n' "$commits"
+            fi
+            printf '\n---\n\n'
+          } > "$entry"
+
+          {
+            printf '### Changelog\n\n'
+            cat "$entry"
+            # старое содержимое без заголовка "# Changelog" и пустой строки после него
+            if [ -f "$changelog" ]; then
+              tail -n +3 "$changelog"
+            fi
+          } > "$changelog.new"
+          mv "$changelog.new" "$changelog"
+
+          # 2-й коммит: changelog со ссылкой на 1-й
+          git add "$changelog"
+          git commit -S -m "[github-actions] update changelog"
+
+          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
