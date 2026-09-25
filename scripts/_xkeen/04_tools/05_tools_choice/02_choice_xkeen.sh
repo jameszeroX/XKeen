@@ -235,7 +235,11 @@ check_file_descriptors() {
 
 warn_proxy_dns() {
     echo
-    echo -e "  ${red}Внимание!${reset} Значение данного параметра без соответствующих настроек прокси-клиента ${green}игнорируется${reset}"
+    echo -e "  ${red}Внимание!${reset} Данная настройка устарела и не рекомендуется"
+    echo "  Включайте перехват, только если понимаете, зачем это нужно"
+    echo
+    echo -e "  ${green}Рекомендуемый${reset} способ настройки проксирования DNS по ссылке:"
+    echo "  https://github.com/jameszeroX/XKeen/wiki/DNS-over-VLESS"
 }
 
 change_proxy_dns() {

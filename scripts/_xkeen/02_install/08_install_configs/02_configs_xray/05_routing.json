@@ -6,6 +6,10 @@
       {
         "inboundTag": ["force-proxy-redirect","force-proxy-tproxy"],
         "outboundTag": "vless-reality"
+      },
+      {
+        "inboundTag": ["redirect","tproxy"],
+        "outboundTag": "direct"
       }
     ]
   }
