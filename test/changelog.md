@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.0.1 Beta (время сборки: 2026-09-29 12:48:55 MSK)
+
+Сборка из [`9b5e7c8`](https://github.com/jameszeroX/XKeen/commit/9b5e7c839df66f1ac9ca5512314bf8f63d4bfd0e).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/147f98663f68750ac0521272489b1cc437e9dfab/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`72bb57f...9b5e7c8`](https://github.com/jameszeroX/XKeen/compare/72bb57faafddf2df6db8e80186cd57e4659f2b6f...9b5e7c839df66f1ac9ca5512314bf8f63d4bfd0e).
+
+###### Коммиты
+
+- fix(hook): сброс UDP-conntrack клиентов после пересборки правил ([`9b5e7c8`](https://github.com/jameszeroX/XKeen/commit/9b5e7c839df66f1ac9ca5512314bf8f63d4bfd0e)) — jameszeroX
+
+---
+
 #### XKeen 2.0.1 Beta (время сборки: 2026-09-25 14:35:05 MSK)
 
 Сборка из [`6fbfddc`](https://github.com/jameszeroX/XKeen/commit/6fbfddc47c186160fd05614bb78c3f31f3dff343).
