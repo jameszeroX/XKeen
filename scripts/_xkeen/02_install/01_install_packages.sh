@@ -28,4 +28,5 @@ _ensure_installed_packages() {
     install_packages "$info_packages_cabundle" "ca-bundle"
     install_packages "$info_packages_uname" "coreutils-uname"
     install_packages "$info_packages_nohup" "coreutils-nohup"
+    install_packages "$info_packages_conntrack" "conntrack"
 }

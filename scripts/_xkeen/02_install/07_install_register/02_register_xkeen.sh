@@ -5,7 +5,7 @@ register_xkeen_control() {
     write_opkg_control \
         "xkeen" \
         "$xkeen_current_version" \
-        "jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset, ip-full" \
+        "jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset, ip-full, conntrack" \
         "Skrill" \
         "xkeen" \
         "Skrill / jameszero" \
@@ -34,7 +34,7 @@ register_xkeen_status() {
     write_opkg_status \
         "xkeen" \
         "$xkeen_current_version" \
-        "jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset, ip-full"
+        "jq, curl, coreutils-uname, coreutils-nohup, iptables, ipset, ip-full, conntrack"
 }
 
 fixed_register_packages() {
@@ -47,7 +47,7 @@ register_xkeen_initd() {
     old_start_file="${initd_dir}/S99xkeenstart"
     script_file="${xinstall_dir}/07_install_register/04_register_init.sh" 
     current_datetime=$(date "+%Y-%m-%d_%H-%M-%S")
-    variables_to_extract="name_client name_policy name_policy_full table_id table_mark custom_mark dscp_enable dscp_force_proxy dscp_force_proxy_tag dscp_exclude dscp_proxy ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude proxy_dns proxy_router nfqws_mark pbr_strict start_verbose start_attempts init_delay check_fd arm64_fd other_fd delay_fd ipv6_support extended_msg backup aghfix"
+    variables_to_extract="name_client name_policy name_policy_full table_id table_mark custom_mark dscp_enable dscp_force_proxy dscp_force_proxy_tag dscp_exclude dscp_proxy ipv4_proxy ipv4_exclude ipv6_proxy ipv6_exclude proxy_dns proxy_router nfqws_mark pbr_strict start_verbose start_attempts init_delay udp_flush check_fd arm64_fd other_fd delay_fd ipv6_support extended_msg backup aghfix"
     source_main_backup=""
     source_start_backup=""
     # Временный файл в $initd_dir: mv в конце — атомарный rename на одном

@@ -49,4 +49,8 @@ _load_packages_info() {
     # Проверка наличия пакета "ipset"
     info_packages "ipset"
     info_packages_ipset=$package_status
+
+    # Проверка наличия пакета "conntrack"
+    info_packages "conntrack"
+    info_packages_conntrack=$package_status
 }

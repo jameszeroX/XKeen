@@ -97,6 +97,9 @@ start_auto="on"
 start_delay=20
 init_delay=0
 
+# Сброс UDP-conntrack на DHCP renew
+udp_flush="on"
+
 # Контроль файловых дескрипторов
 check_fd="off"
 arm64_fd=40000
@@ -2242,6 +2245,7 @@ EOL
     apply_gomemlimit
     inject_var gomemlimit_value "$gomemlimit_value"
     inject_var killswitch "$killswitch"
+    inject_var udp_flush "$udp_flush"
 
     cat >> "$file_netfilter_hook" <<'EOL'
 
@@ -2460,6 +2464,22 @@ if pidof "$name_client" >/dev/null; then
         [ "$iptables_supported" = "true" ] && _xkeen_apply_table iptables mangle _xkeen_v4_mangle_rules || true
         [ "$ip6tables_supported" = "true" ] && _xkeen_apply_table ip6tables nat _xkeen_v6_nat_rules || true
         [ "$ip6tables_supported" = "true" ] && _xkeen_apply_table ip6tables mangle _xkeen_v6_mangle_rules || true
+    }
+
+    # Пока NDM держит цепочки снесёнными, пакет установленного UDP-потока
+    # может уйти по FORWARD, и его забрать сетевой ускоритель (PPE): дальше
+    # поток идёт мимо netfilter и после возврата правил не восстанавливается.
+    # Удаление conntrack-записи заставляет следующий пакет пройти через
+    # xkeen-цепочку заново и снимает offload-запись.
+    # TPROXY-потоки помечены в conntrack меткой $table_mark (CONNMARK --save-mark
+    # в xkeen-цепочке), поэтому удаляем записи именно по ней: NAT-нутые
+    # DIRECT-потоки (метки NDM) и собственные потоки роутера (mark 0) не
+    # затрагиваются. Только UDP: для TCP это привело бы к RST.
+    _xkeen_flush_udp_conntrack() {
+        [ "$udp_flush" = "on" ] || return 0
+        case "$mode_proxy" in TProxy|Hybrid) ;; *) return 0 ;; esac
+        command -v conntrack >/dev/null 2>&1 || return 0
+        conntrack -D -p udp -m "$(( table_mark ))" >/dev/null 2>&1
     }
 
     # Добавление правил-исключений
@@ -3128,6 +3148,7 @@ USER_POLICIES_EOF
         _xkeen_apply
         [ -n "$_xkeen_cur_wan" ] && printf '%s' "$_xkeen_cur_wan" > "$_xkeen_wan_state"
         _xkeen_release_nf_lock
+        _xkeen_flush_udp_conntrack
         _xkeen_sync_deny_mac_ipset
         exit 0
     fi
@@ -3184,6 +3205,7 @@ USER_POLICIES_EOF
     # правил и после снятия nf-lock: см. комментарий у _xkeen_sync_deny_mac_ipset.
     [ -n "$_xkeen_cur_wan" ] && printf '%s' "$_xkeen_cur_wan" > "$_xkeen_wan_state"
     _xkeen_release_nf_lock
+    _xkeen_flush_udp_conntrack
     _xkeen_sync_deny_mac_ipset
 else
     # mkdir-lock с PID: обычный touch-файл залипал навсегда после OOM

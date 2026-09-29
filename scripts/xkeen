@@ -83,7 +83,7 @@ get_state_arg() {
 # Импортируем модули
 . "$script_dir/.xkeen/import.sh"
 
-# Self-heal пакетов (opkg-форк + опциональная установка curl/jq/ip-full/
+# Self-heal пакетов (opkg-форк + опциональная установка curl/jq/ip-full/conntrack/
 # iptables/ipset/ca-bundle/coreutils-uname/coreutils-nohup) пропускается для
 # команд, не зависящих от статуса пакетов: -sbt — тик балансировщика по
 # расписанию cron, может вызываться раз в минуту — и help/meta-ключей.
