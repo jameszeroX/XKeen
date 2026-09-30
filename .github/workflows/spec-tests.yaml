@@ -26,7 +26,13 @@ jobs:
             cd /repo
             rc=0
             for t in spec/test_*.sh; do
-              sh "$t" || rc=1
+              echo "##### $t"
+              sh "$t"
+              s=$?
+              if [ "$s" -ne 0 ]; then
+                echo "##### FAILED: $t (exit $s)"
+                rc=1
+              fi
             done
             exit "$rc"
           '
