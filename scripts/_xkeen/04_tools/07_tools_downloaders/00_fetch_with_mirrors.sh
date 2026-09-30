@@ -231,6 +231,11 @@ fetch_release_tags() {
     USE_JSDELIVR=""
     RELEASE_TAGS=""
 
+    # В список попадают только теги вида vX.Y.Z (префикс v необязателен, для jsDelivr его нет).
+    # Отсекает rolling-тег Prerelease-Alpha и любые теги с суффиксами (-rc, -beta и т.п.):
+    # по ним нельзя собрать URL загрузки. Pre-release с обычным номером версии проходят.
+    _frt_tag_re='^v?[0-9]+(\.[0-9]+)*$'
+
     # Кэш сырого JSON списка релизов (только прямой GitHub API, не
     # jsDelivr) — переиспользуется verify_github_sha256() вместо второго
     # независимого GET-а за digest'ом. Очистка — на стороне вызывающих
@@ -251,9 +256,9 @@ fetch_release_tags() {
             # Перезаписываем файл целиком на каждой попытке (не дописываем),
             # чтобы после неудачной попытки не остался частичный JSON.
             curl_with_timeout -s "${api_url}?per_page=${per_page}" > "$_frt_cache" 2>/dev/null
-            RELEASE_TAGS=$(jq -re 'if type == "array" then .[] | .tag_name else empty end' "$_frt_cache" 2>/dev/null | grep -ivE 'Prerelease-Alpha' | head -n 8)
+            RELEASE_TAGS=$(jq -re 'if type == "array" then .[] | .tag_name else empty end' "$_frt_cache" 2>/dev/null | grep -E "$_frt_tag_re" | head -n 8)
         else
-            RELEASE_TAGS=$(curl_with_timeout -s "${api_url}?per_page=${per_page}" 2>/dev/null | jq -re 'if type == "array" then .[] | .tag_name else empty end' 2>/dev/null | grep -ivE 'Prerelease-Alpha' | head -n 8)
+            RELEASE_TAGS=$(curl_with_timeout -s "${api_url}?per_page=${per_page}" 2>/dev/null | jq -re 'if type == "array" then .[] | .tag_name else empty end' 2>/dev/null | grep -E "$_frt_tag_re" | head -n 8)
         fi
 
         if [ -z "$RELEASE_TAGS" ]; then
@@ -262,7 +267,7 @@ fetch_release_tags() {
                 printf "  ${red}Нет доступа${reset} к ${yellow}GitHub API${reset}. Пробуем ${yellow}jsDelivr${reset}...\n"
             fi
 
-            RELEASE_TAGS=$(curl_with_timeout -s "$jsd_url" 2>/dev/null | jq -r '.versions[]' 2>/dev/null | grep -ivE 'Prerelease-Alpha' | head -n 8)
+            RELEASE_TAGS=$(curl_with_timeout -s "$jsd_url" 2>/dev/null | jq -r '.versions[]' 2>/dev/null | grep -E "$_frt_tag_re" | head -n 8)
 
             if [ -n "$RELEASE_TAGS" ]; then
                 USE_JSDELIVR="true"
