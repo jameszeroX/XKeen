@@ -1,4 +1,39 @@
+# Автоустановка: аналог пункта «1» (установить отсутствующие и обновить установленные)
+# при auto_geo=on либо пункта «0» (пропустить) при auto_geo=off.
+# $1 = тип (geosite|geoip), $2 = третий источник (zkeen|zkeenip), $3 = имя переменной bypass
+_choice_geodata_auto() {
+    _cga_type="$1"
+    _cga_src3="$2"
+    _cga_bypass="$3"
+    _cga_any=false
+
+    for _cga_src in refilter v2fly "$_cga_src3"; do
+        _cga_cur=$(eval echo "\$update_${_cga_src}_${_cga_type}")
+        eval "install_${_cga_src}_${_cga_type}=false"
+        eval "update_${_cga_src}_${_cga_type}=false"
+        eval "choice_delete_${_cga_type}_${_cga_src}_select=false"
+        if [ "$_cga_cur" = "true" ]; then
+            _cga_any=true
+            [ "$auto_geo" = "on" ] && eval "update_${_cga_src}_${_cga_type}=true"
+        else
+            [ "$auto_geo" = "on" ] && eval "install_${_cga_src}_${_cga_type}=true"
+        fi
+    done
+
+    if [ "$auto_geo" = "on" ]; then
+        eval "$_cga_bypass=false"
+    else
+        echo "  Выполнен пропуск установки / обновления $_cga_type"
+        [ "$_cga_any" = "true" ] && eval "$_cga_bypass=false" || eval "$_cga_bypass=true"
+    fi
+}
+
 choice_geodata() {
+    if [ "$autoinstall_mode" = "true" ]; then
+        _choice_geodata_auto "$1" "$3" "$5"
+        return 0
+    fi
+
     type="$1"
     type_name="$2"
     src3="$3"

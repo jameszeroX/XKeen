@@ -60,7 +60,29 @@ download_xray() {
     fetch_release_tags "$xray_api_url" "$xray_jsd_url" "10"
     _dlx_cache=$(_release_cache_path "$xray_api_url") || _dlx_cache=""
 
-    # --- ИНТЕРАКТИВНЫЙ РЕЖИМ ---
+    # --- Автоустановка (xkeen -ux auto | -ux vX.Y.Z | -i auto [xray=vX.Y.Z]) ---
+    if [ "$autoinstall_mode" = "true" ]; then
+        if [ -n "$auto_xray_version" ]; then
+            # Конкретная версия, заданная пользователем (как при ручном вводе: всегда с префиксом v)
+            version_selected="$auto_xray_version"
+            printf "  ${green}Автоустановка${reset}: выбрана указанная версия ${yellow}%s${reset}\n" "$version_selected"
+        else
+            version_selected=$(echo "$RELEASE_TAGS" | head -1)
+            if [ -z "$version_selected" ]; then
+                printf "  ${red}Ошибка${reset}: Не удалось определить последнюю версию Xray\n"
+                [ -n "$_dlx_cache" ] && rm -f "$_dlx_cache"
+                return 1
+            fi
+            [ "$USE_JSDELIVR" = "true" ] && version_selected="v$version_selected"
+            printf "  ${green}Автоустановка${reset}: выбрана последняя версия ${yellow}%s${reset}\n" "$version_selected"
+        fi
+
+        # _xray_perform_install сам удаляет кэш релизов на всех путях выхода
+        _xray_perform_install "$version_selected"
+        return $?
+    fi
+
+    # --- Интерактивная установка ---
     while true; do
         echo
         echo "$RELEASE_TAGS" | awk '{printf "    %2d. %s\n", NR, $0}'
@@ -89,7 +111,7 @@ download_xray() {
         fi
 
         if [ "$choice" = "9" ]; then
-            printf "  Введите версию Xray для загрузки (например: v26.6.1): "
+            printf "  Введите версию Xray для загрузки (например: v26.7.28): "
             read -r version_selected
             if [ -z "$version_selected" ]; then
                 printf "  ${red}Ошибка${reset}: Версия не может быть пустой\n"

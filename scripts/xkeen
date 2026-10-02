@@ -33,10 +33,25 @@ for arg in "$@"; do
 done
 
 # Функция умной очистки экрана
+# Очистит ли smart_clear экран (одна логическая команда и вывод в терминал)
+screen_will_clear() {
+    [ "$LOGICAL_CMD_COUNT" -le 1 ] && [ -t 1 ]
+}
+
 smart_clear() {
     # Очищаем экран, только если запущена одна логическая команда и вывод идёт в терминал
-    if [ "$LOGICAL_CMD_COUNT" -le 1 ] && [ -t 1 ]; then
+    if screen_will_clear; then
         clear
+    fi
+}
+
+# Автоустановка: пустая строка в начале нового этапа
+# Без очистки экрана (есть дополнительные ключи) строка не нужна, если предыдущий
+# этап сам закончил вывод пустой строкой: $1 = true в этом случае
+auto_window_gap() {
+    [ "$autoinstall_mode" = "true" ] || return 0
+    if screen_will_clear || [ "$1" != "true" ]; then
+        echo
     fi
 }
 
@@ -78,6 +93,41 @@ get_state_arg() {
     if [ "$1" = "on" ] || [ "$1" = "off" ]; then
         echo "$1"
     fi
+}
+
+# Второй параметр "auto" для -ux / -um: автоустановка последней версии ядра
+get_auto_arg() {
+    [ "$1" = "auto" ] && echo "true"
+}
+
+# Версия ядра вида X.Y.Z / vX.Y.Z
+is_version_arg() {
+    echo "$1" | grep -Eq '^v?[0-9]+(\.[0-9]+){2}$'
+}
+
+# Разбор параметров вида ключ=значение после "-i auto". Возврат 1 при ошибке
+parse_auto_opt() {
+    _pao_key="${1%%=*}"
+    _pao_val="${1#*=}"
+    case "$_pao_key=$_pao_val" in
+        cores=xray|cores=mihomo|cores=all|cores=none) auto_cores="$_pao_val" ;;
+        geo=on|geo=off)                               auto_geo="$_pao_val" ;;
+        geoipset=on|geoipset=off)                     auto_geoipset="$_pao_val" ;;
+        cron=on|cron=off)                             auto_cron="$_pao_val" ;;
+        xray=*|mihomo=*)
+            if ! is_version_arg "$_pao_val"; then
+                echo -e "  ${red}Ошибка${reset}: неверная версия в параметре ${yellow}$1${reset} (ожидается, например, ${_pao_key}=v1.2.3)" >&2
+                return 1
+            fi
+            eval "auto_${_pao_key}_version=\"v\${_pao_val#v}\""
+        ;;
+        autostart=on|autostart=off)                   auto_autostart="$_pao_val"; auto_autostart_set="true" ;;
+        *)
+            echo -e "  ${red}Ошибка${reset}: неверный параметр автоустановки: ${yellow}$1${reset}" >&2
+            echo -e "  Допустимо: cores=xray|mihomo|all|none geo=on|off geoipset=on|off cron=on|off autostart=on|off" >&2
+            return 1
+        ;;
+    esac
 }
 
 # Импортируем модули
@@ -144,7 +194,49 @@ xkeen_rc=0
 while [ $# -gt 0 ]; do
     case "$1" in
 
-        -i|-install)    # Запуск полного цикла установки
+        -i|-install)    # Запуск полного цикла установки (-i auto — автоустановка без вопросов)
+            autoinstall_mode=""
+            auto_failed=""
+            xray_fresh=""
+            auto_xray_version=""
+            auto_mihomo_version=""
+            if [ "$2" = "auto" ]; then
+                autoinstall_mode="true"
+                # Значения по умолчанию: оба ядра, все геобазы и GeoIPSET,
+                # cron (понедельник, случайное время 00:00-05:59), автозагрузка
+                auto_cores="all"
+                auto_geo="on"
+                auto_geoipset="on"
+                auto_cron="on"
+                auto_autostart="on"
+                auto_autostart_set=""
+                shift
+                while [ $# -gt 1 ]; do
+                    case "$2" in
+                        *=*) parse_auto_opt "$2" || exit 1; shift ;;
+                        *)   break ;;
+                    esac
+                done
+                # Версия ядра, которое не будет устанавливаться, — противоречие в параметрах
+                if [ -n "$auto_xray_version" ] && [ "$auto_cores" != "xray" ] && [ "$auto_cores" != "all" ]; then
+                    echo -e "  ${red}Ошибка${reset}: указана версия Xray, но cores=${yellow}$auto_cores${reset} не устанавливает Xray" >&2
+                    exit 1
+                fi
+                if [ -n "$auto_mihomo_version" ] && [ "$auto_cores" != "mihomo" ] && [ "$auto_cores" != "all" ]; then
+                    echo -e "  ${red}Ошибка${reset}: указана версия Mihomo, но cores=${yellow}$auto_cores${reset} не устанавливает Mihomo" >&2
+                    exit 1
+                fi
+                # Слово без "=" и без "-" — опечатка в параметрах, а не следующий ключ
+                case "$2" in
+                    ''|-*) ;;
+                    *)
+                        echo -e "  ${red}Ошибка${reset}: неверный параметр автоустановки: ${yellow}$2${reset}" >&2
+                        echo -e "  Формат параметров: ключ=значение (например, cores=xray)" >&2
+                        exit 1
+                    ;;
+                esac
+            fi
+
             info_firmware
             test_connection
             check_health
@@ -161,6 +253,11 @@ while [ $# -gt 0 ]; do
             fi
 
             echo -e "  Запуск полного цикла установки ${yellow}XKeen${reset}"
+            if [ "$autoinstall_mode" = "true" ]; then
+                echo -e "  ${green}Автоустановка${reset}: ядра - ${yellow}$auto_cores${reset}, геобазы - ${yellow}$auto_geo${reset}, GeoIPSET - ${yellow}$auto_geoipset${reset}, cron - ${yellow}$auto_cron${reset}, автозагрузка - ${yellow}$auto_autostart${reset}"
+                [ -n "$auto_xray_version" ] && echo -e "  Версия Xray: ${yellow}$auto_xray_version${reset}"
+                [ -n "$auto_mihomo_version" ] && echo -e "  Версия Mihomo: ${yellow}$auto_mihomo_version${reset}"
+            fi
 
             init_directories
             xkeen_set_info
@@ -177,12 +274,18 @@ while [ $# -gt 0 ]; do
             choice_add_proxy_cores
 
             if [ "$add_xray" = "true" ] && [ "$xray_installed" != "installed" ]; then
-                check_free_space xray || add_xray="false"
+                if ! check_free_space xray; then
+                    add_xray="false"
+                    [ "$autoinstall_mode" = "true" ] && auto_failed="$auto_failed Xray"
+                fi
             fi
 
             if [ "$add_xray" = "true" ]; then
                 smart_clear
-                download_xray
+                if ! download_xray && [ "$autoinstall_mode" = "true" ]; then
+                    bypass_xray="true"
+                    auto_failed="$auto_failed Xray"
+                fi
             else
                 command -v xray >/dev/null 2>&1 || bypass_xray="true"
             fi
@@ -191,8 +294,11 @@ while [ $# -gt 0 ]; do
                 if [ -f "$install_dir/xray" ]; then
                     chmod +x "$install_dir/xray" 2>/dev/null
                 else
-                    if ! install_xray; then
+                    if install_xray; then
+                        xray_fresh="true"   # install_xray заканчивает вывод пустой строкой
+                    else
                         bypass_xray="true"
+                        [ "$autoinstall_mode" = "true" ] && auto_failed="$auto_failed Xray"
                     fi
                 fi
                 info_xray
@@ -200,18 +306,26 @@ while [ $# -gt 0 ]; do
 
             if [ "$xray_installed" = "installed" ]; then
                 smart_clear
-                echo
+                if [ "$autoinstall_mode" = "true" ]; then
+                    auto_window_gap "$xray_fresh"
+                else
+                    echo
+                fi
                 xray_conf_install
             fi
 
             if [ "$add_mihomo" = "true" ] && [ "$mihomo_installed" != "installed" ]; then
-                check_free_space mihomo || add_mihomo="false"
+                if ! check_free_space mihomo; then
+                    add_mihomo="false"
+                    [ "$autoinstall_mode" = "true" ] && auto_failed="$auto_failed Mihomo"
+                fi
             fi
 
             if [ "$add_mihomo" = "true" ]; then
                 smart_clear
                 if ! download_mihomo; then
                     bypass_mihomo="true"
+                    [ "$autoinstall_mode" = "true" ] && auto_failed="$auto_failed Mihomo"
                 fi
             else
                 command -v mihomo >/dev/null 2>&1 || bypass_mihomo="true"
@@ -223,13 +337,21 @@ while [ $# -gt 0 ]; do
                 else
                     if ! install_mihomo; then
                         bypass_mihomo="true"
+                        [ "$autoinstall_mode" = "true" ] && auto_failed="$auto_failed Mihomo"
                     fi
                 fi
                 info_mihomo
             fi
 
+            mihomo_cfg_fresh=""
             if [ "$mihomo_installed" = "installed" ]; then
+                _mc_existed=""
+                [ -f "$mihomo_conf_dir/config.yaml" ] && _mc_existed="yes"
                 add_mihomo_config
+                # add_mihomo_config заканчивает вывод пустой строкой, если создал config.yaml
+                if [ -z "$_mc_existed" ] && [ -f "$mihomo_conf_dir/config.yaml" ]; then
+                    mihomo_cfg_fresh="true"
+                fi
             fi
 
             if [ "$mihomo_installed" != "installed" ] && [ "$xray_installed" != "installed" ]; then
@@ -244,6 +366,9 @@ while [ $# -gt 0 ]; do
                 geofile_update="true"
 
                 smart_clear
+                # Автоустановка: пустая строка в начале окна, как у остальных шагов
+                # (в интерактивном режиме её выводит само меню выбора)
+                auto_window_gap "$mihomo_cfg_fresh"
                 # Устанавливаем GeoSite
                 choice_geosite
                 delete_geosite
@@ -251,6 +376,7 @@ while [ $# -gt 0 ]; do
                 sleep 2
 
                 smart_clear
+                auto_window_gap
                 # Устанавливаем GeoIP
                 choice_geoip
                 delete_geoip
@@ -260,6 +386,7 @@ while [ $# -gt 0 ]; do
 
             if [ "$xray_installed" = "installed" ] || [ "$mihomo_installed" = "installed" ]; then
                 smart_clear
+                auto_window_gap
                 # Устанавливаем GeoIPSET
                 install_geoipset init
                 sleep 2
@@ -267,6 +394,8 @@ while [ $# -gt 0 ]; do
 
             if [ "$bypass_cron_geosite" = "false" ] || [ "$bypass_cron_geoip" = "false" ] || [ "$bypass_cron_geoipset" = "false" ]; then
                 smart_clear
+                # Предыдущий этап (GeoIPSET) заканчивает вывод пустой строкой
+                auto_window_gap "true"
                 # Настраиваем автоматические обновления
                 choice_update_cron
                 update_cron_geofile_task
@@ -361,6 +490,11 @@ while [ $# -gt 0 ]; do
 
             smart_clear
             echo
+            if [ -n "$auto_failed" ]; then
+                echo -e "  ${red}Внимание${reset}: не удалось установить:${yellow}$auto_failed${reset}"
+                xkeen_rc=1
+            fi
+            autoinstall_mode=""
             echo -e "  ${green}Установка XKeen завершена!${reset}"
 
             if [ "$xray_installed" = "installed" ] || [ "$mihomo_installed" = "installed" ]; then
@@ -668,7 +802,16 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -ux)    # Обновление или установка ядра Xray
+        -ux)    # Обновление или установка ядра Xray (-ux auto — автоустановка последней версии, -ux vX.Y.Z — указанной версии)
+            autoinstall_mode=$(get_auto_arg "$2")
+            auto_xray_version=""
+            if [ -n "$autoinstall_mode" ]; then
+                shift
+            elif is_version_arg "$2"; then
+                autoinstall_mode="true"
+                auto_xray_version="v${2#v}"
+                shift
+            fi
             check_free_space xray || exit 1
             test_connection
             check_health
@@ -679,7 +822,13 @@ while [ $# -gt 0 ]; do
             info_xray
 
             [ "$xray_installed" = "installed" ] && echo && echo -e "  В роутере установлен Xray версии ${yellow}$xray_current_version${reset}"
-            download_xray
+            if ! download_xray; then
+                autoinstall_mode=""
+                echo
+                delete_tmp
+                exit 1
+            fi
+            autoinstall_mode=""
 
             if [ -z "$bypass_xray" ]; then
                 if ! install_xray; then
@@ -746,7 +895,16 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -um)    # Обновление или установка ядра Mihomo
+        -um)    # Обновление или установка ядра Mihomo (-um auto — автоустановка последней версии, -um vX.Y.Z — указанной версии)
+            autoinstall_mode=$(get_auto_arg "$2")
+            auto_mihomo_version=""
+            if [ -n "$autoinstall_mode" ]; then
+                shift
+            elif is_version_arg "$2"; then
+                autoinstall_mode="true"
+                auto_mihomo_version="v${2#v}"
+                shift
+            fi
             check_free_space mihomo || exit 1
             test_connection
             check_health
@@ -759,10 +917,12 @@ while [ $# -gt 0 ]; do
 
             [ "$mihomo_installed" = "installed" ] && echo && echo -e "  В роутере установлен Mihomo версии ${yellow}$mihomo_current_version${reset}"
             if ! download_mihomo; then
+                autoinstall_mode=""
                 echo
                 delete_tmp
                 exit 1
             fi
+            autoinstall_mode=""
 
             if [ -z "$bypass_mihomo" ]; then
                 if ! install_mihomo; then

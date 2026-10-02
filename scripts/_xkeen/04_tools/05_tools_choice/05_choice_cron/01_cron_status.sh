@@ -35,6 +35,20 @@ format_cron_time() {
 }
 
 choice_update_cron() {
+    # Автоустановка (xkeen -i auto cron=on|off)
+    if [ "$autoinstall_mode" = "true" ]; then
+        choice_cancel_cron_select=false
+        choice_geofile_cron_select=false
+        if [ "$auto_cron" = "on" ]; then
+            choice_geofile_cron_select=true
+            echo -e "  ${yellow}Будет выполнено${reset} включение задачи GeoFile/GeoIPSET"
+        else
+            choice_cancel_cron_select=true
+            echo "  Выполнен пропуск настройки автообновления"
+        fi
+        return 0
+    fi
+
     has_updatable_cron_tasks=false
     [ "$info_update_geofile_cron" = "installed" ] && has_updatable_cron_tasks=true
 

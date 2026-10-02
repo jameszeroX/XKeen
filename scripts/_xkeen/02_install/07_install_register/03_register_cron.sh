@@ -95,11 +95,15 @@ exit 0'
     fi
 }
 
-# Обновление cron задач
+# Обновление cron задач: удаляет только УСТАРЕВШИЕ задачи прежних версий XKeen,
+# которые вызывали -ugi/-ugs/-ux/-uk без аргументов (интерактивно они в cron не работают).
+# Задачи с аргументами (например, "-ux auto", "-um auto", "-ux v26.7.28") пользовательские
+# и не затрагиваются. Устаревшей считается запись, где после ключа ничего нет
+# либо сразу идёт перенаправление вывода/комментарий/конвейер.
 update_cron_geofile_task() {
     if [ -f "$cron_dir/$cron_file" ]; then
         tmp_file="$cron_dir/${cron_file}.tmp.$$"
-        grep -v -E "($install_dir/xkeen[[:space:]]+-(ugi|ugs|ux|uk))" "$cron_dir/$cron_file" > "$tmp_file"
+        grep -v -E "$install_dir/xkeen[[:space:]]+-(ugi|ugs|ux|uk)([[:space:]]*$|[[:space:]]+[>&#|])" "$cron_dir/$cron_file" > "$tmp_file"
         mv -f "$tmp_file" "$cron_dir/$cron_file" || rm -f "$tmp_file"
     fi
 }

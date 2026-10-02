@@ -22,6 +22,12 @@ preinstall_warn() {
         echo "  установке не является проблемой XKeen и багрепорт не будет рассмотрен"
         echo -e "  XKeen ${green}рекомендуется${reset} устанавливать на внешний ${green}USB-накопитель${reset}"
         echo
+
+        if [ "$autoinstall_mode" = "true" ]; then
+            echo "  Установка $entware_storage продолжается"
+            return 0
+        fi
+
         echo "  1. Продолжить установку $entware_storage"
         echo "  2. Выйти из установщика"
         echo
@@ -69,6 +75,11 @@ check_free_space() {
         echo -e "  ${red}Внимание: Недостаточно свободного места для установки $client_name${reset}"
         echo -e "  Требуется: ${light_blue}${required_space} MB${reset}, доступно: ${light_blue}${free_space} MB${reset}"
         echo
+
+        if [ "$autoinstall_mode" = "true" ]; then
+            echo -e "  Установка ${yellow}$client_name${reset} отменена"
+            return 1
+        fi
 
         echo -e "  1) Продолжить установку ${yellow}$client_name${reset} ${red}на свой страх и риск${reset}"
         echo -e "  0) Отменить установку ${yellow}$client_name${reset} (${green}Рекомендуется${reset})"

@@ -8,50 +8,69 @@ download_mihomo() {
     _dlm_cache=$(_release_cache_path "$mihomo_api_url") || _dlm_cache=""
 
     while true; do
-        echo
-        echo "$RELEASE_TAGS" | awk '{printf "    %2d. %s\n", NR, $0}'
-        echo
-        echo "     9. Ручной ввод версии"
-        echo
-        echo "     0. Пропустить загрузку Mihomo"
-
-        printf "\n  Введите порядковый номер релиза (0 - пропустить, 9 - ручной ввод): "
-        read -r choice
-
-        case "$choice" in
-            [0-9]) ;;
-            *) 
-                printf "  ${red}Некорректный${reset} ввод. Пожалуйста, введите число\n"
-                sleep 1
-                continue
-                ;;
-        esac
-
-        if [ "$choice" = "0" ]; then
-            bypass_mihomo="true"
-            [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
-            printf "  Загрузка Mihomo ${yellow}пропущена${reset}\n"
-            return 0
-        fi
-
-        if [ "$choice" = "9" ]; then
-            printf "  Введите версию Mihomo для загрузки (например: v1.19.26): "
-            read -r version_selected
-            if [ -z "$version_selected" ]; then
-                printf "  ${red}Ошибка${reset}: Версия не может быть пустой\n"
-                sleep 1
-                continue
+        if [ "$autoinstall_mode" = "true" ]; then
+            # --- Автоустановка (xkeen -um auto | -um vX.Y.Z | -i auto [mihomo=vX.Y.Z]) ---
+            if [ -n "$auto_mihomo_version" ]; then
+                # Конкретная версия, заданная пользователем (как при ручном вводе: всегда с префиксом v)
+                version_selected="$auto_mihomo_version"
+                printf "  ${green}Автоустановка${reset}: выбрана указанная версия ${yellow}%s${reset}\n" "$version_selected"
+            else
+                version_selected=$(echo "$RELEASE_TAGS" | head -1)
+                if [ -z "$version_selected" ]; then
+                    printf "  ${red}Ошибка${reset}: Не удалось определить последнюю версию Mihomo\n"
+                    [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
+                    return 1
+                fi
+                [ "$USE_JSDELIVR" = "true" ] && version_selected="v$version_selected"
+                printf "  ${green}Автоустановка${reset}: выбрана последняя версия ${yellow}%s${reset}\n" "$version_selected"
             fi
-            version_selected=$(echo "$version_selected" | sed 's/^v//')
-            version_selected="v$version_selected"
         else
-            version_selected=$(echo "$RELEASE_TAGS" | awk -v line="$choice" 'NR == line {print $0; exit}')
-            if [ -z "$version_selected" ]; then
-                printf "  Выбранный номер ${red}вне диапазона.${reset} Пожалуйста, попробуйте снова\n"
-                sleep 1
-                continue
+            # --- Интерактивная установка ---
+            echo
+            echo "$RELEASE_TAGS" | awk '{printf "    %2d. %s\n", NR, $0}'
+            echo
+            echo "     9. Ручной ввод версии"
+            echo
+            echo "     0. Пропустить загрузку Mihomo"
+
+            printf "\n  Введите порядковый номер релиза (0 - пропустить, 9 - ручной ввод): "
+            read -r choice
+
+            case "$choice" in
+                [0-9]) ;;
+                *) 
+                    printf "  ${red}Некорректный${reset} ввод. Пожалуйста, введите число\n"
+                    sleep 1
+                    continue
+                    ;;
+            esac
+
+            if [ "$choice" = "0" ]; then
+                bypass_mihomo="true"
+                [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
+                printf "  Загрузка Mihomo ${yellow}пропущена${reset}\n"
+                return 0
             fi
-            [ "$USE_JSDELIVR" = "true" ] && version_selected="v$version_selected"
+
+            if [ "$choice" = "9" ]; then
+                printf "  Введите версию Mihomo для загрузки (например: v1.19.26): "
+                read -r version_selected
+                if [ -z "$version_selected" ]; then
+                    printf "  ${red}Ошибка${reset}: Версия не может быть пустой\n"
+                    sleep 1
+                    continue
+                fi
+                version_selected=$(echo "$version_selected" | sed 's/^v//')
+                version_selected="v$version_selected"
+            else
+                version_selected=$(echo "$RELEASE_TAGS" | awk -v line="$choice" 'NR == line {print $0; exit}')
+                if [ -z "$version_selected" ]; then
+                    printf "  Выбранный номер ${red}вне диапазона.${reset} Пожалуйста, попробуйте снова\n"
+                    sleep 1
+                    continue
+                fi
+                [ "$USE_JSDELIVR" = "true" ] && version_selected="v$version_selected"
+            fi
         fi
 
         VERSION_ARG="$version_selected"
@@ -93,6 +112,7 @@ download_mihomo() {
         yq_available="false"
 
         if ! _network_probe "$download_url" "Mihomo $version_selected"; then
+            [ "$autoinstall_mode" = "true" ] && { [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"; return 1; }
             continue
         fi
 
@@ -126,10 +146,12 @@ download_mihomo() {
         printf "  ${yellow}Выполняется загрузка${reset} Mihomo %s\n" "$version_selected"
 
         if ! _network_download "$download_url" "$tmp_ram/mihomo.$extension" "Mihomo" "$max_attempts" "$delay" 1048576; then
+            [ "$autoinstall_mode" = "true" ] && { [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"; return 1; }
             continue
         fi
         if ! verify_github_sha256 "$tmp_ram/mihomo.$extension" "$download_url" "${mihomo_api_url}/tags/$VERSION_ARG"; then
             [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
+            [ "$autoinstall_mode" = "true" ] && return 1
             continue
         fi
         [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"

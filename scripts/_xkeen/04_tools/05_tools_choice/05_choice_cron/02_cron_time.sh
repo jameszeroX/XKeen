@@ -1,6 +1,25 @@
 # Определение времени для задач cron
+# Случайное целое в диапазоне [0, $1). /dev/urandom, при его отсутствии - время и PID
+_auto_rand() {
+    _ar_val=$(od -An -N2 -tu2 /dev/urandom 2>/dev/null | tr -d ' ')
+    case "$_ar_val" in
+        ''|*[!0-9]*) _ar_val=$(( $(date +%s) + $$ )) ;;
+    esac
+    echo $(( _ar_val % $1 ))
+}
+
 choice_cron_time() {
     [ "$choice_geofile_cron_select" != true ] && return
+
+    # Автоустановка: понедельник в случайное время с 00:00 до 05:59
+    if [ "$autoinstall_mode" = "true" ]; then
+        _cct_offset=$(_auto_rand 360)
+        hour=$(( _cct_offset / 60 ))
+        minute=$(( _cct_offset % 60 ))
+        choice_geofile_cron_time="$minute $hour * * 1"
+        printf "\n  Время автоматического обновления ${yellow}геофайлов${reset}: Понедельник в %02d:%02d\n\n" "$hour" "$minute"
+        return 0
+    fi
 
     echo
     echo -e "  Время автоматического обновления ${yellow}геофайлов${reset}:"

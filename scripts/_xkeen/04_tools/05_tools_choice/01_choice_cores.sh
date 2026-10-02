@@ -1,5 +1,18 @@
 # Запрос на добавление ядер проксирования
 choice_add_proxy_cores() {
+    # Автоустановка (xkeen -i auto cores=...)
+    if [ "$autoinstall_mode" = "true" ]; then
+        add_xray=false
+        add_mihomo=false
+        case "$auto_cores" in
+            xray)   add_xray=true ;;
+            mihomo) add_mihomo=true ;;
+            all)    add_xray=true; add_mihomo=true ;;
+            none)   echo "  Выполнен пропуск установки / обновления ядра проксирования" ;;
+        esac
+        return 0
+    fi
+
     echo
     echo -e "  Выберите ${yellow}ядро проксирования${reset} для загрузки и установки:"
     echo

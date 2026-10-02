@@ -174,8 +174,19 @@ install_geoipset() {
         # бесконечно: процесс висит в R-state с CPU-spin. Дефолтим выбор на "1"
         # (установить), потому что xkeen -gips из cron это типичный
         # non-interactive caller, где пользователь явно ожидает установку.
-        if [ ! -t 0 ]; then
-            printf "  Не интерактивный режим (нет TTY): автоматическая установка GeoIPSET\n"
+        if [ "$autoinstall_mode" = "true" ] && [ "$auto_geoipset" = "off" ]; then
+            printf "  Установка списков GeoIPSET пропущена\n\n"
+            if [ ! -f "$ru_exclude_ipv4" ] && [ ! -f "$ru_exclude_ipv6" ]; then
+                bypass_cron_geoipset=true
+            fi
+            return 0
+        elif [ "$autoinstall_mode" = "true" ] || [ ! -t 0 ]; then
+            if [ "$autoinstall_mode" = "true" ]; then
+                printf "  Установка GeoIPSET\n"
+            else
+                printf "  Не интерактивный режим (нет TTY): автоматическая установка GeoIPSET\n"
+            fi
+            mkdir -p "$ipset_cfg" || { echo "Ошибка: Не удалось создать директорию $ipset_cfg"; exit 1; }
             bypass_cron_geoipset=false
         else
             while true; do

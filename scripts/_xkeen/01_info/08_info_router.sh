@@ -60,7 +60,12 @@ info_firmware() {
         echo -e "  Техподдержка разработчиком ${light_blue}НЕ предоставляетcя${reset}"
         echo -e "  ${red}=============================================${reset}"
         echo
-        
+
+        if [ "$autoinstall_mode" = "true" ]; then
+            echo "  Установка на этой версии прошивки отменена"
+            exit 1
+        fi
+
         while true; do
             echo "  Выберите действие:"
             echo

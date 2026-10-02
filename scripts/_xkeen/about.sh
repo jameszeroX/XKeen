@@ -9,6 +9,7 @@ help_xkeen() {
     echo
     echo -e "  ${yellow}Установка${reset}"
     echo -e "	-i		${italic}Основной режим установки XKeen + Xray + Mihomo + GeoFile/GeoIPSET${reset}"
+    echo -e "	-i auto		${italic}Автоустановка${reset}"
     echo -e "	-io		${italic}OffLine установка XKeen${reset}"
     echo -e "	-toff		${italic}Отключение таймаута при медленной загрузке с GitHub (xkeen -i -toff)${reset}"
     echo -e "	-health		${italic}Базовая проверка исправности Entware перед установкой XKeen${reset}"

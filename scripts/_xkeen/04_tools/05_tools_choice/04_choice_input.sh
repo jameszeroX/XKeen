@@ -40,6 +40,7 @@ toggle_param() {
 
     if [ "$force_state" = "on" ] || [ "$force_state" = "off" ]; then
         if [ "$current_state" = "$force_state" ]; then
+            [ "$bypass_autostart_msg" = "yes" ] && return 0
             if [ "$current_state" = "on" ]; then
                 echo -e "  Состояние ${description} уже ${green}включено${reset}"
             else

@@ -172,6 +172,31 @@ choice_backup_xkeen() {
 }
 
 choice_autostart_xkeen() {
+    # Автоустановка (xkeen -i auto autostart=on|off)
+    # Явно заданный autostart= имеет приоритет; если параметр не задан, то
+    # прежний выбор пользователя (start_auto="off") сохраняется, как и в интерактивном режиме
+    if [ "$autoinstall_mode" = "true" ]; then
+        if [ "$auto_autostart_set" != "true" ] && [ -f "$initd_file" ] && grep -q 'start_auto="off"' "$initd_file"; then
+            echo
+            return 1
+        fi
+        # bypass_autostart_msg скрывает служебные сообщения toggle_param
+        # ("уже включено" и "Новое состояние"), итог выводим сами
+        bypass_autostart_msg="yes"
+        change_autostart_xkeen "$auto_autostart"
+        _cax_rc=$?
+        unset bypass_autostart_msg
+        if [ "$_cax_rc" -eq 0 ]; then
+            if [ "$auto_autostart" = "on" ]; then
+                echo -e "  Автозагрузка XKeen ${green}включена${reset}"
+            else
+                echo -e "  Автозагрузка XKeen ${light_blue}отключена${reset}"
+            fi
+        fi
+        echo
+        return 0
+    fi
+
     if [ -f "$initd_file" ] && grep -q 'start_auto="off"' "$initd_file"; then
         echo
         return 1
