@@ -719,7 +719,15 @@ while [ $# -gt 0 ]; do
         ;;
 
 
-        -uk)    # Обновление XKeen
+        -uk)    # Обновление XKeen (-uk auto — без вопросов)
+            autoinstall_mode=$(get_auto_arg "$2")
+            if [ -n "$autoinstall_mode" ]; then
+                shift
+            elif ! choice_menu "Проверить и установить обновления ${yellow}XKeen${reset}?" "Да" "Нет"; then
+                echo
+                echo -e "  Проверка обновлений XKeen ${red}отменена${reset}"
+                exit 0
+            fi
             test_connection
             check_health	
             test_entware
@@ -754,12 +762,25 @@ while [ $# -gt 0 ]; do
                 exit 1
             fi
 
-            # Перезапуск скрипта
-            grep -E "^[[:space:]]*-uk_post_update[[:space:]]*\)" "$0" > /dev/null && exec sh "$0" -uk_post_update
+            # Перезапуск скрипта. Авто-режим передаём дальше, если новая версия его поддерживает
+            if grep -E "^[[:space:]]*-uk_post_update[[:space:]]*\)" "$0" > /dev/null; then
+                if [ "$autoinstall_mode" = "true" ] && grep -q 'get_auto_arg' "$0"; then
+                    exec sh "$0" -uk_post_update auto
+                fi
+                exec sh "$0" -uk_post_update
+            fi
         ;;
 
 
-        -uk_post_update)
+        -uk_post_update)    # Завершение обновления XKeen (запускается автоматически)
+            autoinstall_mode=$(get_auto_arg "$2")
+            if [ -n "$autoinstall_mode" ]; then
+                shift
+                # Новые возможности версии: GeoIPSET ставится как при запуске без TTY,
+                # задачи планировщика без явного согласия пользователя не создаются
+                auto_geoipset="on"
+                auto_cron="off"
+            fi
             . "$xkeen_dir/import.sh"
             init_directories
             xkeen_set_info

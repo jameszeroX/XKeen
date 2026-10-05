@@ -97,9 +97,6 @@ start_auto="on"
 start_delay=20
 init_delay=0
 
-# Сброс UDP-conntrack на DHCP renew
-udp_flush="on"
-
 # Контроль файловых дескрипторов
 check_fd="off"
 arm64_fd=40000
@@ -2245,7 +2242,6 @@ EOL
     apply_gomemlimit
     inject_var gomemlimit_value "$gomemlimit_value"
     inject_var killswitch "$killswitch"
-    inject_var udp_flush "$udp_flush"
 
     cat >> "$file_netfilter_hook" <<'EOL'
 
@@ -2476,7 +2472,6 @@ if pidof "$name_client" >/dev/null; then
     # DIRECT-потоки (метки NDM) и собственные потоки роутера (mark 0) не
     # затрагиваются. Только UDP: для TCP это привело бы к RST.
     _xkeen_flush_udp_conntrack() {
-        [ "$udp_flush" = "on" ] || return 0
         case "$mode_proxy" in TProxy|Hybrid) ;; *) return 0 ;; esac
         command -v conntrack >/dev/null 2>&1 || return 0
         conntrack -D -p udp -m "$(( table_mark ))" >/dev/null 2>&1

@@ -134,7 +134,7 @@ choice_geodata() {
                 1)
                     if [ "$has_missing_bases" = "false" ]; then
                         echo -e "  Все ${type_name} ${green}уже установлены${reset}"
-                        if input_concordance_list "Вы хотите обновить их?"; then
+                        if choice_menu "Вы хотите обновить их?" "Да" "Нет"; then
                             eval "update_refilter_${type}=true"
                             eval "update_v2fly_${type}=true"
                             eval "update_${src3}_${type}=true"
@@ -154,7 +154,7 @@ choice_geodata() {
                 2)
                     if [ "$has_updatable_bases" = "false" ]; then
                         echo -e "  ${red}Нет установленных ${type_name}${reset} для обновления"
-                        if input_concordance_list "Вы хотите установить их?"; then
+                        if choice_menu "Вы хотите установить их?" "Да" "Нет"; then
                             eval "install_refilter_${type}=true"
                             eval "install_v2fly_${type}=true"
                             eval "install_${src3}_${type}=true"
@@ -181,9 +181,11 @@ choice_geodata() {
                         echo -e "  ${red}Нет установленных ${type_name} для удаления${reset}. Выберите другой пункт"
                         invalid_choice=true
                     else
-                        eval "choice_delete_${type}_refilter_select=true"
-                        eval "choice_delete_${type}_v2fly_select=true"
-                        eval "choice_delete_${type}_${src3}_select=true"
+                        # Отмечаем на удаление только реально установленные базы
+                        # (update_<источник>_<тип>_msg=true выставляется выше для установленных)
+                        for source in refilter v2fly "$src3"; do
+                            [ "$(eval echo \$update_${source}_${type}_msg)" = "true" ] && eval "choice_delete_${type}_${source}_select=true"
+                        done
                     fi
                     ;;
                 0)
