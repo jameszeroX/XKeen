@@ -60,10 +60,14 @@ new_features() {
     if [ ! -d "$ipset_cfg" ]; then
         test_github
         smart_clear
+        # Автоустановка (xkeen -uk auto): пустая строка в начале окна, как у остальных этапов
+        auto_window_gap
         install_geoipset init
 
         if [ "$bypass_cron_geoipset" = "false" ] && [ "$info_update_geofile_cron" != "installed" ]; then
             smart_clear
+            # Автоустановка: предыдущий этап (GeoIPSET) заканчивает вывод пустой строкой
+            auto_window_gap "true"
             choice_update_cron
             update_cron_geofile_task
             smart_clear
