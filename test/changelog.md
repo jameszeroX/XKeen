@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.0.1 Beta (время сборки: 2026-10-05 11:02:04 MSK)
+
+Сборка из [`ef2b258`](https://github.com/jameszeroX/XKeen/commit/ef2b258652e49b401258f82f97f3cd3664b24dd9).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/c09242d304c279b6edf572499840976885d2b9cb/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`3f44f2a...ef2b258`](https://github.com/jameszeroX/XKeen/compare/3f44f2a25ec65808d9b135d0dc5a274a3afaf796...ef2b258652e49b401258f82f97f3cd3664b24dd9).
+
+###### Коммиты
+
+- Add auto mode for xkeen -uk update ([`ef2b258`](https://github.com/jameszeroX/XKeen/commit/ef2b258652e49b401258f82f97f3cd3664b24dd9)) — jameszeroX
+
+---
+
 #### XKeen 2.0.1 Beta (время сборки: 2026-10-02 12:10:42 MSK)
 
 Сборка из [`6edce01`](https://github.com/jameszeroX/XKeen/commit/6edce0140e67cf2e01f446fa5b029ad64d689680).
