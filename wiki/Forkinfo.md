@@ -3,11 +3,14 @@
 Добавлено:
 
 - Совместимость с актуальными версиями KeeneticOS
+- Возможность [автоматической установки](https://github.com/jameszeroX/XKeen/wiki/autoinstall)
 - Поддержка ядра Mihomo и смена ядра проксирования (Xray/Mihomo) параметрами запуска `-xray` и `-mihomo`
 - Реализована работа с пользовательскими политиками [подробнее](https://github.com/jameszeroX/XKeen/wiki/Configuration#пользовательские-политики)
 - Реализовано проксирование DNS [подробнее](https://github.com/jameszeroX/XKeen/wiki/Configuration#Проксирование-dns) (параметр запуска `-dns`)
 - Реализована работа с IPSET и возможность исключать из проксирования IP-подсети России (параметры запуска `-gips`, `-dgips`) [подробнее](https://github.com/jameszeroX/XKeen/wiki/Configuration#описание-работы-ipset-в-xkeen)
 - Поддержка [DSCP-меток QoS](https://jameszero.net/4509.htm) (`61` - force proxy через отдельный inbound/listener, `62` - исключение из проксирования, `63` - проксирование)
+- Возможность [проксирования через выбранного провайдера](https://github.com/jameszeroX/XKeen/wiki/Configuration#pbr-для-исходящих-подключений-xraymihomo)
+- Опциональная балансировка по [фактической скорости](https://github.com/jameszeroX/XKeen/wiki/Configuration#балансировка-по-фактической-скорости) серверов
 - Возможность проксирования трафика Entware (параметр запуска `-pr`) [подробнее](https://github.com/jameszeroX/XKeen/wiki/Configuration#проксирование-трафика-entware)
 - Возможность отключить/включить протокол IPv6 в KeeneticOS (параметр запуска `-ipv6`)
 - Поддержка внешних файлов `ip_exclude.lst`, `port_proxying.lst` и `port_exclude.lst` в директории `/opt/etc/xkeen/` для указания IP и портов (проксирования/исключения из проксирования)

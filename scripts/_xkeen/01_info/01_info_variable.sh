@@ -2,8 +2,8 @@
 # Информация
 # -------------------------------------
 current_datetime=$(date +"%Y-%m-%d_%H-%M")
-xkeen_current_version="2.0.1"
-xkeen_build="Beta"
+xkeen_current_version="2.1"
+xkeen_build="Stable"
 build_timestamp=""
 
 # -------------------------------------

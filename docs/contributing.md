@@ -94,7 +94,7 @@ find scripts/_xkeen -name '*.sh' -exec shellcheck -s sh {} +
 ## Документация
 
 - Корневой `README.md` и `wiki/Configuration.md`, `wiki/Forkinfo.md`, `wiki/Knownissues.md` — пользовательская документация. При фичах, затрагивающих пользователя, — обновлять.
-- [`test/README.md`](../test/README.md) — release-notes 2.0.1 Beta. При новой Beta-фиче — добавить запись.
+- [`test/README.md`](../test/README.md) — release-notes Beta. При новой Beta-фиче — добавить запись.
 - [`docs/`](.) — техническая документация для контрибьюторов. При структурных изменениях кода — обновлять `architecture.md` / `runtime-paths.md` / `commands.md`.
 - [`wiki/`](../wiki) — публичная Wiki для пользователей. Обновления синхронизируются автоматически.
 

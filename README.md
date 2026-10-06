@@ -1,4 +1,4 @@
-# XKeen 2.0
+# XKeen 2.1
 
 [![CodeFactor](https://www.codefactor.io/repository/github/jameszerox/xkeen/badge)](https://www.codefactor.io/repository/github/jameszerox/xkeen) [![Github All Releases](https://img.shields.io/github/downloads/jameszeroX/XKeen/total.svg)](https://github.com/jameszeroX/XKeen/releases) [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
@@ -22,7 +22,6 @@
 - Поддержка режимов **TProxy**, **Hybrid**, **Redirect**, **Other** (socks5/http)
 - Прозрачное проксирование **TCP** и **UDP**
 - Поддержка ядер-проксирования **Xray** и **Mihomo**
-- Совместимость с **KeeneticOS 5+**
 - Управление через shell и [веб-панели](https://github.com/jameszeroX/XKeen?tab=readme-ov-file#дополнения) сторонних разработчиков
 
 XKeen работает полностью на стороне роутера, не меняет настройки клиентов и не требует установки на них дополнительных программ.
@@ -48,7 +47,8 @@ XKeen работает полностью на стороне роутера, н
 
 ### Добавлено
 
-- поддержка **KeeneticOS 5+**
+- поддержка актуальных версий **KeeneticOS**
+- возможнось автоустановки
 - управление IPv6
 - поддержка ядра **Mihomo**
 - быстрое переключение Xray / Mihomo
@@ -85,7 +85,7 @@ XKeen работает полностью на стороне роутера, н
 
 ## Поддержка проекта
 
-Форк XKeen, как и оригинал, совершено бесплатен и не имеет каких либо ограничений по использованию. Надеюсь, доработки XKeen, многие из которых я сделал по Вашим просьбам, оказались полезны, так же, как и мои сообщения в [телеграм-чате](https://t.me/+8Cvh7oVf6cE0MWRi). Для меня очень важно понимать, что труд и время потрачены не зря. Буду благодарен за любую Вашу поддержку на кофе для развития проекта:
+Форк XKeen, как и оригинал, совершено бесплатен и не имеет каких либо ограничений по использованию. Надеюсь, доработки XKeen, многие из которых я сделал по Вашим просьбам, оказались полезны, так же, как и мои сообщения в [телеграм-чате](https://t.me/+8Cvh7oVf6cE0MWRi). Дальнейшее развитие проекта зависит исключительно от Вашего участия. Буду благодарен за любую Вашу поддержку на кофе:
 
 - [CloudTips](https://pay.cloudtips.ru/p/7edb30ec)
 - [ЮMoney](https://yoomoney.ru/to/41001350776240)
@@ -102,8 +102,9 @@ XKeen работает полностью на стороне роутера, н
 - XKeen UI — https://github.com/zxc-rv/XKeen-UI
 - XKeen UI — https://github.com/umarcheh001/Xkeen-UI
 - XKeen UI — https://github.com/fan92rus/xkeen-ui
+- Xray Dashboard — https://github.com/yuran2000/xkeen-windows-dashboard
 - Генератор Outbound — https://zxc-rv.github.io/XKeen-UI/Outbound_Generator/
-- Парсер подписок - https://github.com/tkukushkin/xkeen-subscription-watcher
+- Парсер подписок — https://github.com/tkukushkin/xkeen-subscription-watcher
 - Парсер подписок — https://github.com/V2as/SubKeen
 - Mihomo Studio — https://github.com/l-ptrol/mihomo_studio
 - Конвертер JSON-подписок — https://sngvy.github.io/json-sub-to-outbounds
