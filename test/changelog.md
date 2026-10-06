@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1 Stable (время сборки: 2026-10-06 10:56:20 MSK)
+
+Сборка из [`adb1706`](https://github.com/jameszeroX/XKeen/commit/adb1706e62d472329bd8824db00144f21a9571a0).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/8cbd1bfe6a393175aeec360d78f0c90676253c3a/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`e7e1f26...adb1706`](https://github.com/jameszeroX/XKeen/compare/e7e1f26d1246d40d80d9e001d2af4d8100bcaf2f...adb1706e62d472329bd8824db00144f21a9571a0).
+
+###### Коммиты
+
+- XKeen 2.1 Release ([`adb1706`](https://github.com/jameszeroX/XKeen/commit/adb1706e62d472329bd8824db00144f21a9571a0)) — jameszeroX
+
+---
+
 #### XKeen 2.0.1 Beta (время сборки: 2026-10-05 11:44:46 MSK)
 
 Сборка из [`7b9435d`](https://github.com/jameszeroX/XKeen/commit/7b9435d8a98489c3ed21141138be20453ab2106c).
