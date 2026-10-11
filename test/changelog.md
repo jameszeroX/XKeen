@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-11 12:11:43 MSK)
+
+Сборка из [`d5cab1f`](https://github.com/jameszeroX/XKeen/commit/d5cab1fcd49c9cb0969491329dbf0da4586809dc).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/93227cf3b35c7886ca7d63c13b143e8580b3bfbc/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`ae68a69...d5cab1f`](https://github.com/jameszeroX/XKeen/compare/ae68a694b58c44bba315cf8daa3ca8ddf2e99f8c...d5cab1fcd49c9cb0969491329dbf0da4586809dc).
+
+###### Коммиты
+
+- Refactor RCI access ([`d5cab1f`](https://github.com/jameszeroX/XKeen/commit/d5cab1fcd49c9cb0969491329dbf0da4586809dc)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-06 11:10:33 MSK)
 
 Сборка из [`b28c37e`](https://github.com/jameszeroX/XKeen/commit/b28c37e63bd1dd56759dc245be1d8feb03b3d453).
