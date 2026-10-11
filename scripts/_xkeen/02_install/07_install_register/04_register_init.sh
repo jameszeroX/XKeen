@@ -316,7 +316,7 @@ wait_for_rci_token() {
     _rci_wait_attempts=20
     _rci_wait_i=0
     while [ "$_rci_wait_i" -lt "$_rci_wait_attempts" ]; do
-        http_code=$(curl -ksS -o /dev/null -w "%{http_code}" --connect-timeout 2 -m 5 -H "X-Ndma-Tkn: $rci_token" "${url_server}/${url_policy}")
+        http_code=$(curl --noproxy '*' -ksS -o /dev/null -w "%{http_code}" --connect-timeout 2 -m 5 -H "X-Ndma-Tkn: $rci_token" "${url_server}/${url_policy}")
 
         case "$http_code" in
             200) return 0 ;;
@@ -350,9 +350,9 @@ esac
 # 01_info_common.sh:curl_api — правь все три места синхронно.
 curl_api() {
     if [ -n "$rci_token" ]; then
-        curl --connect-timeout 2 -m 5 -kfsS -H "X-Ndma-Tkn: $rci_token" "$@"
+        curl --noproxy '*' --connect-timeout 2 -m 5 -kfsS -H "X-Ndma-Tkn: $rci_token" "$@"
     else
-        curl --connect-timeout 2 -m 5 -kfsS "$@"
+        curl --noproxy '*' --connect-timeout 2 -m 5 -kfsS "$@"
     fi
 }
 
@@ -456,7 +456,7 @@ ${custom_details}"
     fi
 }
 
-utils="jq curl grep awk sed ipset ip logger"
+utils="jq curl grep awk sed ipset ip logger killall"
 [ "$name_client" = "mihomo" ] && utils="$utils yq"
 for cmd in $utils; do
     command -v "$cmd" >/dev/null 2>&1 || log_error_terminal "Не найдена необходимая утилита: ${yellow}$cmd${reset}"
@@ -2254,9 +2254,9 @@ restart_script() {
 # 01_info_common.sh:curl_api — правь все три места синхронно.
 curl_api() {
     if [ -n "$rci_token" ]; then
-        curl --connect-timeout 2 -m 5 -kfsS -H "X-Ndma-Tkn: $rci_token" "$@"
+        curl --noproxy '*' --connect-timeout 2 -m 5 -kfsS -H "X-Ndma-Tkn: $rci_token" "$@"
     else
-        curl --connect-timeout 2 -m 5 -kfsS "$@"
+        curl --noproxy '*' --connect-timeout 2 -m 5 -kfsS "$@"
     fi
 }
 

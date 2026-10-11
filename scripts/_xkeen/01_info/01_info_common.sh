@@ -351,16 +351,44 @@ get_rci_token() {
 }
 get_rci_token
 
-http_code=$(
-    curl --connect-timeout 2 -m 5 -ksS -o /dev/null -w "%{http_code}" -H "X-Ndma-Tkn: $rci_token" "127.0.0.1:79/rci/show/version"
-)
+# Проверка доступности RCI. --noproxy '*': запрос идёт на loopback и не должен
+# уходить через http_proxy/all_proxy из окружения (иначе 401/403 может
+# вернуть прокси, а не RCI). Заголовок токена шлём только если токен задан.
+rci_probe_code() {
+    if [ -n "$rci_token" ]; then
+        curl --noproxy '*' --connect-timeout 2 -m 5 -ksS -o /dev/null -w "%{http_code}" -H "X-Ndma-Tkn: $rci_token" "127.0.0.1:79/rci/show/version" 2>/dev/null
+    else
+        curl --noproxy '*' --connect-timeout 2 -m 5 -ksS -o /dev/null -w "%{http_code}" "127.0.0.1:79/rci/show/version" 2>/dev/null
+    fi
+}
+
+# 401/403 перепроверяем (до 3 попыток)
+# Остальные коды (в т.ч. 000) не считаем
+# проблемой токена — поведение прежнее.
+http_code=""
+_rci_probe_i=0
+while [ "$_rci_probe_i" -lt 3 ]; do
+    http_code=$(rci_probe_code)
+    case "$http_code" in
+        401|403) _rci_probe_i=$((_rci_probe_i + 1)); [ "$_rci_probe_i" -lt 3 ] && sleep 1 ;;
+        *) break ;;
+    esac
+done
+unset _rci_probe_i
 
 case "$http_code" in
     401|403)
-        printf "  ${red}Ошибка${reset}: Отсутствует или недействителен ${light_blue}токен доступа${reset} к RCI
+        if [ -n "$rci_token" ]; then
+            printf "  ${red}Ошибка${reset}: RCI роутера отклонил ${light_blue}токен доступа${reset} из ${yellow}xkeen.json${reset} (HTTP ${http_code})
+
+  Токен недействителен или устарел. Создайте новый в веб-интерфейсе
+  или удалите ${light_blue}rci_token${reset} из ${yellow}xkeen.json${reset}, если ваша прошивка его не требует\n" >&2
+        else
+            printf "  ${red}Ошибка${reset}: RCI роутера отказал в доступе (HTTP ${http_code}), ${light_blue}токен доступа${reset} не задан
 
   Для ${green}KeeneticOS 5.2${reset} и выше требуется ${light_blue}токен доступа${reset}
   Создайте его в веб-интерфейсе и укажите в ${yellow}xkeen.json${reset}\n" >&2
+        fi
         exit 1
         ;;
 esac
@@ -368,9 +396,9 @@ esac
 # Параметры curl
 curl_api() {
     if [ -n "$rci_token" ]; then
-        curl --connect-timeout 2 -m 5 -kfsS -H "X-Ndma-Tkn: $rci_token" "$@"
+        curl --noproxy '*' --connect-timeout 2 -m 5 -kfsS -H "X-Ndma-Tkn: $rci_token" "$@"
     else
-        curl --connect-timeout 2 -m 5 -kfsS "$@"
+        curl --noproxy '*' --connect-timeout 2 -m 5 -kfsS "$@"
     fi
 }
 
