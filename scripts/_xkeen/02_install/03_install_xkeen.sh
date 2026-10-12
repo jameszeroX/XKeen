@@ -20,7 +20,7 @@ install_xkeen() {
             rm -f "$xkeen_archive"
             return 1
         }
-        if ! tar -xzf "$xkeen_archive" -C "$stage_dir" xkeen _xkeen \
+        if ! tar -xzf "$xkeen_archive" -C "$stage_dir" \
             || [ ! -f "$stage_dir/xkeen" ] || [ ! -d "$stage_dir/_xkeen" ]; then
             echo -e "  ${red}Ошибка${reset}: В архиве XKeen нет ожидаемых xkeen/_xkeen"
             rm -rf "$stage_dir" "$xkeen_archive"
