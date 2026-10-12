@@ -192,6 +192,59 @@ verify_install_sha256() {
     return 1
 }
 
+# Функция загрузки с проверкой (дубль из scripts/_xkeen/.../01_tests_system.sh:
+# install.sh запускается до установки модулей, поэтому правки нужны в обоих местах)
+download_with_check() {
+    url="$1"
+    output_file="$2"
+    min_size="${3:-50000}"
+
+    curl --connect-timeout 5 -m 15 -y 1000 -Y 5 -s -L "$url" -o "$output_file" 2>/dev/null
+
+    if [ -f "$output_file" ]; then
+        size=$(wc -c < "$output_file" 2>/dev/null || echo 0)
+        if [ "$size" -gt "$min_size" ]; then
+            if head -c 100 "$output_file" 2>/dev/null | grep -iqE '^(<!doctype|<html|<head|<body|404|error|not found)'; then
+                rm -f "$output_file" 2>/dev/null
+                return 1
+            fi
+            return 0
+        fi
+    fi
+
+    rm -f "$output_file" 2>/dev/null
+    return 1
+}
+
+# Функция проверки доступности репозитория Entware.
+# Выполняется до начала установки: при недоступности репозитория
+# установка прерывается, чтобы не оставить систему в полуустановленном состоянии.
+check_entware_repo() {
+    printf "  ${yellow}Проверка доступности${reset} репозитория Entware. Подождите, пожалуйста...\n"
+
+    repo_url=$(awk '/^src/ {print $3; exit}' /opt/etc/opkg.conf 2>/dev/null)
+
+    if [ -z "$repo_url" ]; then
+        printf "  ${red}Не удалось${reset} определить используемый репозиторий Entware\n"
+        printf "  Проверьте файл ${yellow}/opt/etc/opkg.conf${reset}\n"
+        exit 1
+    fi
+
+    tmp_file="/tmp/pkg_check_$$"
+
+    if download_with_check "$repo_url/Packages.gz" "$tmp_file"; then
+        rm -f "$tmp_file" 2>/dev/null
+        printf "  Репозиторий Entware ${green}доступен${reset}. Продолжаем...\n\n"
+        return 0
+    fi
+
+    rm -f "$tmp_file" 2>/dev/null
+    printf "  Репозиторий Entware ${red}недоступен${reset}\n"
+    printf "  Установка ${red}прервана${reset}. Выберите рабочее зеркало по ссылке ${light_blue}https://entware.net/mirrors.html${reset}\n"
+    printf "  и укажите его в файле ${yellow}/opt/etc/opkg.conf${reset}, после чего запустите установку повторно\n"
+    exit 1
+}
+
 # Парсинг аргументов командной строки
 VERSION_TYPE=""
 LEGACY_VERSION=""
@@ -225,6 +278,9 @@ done
 
 [ -t 1 ] && clear
 echo
+
+# Проверяем доступность репозитория Entware до начала установки
+check_entware_repo
 
 # Проверяем наличие пользовательского прокси в конфиге
 if get_user_proxy; then
