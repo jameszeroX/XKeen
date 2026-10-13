@@ -86,7 +86,7 @@ download_with_check() {
 
 # Функция проверки доступности Entware
 test_entware() {
-    printf "  ${yellow}Проверка доступности${reset} репозитория Entware. Подождите, пожалуйста...\n"
+    printf "  ${yellow}Проверка доступности${reset} репозитория Entware. Пожалуйста, подождите...\n"
     repo_url=$(awk '/^src/ {print $3; exit}' /opt/etc/opkg.conf 2>/dev/null)
 
     if [ -z "$repo_url" ]; then
@@ -142,7 +142,7 @@ test_github() {
 
     get_user_proxy
 
-    printf "  ${yellow}Проверка доступности${reset} GitHub. Подождите, пожалуйста...\n"
+    printf "  ${yellow}Проверка доступности${reset} GitHub. Пожалуйста, подождите...\n"
 
     # Pair probe: github.com (releases) + raw.githubusercontent.com
     # (для dev-обновления). Разные CDN, разный uptime, проверяем оба.

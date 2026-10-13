@@ -220,7 +220,7 @@ download_with_check() {
 # Выполняется до начала установки: при недоступности репозитория
 # установка прерывается, чтобы не оставить систему в полуустановленном состоянии.
 check_entware_repo() {
-    printf "  ${yellow}Проверка доступности${reset} репозитория Entware. Подождите, пожалуйста...\n"
+    printf "  ${yellow}Проверка готовности${reset} к установке. Пожалуйста, подождите...\n"
 
     repo_url=$(awk '/^src/ {print $3; exit}' /opt/etc/opkg.conf 2>/dev/null)
 
@@ -234,7 +234,7 @@ check_entware_repo() {
 
     if download_with_check "$repo_url/Packages.gz" "$tmp_file"; then
         rm -f "$tmp_file" 2>/dev/null
-        printf "  Репозиторий Entware ${green}доступен${reset}. Продолжаем...\n\n"
+        clear && echo
         return 0
     fi
 
