@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-14 12:50:39 MSK)
+
+Сборка из [`fe06896`](https://github.com/jameszeroX/XKeen/commit/fe068964c2d470b15dcd3e6a3be8c7f47e5d37a5).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/8dfbf9f77155e8df793a7e833c306a74b56c40a2/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`47ece51...fe06896`](https://github.com/jameszeroX/XKeen/compare/47ece51b3e0214b948205b92ed6e074ab5a14f0e...fe068964c2d470b15dcd3e6a3be8c7f47e5d37a5).
+
+###### Коммиты
+
+- Fix proxy warnings and cache reset ([`fe06896`](https://github.com/jameszeroX/XKeen/commit/fe068964c2d470b15dcd3e6a3be8c7f47e5d37a5)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-13 21:20:44 MSK)
 
 Сборка из [`3d26ae0`](https://github.com/jameszeroX/XKeen/commit/3d26ae06339dea10e38565226b4239828292c5cf).
