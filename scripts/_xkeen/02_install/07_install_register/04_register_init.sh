@@ -126,8 +126,13 @@ log_info_router() { logger -p notice -t "$name_app" "$1"; }
 log_warning_router() { logger -p warning -t "$name_app" "$1"; }
 log_error_router() { logger -p error -t "$name_app" "$1"; }
 
-log_info_terminal() { echo -e "\n${green}Информация${reset}: $1" >&2; }
-log_warning_terminal() { echo -e "\n${yellow}Предупреждение${reset}: $1" >&2; }
+# Сообщения начинаются с пустой строки и не заканчиваются ею. Если выводилось
+# хотя бы одно сообщение, перед дальнейшим выводом (старт прокси-клиента)
+# flush_warn_gap добавляет одну разделяющую пустую строку.
+_warn_gap=""
+log_info_terminal() { _warn_gap=1; echo -e "\n${green}Информация${reset}: $1" >&2; }
+log_warning_terminal() { _warn_gap=1; echo -e "\n${yellow}Предупреждение${reset}: $1" >&2; }
+flush_warn_gap() { [ -n "$_warn_gap" ] && echo; _warn_gap=""; return 0; }
 log_error_terminal() { echo -e "\n${red}Ошибка${reset}: $1" >&2; exit 1; }
 
 # Runtime state must stay in tmpfs, but must never be created in a
@@ -960,8 +965,7 @@ $config_hint
   Если нужно направить сам ${yellow}${name_client}${reset} через конкретную политику Keenetic, используйте код из ${yellow}xkeen -pbr codes${reset}
 
   Отсутствие маркировки в этом режиме приведет к петле трафика и зависанию роутера
-  Проксирование трафика Entware ${red}отключено${reset} для безопасности
-"
+  Проксирование трафика Entware ${red}отключено${reset} для безопасности"
         proxy_router="off"
     fi
 
@@ -1085,8 +1089,7 @@ process_user_ports() {
     if [ -n "$port_donor" ] && [ -n "$port_exclude" ]; then
         log_warning_terminal "
   Заданы и порты проксирования, и порты исключения
-  Прокси будет запущен на портах проксирования, порты исключения игнорируются
-"
+  Прокси будет запущен на портах проксирования, порты исключения игнорируются"
         port_exclude=""
     fi
 }
@@ -1244,8 +1247,7 @@ get_modules() {
   Невозможно использовать выбранные порты без него
   Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
 
-  Прокси будет запущен на всех портах
-"
+  Прокси будет запущен на всех портах"
             port_donor=""
             port_exclude=""
         fi
@@ -1257,8 +1259,7 @@ get_modules() {
             log_warning_terminal "
   Модуль '${light_blue}xt_dscp${reset}' не загружен
   Работа с DSCP-метками невозможна
-  Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'
-"
+  Установите компонент роутера '${yellow}Модули ядра подсистемы Netfilter${reset}'"
             dscp_force_proxy=""
             dscp_exclude=""
             dscp_proxy=""
@@ -1848,8 +1849,7 @@ configure_dscp_force_proxy() {
   DSCP force-proxy '${yellow}${dscp_force_proxy_tag}${reset}' найден, но настроен неверно
   ${light_blue}${dscp_force_proxy_reason}${reset}
 
-  Маршрутизация по DSCP ${green}${dscp_force_proxy}${reset} ${red}отключена${reset}
-"
+  Маршрутизация по DSCP ${green}${dscp_force_proxy}${reset} ${red}отключена${reset}"
     fi
 
     return 0
@@ -3724,6 +3724,14 @@ proxy_start() {
             _pm_tmp="${policy_mark_cache}.tmp.$$"
             (umask 077; printf '%s\n' "$policy_mark" > "$_pm_tmp") &&
                 chmod 600 "$_pm_tmp" && mv -f "$_pm_tmp" "$policy_mark_cache"
+        elif [ -n "$api_policy_json" ] && \
+             printf '%s' "$api_policy_json" | jq -e 'type == "array" or type == "object"' >/dev/null 2>&1; then
+            # RCI ответил корректно, но политики xkeen в ответе нет:
+            # её удалили вручную. Кеш недействителен, режим "для всех клиентов".
+            if [ -e "$policy_mark_cache" ]; then
+                rm -f "$policy_mark_cache"
+                log_info_router "Политика $name_policy отсутствует в RCI; кеш mark сброшен, прокси будет запущен для всех клиентов"
+            fi
         elif [ -s "$policy_mark_cache" ]; then
             _cached_mark=$(cat "$policy_mark_cache" 2>/dev/null)
             case "$_cached_mark" in
@@ -3790,6 +3798,7 @@ proxy_start() {
                 }
             fi
         fi
+        flush_warn_gap
         if proxy_status; then
             echo -e "  Прокси-клиент уже ${green}запущен${reset}"
             if [ "$mode_proxy" != "Other" ] && ! configure_firewall; then
