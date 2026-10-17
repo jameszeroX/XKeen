@@ -2406,12 +2406,14 @@ if pidof "$name_client" >/dev/null; then
             -v tag="$comment_tag" \
             -v c1="$name_chain" \
             -v c2="${name_chain}_out" \
-            -v c3="${name_chain}_force" '
+            -v c3="${name_chain}_force" \
+            -v c4="${name_chain}_divert" '
             index($0, tag) &&
             $1 == "-A" &&
             $2 != c1 &&
             $2 != c2 &&
-            $2 != c3 {
+            $2 != c3 &&
+            $2 != c4 {
                 sub(/^-A /, "-D ")
                 print
             }
@@ -2422,6 +2424,7 @@ if pidof "$name_client" >/dev/null; then
             printf ':%s -\n' "$name_chain"
             { [ -n "$port_dscp_force_proxy" ] || [ -n "$policy_mark_full" ]; } && printf ':%s_force -\n' "$name_chain"
             [ "$proxy_router" = "on" ] && printf ':%s_out -\n' "$name_chain"
+            [ "$_table" = "$table_tproxy" ] && [ -n "$port_tproxy" ] && printf ':%s_divert -\n' "$name_chain"
             [ -n "$_deletes" ] && printf '%s\n' "$_deletes"
             printf '%s' "$_rules"
             printf 'COMMIT'
@@ -2782,6 +2785,13 @@ if pidof "$name_client" >/dev/null; then
         # видит L2-MAC только для устройств в одном broadcast-домене с роутером
         # (LAN/Wi-Fi/guest-bridge); за L3-VLAN правило безвредно неактивно.
         ipt -I PREROUTING 1 -m set --match-set "$name_ipset_deny_mac" src $comment -j RETURN >/dev/null 2>&1
+
+        if [ "$table" = "$table_tproxy" ] && [ "${network_tproxy#*tcp}" != "$network_tproxy" ]; then
+            divert_chain="${name_chain}_divert"
+            ipt -A "$divert_chain" $comment -j MARK --set-mark "$table_mark" >/dev/null 2>&1
+            ipt -A "$divert_chain" $comment -j ACCEPT >/dev/null 2>&1
+            ipt -A PREROUTING -p tcp -m socket --transparent $comment -j "$divert_chain" >/dev/null 2>&1
+        fi
 
         if [ "$table" = "$table_redirect" ] && [ -n "$port_dscp_force_proxy_redirect" ] && [ -n "$dscp_force_proxy" ]; then
             for force_net in $network_dscp_force_proxy_redirect; do
@@ -3347,6 +3357,12 @@ clean_firewall() {
         if "$family" -w -t "$table" -nL "$force_chain" >/dev/null 2>&1; then
             "$family" -w -t "$table" -F "$force_chain" >/dev/null 2>&1
             "$family" -w -t "$table" -X "$force_chain" >/dev/null 2>&1
+        fi
+
+        divert_chain="${name_chain}_divert"
+        if "$family" -w -t "$table" -nL "$divert_chain" >/dev/null 2>&1; then
+            "$family" -w -t "$table" -F "$divert_chain" >/dev/null 2>&1
+            "$family" -w -t "$table" -X "$divert_chain" >/dev/null 2>&1
         fi
 
         killswitch_chain="${name_chain}_killswitch"
