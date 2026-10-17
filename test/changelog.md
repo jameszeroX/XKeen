@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-17 10:54:42 MSK)
+
+Сборка из [`b935dc3`](https://github.com/jameszeroX/XKeen/commit/b935dc3ee88d77f7296e27739b2b73394902e61a).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/798d55ff58f7bf44c3f33574e605cbc9a1aed9ec/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`8dfbf9f...b935dc3`](https://github.com/jameszeroX/XKeen/compare/8dfbf9f77155e8df793a7e833c306a74b56c40a2...b935dc3ee88d77f7296e27739b2b73394902e61a).
+
+###### Коммиты
+
+- fix(speed_balancer): поддержка тегов outbound с пробелами в имени ([`b935dc3`](https://github.com/jameszeroX/XKeen/commit/b935dc3ee88d77f7296e27739b2b73394902e61a)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-14 12:50:39 MSK)
 
 Сборка из [`fe06896`](https://github.com/jameszeroX/XKeen/commit/fe068964c2d470b15dcd3e6a3be8c7f47e5d37a5).
