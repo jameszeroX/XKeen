@@ -4,6 +4,9 @@
 # Аппаратная часть (bo, замер через probe+adrules) доказана на живом роутере,
 # здесь проверяется sh-логика, которая от железа не зависит: разбор нод из
 # конфига, разбор вывода bi, чтение/запись настроек и решение гистерезиса.
+# Теги outbound'ов могут содержать пробелы ("proxy DE Frankfurt") и прочие
+# спецсимволы — для них есть отдельные регрессионные проверки (секции
+# «теги с пробелами»): списки нод идут по одному тегу на строку.
 # xray и curl заглушены shell-функциями, xray-конфиги — фикстуры во временном
 # каталоге. Нужен jq (alpine).
 
@@ -94,7 +97,11 @@ curl() {
     # STUB_RAW, если задан, печатается как есть (для проверки разбора -w).
     [ -n "$STUB_RAW" ] && { printf '%s' "$STUB_RAW"; return 1; }
     _n=$(jq -r '.routing.rules[0].outboundTag' "$sb_rule_tmp" 2>/dev/null)
-    _bytes=$(eval "printf '%s' \"\${STUB_SPEED_$(echo "$_n" | tr '-' '_')}\"")
+    # Имя переменной строится из тега заменой всех не-буквенно-цифровых
+    # символов на "_" (тег может содержать пробелы, '*', кавычки): "sub-a" ->
+    # sub_a, "proxy DE Frankfurt" -> proxy_DE_Frankfurt. printf, а не echo —
+    # иначе завершающий перевод строки тоже превратился бы в "_".
+    _bytes=$(eval "printf '%s' \"\${STUB_SPEED_$(printf '%s' "$_n" | tr -c 'A-Za-z0-9' '_')}\"")
     [ -n "$_bytes" ] || _bytes=0
     # формат -w: size_download time_total http_code (без завершающего пробела)
     if [ "$_bytes" = "0" ]; then printf '0 0 000'; else printf '%s 1 200' "$_bytes"; fi
@@ -165,7 +172,7 @@ check "прочие ключи не затёрты" "$(strip_json_comments "$xke
 # === разбор нод балансировщика по selector ===
 sb_balancer="balancer"
 sb_node_list
-check "ноды balancer по подстроке sub-" "$sb_nodes" "sub-a sub-b sub-us1"
+check "ноды balancer по подстроке sub-" "$sb_nodes" "$(printf '%s\n%s\n%s' sub-a sub-b sub-us1)"
 sb_balancer="balancer-us"
 sb_node_list
 check "ноды balancer-us (sub-us)" "$sb_nodes" "sub-us1"
@@ -188,8 +195,50 @@ sb_routing_file="$xray_conf_dir/routing_custom.json"
 sb_outbounds_file="$xray_conf_dir/outbounds_custom.json"
 sb_balancer="balancer"
 sb_node_list
-check "кастомные имена файлов: ноды по node-" "$sb_nodes" "node-1 node-2"
+check "кастомные имена файлов: ноды по node-" "$sb_nodes" "$(printf '%s\n%s' node-1 node-2)"
 # вернуть дефолтные пути — дальше sb_tick внутри снова зовёт sb_node_list
+sb_routing_file="$xray_conf_dir/05_routing.json"
+sb_outbounds_file="$xray_conf_dir/04_outbounds.json"
+
+# === теги с пробелами: разбор нод ===
+# Регрессия: sb_nodes раньше была строкой через пробел, перебор шёл через
+# `for x in $var`, и тег "proxy DE Frankfurt" рассыпался на три слова. Теперь
+# один тег на строку, перебор через `read -r`. Фикстура включает тег с '*':
+# через `for` он ещё и раскрылся бы в имена файлов текущего каталога.
+cat > "$xray_conf_dir/routing_space.json" <<'EOF'
+{ "routing": { "balancers": [
+  { "tag": "balancer", "selector": ["proxy"] },
+  { "tag": "balancer-de", "selector": ["DE Frankfurt"] }
+], "rules": [] } }
+EOF
+cat > "$xray_conf_dir/outbounds_space.json" <<'EOF'
+{ "outbounds": [
+  { "tag": "proxy DE Frankfurt" }, { "tag": "proxy US East 2" },
+  { "tag": "proxy-NL" }, { "tag": "direct" }, { "tag": "proxy * all" }
+] }
+EOF
+sb_routing_file="$xray_conf_dir/routing_space.json"
+sb_outbounds_file="$xray_conf_dir/outbounds_space.json"
+
+sb_balancer="balancer"
+sb_node_list; rc=$?
+check "теги с пробелами: sb_node_list rc=0" "$rc" "0"
+check "теги с пробелами: ноды целиком, по одному на строку" "$sb_nodes" \
+    "$(printf '%s\n%s\n%s\n%s' 'proxy DE Frankfurt' 'proxy US East 2' 'proxy-NL' 'proxy * all')"
+check "теги с пробелами: число нод = 4 (не 10 слов)" "$(printf '%s\n' "$sb_nodes" | awk 'END { print NR }')" "4"
+check "теги с пробелами: '*' не раскрыт в файлы" "$(printf '%s\n' "$sb_nodes" | grep -c -F 'proxy * all')" "1"
+check "теги с пробелами: нет обрезанного 'proxy'" "$(printf '%s\n' "$sb_nodes" | grep -c -x 'proxy')" "0"
+
+# selector с пробелом: подстрока "DE Frankfurt" должна находить тег, а не
+# распадаться на селекторы "DE" и "Frankfurt"
+sb_balancer="balancer-de"
+sb_node_list
+check "selector с пробелом: находит ровно свой тег" "$sb_nodes" "proxy DE Frankfurt"
+
+sb_balancer="нет-такого"
+sb_node_list; rc=$?
+check "теги с пробелами: неизвестный балансировщик -> код 1" "$rc" "1"
+# вернуть дефолтные пути
 sb_routing_file="$xray_conf_dir/05_routing.json"
 sb_outbounds_file="$xray_conf_dir/04_outbounds.json"
 
@@ -199,6 +248,13 @@ check "sb_current_target: без override берёт Selects" "$(sb_current_targ
 STUB_OVERRIDE="sub-z"
 check "sb_current_target: override приоритетнее Selects" "$(sb_current_target)" "sub-z"
 STUB_OVERRIDE=""
+# тег с пробелами: берётся целиком, а не первое слово; хвостовые пробелы
+# заглушки bi срезаются (на живом bi строка тоже добита пробелами)
+STUB_CURRENT="proxy DE Frankfurt"; STUB_OVERRIDE=""
+check "sb_current_target: Selects с пробелами целиком" "$(sb_current_target)" "proxy DE Frankfurt"
+STUB_OVERRIDE="proxy US East 2"
+check "sb_current_target: Override с пробелами целиком" "$(sb_current_target)" "proxy US East 2"
+STUB_OVERRIDE=""; STUB_CURRENT="sub-a"
 
 # === замер одной ноды (возвращает "КБ/с код") ===
 STUB_SPEED_sub_a=$((2048*1024))   # 2048 КБ/с
@@ -220,6 +276,18 @@ check "таймаут с частичной закачкой -> скорость
 STUB_RAW="0 0 000"
 check "полный отказ -> 0 000" "$(sb_measure_node sub-a)" "0 000"
 STUB_RAW=""
+
+# теги с пробелами и спецсимволами: правило замера должно нести тег ТОЧНО
+# (раньше JSON собирался printf'ом — кавычка или \ в теге ломали его)
+STUB_SPEED_proxy_DE_Frankfurt=$((2048*1024))
+check "замер: тег с пробелами -> скорость и код" "$(sb_measure_node 'proxy DE Frankfurt')" "2048 200"
+check "правило замера: тег с пробелами целиком" "$(jq -r '.routing.rules[0].outboundTag' "$WORK/last_rule.json")" "proxy DE Frankfurt"
+check "правило замера: тег с пробелами, inbound цел" "$(jq -r '.routing.rules[0].inboundTag[0]' "$WORK/last_rule.json")" "probe"
+
+_odd='proxy "q" \b'
+sb_measure_node "$_odd" >/dev/null 2>&1
+check "правило замера: тег с кавычкой и \ — валидный JSON" "$(jq -e . "$WORK/last_rule.json" >/dev/null 2>&1 && echo ok || echo bad)" "ok"
+check "правило замера: тег с кавычкой и \ — без искажений" "$(jq -r '.routing.rules[0].outboundTag' "$WORK/last_rule.json")" "$_odd"
 
 # === гистерезис в sb_tick ===
 # порог задаём явно, чтобы тест не зависел от ранее прочитанных настроек
@@ -248,6 +316,62 @@ STUB_CURRENT="sub-a"; STUB_BO=""
 STUB_SPEED_sub_a=0; STUB_SPEED_sub_b=0; STUB_SPEED_sub_us1=0
 sb_tick >/dev/null 2>&1
 check "все мертвы -> bo не вызван" "$STUB_BO" ""
+
+# === теги с пробелами: sb_tick целиком ===
+# Сквозная регрессия: все четыре места, где тег резался по пробелам (список
+# нод, перебор в sb_tick, текущая нода из bi, JSON правила), в одном прогоне.
+# Ноды: "proxy DE Frankfurt", "proxy US East 2", "proxy-NL", "proxy * all".
+sb_routing_file="$xray_conf_dir/routing_space.json"
+sb_outbounds_file="$xray_conf_dir/outbounds_space.json"
+sb_balancer="balancer"; sb_hysteresis=25; sb_maxtime=8
+sb_log_file="$WORK/sb_tick_space.log"; sb_log_enabled="true"
+STUB_OVERRIDE=""
+STUB_SPEED_proxy_NL=0; STUB_SPEED_proxy___all=0
+
+# текущая "proxy DE Frankfurt"=1000, кандидат "proxy US East 2"=1200 (+20%) —
+# ниже порога. Если текущая определилась как обрезанное "proxy", её скорость
+# сочлась бы нулём и переключение случилось бы зря.
+rm -f "$sb_log_file"
+STUB_CURRENT="proxy DE Frankfurt"; STUB_BO=""
+STUB_SPEED_proxy_DE_Frankfurt=$((1000*1024)); STUB_SPEED_proxy_US_East_2=$((1200*1024))
+sb_tick >/dev/null 2>&1
+check "теги с пробелами: +20% не переключает" "$STUB_BO" ""
+check "теги с пробелами: текущая осталась" "$STUB_CURRENT" "proxy DE Frankfurt"
+check "теги с пробелами: замер в логе под полным именем" "$(grep -c -F 'замер proxy US East 2: 1200 КБ/с' "$sb_log_file")" "1"
+check "теги с пробелами: нет замера обрезанного 'proxy'" "$(grep -c -E 'замер proxy: ' "$sb_log_file")" "0"
+check "теги с пробелами: порог в логе назван по полному тегу" "$(grep -c -F 'оставляем proxy DE Frankfurt:' "$sb_log_file")" "1"
+
+# кандидат +30% — переключить, и в bo уйдёт ОДИН аргумент с полным тегом
+STUB_CURRENT="proxy DE Frankfurt"; STUB_BO=""
+STUB_SPEED_proxy_DE_Frankfurt=$((1000*1024)); STUB_SPEED_proxy_US_East_2=$((1300*1024))
+sb_tick >/dev/null 2>&1
+check "теги с пробелами: +30% -> bo с полным тегом" "$STUB_BO" "proxy US East 2"
+check "теги с пробелами: переключение записано в лог" "$(grep -c -F 'переключение: proxy DE Frankfurt (1000) -> proxy US East 2 (1300 КБ/с)' "$sb_log_file")" "1"
+
+# быстрейшая уже активна — bo не зовётся
+rm -f "$sb_log_file"
+STUB_CURRENT="proxy US East 2"; STUB_BO=""
+sb_tick >/dev/null 2>&1
+check "теги с пробелами: быстрейшая активна -> bo не вызван" "$STUB_BO" ""
+check "теги с пробелами: лог 'уже активна' с полным тегом" "$(grep -c -F 'быстрейшая нода уже активна: proxy US East 2 (1300 КБ/с)' "$sb_log_file")" "1"
+
+# активная нода задана через Override (как после прошлого bo) — тоже с пробелами
+STUB_CURRENT="proxy-NL"; STUB_OVERRIDE="proxy US East 2"; STUB_BO=""
+sb_tick >/dev/null 2>&1
+check "теги с пробелами: Override-нода с пробелами считается текущей" "$STUB_BO" ""
+STUB_OVERRIDE=""
+
+# тег с '*' замеряется как обычный и не рассыпается на файлы каталога
+STUB_CURRENT="proxy US East 2"; STUB_BO=""
+STUB_SPEED_proxy_DE_Frankfurt=0; STUB_SPEED_proxy_US_East_2=0; STUB_SPEED_proxy___all=$((5000*1024))
+sb_tick >/dev/null 2>&1
+check "теги с пробелами: нода с '*' выбрана целиком" "$STUB_BO" "proxy * all"
+
+# вернуть дефолтные пути и лог — дальше свои фикстуры
+sb_routing_file="$xray_conf_dir/05_routing.json"
+sb_outbounds_file="$xray_conf_dir/04_outbounds.json"
+sb_log_file="$WORK/sb.log"
+STUB_SPEED_proxy___all=0
 
 # === лог: параметр .xray.speed_balancer.log (issue #103) ===
 sb_log_file="$WORK/sblog.log"; rm -f "$sb_log_file"
