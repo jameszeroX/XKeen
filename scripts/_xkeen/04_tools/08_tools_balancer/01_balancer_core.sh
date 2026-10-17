@@ -21,43 +21,33 @@ sb_log_trim() {
 }
 
 # Список нод балансировщика: outbound-теги, попадающие под его selector.
-# Xray сопоставляет selector с тегом по префиксу, поэтому здесь тоже префикс.
+# Xray сопоставляет каждый selector с НАЧАЛОМ тега (префикс, а не подстрока:
+# selector "a" берёт "a" и "ab", но не "ba"), поэтому здесь тоже префикс —
+# иначе в замер и в bo попали бы ноды, которых нет в пуле балансировщика.
 # Результат — в глобальную sb_nodes (через субшелл вернуть нельзя), по ОДНОМУ
-# тегу на строку: тег может содержать пробелы ("proxy DE Frankfurt"), поэтому
-# пробел разделителем быть не может, а перебор идёт через `read -r` по строкам,
-# а не через `for x in $var` (тот режет по пробелам и раскрывает glob-символы).
+# тегу на строку: тег и selector могут содержать пробелы ("proxy DE Frankfurt"),
+# поэтому пробел разделителем быть не может. Сопоставление целиком делает jq
+# (startswith — префикс): никаких `for x in $var` (режет по пробелам
+# и раскрывает glob-символы) и вложенных heredoc-циклов, поведение которых
+# заметно разнится между реализациями ash.
 # Возврат 1, если балансировщик или ноды не найдены.
 sb_node_list() {
     sb_nodes=""
     [ -f "$sb_routing_file" ] || return 1
     [ -f "$sb_outbounds_file" ] || return 1
 
-    local selectors all tag sel
-    selectors=$(strip_json_comments "$sb_routing_file" \
-        | jq -r --arg b "$sb_balancer" '.routing.balancers[]? | select(.tag==$b) | .selector[]?' 2>/dev/null)
-    [ -n "$selectors" ] || return 1
+    local sels
+    # selector'ы нужного балансировщика одним JSON-массивом
+    sels=$(strip_json_comments "$sb_routing_file" \
+        | jq -c --arg b "$sb_balancer" \
+            '[.routing.balancers[]? | select(.tag==$b) | .selector[]? | select(type=="string")]' 2>/dev/null)
+    [ -n "$sels" ] && [ "$sels" != "[]" ] || return 1
 
-    all=$(strip_json_comments "$sb_outbounds_file" \
-        | jq -r '.outbounds[]? | .tag // empty' 2>/dev/null)
-    [ -n "$all" ] || return 1
-
-    # heredoc вместо pipe: цикл остаётся в текущем шелле, иначе sb_nodes
-    # осталась бы пустой (pipe -> субшелл). Вложенный перебор selector'ов идёт
-    # по тому же heredoc'у через отдельный дескриптор (fd 3).
-    while IFS= read -r tag; do
-        [ -n "$tag" ] || continue
-        while IFS= read -r sel <&3; do
-            [ -n "$sel" ] || continue
-            case "$tag" in
-                "$sel"*) sb_nodes="${sb_nodes:+$sb_nodes
-}$tag"; break ;;
-            esac
-        done 3<<EOF_SEL
-$selectors
-EOF_SEL
-    done <<EOF_ALL
-$all
-EOF_ALL
+    # теги outbound'ов, НАЧИНАЮЩИЕСЯ с любого из selector'ов, — по строке на тег
+    sb_nodes=$(strip_json_comments "$sb_outbounds_file" \
+        | jq -r --argjson s "$sels" \
+            '.outbounds[]? | .tag // empty | select(type=="string")
+             | select(. as $t | any($s[]; . as $x | $t | startswith($x)))' 2>/dev/null)
 
     [ -n "$sb_nodes" ]
 }

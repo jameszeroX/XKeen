@@ -172,7 +172,7 @@ check "прочие ключи не затёрты" "$(strip_json_comments "$xke
 # === разбор нод балансировщика по selector ===
 sb_balancer="balancer"
 sb_node_list
-check "ноды balancer по подстроке sub-" "$sb_nodes" "$(printf '%s\n%s\n%s' sub-a sub-b sub-us1)"
+check "ноды balancer по префиксу sub-" "$sb_nodes" "$(printf '%s\n%s\n%s' sub-a sub-b sub-us1)"
 sb_balancer="balancer-us"
 sb_node_list
 check "ноды balancer-us (sub-us)" "$sb_nodes" "sub-us1"
@@ -208,13 +208,14 @@ sb_outbounds_file="$xray_conf_dir/04_outbounds.json"
 cat > "$xray_conf_dir/routing_space.json" <<'EOF'
 { "routing": { "balancers": [
   { "tag": "balancer", "selector": ["proxy"] },
-  { "tag": "balancer-de", "selector": ["DE Frankfurt"] }
+  { "tag": "balancer-de", "selector": ["proxy DE"] }
 ], "rules": [] } }
 EOF
 cat > "$xray_conf_dir/outbounds_space.json" <<'EOF'
 { "outbounds": [
   { "tag": "proxy DE Frankfurt" }, { "tag": "proxy US East 2" },
-  { "tag": "proxy-NL" }, { "tag": "direct" }, { "tag": "proxy * all" }
+  { "tag": "proxy-NL" }, { "tag": "direct" }, { "tag": "proxy * all" },
+  { "tag": "old proxy" }
 ] }
 EOF
 sb_routing_file="$xray_conf_dir/routing_space.json"
@@ -228,12 +229,40 @@ check "теги с пробелами: ноды целиком, по одном�
 check "теги с пробелами: число нод = 4 (не 10 слов)" "$(printf '%s\n' "$sb_nodes" | awk 'END { print NR }')" "4"
 check "теги с пробелами: '*' не раскрыт в файлы" "$(printf '%s\n' "$sb_nodes" | grep -c -F 'proxy * all')" "1"
 check "теги с пробелами: нет обрезанного 'proxy'" "$(printf '%s\n' "$sb_nodes" | grep -c -x 'proxy')" "0"
+check "теги с пробелами: 'old proxy' (подстрока, не префикс) не взят" "$(printf '%s\n' "$sb_nodes" | grep -c -x 'old proxy')" "0"
 
-# selector с пробелом: подстрока "DE Frankfurt" должна находить тег, а не
-# распадаться на селекторы "DE" и "Frankfurt"
+# selector с пробелом: префикс "proxy DE" должен находить тег, а не
+# распадаться на селекторы "proxy" и "DE"
 sb_balancer="balancer-de"
 sb_node_list
 check "selector с пробелом: находит ровно свой тег" "$sb_nodes" "proxy DE Frankfurt"
+
+# selector — ПРЕФИКС тега (как в Xray: ["a"] берёт "a" и "ab", но не "ba"), а не
+# подстрока: иначе в замер и в bo попадали бы ноды, которых нет в пуле
+# балансировщика. "DE Frankfurt" стоит в середине тега и не должен совпасть.
+cat > "$xray_conf_dir/routing_prefix.json" <<'EOF'
+{ "routing": { "balancers": [
+  { "tag": "balancer", "selector": ["sub-"] },
+  { "tag": "balancer-mid", "selector": ["DE Frankfurt"] }
+], "rules": [] } }
+EOF
+cat > "$xray_conf_dir/outbounds_prefix.json" <<'EOF'
+{ "outbounds": [
+  { "tag": "sub-a" }, { "tag": "my-sub-b" }, { "tag": "xsub-c" },
+  { "tag": "sub-d" }, { "tag": "proxy DE Frankfurt" }
+] }
+EOF
+sb_routing_file="$xray_conf_dir/routing_prefix.json"
+sb_outbounds_file="$xray_conf_dir/outbounds_prefix.json"
+sb_balancer="balancer"
+sb_node_list
+check "префикс: берёт sub-a и sub-d, но не my-sub-b / xsub-c" "$sb_nodes" "$(printf '%s\n%s' sub-a sub-d)"
+sb_balancer="balancer-mid"
+sb_node_list; rc=$?
+check "префикс: selector в середине тега не совпадает -> код 1" "$rc" "1"
+check "префикс: selector в середине тега -> пустой список" "$sb_nodes" ""
+sb_routing_file="$xray_conf_dir/routing_space.json"
+sb_outbounds_file="$xray_conf_dir/outbounds_space.json"
 
 sb_balancer="нет-такого"
 sb_node_list; rc=$?
