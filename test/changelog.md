@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-17 11:33:29 MSK)
+
+Сборка из [`6bb8b67`](https://github.com/jameszeroX/XKeen/commit/6bb8b67aecd9a4ab89d74f9def159eb2953d8dd8).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/6ba9c142e779c8b70759156b31e54b02d1656972/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`798d55f...6bb8b67`](https://github.com/jameszeroX/XKeen/compare/798d55ff58f7bf44c3f33574e605cbc9a1aed9ec...6bb8b67aecd9a4ab89d74f9def159eb2953d8dd8).
+
+###### Коммиты
+
+- fix(speed_balancer): теги с пробелами и selector по префиксу ([`6bb8b67`](https://github.com/jameszeroX/XKeen/commit/6bb8b67aecd9a4ab89d74f9def159eb2953d8dd8)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-17 10:54:42 MSK)
 
 Сборка из [`b935dc3`](https://github.com/jameszeroX/XKeen/commit/b935dc3ee88d77f7296e27739b2b73394902e61a).
