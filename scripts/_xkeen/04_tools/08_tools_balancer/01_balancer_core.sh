@@ -21,9 +21,12 @@ sb_log_trim() {
 }
 
 # Список нод балансировщика: outbound-теги, попадающие под его selector.
-# Xray сопоставляет selector с тегом по подстроке, поэтому здесь тоже подстрока.
-# Результат — в глобальную sb_nodes (через субшелл вернуть нельзя). Возврат 1,
-# если балансировщик или ноды не найдены.
+# Xray сопоставляет selector с тегом по префиксу, поэтому здесь тоже префикс.
+# Результат — в глобальную sb_nodes (через субшелл вернуть нельзя), по ОДНОМУ
+# тегу на строку: тег может содержать пробелы ("proxy DE Frankfurt"), поэтому
+# пробел разделителем быть не может, а перебор идёт через `read -r` по строкам,
+# а не через `for x in $var` (тот режет по пробелам и раскрывает glob-символы).
+# Возврат 1, если балансировщик или ноды не найдены.
 sb_node_list() {
     sb_nodes=""
     [ -f "$sb_routing_file" ] || return 1
@@ -38,15 +41,24 @@ sb_node_list() {
         | jq -r '.outbounds[]? | .tag // empty' 2>/dev/null)
     [ -n "$all" ] || return 1
 
-    for tag in $all; do
-        for sel in $selectors; do
+    # heredoc вместо pipe: цикл остаётся в текущем шелле, иначе sb_nodes
+    # осталась бы пустой (pipe -> субшелл). Вложенный перебор selector'ов идёт
+    # по тому же heredoc'у через отдельный дескриптор (fd 3).
+    while IFS= read -r tag; do
+        [ -n "$tag" ] || continue
+        while IFS= read -r sel <&3; do
+            [ -n "$sel" ] || continue
             case "$tag" in
-                *"$sel"*) sb_nodes="$sb_nodes $tag"; break ;;
+                "$sel"*) sb_nodes="${sb_nodes:+$sb_nodes
+}$tag"; break ;;
             esac
-        done
-    done
+        done 3<<EOF_SEL
+$selectors
+EOF_SEL
+    done <<EOF_ALL
+$all
+EOF_ALL
 
-    sb_nodes="${sb_nodes# }"   # срезать единственный ведущий пробел
     [ -n "$sb_nodes" ]
 }
 
@@ -76,8 +88,11 @@ sb_measure_node() {
     sb_rule_tmp="${sb_rule_tmp:-$(_xkeen_secure_rundir)/sb_probe_rule.json.$$}"
 
     # без "type": "field" — поле deprecated с xray-core v1.8.10 и правилу не нужно
-    printf '{"routing":{"rules":[{"ruleTag":"%s","inboundTag":["%s"],"outboundTag":"%s"}]}}' \
-        "$sb_rule_tag" "$sb_probe_intag" "$node" > "$sb_rule_tmp" 2>/dev/null
+    # JSON собирается через jq, а не printf: тег может содержать пробелы,
+    # кавычки и бэкслеши, которые в строке printf сломали бы JSON.
+    jq -nc --arg rt "$sb_rule_tag" --arg it "$sb_probe_intag" --arg ot "$node" \
+        '{routing:{rules:[{ruleTag:$rt,inboundTag:[$it],outboundTag:$ot}]}}' \
+        > "$sb_rule_tmp" 2>/dev/null
 
     xray api rmrules -s "$sb_api_addr" "$sb_rule_tag" >/dev/null 2>&1
     if ! xray api adrules -s "$sb_api_addr" -append "$sb_rule_tmp" >/dev/null 2>&1; then
@@ -113,11 +128,19 @@ sb_measure_node() {
 # Формат обеих секций — "    N   <тег>"; пусто в Override означает, что override
 # не выставлен, тогда берём Selects. Пусто на выходе — если не удалось определить.
 sb_current_target() {
+    # Тег — всё после первого поля (индекса) до конца строки, а не $2: тег
+    # с пробелом занимает несколько полей.
     xray api bi -s "$sb_api_addr" "$sb_balancer" 2>/dev/null | awk '
+        function tag(   t) {
+            t = $0
+            sub(/^[ \t]*[^ \t]+[ \t]+/, "", t)
+            sub(/[ \t\r]+$/, "", t)
+            return t
+        }
         /Selecting Override:/ { sec = "ov";  next }
         /Selects:/            { sec = "sel"; next }
-        sec == "ov"  && $2 ~ /./ && ov  == "" { ov  = $2 }
-        sec == "sel" && $2 ~ /./ && sel == "" { sel = $2 }
+        sec == "ov"  && NF >= 2 && ov  == "" { ov  = tag() }
+        sec == "sel" && NF >= 2 && sel == "" { sel = tag() }
         END { if (ov != "") print ov; else print sel }'
 }
 
@@ -138,8 +161,11 @@ sb_tick() {
     current=$(sb_current_target); current_speed=0
 
     local r code
-    for n in $sb_nodes; do
-        r=$(sb_measure_node "$n")
+    # построчный перебор: тег может содержать пробелы (см. sb_node_list).
+    # </dev/null у замера — чтобы команды внутри не съели stdin-heredoc списка.
+    while IFS= read -r n; do
+        [ -n "$n" ] || continue
+        r=$(sb_measure_node "$n" </dev/null)
         s=${r%% *}; code=${r#* }
         if [ "$s" -gt 0 ] 2>/dev/null; then
             sb_log "замер $n: $s КБ/с"
@@ -150,7 +176,9 @@ sb_tick() {
         if [ "$s" -gt "$best_speed" ] 2>/dev/null; then
             best_speed="$s"; best="$n"
         fi
-    done
+    done <<EOF_NODES
+$sb_nodes
+EOF_NODES
 
     if [ -z "$best" ] || [ "$best_speed" -eq 0 ] 2>/dev/null; then
         sb_log "все замеры провалились — выбор не меняем"
