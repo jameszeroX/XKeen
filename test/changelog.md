@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-18 11:56:38 MSK)
+
+Сборка из [`c9e1401`](https://github.com/jameszeroX/XKeen/commit/c9e1401da7fa07e03e03aeb332c42cac0a35b954).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/1bd3e598459f1176076a5897c17dce80df2b4f79/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`6ba9c14...c9e1401`](https://github.com/jameszeroX/XKeen/compare/6ba9c142e779c8b70759156b31e54b02d1656972...c9e1401da7fa07e03e03aeb332c42cac0a35b954).
+
+###### Коммиты
+
+- feat(netfilter): add divert chain for tproxy mode ([`c9e1401`](https://github.com/jameszeroX/XKeen/commit/c9e1401da7fa07e03e03aeb332c42cac0a35b954)) — zxc-rv
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-17 11:33:29 MSK)
 
 Сборка из [`6bb8b67`](https://github.com/jameszeroX/XKeen/commit/6bb8b67aecd9a4ab89d74f9def159eb2953d8dd8).
