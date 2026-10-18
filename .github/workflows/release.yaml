@@ -60,7 +60,7 @@ jobs:
           cd scripts_for_release
           chmod +x xkeen
 
-          find . -type f -o -type l | sed 's|^\./||' | tar -czf "../dist/${ARCHIVE_NAME}" -T -
+          find . -type f -o -type l | sed 's|^\./||' | tar --owner=0 --group=0 --numeric-owner -czf "../dist/${ARCHIVE_NAME}" -T -
 
       - name: Verify archive integrity
         run: tar -tzf "dist/${ARCHIVE_NAME}" >/dev/null

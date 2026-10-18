@@ -74,7 +74,7 @@ jobs:
           mkdir -p output
           cd scripts_for_build
           chmod +x xkeen
-          find . -type f -o -type l | sed 's|^\./||' | tar -czf "../output/xkeen.tar.gz" -T -
+          find . -type f -o -type l | sed 's|^\./||' | tar --owner=0 --group=0 --numeric-owner -czf "../output/xkeen.tar.gz" -T -
 
       - name: Move archive to test folder in main
         run: |
