@@ -2383,6 +2383,15 @@ if pidof "$name_client" >/dev/null; then
         esac
     }
 
+    _xkeen_use_divert() {
+        [ "$1" = "$table_tproxy" ] || return 1
+        [ -n "$port_tproxy" ] || return 1
+        case "$network_tproxy" in
+            *tcp*) return 0 ;;
+        esac
+        return 1
+    }
+
     # Применяет аккумулированные правила одной таблицы атомарно через
     # iptables-restore --noflush. Custom chain $name_chain flush'ится
     # объявлением ":$name_chain -" перед добавлением новых правил.
@@ -2424,7 +2433,7 @@ if pidof "$name_client" >/dev/null; then
             printf ':%s -\n' "$name_chain"
             { [ -n "$port_dscp_force_proxy" ] || [ -n "$policy_mark_full" ]; } && printf ':%s_force -\n' "$name_chain"
             [ "$proxy_router" = "on" ] && printf ':%s_out -\n' "$name_chain"
-            [ "$_table" = "$table_tproxy" ] && [ -n "$port_tproxy" ] && printf ':%s_divert -\n' "$name_chain"
+            _xkeen_use_divert "$_table" && printf ':%s_divert -\n' "$name_chain"
             [ -n "$_deletes" ] && printf '%s\n' "$_deletes"
             printf '%s' "$_rules"
             printf 'COMMIT'
@@ -2786,7 +2795,7 @@ if pidof "$name_client" >/dev/null; then
         # (LAN/Wi-Fi/guest-bridge); за L3-VLAN правило безвредно неактивно.
         ipt -I PREROUTING 1 -m set --match-set "$name_ipset_deny_mac" src $comment -j RETURN >/dev/null 2>&1
 
-        if [ "$table" = "$table_tproxy" ] && [ "${network_tproxy#*tcp}" != "$network_tproxy" ]; then
+        if _xkeen_use_divert "$table"; then
             divert_chain="${name_chain}_divert"
             ipt -A "$divert_chain" $comment -j MARK --set-mark "$table_mark" >/dev/null 2>&1
             ipt -A "$divert_chain" $comment -j ACCEPT >/dev/null 2>&1
