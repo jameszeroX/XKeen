@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-20 09:23:37 MSK)
+
+Сборка из [`ce8500b`](https://github.com/jameszeroX/XKeen/commit/ce8500b7fbec7497bff6c73bc9ff5248da1ba7e9).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/bf840911a2778d736ab06d19d50ef7c905480270/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`c7fe3e9...ce8500b`](https://github.com/jameszeroX/XKeen/compare/c7fe3e99d7f9469c85d0963e1da1a9a9d94bde5c...ce8500b7fbec7497bff6c73bc9ff5248da1ba7e9).
+
+###### Коммиты
+
+- Handle unmatched exclusions in iptables rules #252 ([`ce8500b`](https://github.com/jameszeroX/XKeen/commit/ce8500b7fbec7497bff6c73bc9ff5248da1ba7e9)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-19 08:10:57 MSK)
 
 Сборка из [`3db1931`](https://github.com/jameszeroX/XKeen/commit/3db193193b57986dfa60f3a5865789932c3b58f5).
