@@ -2496,17 +2496,23 @@ if pidof "$name_client" >/dev/null; then
             if [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ] && [ "$chain" != "${name_chain}_out" ]; then
                 case "$exclude" in
                     10.0.0.0/8|172.16.0.0/12|192.168.0.0/16|fd00::/8|fe80::/10)
-                    if [ "$table" = "mangle" ] && [ "$mode_proxy" = "Hybrid" ]; then
-                        ipt -A "$chain" -d "$exclude" -p tcp --dport 53 $comment -j RETURN >/dev/null 2>&1
-                        ipt -A "$chain" -d "$exclude" -p udp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
-                    elif [ "$table" = "nat" ] && [ "$mode_proxy" = "Hybrid" ]; then
-                        ipt -A "$chain" -d "$exclude" -p tcp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
-                        ipt -A "$chain" -d "$exclude" -p udp --dport 53 $comment -j RETURN >/dev/null 2>&1
-                    elif [ "$table" = "mangle" ] && [ "$mode_proxy" = "TProxy" ]; then
-                        ipt -A "$chain" -d "$exclude" -p tcp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
-                        ipt -A "$chain" -d "$exclude" -p udp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
-                    fi
-                    ;;
+                        if [ "$table" = "mangle" ] && [ "$mode_proxy" = "Hybrid" ]; then
+                            ipt -A "$chain" -d "$exclude" -p tcp --dport 53 $comment -j RETURN >/dev/null 2>&1
+                            ipt -A "$chain" -d "$exclude" -p udp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
+                        elif [ "$table" = "nat" ] && [ "$mode_proxy" = "Hybrid" ]; then
+                            ipt -A "$chain" -d "$exclude" -p tcp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
+                            ipt -A "$chain" -d "$exclude" -p udp --dport 53 $comment -j RETURN >/dev/null 2>&1
+                        elif [ "$table" = "mangle" ] && [ "$mode_proxy" = "TProxy" ]; then
+                            ipt -A "$chain" -d "$exclude" -p tcp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
+                            ipt -A "$chain" -d "$exclude" -p udp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
+                        fi
+                        ;;
+                    *)
+                        # Остальные исключения (WAN роутера, 224.0.0.0/4, 100.64.0.0/10,
+                        # 255.255.255.255, IPv6 ff00::/8 и пользовательские адреса) ставятся
+                        # как без перехвата DNS: без ветки *) case молча их отбрасывал.
+                        ipt -A "$chain" -d "$exclude" $comment -j RETURN >/dev/null 2>&1
+                        ;;
                 esac
             else
                 ipt -A "$chain" -d "$exclude" $comment -j RETURN >/dev/null 2>&1
