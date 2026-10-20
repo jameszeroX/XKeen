@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-20 09:39:58 MSK)
+
+Сборка из [`fdf3788`](https://github.com/jameszeroX/XKeen/commit/fdf3788d724c9b04c34374066d07cd37ddca970b).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/9c5e66de15439690414e51d88bbbc0ce85c1fa04/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`bf84091...fdf3788`](https://github.com/jameszeroX/XKeen/compare/bf840911a2778d736ab06d19d50ef7c905480270...fdf3788d724c9b04c34374066d07cd37ddca970b).
+
+###### Коммиты
+
+- fix(init): don't wait for RCI in boot-time start ([`fdf3788`](https://github.com/jameszeroX/XKeen/commit/fdf3788d724c9b04c34374066d07cd37ddca970b)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-20 09:23:37 MSK)
 
 Сборка из [`ce8500b`](https://github.com/jameszeroX/XKeen/commit/ce8500b7fbec7497bff6c73bc9ff5248da1ba7e9).
