@@ -347,6 +347,11 @@ wait_for_rci_token() {
 # проверка остаётся обязательной.
 case "$1" in
     stop|status) : ;;
+    start)
+        if [ -n "$2" ]; then
+            wait_for_rci_token
+        fi
+        ;;
     *) wait_for_rci_token ;;
 esac
 
@@ -4155,7 +4160,7 @@ case "$1" in
         proxy_start ""
         ;;
     *)
-        echo -e "  Команды: ${green}start${reset} | ${red}stop${reset} | ${yellow}restart${reset} | status"
+        echo -e "  Команды: ${green}start on${reset} | ${red}stop${reset} | ${yellow}restart on${reset} | status"
         _cmd_rc=1
         ;;
 esac
