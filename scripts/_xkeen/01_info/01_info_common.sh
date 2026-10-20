@@ -362,19 +362,38 @@ rci_probe_code() {
     fi
 }
 
+# stop/status не обращаются к RCI (см. комментарий у wait_for_rci_token в
+# 04_register_init.sh), поэтому недействительный токен не должен блокировать
+# аварийную остановку и проверку статуса. Этот файл подключается из import.sh
+# ДО разбора команд в xkeen и позиционные параметры вызова ($@) здесь видны,
+# поэтому пробу пропускаем, только если ВСЕ переданные ключи — -stop/-status.
+# Любая другая команда (в т.ч. в связке: xkeen -stop -start) и запуск без
+# аргументов проверяют токен, как и раньше.
+_rci_probe_needed=1
+if [ $# -gt 0 ]; then
+    _rci_probe_needed=0
+    for _rci_arg in "$@"; do
+        case "$_rci_arg" in
+            -stop|-status) ;;
+            *) _rci_probe_needed=1; break ;;
+        esac
+    done
+    unset _rci_arg
+fi
+
 # 401/403 перепроверяем (до 3 попыток)
 # Остальные коды (в т.ч. 000) не считаем
 # проблемой токена — поведение прежнее.
 http_code=""
 _rci_probe_i=0
-while [ "$_rci_probe_i" -lt 3 ]; do
+while [ "$_rci_probe_needed" = "1" ] && [ "$_rci_probe_i" -lt 3 ]; do
     http_code=$(rci_probe_code)
     case "$http_code" in
         401|403) _rci_probe_i=$((_rci_probe_i + 1)); [ "$_rci_probe_i" -lt 3 ] && sleep 1 ;;
         *) break ;;
     esac
 done
-unset _rci_probe_i
+unset _rci_probe_i _rci_probe_needed
 
 case "$http_code" in
     401|403)
