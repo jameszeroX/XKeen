@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-20 10:22:02 MSK)
+
+Сборка из [`5c3c584`](https://github.com/jameszeroX/XKeen/commit/5c3c584a5c2b74a50fbe6a258e74c09af2971607).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/834c79fe22fdc0000b1347b4ae8015c0c16bd856/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`9c5e66d...5c3c584`](https://github.com/jameszeroX/XKeen/compare/9c5e66de15439690414e51d88bbbc0ce85c1fa04...5c3c584a5c2b74a50fbe6a258e74c09af2971607).
+
+###### Коммиты
+
+- Skip RCI token probe for -stop/-status commands ([`5c3c584`](https://github.com/jameszeroX/XKeen/commit/5c3c584a5c2b74a50fbe6a258e74c09af2971607)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-20 09:39:58 MSK)
 
 Сборка из [`fdf3788`](https://github.com/jameszeroX/XKeen/commit/fdf3788d724c9b04c34374066d07cd37ddca970b).
