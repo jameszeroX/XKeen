@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-21 08:33:33 MSK)
+
+Сборка из [`f06f084`](https://github.com/jameszeroX/XKeen/commit/f06f08422c995adcce480ffdb08593aed228a339).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/3dfe74fb30fe6edfd5170f6df054621862f2341f/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`834c79f...f06f084`](https://github.com/jameszeroX/XKeen/compare/834c79fe22fdc0000b1347b4ae8015c0c16bd856...f06f08422c995adcce480ffdb08593aed228a339).
+
+###### Коммиты
+
+- Simplify WAN IP detection logic ([`f06f084`](https://github.com/jameszeroX/XKeen/commit/f06f08422c995adcce480ffdb08593aed228a339)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-20 10:22:02 MSK)
 
 Сборка из [`5c3c584`](https://github.com/jameszeroX/XKeen/commit/5c3c584a5c2b74a50fbe6a258e74c09af2971607).
