@@ -1939,35 +1939,21 @@ get_port_exclude() {
 }
 
 # Получение исключений IPv4.
-# Этот файл — standalone-генератор: не sourcer'ится, копируется целиком
-# в /opt/etc/init.d/S05xkeen (cp в 02_register_xkeen.sh). Контракт: echo
-# объединённого списка /32-CIDR (провайдерский IP + $ipv4_exclude).
-# В 03_tools_diagnostic.sh есть одноимённая, но семантически независимая
-# функция (side-effect без CIDR, для маскировки IP) — тело между файлами
-# не копировать.
 get_exclude_ip4() {
     [ "$iptables_supported" != "true" ] && return
 
     # Получаем провайдерский IPv4
-    ipv4_eth=$(ip -o route get 195.208.4.1 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p' || \
-               ip -o route get 77.88.8.8 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
+    ipv4_eth=$(ip -o route get 77.88.8.8 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
     [ -n "$ipv4_eth" ] && ipv4_eth="${ipv4_eth}/32"
     echo "${ipv4_eth} ${ipv4_exclude}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
 }
 
 # Получение исключений IPv6.
-# Этот файл — standalone-генератор: не sourcer'ится, копируется целиком
-# в /opt/etc/init.d/S05xkeen (cp в 02_register_xkeen.sh). Контракт: echo
-# объединённого списка /128-CIDR (провайдерский IP + $ipv6_exclude).
-# В 03_tools_diagnostic.sh есть одноимённая, но семантически независимая
-# функция (side-effect без CIDR, для маскировки IP) — тело между файлами
-# не копировать.
 get_exclude_ip6() {
     [ "$ip6tables_supported" != "true" ] && return
 
     # Получаем провайдерский IPv6
-    ipv6_eth=$(ip -o -6 route get 2a0c:a9c7:8::1 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p' || \
-               ip -o -6 route get 2a02:6b8::feed:0ff 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
+    ipv6_eth=$(ip -o -6 route get 2a02:6b8::feed:0ff 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
     [ -n "$ipv6_eth" ] && ipv6_eth="${ipv6_eth}/128"
     echo "${ipv6_eth} ${ipv6_exclude}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
 }
@@ -3073,8 +3059,7 @@ USER_POLICIES_EOF
     # и цепочки на месте — не трогаем даже configure_route (он и так
     # идемпотентен, но лишние ip route show на каждом renew не нужны).
     _xkeen_wan_state="$_xkeen_rundir/wan_ip"
-    _xkeen_cur_wan=$(ip -o route get 195.208.4.1 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p' || \
-                     ip -o route get 77.88.8.8 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
+    _xkeen_cur_wan=$(ip -o route get 77.88.8.8 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
     _xkeen_prev_wan=$(cat "$_xkeen_wan_state" 2>/dev/null)
 
     if [ -n "$_xkeen_cur_wan" ] && [ "$_xkeen_cur_wan" = "$_xkeen_prev_wan" ] && _xkeen_rules_intact; then
