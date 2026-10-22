@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-22 10:57:30 MSK)
+
+Сборка из [`f723b66`](https://github.com/jameszeroX/XKeen/commit/f723b66d34a0397b7affc6ab1516e399d7604e47).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/0f3da4ba8e98a4628bcdeac48469260f07a3eb49/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`3dfe74f...f723b66`](https://github.com/jameszeroX/XKeen/compare/3dfe74fb30fe6edfd5170f6df054621862f2341f...f723b66d34a0397b7affc6ab1516e399d7604e47).
+
+###### Коммиты
+
+- Handle JSON comments in xkeen.json config  for -pbr function ([`f723b66`](https://github.com/jameszeroX/XKeen/commit/f723b66d34a0397b7affc6ab1516e399d7604e47)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-21 08:33:33 MSK)
 
 Сборка из [`f06f084`](https://github.com/jameszeroX/XKeen/commit/f06f08422c995adcce480ffdb08593aed228a339).
