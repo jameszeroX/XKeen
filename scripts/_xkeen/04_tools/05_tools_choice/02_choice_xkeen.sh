@@ -391,14 +391,15 @@ show_pbr_policy_codes() {
 
     user_policy_marks=""
     if [ -f "$xkeen_config" ]; then
-        if ! jq -e . "$xkeen_config" >/dev/null 2>&1; then
-            xkeen_config_error=$(_pbr_format_single_line_error "$(jq -e . "$xkeen_config" 2>&1 >/dev/null)")
+        xkeen_config_clean=$(strip_json_comments "$xkeen_config")
+        if ! printf '%s' "$xkeen_config_clean" | jq -e . >/dev/null 2>&1; then
+            xkeen_config_error=$(_pbr_format_single_line_error "$(printf '%s' "$xkeen_config_clean" | jq -e . 2>&1 >/dev/null)")
             [ -z "$xkeen_config_error" ] && xkeen_config_error="xkeen.json содержит невалидный JSON"
             echo -e "  ${red}Ошибка${reset}: ${yellow}xkeen.json${reset}: $xkeen_config_error"
             return 1
         fi
 
-        user_policy_marks=$(printf '%s' "$api_policy_json" | jq -r --argjson user_cfg "$(cat "$xkeen_config")" '
+        user_policy_marks=$(printf '%s' "$api_policy_json" | jq -r --argjson user_cfg "$xkeen_config_clean" '
             ($user_cfg.xkeen.policy // []) as $up |
             .[] as $api |
             $up[] |
