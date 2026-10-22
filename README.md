@@ -1,6 +1,6 @@
 # XKeen 2.1
 
-[![CodeFactor](https://www.codefactor.io/repository/github/jameszerox/xkeen/badge)](https://www.codefactor.io/repository/github/jameszerox/xkeen) [![Github All Releases](https://img.shields.io/github/downloads/jameszeroX/XKeen/total.svg)](https://github.com/jameszeroX/XKeen/releases) [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![CodeFactor](https://www.codefactor.io/repository/github/jameszerox/xkeen/badge)](https://www.codefactor.io/repository/github/jameszerox/xkeen) [![Github All Releases](https://img.shields.io/github/downloads/jameszeroX/XKeen/total.svg)](https://github.com/jameszeroX/XKeen/releases) [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause) [![Wiki](https://img.shields.io/badge/Wiki-Project_Docs-blue?style=flat-square)](https://github.com/jameszeroX/XKeen/wiki)
 
 <p align="center">
   <picture>
@@ -102,7 +102,7 @@ XKeen работает полностью на стороне роутера, н
 - XKeen UI — https://github.com/zxc-rv/XKeen-UI
 - XKeen UI — https://github.com/umarcheh001/Xkeen-UI
 - XKeen UI — https://github.com/fan92rus/xkeen-ui
-- Xray Dashboard — https://github.com/yuran2000/xkeen-windows-dashboard
+- Xray Dashboard — https://github.com/timellemit/xkeen-windows-dashboard
 - Генератор Outbound — https://zxc-rv.github.io/XKeen-UI/Outbound_Generator/
 - Парсер подписок — https://github.com/tkukushkin/xkeen-subscription-watcher
 - Парсер подписок — https://github.com/V2as/SubKeen
