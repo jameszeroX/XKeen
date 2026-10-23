@@ -362,6 +362,7 @@ _pbr_format_single_line_error() {
 show_pbr_policy_codes() {
     policy_api_url="127.0.0.1:79/rci/show/ip/policy"
     main_policy_name="xkeen"
+    full_policy_name="xkeen_full"
 
     echo
     api_policy_json=$(curl_api "$policy_api_url" 2>/dev/null)
@@ -388,6 +389,18 @@ show_pbr_policy_codes() {
         return 1
     fi
     main_policy_mark=$(printf '%s\n' "$main_policy_mark" | sed -n '1p')
+
+    full_policy_mark=$(printf '%s' "$api_policy_json" | jq -r --arg pname "$full_policy_name" '
+        .[] | select((.description // "" | ascii_downcase) == ($pname | ascii_downcase)) | .mark // empty
+    ' 2>&1)
+    full_policy_mark_rc=$?
+    if [ "$full_policy_mark_rc" -ne 0 ]; then
+        full_policy_error=$(_pbr_format_single_line_error "$full_policy_mark")
+        [ -z "$full_policy_error" ] && full_policy_error="Не удалось обработать список политик Keenetic"
+        echo -e "  ${red}Ошибка${reset}: $full_policy_error"
+        return 1
+    fi
+    full_policy_mark=$(printf '%s\n' "$full_policy_mark" | sed -n '1p')
 
     user_policy_marks=""
     if [ -f "$xkeen_config" ]; then
@@ -423,6 +436,11 @@ show_pbr_policy_codes() {
         echo "xkeen=$main_policy_dec"
     else
         echo "xkeen="
+    fi
+
+    if [ -n "$full_policy_mark" ]; then
+        full_policy_dec=$(_pbr_hex_to_decimal "$full_policy_mark" 2>/dev/null)
+        [ -n "$full_policy_dec" ] && echo "${full_policy_name}=${full_policy_dec}"
     fi
 
     if [ -n "$user_policy_marks" ]; then

@@ -636,7 +636,7 @@ ${light_blue}${bad_list}${reset}
 build_allowed_policy_marks() {
     include_service_mark="$1"
     allowed_marks=""
-    policy_hex_marks="$policy_mark"
+    policy_hex_marks="$policy_mark $policy_mark_full"
 
     if [ "$include_service_mark" = "yes" ]; then
         allowed_marks="255"
