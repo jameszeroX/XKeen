@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-23 08:42:47 MSK)
+
+Сборка из [`f3a7fe2`](https://github.com/jameszeroX/XKeen/commit/f3a7fe23694469eee3323c6deccda9d99d6a7b89).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/4accbf9d59d32ca73b4b8e193de38181e5887b29/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`0f3da4b...f3a7fe2`](https://github.com/jameszeroX/XKeen/compare/0f3da4ba8e98a4628bcdeac48469260f07a3eb49...f3a7fe23694469eee3323c6deccda9d99d6a7b89).
+
+###### Коммиты
+
+- Add support for the xkeen_full policy to the PBR ([`f3a7fe2`](https://github.com/jameszeroX/XKeen/commit/f3a7fe23694469eee3323c6deccda9d99d6a7b89)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-22 10:57:30 MSK)
 
 Сборка из [`f723b66`](https://github.com/jameszeroX/XKeen/commit/f723b66d34a0397b7affc6ab1516e399d7604e47).
