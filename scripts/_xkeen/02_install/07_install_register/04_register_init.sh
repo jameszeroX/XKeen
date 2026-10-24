@@ -1142,7 +1142,23 @@ process_mark_var() {
 }
 
 # Проверка статуса прокси-клиента
-proxy_status() { pidof "$name_client" >/dev/null; }
+proxy_pids() {
+    if [ "$name_client" != "xray" ]; then
+        pidof "$name_client"
+        return
+    fi
+    for _proxy_pid in $(pidof "$name_client"); do
+        if tr '\000' '\n' 2>/dev/null < "/proc/$_proxy_pid/cmdline" | awk '
+            NR == 2 { running = ($0 == "run") }
+            $0 == "-test" || $0 == "--test" || $0 == "-test=true" || $0 == "--test=true" { testing = 1 }
+            END { exit !(running && !testing) }
+        '; then
+            printf '%s\n' "$_proxy_pid"
+        fi
+    done
+}
+
+proxy_status() { [ -n "$(proxy_pids)" ]; }
 
 # Поиск конфигураций DNS
 check_dns_config() {
@@ -2257,7 +2273,25 @@ curl_api() {
 # полностью разобрать его на каждое событие netfilter.d/schedule.d,
 # прежде чем начать что-либо исполнять — в т.ч. fast-path выход
 # _xkeen_rules_intact ниже: он экономит только исполнение, не разбор.
-if pidof "$name_client" >/dev/null; then
+proxy_pids() {
+    if [ "$name_client" != "xray" ]; then
+        pidof "$name_client"
+        return
+    fi
+    for _proxy_pid in $(pidof "$name_client"); do
+        if tr '\000' '\n' 2>/dev/null < "/proc/$_proxy_pid/cmdline" | awk '
+            NR == 2 { running = ($0 == "run") }
+            $0 == "-test" || $0 == "--test" || $0 == "-test=true" || $0 == "--test=true" { testing = 1 }
+            END { exit !(running && !testing) }
+        '; then
+            printf '%s\n' "$_proxy_pid"
+        fi
+    done
+}
+
+proxy_status() { [ -n "$(proxy_pids)" ]; }
+
+if proxy_status; then
 
     # Сериализация прогонов хука. NDM вызывает netfilter.d конкурентно —
     # по событию на каждую пересобранную (type, table) пару, плюс schedule.d.
@@ -3063,11 +3097,12 @@ USER_POLICIES_EOF
     _xkeen_prev_wan=$(cat "$_xkeen_wan_state" 2>/dev/null)
 
     if [ -n "$_xkeen_cur_wan" ] && [ "$_xkeen_cur_wan" = "$_xkeen_prev_wan" ] && _xkeen_rules_intact; then
-        # IP тот же, цепочки целы: deny-MAC обновляет schedule.d —
+        # IP тот же, цепочки целы: deny-MAC обновляется и для schedule.d —
         # здесь curl под lock только мешает соседним событиям NDM.
         [ "$iptables_supported" = "true" ] && _xkeen_refill_geo_if_empty geo_exclude "$ru_exclude_ipv4" inet
         [ "$ip6tables_supported" = "true" ] && _xkeen_refill_geo_if_empty geo_exclude6 "$ru_exclude_ipv6" inet6
         _xkeen_release_nf_lock
+        _xkeen_sync_deny_mac_ipset
         exit 0
     fi
 
@@ -3256,14 +3291,14 @@ else
     esac
     _probe=0
     while [ "$_probe" -lt 60 ]; do
-        pidof "$name_client" >/dev/null 2>&1 && break
+        proxy_status && break
         _probe=$((_probe + 1))
         usleep 100000
     done
     unset _probe
     rm -rf "$_xkeen_start_lock"
     trap - EXIT INT TERM
-    if pidof "$name_client" >/dev/null; then
+    if proxy_status; then
         restart_script "$@"
     else
         exit 1
@@ -4048,6 +4083,7 @@ proxy_stop() {
     if ! proxy_status; then
         echo -e "  Прокси-клиент ${red}не запущен${reset}"
         cleanup_fd_monitor
+        clean_firewall
     else
         [ -f "$xkeen_rundir/coldstart.lock" ] || log_info_router "Инициирована остановка прокси-клиента"
         cleanup_fd_monitor
