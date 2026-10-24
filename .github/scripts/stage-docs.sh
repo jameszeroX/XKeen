@@ -64,6 +64,8 @@ inject_fm() {
 # --- Копирование канонических источников + front-matter ---
 
 cp "$ROOT/README.md"          "$SRC/index.md"
+mkdir -p "$SRC/docs"
+cp "$ROOT/docs/xkeen-light.png" "$ROOT/docs/xkeen-dark.png" "$SRC/docs/"
 inject_fm "$SRC/index.md"          "README.md"
 
 cp "$ROOT/wiki/Configuration.md"   "$SRC/configuration.md"
