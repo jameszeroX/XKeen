@@ -65,9 +65,9 @@ reset_geo
 STUB_RC=1
 install_geosite
 check "geosite: провал → zkeen.dat не создан" \
-    "$([ -e "$geo_dir/zkeen.dat" ] && echo есть || echo нет)" "нет"
+    "$({ [ -e "$geo_dir/zkeen.dat" ] || [ -L "$geo_dir/zkeen.dat" ]; } && echo есть || echo нет)" "нет"
 check "geosite: провал → geosite_zkeen.dat не создан" \
-    "$([ -e "$geo_dir/geosite_zkeen.dat" ] && echo есть || echo нет)" "нет"
+    "$({ [ -e "$geo_dir/geosite_zkeen.dat" ] || [ -L "$geo_dir/geosite_zkeen.dat" ]; } && echo есть || echo нет)" "нет"
 
 # --- GeoSite: успех создаёт симлинк на реальный файл ---
 reset_geo
@@ -93,9 +93,9 @@ reset_geo
 STUB_RC=1
 install_geoip
 check "geoip: провал → zkeenip.dat не создан" \
-    "$([ -e "$geo_dir/zkeenip.dat" ] && echo есть || echo нет)" "нет"
+    "$({ [ -e "$geo_dir/zkeenip.dat" ] || [ -L "$geo_dir/zkeenip.dat" ]; } && echo есть || echo нет)" "нет"
 check "geoip: провал → geoip_zkeenip.dat не создан" \
-    "$([ -e "$geo_dir/geoip_zkeenip.dat" ] && echo есть || echo нет)" "нет"
+    "$({ [ -e "$geo_dir/geoip_zkeenip.dat" ] || [ -L "$geo_dir/geoip_zkeenip.dat" ]; } && echo есть || echo нет)" "нет"
 
 reset_geo
 STUB_RC=0
