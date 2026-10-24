@@ -146,6 +146,7 @@ sb_write_setting() {
     # них упал бы, ложно забраковав корректный результат.
     if { [ "$rc" = 0 ] || [ "$rc" = 1 ]; } && strip_json_comments "$tmp" | jq -e . >/dev/null 2>&1 \
        && strip_json_comments "$tmp" | jq -e "$struct_ok" >/dev/null 2>&1 \
+       && strip_json_comments "$tmp" | jq -e --arg k "$key" --argjson v "$val" '.xkeen.xray.speed_balancer[$k] == $v' >/dev/null 2>&1 \
        && chmod 600 "$tmp" && mv "$tmp" "$xkeen_config"; then
         return 0
     fi
@@ -157,7 +158,25 @@ sb_write_setting() {
     return 1
 }
 
-# Гарантировать наличие рабочего gRPC api и probe-inbound. Если api уже живой —
+# shellcheck disable=SC2154
+sb_probe_configured() {
+    local conf
+    for conf in "$xray_conf_dir"/*.json; do
+        [ -f "$conf" ] || continue
+        if strip_json_comments "$conf" | jq -e --arg tag "$sb_probe_intag" \
+            --arg host "${sb_probe_addr%:*}" --arg port "${sb_probe_addr##*:}" '
+            any(.inbounds[]?;
+                .tag == $tag and .protocol == "http" and
+                (.listen == $host or .listen == "0.0.0.0" or .listen == null) and
+                (.port | tostring) == $port)
+        ' >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Гарантировать наличие рабочего gRPC api и probe-inbound. Если api и probe уже настроены —
 # ничего не делает. Иначе с подтверждением добавляет api-блок, probe-inbound и
 # правило маршрутизации api, проверяет конфиг и перезапускает Xray.
 #
@@ -185,7 +204,12 @@ sb_ensure_api() {
 
     sb_check_xray_version || return 1
 
-    sb_api_alive && return 0
+    local api_ready generated_config generated_existed probe_json
+    api_ready=false
+    sb_api_alive && api_ready=true
+    if [ "$api_ready" = "true" ] && sb_probe_configured; then
+        return 0
+    fi
 
     echo
     echo -e "  Для балансировки нужен gRPC api Xray (${yellow}RoutingService${reset}) и probe-inbound для замера."
@@ -198,11 +222,29 @@ sb_ensure_api() {
 
     local bkp
     bkp="$backups_dir/xray-configs-sb-$(date +%s)"
-    mkdir -p "$bkp" && cp "$xray_conf_dir"/*.json "$bkp"/ 2>/dev/null
+    mkdir -p "$bkp" && cp "$xray_conf_dir"/*.json "$bkp"/ 2>/dev/null || return 1
     echo -e "  Бэкап конфигурации Xray: ${yellow}$bkp${reset}"
 
-    # api-блок + api-inbound + probe-inbound одним файлом (мержатся по tag)
-    cat > "$sb_api_config" <<EOF
+    generated_config="$sb_api_config"
+    # shellcheck disable=SC2154
+    [ "$api_ready" = "true" ] && generated_config="$sb_probe_config"
+    generated_existed=false
+    [ -f "$generated_config" ] && generated_existed=true
+    if [ "$api_ready" = "true" ]; then
+        probe_json='{}'
+        [ ! -f "$generated_config" ] || probe_json=$(strip_json_comments "$generated_config")
+        if ! printf '%s\n' "$probe_json" | jq --arg tag "$sb_probe_intag" \
+            --arg host "${sb_probe_addr%:*}" --argjson port "${sb_probe_addr##*:}" '
+            .inbounds = ([.inbounds[]? | select(.tag != $tag)] +
+                [{protocol:"http",listen:$host,port:$port,tag:$tag}])
+        ' > "$generated_config.tmp" 2>/dev/null; then
+            rm -f "$generated_config.tmp"
+            return 1
+        fi
+        chmod 600 "$generated_config.tmp" && mv "$generated_config.tmp" "$generated_config" || return 1
+    else
+        # api-блок + api-inbound + probe-inbound одним файлом (мержатся по tag)
+        cat > "$sb_api_config" <<EOF
 {
   "api": {
     "services": [
@@ -230,24 +272,28 @@ sb_ensure_api() {
   ]
 }
 EOF
+    fi
 
     # api-правило первым в основной routing.rules, если его там ещё нет
-    local rjson has_rule
-    rjson="$sb_routing_file"
-    if [ -f "$rjson" ]; then
-        has_rule=$(strip_json_comments "$rjson" \
-            | jq '[.routing.rules[]? | select(.outboundTag=="api")] | length' 2>/dev/null)
-        if [ "${has_rule:-0}" = "0" ]; then
-            # без "type": "field" — поле deprecated с xray-core v1.8.10 и правилу не нужно
-            if strip_json_comments "$rjson" \
-                | jq '.routing.rules = ([{inboundTag:["api"],outboundTag:"api"}] + (.routing.rules // []))' \
-                  > "$rjson.tmp" 2>/dev/null && jq -e . "$rjson.tmp" >/dev/null 2>&1; then
-                mv "$rjson.tmp" "$rjson"
-            else
-                rm -f "$rjson.tmp"
-                echo -e "  ${red}✗${reset} Не удалось добавить правило api в $rjson"
-                cp "$bkp"/*.json "$xray_conf_dir"/ 2>/dev/null
-                return 1
+    if [ "$api_ready" != "true" ]; then
+        local rjson has_rule
+        rjson="$sb_routing_file"
+        if [ -f "$rjson" ]; then
+            has_rule=$(strip_json_comments "$rjson" \
+                | jq '[.routing.rules[]? | select(.outboundTag=="api")] | length' 2>/dev/null)
+            if [ "${has_rule:-0}" = "0" ]; then
+                # без "type": "field" — поле deprecated с xray-core v1.8.10 и правилу не нужно
+                if strip_json_comments "$rjson" \
+                    | jq '.routing.rules = ([{inboundTag:["api"],outboundTag:"api"}] + (.routing.rules // []))' \
+                      > "$rjson.tmp" 2>/dev/null && jq -e . "$rjson.tmp" >/dev/null 2>&1; then
+                    mv "$rjson.tmp" "$rjson"
+                else
+                    rm -f "$rjson.tmp"
+                    echo -e "  ${red}✗${reset} Не удалось добавить правило api в $rjson"
+                    cp "$bkp"/*.json "$xray_conf_dir"/ 2>/dev/null
+                    [ "$generated_existed" = "true" ] || rm -f "$generated_config"
+                    return 1
+                fi
             fi
         fi
     fi
@@ -256,15 +302,16 @@ EOF
     if ! XRAY_LOCATION_ASSET="$geo_dir" xray run -confdir "$xray_conf_dir" -test >/dev/null 2>&1; then
         echo -e "  ${red}✗${reset} Конфигурация не прошла проверку — восстанавливаю из бэкапа"
         cp "$bkp"/*.json "$xray_conf_dir"/ 2>/dev/null
+        [ "$generated_existed" = "true" ] || rm -f "$generated_config"
         return 1
     fi
 
     echo -e "  ${yellow}Перезапуск${reset} XKeen для применения api..."
-    "$install_dir/xkeen" -restart >/dev/null 2>&1
+    XKEEN_FOREGROUND=1 "$install_dir/xkeen" -restart >/dev/null 2>&1 || return 1
 
     local i=0
     while [ "$i" -lt 20 ]; do
-        sb_api_alive && { echo -e "  api ${green}поднят${reset}"; return 0; }
+        sb_api_alive && sb_probe_configured && { echo -e "  api ${green}поднят${reset}"; return 0; }
         i=$((i + 1)); sleep 1
     done
     echo -e "  ${red}✗${reset} api не поднялся за 20с — проверьте $xray_error_log"
@@ -347,7 +394,10 @@ sb_disable() {
         return 0
     fi
     # снять override — без него выбор залипнет на последней ноде (у bo нет TTL)
-    xray api bo -s "$sb_api_addr" -b "$sb_balancer" -r >/dev/null 2>&1
+    if ! xray api bo -s "$sb_api_addr" -b "$sb_balancer" -r >/dev/null 2>&1; then
+        echo -e "  ${red}✗${reset} Не удалось снять override — балансировка остаётся включённой."
+        return 1
+    fi
     sb_remove_cron
     sb_write_setting enabled false || return 1
     echo

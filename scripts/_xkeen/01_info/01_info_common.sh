@@ -125,6 +125,28 @@ verify_downloads_settings
 #   4 — файл на входе даже не открывается как JSON-объект.
 jc_set_path() {
     JC_PATH="$1" JC_NEW="$2" awk '
+    function mask_comments(s,   out, i, c, nextc, instr, esc, inblk, inlinec) {
+      out = ""; instr = 0; esc = 0; inblk = 0; inlinec = 0
+      for (i = 1; i <= length(s); i++) {
+        c = substr(s,i,1); nextc = substr(s,i+1,1)
+        if (inlinec) {
+          if (c == "\n") { inlinec = 0; out = out c } else out = out " "
+        } else if (inblk) {
+          if (c == "*" && nextc == "/") { inblk = 0; out = out "  "; i++ }
+          else out = out (c == "\n" ? c : " ")
+        } else if (instr) {
+          out = out c
+          if (esc) esc = 0
+          else if (c == "\\") esc = 1
+          else if (c == "\"") instr = 0
+        } else if (c == "\"") { instr = 1; out = out c }
+        else if (c == "/" && nextc == "/") { inlinec = 1; out = out "  "; i++ }
+        else if (c == "/" && nextc == "*") { inblk = 1; out = out "  "; i++ }
+        else out = out c
+      }
+      return out
+    }
+
     function reindent(s, pad,   n, i, parts, out) {
       n = split(s, parts, "\n")
       if (n < 2) return s
@@ -236,10 +258,12 @@ jc_set_path() {
 
     { buf = buf $0 "\n" }
     END {
+      original = buf
+      buf = mask_comments(buf)
       new = ENVIRON["JC_NEW"]
       npath = split(ENVIRON["JC_PATH"], keys, ".")
 
-      if (!locate_root(buf, cur)) { printf "%s", buf; exit 4 }
+      if (!locate_root(buf, cur)) { printf "%s", original; exit 4 }
 
       # Промежуточные уровни (все, кроме последнего ключа пути) обязаны
       # быть объектами, чтобы в них можно было "войти".
@@ -248,7 +272,7 @@ jc_set_path() {
         key = "\"" keys[lvl] "\""
         r = locate_obj(buf, key, cur[1], cur[2], nxt)
         if (r == 1) { cur[1]=nxt[1]; cur[2]=nxt[2]; cur[3]=nxt[3]; matched = lvl; continue }
-        if (r == 2) { printf "%s", buf; exit 2 }
+        if (r == 2) { printf "%s", original; exit 2 }
         break   # r == 0: этого промежуточного ключа нет — дальше только вставка
       }
 
@@ -263,10 +287,10 @@ jc_set_path() {
           while (ls > 1 && substr(buf, ls - 1, 1) != "\n") ls--
           pad = substr(buf, ls, kp - ls)
           if (pad ~ /[^ \t]/) { gsub(/\n[ \t]*/, " ", new); pad = "" }
-          printf "%s%s%s", substr(buf,1,vs-1), reindent(new, pad), substr(buf,ve+1)
+          printf "%s%s%s", substr(original,1,vs-1), reindent(new, pad), substr(original,ve+1)
           exit 0
         }
-        if (r == 2) { printf "%s", buf; exit 2 }
+        if (r == 2) { printf "%s", original; exit 2 }
         # r == 0: последнего ключа нет — вставляем ниже как единственный
         # недостающий уровень (matched уже == npath-1).
       }
@@ -293,7 +317,7 @@ jc_set_path() {
       }
 
       block = build_wrap(keys, matched + 1, npath, new, pad)
-      before = substr(buf,1,i); after = substr(buf,i+1)
+      before = substr(original,1,i); after = substr(original,i+1)
       if (substr(buf,j,1) == "}")
         printf "%s\n%s%s\n%s%s", before, pad, block, base, after
       else
