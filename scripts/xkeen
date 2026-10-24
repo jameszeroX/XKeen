@@ -1693,15 +1693,23 @@ while [ $# -gt 0 ]; do
 
 
         -di)    # Время ожидания инициализации роутера
-            shift
-            delay_init "$1"
+            if [ -n "${2:-}" ] && [ "${2#-}" = "$2" ]; then
+                shift
+                delay_init "$1"
+            else
+                delay_init ""
+            fi
             add_chmod_init
         ;;
 
 
         -d)    # Время ожидания успешного запуска
-            shift
-            delay_autostart "$1"
+            if [ -n "${2:-}" ] && [ "${2#-}" = "$2" ]; then
+                shift
+                delay_autostart "$1"
+            else
+                delay_autostart ""
+            fi
             add_chmod_init
         ;;
 

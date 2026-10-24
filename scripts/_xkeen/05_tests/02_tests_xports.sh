@@ -62,8 +62,9 @@ tests_ports_client() {
                     gw = substr(addr, 1, n)
                     pt = substr(addr, n + 2)
                 } else if (addr ~ /:/) {
-                    # Обычный IPv4
-                    n = index(addr, ":")
+                    # IPv4 или IPv6 без квадратных скобок
+                    n = length(addr)
+                    while (n > 0 && substr(addr, n, 1) != ":") n--
                     gw = substr(addr, 1, n - 1)
                     pt = substr(addr, n + 1)
                 } else {
