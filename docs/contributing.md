@@ -70,7 +70,7 @@ find scripts/_xkeen -name '*.sh' -exec shellcheck -s sh {} +
 
    ```sh
    docker run --rm -v "$PWD:/repo:ro" alpine:latest sh -c '
-     apk add --no-cache jq curl >/dev/null
+     apk add --no-cache jq curl yq >/dev/null
      cd /repo
      rc=0
      for t in spec/test_*.sh; do
