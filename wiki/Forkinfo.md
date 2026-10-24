@@ -18,7 +18,7 @@
 - Возможность загружать компоненты XKeen через [Self-Hosted прокси](https://github.com/jameszeroX/XKeen/wiki/Configuration#self-hosted-прокси-для-загрузки-с-github) при недоступности GitHub. Пользовательский прокси задаётся в параметре `gh_proxy` конфигурационного файла `xkeen.json`
 - Параметры `retries_download` и `retry_delay_download` в `xkeen.json` для настройки числа повторных попыток и паузы между ними при загрузке с GitHub. Применяется к загрузке XKeen, Xray, Mihomo, Yq, GeoSite/GeoIP/GeoIPSET и получению списков релизов через GitHub API/jsDelivr. [Подробнее](https://github.com/jameszeroX/XKeen/wiki/Configuration#повторы-загрузки-с-github)
 - Возможность [OffLine установки](https://github.com/jameszeroX/XKeen/wiki/Configuration#offline-установка) (параметр запуска `-io`)
-- Возможность отключить резервное копирование XKeen при обновлении (параметр запуска `-cbr`)
+- Возможность отключить резервное копирование XKeen при обновлении (параметр запуска `-cbk`)
 - Возможность установки GeoIP базы [zkeenip.dat](https://github.com/jameszeroX/zkeen-ip)
 - Обновление [zkeen.dat](https://github.com/jameszeroX/zkeen-domains) и [zkeenip.dat](https://github.com/jameszeroX/zkeen-ip) по расписанию средствами XKeen
 - При установке теперь можно выбрать, добавлять ли XKeen в автозагрузку при включении роутера или нет
