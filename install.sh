@@ -416,7 +416,11 @@ if ! mv "$stage_dir/xkeen" /opt/sbin/xkeen.new; then
     exit 1
 fi
 rm -f /opt/sbin/xkeen.old
-[ -f /opt/sbin/xkeen ] && mv /opt/sbin/xkeen /opt/sbin/xkeen.old
+if [ -f /opt/sbin/xkeen ] && ! mv /opt/sbin/xkeen /opt/sbin/xkeen.old; then
+    rm -rf "$stage_dir" /opt/sbin/xkeen.new
+    printf '  %sОшибка%s: не удалось сохранить установленный XKeen\n' "$red" "$reset"
+    exit 1
+fi
 if ! mv /opt/sbin/xkeen.new /opt/sbin/xkeen; then
     [ -f /opt/sbin/xkeen.old ] && mv /opt/sbin/xkeen.old /opt/sbin/xkeen
     rm -rf "$stage_dir" /opt/sbin/xkeen.new
@@ -424,7 +428,16 @@ if ! mv /opt/sbin/xkeen.new /opt/sbin/xkeen; then
     exit 1
 fi
 rm -rf /opt/sbin/.xkeen.old
-[ -d /opt/sbin/.xkeen ] && mv /opt/sbin/.xkeen /opt/sbin/.xkeen.old
+if [ -d /opt/sbin/.xkeen ] && ! mv /opt/sbin/.xkeen /opt/sbin/.xkeen.old; then
+    if [ -f /opt/sbin/xkeen.old ]; then
+        mv /opt/sbin/xkeen.old /opt/sbin/xkeen
+    else
+        rm -f /opt/sbin/xkeen
+    fi
+    rm -rf "$stage_dir"
+    printf '  %sОшибка%s: не удалось сохранить установленные модули XKeen\n' "$red" "$reset"
+    exit 1
+fi
 if ! mv "$stage_dir/_xkeen" /opt/sbin/.xkeen; then
     [ -f /opt/sbin/xkeen.old ] && mv /opt/sbin/xkeen.old /opt/sbin/xkeen
     [ -d /opt/sbin/.xkeen.old ] && mv /opt/sbin/.xkeen.old /opt/sbin/.xkeen

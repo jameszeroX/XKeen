@@ -6,15 +6,23 @@ backup_xkeen() {
 
     backup_filename="${current_datetime}_xkeen_v${xkeen_current_version}"
     backup_dir="${backups_dir}/${backup_filename}"
-    mkdir -p "$backup_dir"
+    mkdir -p "$backups_dir" || return 1
+    backup_tmp_dir=$(mktemp -d "$backups_dir/.backup-XXXXXX") || return 1
 
     # Копирование файлов. Проверяем успех всей операции копирования
-    if cp -r "$install_dir/.xkeen" "$install_dir/xkeen" "$backup_dir/"; then
+    if cp -r "$install_dir/.xkeen" "$install_dir/xkeen" "$backup_tmp_dir/"; then
         # Переименование скрытой директории для удобства хранения
-        mv "$backup_dir/.xkeen" "$backup_dir/_xkeen"
+        if ! mv "$backup_tmp_dir/.xkeen" "$backup_tmp_dir/_xkeen" ||
+           [ -e "$backup_dir" ] || ! mv "$backup_tmp_dir" "$backup_dir"; then
+            rm -rf "${backup_tmp_dir:?}"
+            echo -e "  ${red}Ошибка${reset} при создании резервной копии XKeen"
+            return 1
+        fi
         echo -e "  Резервная копия XKeen создана: ${yellow}${backup_filename}${reset}"
     else
+        rm -rf "${backup_tmp_dir:?}"
         echo -e "  ${red}Ошибка${reset} при создании резервной копии XKeen"
+        return 1
     fi
 }
 
