@@ -61,23 +61,37 @@ diagnostic() {
             -e "s/\b(rci_token)='[^']*'/\1='***MASKED***'/g"
     }
 
+    mask_json_sensitive_data() {
+        local masked
+        if masked=$(jq -e --arg keys "$1" '
+            walk(if type == "object" then
+                with_entries(if (.key | test($keys; "i")) then
+                    .value = "***MASKED***"
+                else . end)
+            else . end)
+        ' 2>/dev/null) && [ -n "$masked" ]; then
+            printf '%s\n' "$masked"
+        else
+            printf '%s\n' '[Конфигурация скрыта: не удалось безопасно обработать данные]'
+            return 1
+        fi
+    }
+
     # Функция маскировки чувствительных данных в конфигах Xray
     mask_xray_sensitive_data() {
-        sed -E \
-            -e 's/("(id|uuid|address|host|publicKey|privateKey)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
-            -e 's/("(password|user|pass|auth|encryption)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
-            -e 's/("(secretKey|preSharedKey|dest|token)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
-            -e 's/("(serverName|serverNames|sni|path|spiderX)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
-            -e 's/("(shortId|shortIds|mldsa65Verify|mldsa65Seed)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g'
+        strip_json_comments | mask_json_sensitive_data '^(id|uuid|address|host|publicKey|privateKey|password|user|pass|auth|encryption|secretKey|preSharedKey|dest|token|serverName|serverNames|sni|path|spiderX|shortId|shortIds|mldsa65Verify|mldsa65Seed)$'
     }
 
     # Функция маскировки чувствительных данных в конфигах Mihomo
+    # shellcheck disable=SC2154
     mask_mihomo_sensitive_data() {
-        sed -E \
-            -e 's/^([[:space:]]*(- )?(password|username|uuid|pre-shared-key|private-key|private-key-passphrase):).*/\1 ***MASKED***/i' \
-            -e 's/^([[:space:]]*(- )?(server|servername|sni|host|query-server-name|external-controller):).*/\1 ***MASKED***/i' \
-            -e 's/^([[:space:]]*(- )?(url|path|certificate|config|public-key|short-id|client-id|auth-str):).*/\1 ***MASKED***/i' \
-            -e 's/^([[:space:]]*(- )?(obfs-password|encryption|token|secret|psk):).*/\1 ***MASKED***/i'
+        local parsed
+        if parsed=$("$install_dir/yq" -o=json '.' 2>/dev/null) && [ -n "$parsed" ]; then
+            printf '%s\n' "$parsed" | mask_json_sensitive_data '^(password|username|uuid|pre-shared-key|private-key|private-key-passphrase|server|servername|sni|host|query-server-name|external-controller|url|path|certificate|config|public-key|short-id|client-id|auth-str|obfs-password|encryption|token|secret|psk)$'
+        else
+            printf '%s\n' '[Конфигурация скрыта: не удалось безопасно обработать YAML]'
+            return 1
+        fi
     }
 
     # Функция маскировки пользовательских IP-адресов
