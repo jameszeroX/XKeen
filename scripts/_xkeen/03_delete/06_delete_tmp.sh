@@ -34,7 +34,7 @@ delete_all() {
     echo
 
     while true; do
-        read -r -p "  Ваш выбор: " choice
+        read -r -p "  Ваш выбор: " choice || choice=0
         case "$choice" in
             1)
                 [ -d "$backups_dir" ] && rm -rf "$backups_dir"

@@ -33,7 +33,7 @@ preinstall_warn() {
         echo
 
         while true; do
-            read -r -p "  Выберите действие: " choice
+            read -r -p "  Выберите действие: " choice || exit 1
 
             case $choice in
                 1)
