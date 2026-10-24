@@ -2,12 +2,17 @@
 backup_configs_xray() {
     backup_filename="${current_datetime}_configs_xray"
     backup_configs_dir="$backups_dir/$backup_filename"
-    mkdir -p "$backup_configs_dir"
+    mkdir -p "$backups_dir" || return 1
+    backup_tmp_dir=$(mktemp -d "$backups_dir/.backup-XXXXXX") || return 1
 
-    if cp -r "$xray_conf_dir"/* "$backup_configs_dir/"; then
+    if cp -r "$xray_conf_dir"/. "$backup_tmp_dir/" &&
+       [ ! -e "$backup_configs_dir" ] &&
+       mv "$backup_tmp_dir" "$backup_configs_dir"; then
         echo -e "  Резервная копия конфигурации Xray создана: ${yellow}$backup_filename${reset}"
     else
+        rm -rf "${backup_tmp_dir:?}"
         echo -e "  ${red}Ошибка${reset} при создании резервной копии конфигураций Xray"
+        return 1
     fi
 }
 
