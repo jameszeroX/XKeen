@@ -171,7 +171,7 @@ diagnostic() {
 
     if [ -f "$xkeen_ndm" ]; then
         write_header "Файл $xkeen_ndm"
-        mask_xkeen_sensitive_data < "$xkeen_ndm" | mask_ips >> "$diagnostic"
+        mask_hook_sensitive_data < "$xkeen_ndm" | mask_ips >> "$diagnostic"
         echo >> "$diagnostic"; echo >> "$diagnostic"
     fi
 
@@ -201,7 +201,7 @@ diagnostic() {
 
     if [ -f "$xkeen_config" ]; then
         write_header "Файл xkeen.json"
-        mask_hook_sensitive_data < "$xkeen_ndm" | mask_ips >> "$diagnostic"
+        mask_xkeen_sensitive_data < "$xkeen_ndm" | mask_ips >> "$diagnostic"
         echo >> "$diagnostic"; echo >> "$diagnostic"
     fi
 
