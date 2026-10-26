@@ -54,11 +54,9 @@ diagnostic() {
         echo >> "$diagnostic"; echo >> "$diagnostic"
     }
 
-    # Функция маскировки чувствительных данных в xkeen.json
-    mask_xkeen_sensitive_data() {
-        sed -E \
-            -e 's/("(rci_token|gh_proxy|url)")[[:space:]]*:[[:space:]]*"?[^",[:space:]]+"?(,?)/\1: "***MASKED***"\3/g' \
-            -e "s/\b(rci_token)='[^']*'/\1='***MASKED***'/g"
+    # Функция маскировки чувствительных данных в proxy.sh
+    mask_hook_sensitive_data() {
+        sed -E -e "s/\b(rci_token)='[^']*'/\1='***MASKED***'/g"
     }
 
     mask_json_sensitive_data() {
@@ -79,12 +77,17 @@ diagnostic() {
         fi
     }
 
-    # Функция маскировки чувствительных данных в конфигах Xray
-    mask_xray_sensitive_data() {
-        strip_json_comments | mask_json_sensitive_data '["id","uuid","address","host","publicKey","privateKey","password","user","pass","auth","encryption","secretKey","preSharedKey","dest","token","serverName","serverNames","sni","path","spiderX","shortId","shortIds","mldsa65Verify","mldsa65Seed"]'
+    # Функция маскировки чувствительных данных в xkeen.json
+    mask_xkeen_sensitive_data() {
+        strip_json_comments | mask_json_sensitive_data '["rci_token","gh_proxy","url","test_url"]'
     }
 
-    # Функция маскировки чувствительных данных в конфигах Mihomo
+    # Функция маскировки чувствительных данных в конфигах Xray
+    mask_xray_sensitive_data() {
+        strip_json_comments | mask_json_sensitive_data '["id","uuid","address","host","publicKey","privateKey","password","user","pass","auth","encryption","secretKey","preSharedKey","dest","token","serverName","serverNames","sni","path","spiderX","shortId","shortIds","mldsa65Verify","mldsa65Seed","endpoint","authority","email"]'
+    }
+
+    # Функция маскировки чувствительных данных в конфиге Mihomo
     # shellcheck disable=SC2154
     mask_mihomo_sensitive_data() {
         local parsed
@@ -198,7 +201,7 @@ diagnostic() {
 
     if [ -f "$xkeen_config" ]; then
         write_header "Файл xkeen.json"
-        mask_xkeen_sensitive_data < "$xkeen_config" >> "$diagnostic"
+        mask_hook_sensitive_data < "$xkeen_ndm" | mask_ips >> "$diagnostic"
         echo >> "$diagnostic"; echo >> "$diagnostic"
     fi
 
