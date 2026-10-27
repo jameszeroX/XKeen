@@ -1862,7 +1862,9 @@ while [ $# -gt 0 ]; do
 
         -sbt)    # Тик балансировки по скорости (вызывается cron, без интерактива)
             speed_balancer_settings
-            [ "$sb_enabled" = "true" ] && sb_tick
+            if [ "$sb_enabled" = "true" ]; then
+                sb_tick || xkeen_rc=1
+            fi
         ;;
 
 
