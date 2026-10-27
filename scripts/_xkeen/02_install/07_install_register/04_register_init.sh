@@ -2023,7 +2023,7 @@ hex_mark_to_decimal() {
 sync_deny_mac_ipset() {
     command -v ipset >/dev/null 2>&1 || return 0
     ipset create "$name_ipset_deny_mac" hash:mac -exist 2>/dev/null || return 0
-    _xkeen_deny_tmp="${name_ipset_deny_mac}_tmp"
+    _xkeen_deny_tmp="${name_ipset_deny_mac}_tmp_$$"
     ipset create "$_xkeen_deny_tmp" hash:mac -exist 2>/dev/null
     ipset flush "$_xkeen_deny_tmp" >/dev/null 2>&1
     _xkeen_hotspot_json=$(curl_api "${url_server}/${url_hotspot}" 2>/dev/null)
@@ -2334,7 +2334,7 @@ if proxy_status; then
     _xkeen_sync_deny_mac_ipset() {
         command -v ipset >/dev/null 2>&1 || return 0
         ipset create "$name_ipset_deny_mac" hash:mac -exist 2>/dev/null || return 0
-        _tmp="${name_ipset_deny_mac}_tmp"
+        _tmp="${name_ipset_deny_mac}_tmp_$$"
         ipset create "$_tmp" hash:mac -exist 2>/dev/null
         ipset flush "$_tmp" >/dev/null 2>&1
         _hjson=$(curl_api "${url_server}/${url_hotspot}" 2>/dev/null)
