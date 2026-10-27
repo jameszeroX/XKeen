@@ -84,5 +84,69 @@ original=$(cat "$xkeen_config")
 sb_write_setting enabled true >/dev/null; rc=$?
 check 'unchanged requested value rejects publication' "$rc" 1
 check 'semantic rejection preserves config' "$(cat "$xkeen_config")" "$original"
+export SB_ROLLBACK_TEST_DIR="$work"
+sb_api_alive() {
+    [ "$SB_ROLLBACK_TEST_MODE" != wait ] || printf '%s\n' "${1:-3}" >> "$work/api-timeouts"
+    [ "$SB_ROLLBACK_TEST_MODE" != new-api ] || return 1
+    [ "$(cat "$work/daemon-state")" = running ]
+}
+xray() {
+    [ "$SB_ROLLBACK_TEST_MODE" != config-test ] || [ "$1" != run ]
+}
+sleep() { :; }
+date() {
+    if [ "$1" != +%s ]; then
+        command date "$@"
+        return
+    fi
+    clock=0
+    [ ! -f "$work/clock" ] || clock=$(cat "$work/clock")
+    printf '%s\n' "$clock"
+    printf '%s\n' "$((clock + 5))" > "$work/clock"
+}
+for SB_ROLLBACK_TEST_MODE in restart wait new-api config-test; do
+    export SB_ROLLBACK_TEST_MODE
+    rm -rf "$xray_conf_dir"
+    mkdir -p "$xray_conf_dir"
+    printf '%s\n' '{"inbounds":[{"tag":"existing","protocol":"socks","port":10809}],"outbounds":[{"tag":"keep-outbound","protocol":"freedom"}]}' > "$sb_probe_config"
+    chmod 640 "$sb_probe_config"
+    printf '%s\n' '{"routing":{"rules":[{"outboundTag":"keep-route"}]}}' > "$sb_routing_file"
+    if [ "$SB_ROLLBACK_TEST_MODE" != new-api ]; then
+        printf '%s\n' "$api_before" > "$xray_conf_dir/custom-api.json"
+    fi
+    expected_fingerprint=$(cd "$xray_conf_dir" && sha256sum ./*.json)
+    printf '%s\n' "$expected_fingerprint" > "$work/expected-fingerprint"
+    printf running > "$work/daemon-state"
+    rm -f "$work/restart-attempts" "$work/clock" "$work/api-timeouts"
+    cat > "$install_dir/xkeen" <<'SH'
+#!/bin/sh
+[ "$XKEEN_FOREGROUND" = 1 ] || exit 1
+attempts=0
+[ ! -f "$SB_ROLLBACK_TEST_DIR/restart-attempts" ] || attempts=$(cat "$SB_ROLLBACK_TEST_DIR/restart-attempts")
+attempts=$((attempts + 1))
+printf '%s\n' "$attempts" > "$SB_ROLLBACK_TEST_DIR/restart-attempts"
+printf stopped > "$SB_ROLLBACK_TEST_DIR/daemon-state"
+if [ "$attempts" = 1 ]; then
+    [ "$SB_ROLLBACK_TEST_MODE" = wait ] && exit 0
+    exit 7
+fi
+[ "$(cat "$SB_ROLLBACK_TEST_DIR/expected-fingerprint")" = "$(cd "$SB_ROLLBACK_TEST_DIR/configs" && sha256sum ./*.json)" ] || exit 8
+printf running > "$SB_ROLLBACK_TEST_DIR/daemon-state"
+SH
+    chmod +x "$install_dir/xkeen"
+    printf 'y\n' | sb_ensure_api > "$work/rollback-$SB_ROLLBACK_TEST_MODE.log" 2>&1; rc=$?
+    check "$SB_ROLLBACK_TEST_MODE setup failure is reported" "$rc" 1
+    check "$SB_ROLLBACK_TEST_MODE restores exact original configs" "$(cd "$xray_conf_dir" && sha256sum ./*.json)" "$expected_fingerprint"
+    check "$SB_ROLLBACK_TEST_MODE restores config permissions" "$(ls -ld "$sb_probe_config" | awk '{print $1}')" '-rw-r-----'
+    check "$SB_ROLLBACK_TEST_MODE preserves working daemon" "$(cat "$work/daemon-state")" running
+    expected_attempts=2
+    [ "$SB_ROLLBACK_TEST_MODE" != config-test ] || expected_attempts=0
+    attempts=0
+    [ ! -f "$work/restart-attempts" ] || attempts=$(cat "$work/restart-attempts")
+    check "$SB_ROLLBACK_TEST_MODE restarts only when needed" "$attempts" "$expected_attempts"
+    if [ "$SB_ROLLBACK_TEST_MODE" = wait ]; then
+        check 'readiness API probes use one-second timeouts' "$(sed '1d' "$work/api-timeouts" | sort -u)" 1
+    fi
+done
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
