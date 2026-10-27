@@ -148,5 +148,22 @@ SH
         check 'readiness API probes use one-second timeouts' "$(sed '1d' "$work/api-timeouts" | sort -u)" 1
     fi
 done
+tick_branch=$(awk '/^[[:space:]]*-sbt\)/ {on=1; next} on && /^[[:space:]]*;;/ {exit} on {print}' /repo/scripts/xkeen)
+run_tick() (
+    sb_enabled=$1
+    tick_rc=$2
+    xkeen_rc=0
+    speed_balancer_settings() { :; }
+    sb_tick() { printf 'tick\n' >> "$work/tick-calls"; return "$tick_rc"; }
+    eval "$tick_branch"
+    exit "$xkeen_rc"
+)
+run_tick true 0 >/dev/null; rc=$?
+check 'successful CLI tick reports success' "$rc" 0
+run_tick true 7 >/dev/null; rc=$?
+check 'failed CLI tick reports failure' "$rc" 1
+run_tick false 7 >/dev/null; rc=$?
+check 'disabled CLI tick remains a successful no-op' "$rc" 0
+check 'disabled CLI tick does not run measurements' "$(wc -l < "$work/tick-calls" | tr -d ' ')" 2
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
