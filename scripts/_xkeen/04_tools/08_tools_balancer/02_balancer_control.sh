@@ -4,7 +4,7 @@
 # Жив ли gRPC api (RoutingService). lsrules не зависит от имени балансировщика,
 # поэтому годится как проба живости.
 sb_api_alive() {
-    xray api lsrules -s "$sb_api_addr" >/dev/null 2>&1
+    xray api lsrules -s "$sb_api_addr" -timeout "${1:-3}" >/dev/null 2>&1
 }
 
 # Запущен ли Xray. Отдельно от sb_api_alive: у остановленного ядра api молчит
@@ -176,6 +176,14 @@ sb_probe_configured() {
     return 1
 }
 
+sb_restore_api_config() {
+    if ! cp -p "$1"/*.json "$xray_conf_dir"/ 2>/dev/null; then
+        echo "  Не удалось восстановить конфигурацию Xray из резервной копии."
+        return 1
+    fi
+    [ "$3" = true ] || rm -f "$2"
+}
+
 # Гарантировать наличие рабочего gRPC api и probe-inbound. Если api и probe уже настроены —
 # ничего не делает. Иначе с подтверждением добавляет api-блок, probe-inbound и
 # правило маршрутизации api, проверяет конфиг и перезапускает Xray.
@@ -221,8 +229,9 @@ sb_ensure_api() {
     esac
 
     local bkp
-    bkp="$backups_dir/xray-configs-sb-$(date +%s)"
-    mkdir -p "$bkp" && cp "$xray_conf_dir"/*.json "$bkp"/ 2>/dev/null || return 1
+    mkdir -p "$backups_dir" || return 1
+    bkp=$(mktemp -d "$backups_dir/xray-configs-sb-XXXXXX") || return 1
+    cp -p "$xray_conf_dir"/*.json "$bkp"/ 2>/dev/null || return 1
     echo -e "  Бэкап конфигурации Xray: ${yellow}$bkp${reset}"
 
     generated_config="$sb_api_config"
@@ -290,8 +299,7 @@ EOF
                 else
                     rm -f "$rjson.tmp"
                     echo -e "  ${red}✗${reset} Не удалось добавить правило api в $rjson"
-                    cp "$bkp"/*.json "$xray_conf_dir"/ 2>/dev/null
-                    [ "$generated_existed" = "true" ] || rm -f "$generated_config"
+                    sb_restore_api_config "$bkp" "$generated_config" "$generated_existed"
                     return 1
                 fi
             fi
@@ -301,20 +309,27 @@ EOF
     # проверка конфига до рестарта — битый конфиг не должен убить ядро
     if ! XRAY_LOCATION_ASSET="$geo_dir" xray run -confdir "$xray_conf_dir" -test >/dev/null 2>&1; then
         echo -e "  ${red}✗${reset} Конфигурация не прошла проверку — восстанавливаю из бэкапа"
-        cp "$bkp"/*.json "$xray_conf_dir"/ 2>/dev/null
-        [ "$generated_existed" = "true" ] || rm -f "$generated_config"
+        sb_restore_api_config "$bkp" "$generated_config" "$generated_existed"
         return 1
     fi
 
     echo -e "  ${yellow}Перезапуск${reset} XKeen для применения api..."
-    XKEEN_FOREGROUND=1 "$install_dir/xkeen" -restart >/dev/null 2>&1 || return 1
-
-    local i=0
-    while [ "$i" -lt 20 ]; do
-        sb_api_alive && sb_probe_configured && { echo -e "  api ${green}поднят${reset}"; return 0; }
-        i=$((i + 1)); sleep 1
-    done
-    echo -e "  ${red}✗${reset} api не поднялся за 20с — проверьте $xray_error_log"
+    local deadline
+    if XKEEN_FOREGROUND=1 "$install_dir/xkeen" -restart >/dev/null 2>&1; then
+        deadline=$(($(date +%s) + 20))
+        while [ "$(date +%s)" -lt "$deadline" ]; do
+            sb_api_alive 1 && sb_probe_configured && { echo -e "  api ${green}поднят${reset}"; return 0; }
+            sleep 1
+        done
+        echo -e "  ${red}✗${reset} api не поднялся за 20с — проверьте $xray_error_log"
+    else
+        echo -e "  ${red}✗${reset} Не удалось перезапустить XKeen с новой конфигурацией."
+    fi
+    echo "  Восстанавливаю прежнюю конфигурацию Xray и перезапускаю XKeen."
+    if sb_restore_api_config "$bkp" "$generated_config" "$generated_existed"; then
+        XKEEN_FOREGROUND=1 "$install_dir/xkeen" -restart >/dev/null 2>&1 ||
+            echo "  Не удалось запустить XKeen после восстановления конфигурации."
+    fi
     return 1
 }
 
