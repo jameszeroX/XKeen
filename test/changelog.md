@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-28 09:33:36 MSK)
+
+Сборка из [`b97d963`](https://github.com/jameszeroX/XKeen/commit/b97d963ea9472d2430d8f05fb5f5990f3d2f4ffd).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/15f3c276184bf92852af487dcaa1c15c141be067/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`ae6b4e8...b97d963`](https://github.com/jameszeroX/XKeen/compare/ae6b4e8be35d4da08a869b88023fc411f0a5cc96...b97d963ea9472d2430d8f05fb5f5990f3d2f4ffd).
+
+###### Коммиты
+
+- Add manual balancer node selection and pinning ([`b97d963`](https://github.com/jameszeroX/XKeen/commit/b97d963ea9472d2430d8f05fb5f5990f3d2f4ffd)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-28 08:11:45 MSK)
 
 Сборка из [`ba31718`](https://github.com/jameszeroX/XKeen/commit/ba31718bca462c17979e73662ee40391989d0ac1).
