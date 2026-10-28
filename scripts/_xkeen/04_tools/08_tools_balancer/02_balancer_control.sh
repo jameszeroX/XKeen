@@ -413,6 +413,7 @@ sb_disable() {
         echo -e "  ${red}✗${reset} Не удалось снять override — балансировка остаётся включённой."
         return 1
     fi
+    sb_pin_clear
     sb_remove_cron
     sb_write_setting enabled false || return 1
     echo
@@ -430,6 +431,7 @@ sb_status() {
     echo -e "  Балансировщик: ${yellow}$sb_balancer${reset}   Интервал: ${yellow}$sb_interval${reset} мин   Гистерезис: ${yellow}$sb_hysteresis${reset}%"
     if sb_api_alive; then
         echo -e "  Текущая нода: ${yellow}$(sb_current_target)${reset}"
+        [ -n "$(sb_pin_get)" ] && echo -e "  Режим: ${yellow}закреплена вручную${reset} (вернуть автовыбор: xkeen -sb auto)"
     elif ! sb_xray_running; then
         echo -e "  Xray не запущен — текущая нода неизвестна"
     else
@@ -453,6 +455,224 @@ sb_status() {
     fi
 }
 
+# Пронумерованный список нод балансировщика (без служебных outbound'ов).
+# Помечает активную ноду (*) и закреплённую вручную. Нумерация — порядок в
+# outbounds-файле, её же использует `xkeen -sb N`. Возврат 1, если нод нет.
+sb_list() {
+    speed_balancer_settings
+    if ! sb_node_list; then
+        echo
+        echo -e "  ${red}✗${reset} Ноды балансировщика ${yellow}$sb_balancer${reset} не найдены (проверьте selector в $sb_routing_file и теги в $sb_outbounds_file)."
+        return 1
+    fi
+
+    local cur pinned n i mark
+    cur=""; sb_api_alive && cur=$(sb_current_target)
+    pinned=$(sb_pin_get)
+
+    echo
+    echo -e "  Ноды балансировщика ${yellow}$sb_balancer${reset}:"
+    i=0
+    while IFS= read -r n; do
+        [ -n "$n" ] || continue
+        i=$((i + 1))
+        mark=" "; [ "$n" = "$cur" ] && mark="*"
+        if [ -n "$pinned" ] && [ "$n" = "$pinned" ]; then
+            printf '   %s %2d. %s  (закреплена вручную)\n' "$mark" "$i" "$n"
+        else
+            printf '   %s %2d. %s\n' "$mark" "$i" "$n"
+        fi
+    done <<EOF_LIST
+$sb_nodes
+EOF_LIST
+    echo
+    echo -e "  * — активная сейчас. Выбрать: '${green}xkeen -sb N${reset}', вернуть автовыбор: '${green}xkeen -sb auto${reset}'"
+    return 0
+}
+
+# Применить ноду вручную: override через bo и закрепление выбора. Общая часть
+# `xkeen -sb N` и циклического переключения (-sb next/prev). Вывода не делает —
+# сообщения печатает вызывающий. Возврат 1, если bo не принял ноду.
+sb_apply_node() {
+    if ! xray api bo -s "$sb_api_addr" -b "$sb_balancer" "$1" >/dev/null 2>&1; then
+        sb_log "ручное переключение на $1 не удалось"
+        return 1
+    fi
+    sb_pin_set "$1"
+    sb_log "ручное переключение: -> $1 (закреплена)"
+    return 0
+}
+
+# Запись в системный журнал роутера (веб-интерфейс Keenetic -> Журнал): при
+# запуске с аппаратной кнопки терминала нет, и это единственная обратная связь.
+sb_syslog() {
+    command -v logger >/dev/null 2>&1 || return 0
+    logger -p notice -t XKeen "$1" 2>/dev/null
+}
+
+# Блокировка от двойных нажатий кнопки: второй запуск, пока идёт первый,
+# иначе прочитал бы ту же текущую ноду и «съел» нажатие. mkdir атомарен;
+# в каталоге лежит pid владельца, чтобы переживший kill замок не залип.
+sb_lock_acquire() {
+    local d pid
+    d="$sb_pin_file.lock"
+    if mkdir "$d" 2>/dev/null; then echo $$ > "$d/pid"; return 0; fi
+    pid=$(cat "$d/pid" 2>/dev/null)
+    # pid ещё не записан — владелец только что создал замок, даём ему секунду
+    [ -n "$pid" ] || { sleep 1; pid=$(cat "$d/pid" 2>/dev/null); }
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then return 1; fi
+    rm -rf "$d"
+    mkdir "$d" 2>/dev/null || return 1
+    echo $$ > "$d/pid"
+    return 0
+}
+
+sb_lock_release() {
+    rm -rf "$sb_pin_file.lock" 2>/dev/null
+}
+
+# Циклическое переключение на следующую (next) или предыдущую (prev) ноду.
+# Рассчитано на запуск с аппаратной кнопки роутера (/opt/etc/ndm/button.d):
+# без вопросов и меню, при любом отказе — код 1 и запись в журнал. Не пытается
+# сам настроить api (sb_ensure_api спрашивает подтверждение и перезапускает
+# ядро — для кнопки недопустимо).
+# Точка отсчёта — закреплённая нода, а если её нет — текущая эффективная. Если
+# её нет в списке (outbounds правили), цикл начинается с первой (next) или
+# последней (prev) ноды.
+sb_cycle() {
+    local rc
+    sb_lock_acquire || { sb_syslog "sb $1: переключение уже выполняется, нажатие пропущено"; return 1; }
+    sb_cycle_locked "$1"; rc=$?
+    sb_lock_release
+    return "$rc"
+}
+
+sb_cycle_locked() {
+    local dir cur idx total n tag
+    dir="$1"
+    speed_balancer_settings
+
+    if ! sb_xray_running; then
+        echo -e "  ${red}✗${reset} Xray не запущен — переключать нечего."
+        sb_syslog "sb $dir: Xray не запущен"
+        return 1
+    fi
+    if ! sb_api_alive; then
+        echo -e "  ${red}✗${reset} api Xray недоступен. Настройте его: '${green}xkeen -sb on${reset}'"
+        sb_syslog "sb $dir: api Xray недоступен"
+        return 1
+    fi
+    if ! sb_node_list; then
+        echo -e "  ${red}✗${reset} Ноды балансировщика ${yellow}$sb_balancer${reset} не найдены."
+        sb_syslog "sb $dir: ноды балансировщика $sb_balancer не найдены"
+        return 1
+    fi
+
+    total=$(printf '%s\n' "$sb_nodes" | grep -c .)
+    cur=$(sb_pin_get)
+    [ -n "$cur" ] || cur=$(sb_current_target)
+
+    # номер текущей ноды: точное совпадение строки целиком. Тег передаётся через
+    # окружение, а не awk -v: -v обрабатывает бэкслеши, и тег с ними не совпал бы.
+    idx=$(printf '%s\n' "$sb_nodes" | SB_CUR="$cur" awk 'NF && $0 == ENVIRON["SB_CUR"] { print NR; exit }')
+
+    if [ "$dir" = "prev" ]; then
+        if [ -n "$idx" ]; then n=$(( (idx + total - 2) % total + 1 )); else n="$total"; fi
+    else
+        if [ -n "$idx" ]; then n=$(( idx % total + 1 )); else n=1; fi
+    fi
+
+    tag=$(printf '%s\n' "$sb_nodes" | sed -n "${n}p")
+    if ! sb_apply_node "$tag"; then
+        echo -e "  ${red}✗${reset} Не удалось переключить балансировщик на ${yellow}$tag${reset}"
+        sb_syslog "sb $dir: не удалось переключиться на $tag"
+        return 1
+    fi
+    echo -e "  ${green}✔${reset} Нода ${yellow}$n${reset}/$total: ${yellow}$tag${reset} (закреплена вручную)"
+    sb_syslog "sb $dir: активная нода $n/$total: $tag"
+    return 0
+}
+
+# Подготовка api к ручному переключению (xkeen -sb N). Для bo нужен только api:
+# probe-inbound нужен замеру скорости, а не переключению. sb_ensure_api требует
+# и api, и probe, и при отсутствии probe предложил бы перенастроить конфигурацию
+# и перезапустить ядро ради функции, которая probe не использует. Поэтому при
+# живом api идём напрямую, а sb_ensure_api зовём только когда api недоступен
+# (он объяснит, что не так, или предложит настроить api).
+sb_ensure_switch_api() {
+    if sb_xray_running && sb_api_alive; then
+        sb_check_xray_version
+        return $?
+    fi
+    sb_ensure_api
+}
+
+# Принудительно переключиться на ноду номер $1 из sb_list. Выбор закрепляется:
+# автозамер (cron) его не перебивает, а после перезапуска Xray он возвращается
+# на место при ближайшем тике. Снять закрепление — sb_auto.
+sb_select() {
+    local idx tag total
+    idx="$1"
+    speed_balancer_settings
+    sb_ensure_switch_api || return 1
+
+    if ! sb_node_list; then
+        echo -e "  ${red}✗${reset} Ноды балансировщика ${yellow}$sb_balancer${reset} не найдены."
+        return 1
+    fi
+    total=$(printf '%s\n' "$sb_nodes" | grep -c .)
+    case "$idx" in
+        ''|*[!0-9]*) echo -e "  ${red}✗${reset} Номер ноды должен быть числом. Список: '${green}xkeen -sb list${reset}'"; return 1 ;;
+    esac
+    if [ "$idx" -lt 1 ] || [ "$idx" -gt "$total" ]; then
+        echo -e "  ${red}✗${reset} Нет ноды с номером ${yellow}$idx${reset} (доступно 1-$total). Список: '${green}xkeen -sb list${reset}'"
+        return 1
+    fi
+
+    tag=$(printf '%s\n' "$sb_nodes" | sed -n "${idx}p")
+    if ! sb_apply_node "$tag"; then
+        echo -e "  ${red}✗${reset} Не удалось переключить балансировщик на ${yellow}$tag${reset}"
+        return 1
+    fi
+    echo
+    echo -e "  ${green}✔${reset} Активная нода: ${yellow}$tag${reset} (закреплена вручную)"
+    if [ "$sb_enabled" = "true" ]; then
+        echo -e "  Автозамер приостановлен. Вернуть: '${green}xkeen -sb auto${reset}'"
+    fi
+    return 0
+}
+
+# Снять ручное закрепление: сбросить override (балансировщик возвращается к
+# своей strategy) и, если автозамер включён, сразу выбрать лучшую ноду.
+sb_auto() {
+    speed_balancer_settings
+    sb_pin_clear
+    if sb_api_alive; then
+        xray api bo -s "$sb_api_addr" -b "$sb_balancer" -r >/dev/null 2>&1
+    fi
+    sb_log "ручное закрепление снято"
+    echo
+    echo -e "  ${green}✔${reset} Ручное закрепление снято."
+    if [ "$sb_enabled" = "true" ] && sb_api_alive; then
+        echo -e "  ${yellow}Замер...${reset}"
+        sb_tick
+        echo -e "  Текущая нода: ${yellow}$(sb_current_target)${reset}"
+    fi
+    return 0
+}
+
+# Интерактивный выбор ноды из пронумерованного списка.
+sb_pick() {
+    local num
+    sb_list || return 1
+    printf '  Номер ноды (0 — отмена): '
+    read -r num || { echo; return 0; }
+    case "$num" in
+        ''|0) return 0 ;;
+    esac
+    sb_select "$num"
+}
+
 # Интерактивное меню (стиль main: printf + read + case).
 sb_menu() {
     local choice
@@ -466,6 +686,8 @@ sb_menu() {
             printf '     1. Включить балансировку\n'
         fi
         printf '     2. Прогнать замер сейчас\n'
+        printf '     3. Выбрать ноду вручную\n'
+        [ -n "$(sb_pin_get)" ] && printf '     4. Вернуть автовыбор (снять закрепление)\n'
         printf '     0. Выход\n\n'
         printf '  Ваш выбор: '
         # read возвращает ненулевой код на EOF (нет TTY: пайп, ssh без -t, cron).
@@ -486,7 +708,11 @@ sb_menu() {
                     echo "  Сначала включите балансировку."
                 fi
                 ;;
-            *) echo "  Неверный ввод. Введите 1, 2 или 0." ;;
+            3) sb_pick ;;
+            4)
+                if [ -n "$(sb_pin_get)" ]; then sb_auto; else echo "  Нода не закреплена."; fi
+                ;;
+            *) echo "  Неверный ввод." ;;
         esac
     done
 }
@@ -495,11 +721,13 @@ sb_menu() {
 # Аналог get_state_arg диспетчера, но для трёх команд балансировки.
 sb_command_arg() {
     case "$1" in
-        on|off|status) echo "$1" ;;
+        on|off|status|list|auto|next|prev) echo "$1" ;;
+        ''|*[!0-9]*) ;;
+        *) echo "$1" ;;   # число — номер ноды для ручного переключения
     esac
 }
 
-# Точка входа `xkeen -sb [on|off|status]`. Разбор команды здесь, а не в case
+# Точка входа `xkeen -sb [on|off|status|list|auto|next|prev|N]`. Разбор команды здесь, а не в case
 # диспетчера: там код завершения операции терялся на завершающем shift, и
 # `xkeen -sb on` возвращал 0 даже когда включение было отклонено.
 sb_control() {
@@ -507,6 +735,10 @@ sb_control() {
         on)     smart_clear; sb_enable ;;
         off)    smart_clear; sb_disable ;;
         status) sb_status ;;
-        *)      smart_clear; sb_menu ;;
+        list)   sb_list ;;
+        auto)   sb_auto ;;
+        next|prev) sb_cycle "$1" ;;   # циклическое переключение (кнопка роутера)
+        '')     smart_clear; sb_menu ;;
+        *)      sb_select "$1" ;;   # xkeen -sb N
     esac
 }

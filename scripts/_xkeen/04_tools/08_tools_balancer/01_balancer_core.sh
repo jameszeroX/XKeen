@@ -24,6 +24,8 @@ sb_log_trim() {
 # Xray сопоставляет каждый selector с НАЧАЛОМ тега (префикс, а не подстрока:
 # selector "a" берёт "a" и "ab", но не "ba"), поэтому здесь тоже префикс —
 # иначе в замер и в bo попали бы ноды, которых нет в пуле балансировщика.
+# Служебные outbound'ы (protocol freedom/blackhole/dns/loopback: direct, block,
+# dns-out и т.п.) в список не попадают, даже если подпадают под selector.
 # Результат — в глобальную sb_nodes (через субшелл вернуть нельзя), по ОДНОМУ
 # тегу на строку: тег и selector могут содержать пробелы ("proxy DE Frankfurt"),
 # поэтому пробел разделителем быть не может. Сопоставление целиком делает jq
@@ -46,7 +48,8 @@ sb_node_list() {
     # теги outbound'ов, НАЧИНАЮЩИЕСЯ с любого из selector'ов, — по строке на тег
     sb_nodes=$(strip_json_comments "$sb_outbounds_file" \
         | jq -r --argjson s "$sels" \
-            '.outbounds[]? | .tag // empty | select(type=="string")
+            '.outbounds[]? | select((.protocol // "") | IN("freedom","blackhole","dns","loopback") | not)
+             | .tag // empty | select(type=="string")
              | select(. as $t | any($s[]; . as $x | $t | startswith($x)))' 2>/dev/null)
 
     [ -n "$sb_nodes" ]
@@ -110,6 +113,21 @@ sb_measure_node() {
     echo "$size $time" | awk '{ if ($2 > 0) printf "%d %s", $1 / $2 / 1024, "200"; else print "0 200" }'
 }
 
+# Закреплённая вручную нода: тег в sb_pin_file (одна строка). Пусто — не закреплена.
+sb_pin_get() {
+    [ -s "$sb_pin_file" ] || return 0
+    head -n 1 "$sb_pin_file" 2>/dev/null
+}
+
+sb_pin_set() {
+    mkdir -p "$(dirname "$sb_pin_file")" 2>/dev/null
+    printf '%s\n' "$1" > "$sb_pin_file" 2>/dev/null
+}
+
+sb_pin_clear() {
+    rm -f "$sb_pin_file" 2>/dev/null
+}
+
 # Текущая ЭФФЕКТИВНАЯ нода балансировщика. bi печатает две секции:
 #   - Selecting Override:   форс через bo (реально активная нода)
 #   - Selects:              выбор leastPing (что было бы без override)
@@ -140,6 +158,25 @@ sb_tick() {
     if ! xray api bi -s "$sb_api_addr" "$sb_balancer" >/dev/null 2>&1; then
         sb_log "api недоступен ($sb_api_addr) — пропуск"
         return 1
+    fi
+
+    # Нода закреплена вручную (xkeen -sb N): автозамер не трогает выбор.
+    # Override живёт только в памяти Xray и теряется при его перезапуске,
+    # поэтому если он слетел — возвращаем закреплённую ноду на место.
+    local pinned
+    pinned=$(sb_pin_get)
+    if [ -n "$pinned" ]; then
+        if [ "$(sb_current_target)" != "$pinned" ]; then
+            if xray api bo -s "$sb_api_addr" -b "$sb_balancer" "$pinned" >/dev/null 2>&1; then
+                sb_log "закреплённая нода восстановлена: $pinned"
+            else
+                sb_log "не удалось восстановить закреплённую ноду: $pinned"
+            fi
+        else
+            sb_log "нода закреплена вручную: $pinned — замер пропущен"
+        fi
+        sb_log_trim
+        return 0
     fi
     if ! sb_node_list; then
         sb_log "ноды балансировщика '$sb_balancer' не найдены — пропуск"

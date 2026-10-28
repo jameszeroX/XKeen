@@ -25,6 +25,7 @@ sb_probe_intag="probe"
 sb_rule_tag="xkeen-sb-probe"
 sb_rule_tmp="$WORK/sb_rule.json"
 sb_log_file="$WORK/sb.log"
+sb_pin_file="$WORK/.sb_pinned"
 sb_routing_file="$xray_conf_dir/05_routing.json"
 sb_outbounds_file="$xray_conf_dir/04_outbounds.json"
 cron_dir="$WORK/cron"; cron_file="root"
@@ -644,6 +645,385 @@ sb_control off >/dev/null 2>&1
 out=$(sb_control off 2>&1); rc=$?
 check "повторный off: rc=0"                     "$rc" "0"
 check "повторный off: сообщает 'уже выключена'" "$(printf '%s' "$out" | grep -c 'уже .*выключена')" "1"
+
+# === ручной выбор ноды: xkeen -sb list | N | auto ===
+# Фикстуры с protocol: служебные outbound'ы (freedom/blackhole/dns/loopback)
+# не должны попадать в список, даже если их тег подпадает под selector
+# ("sub-block", "sub-dns", "sub-lb" начинаются с "sub-"). Тег с пробелом — как
+# в остальных регрессиях: список идёт по одному тегу на строку.
+cat > "$xray_conf_dir/05_routing.json" <<'EOF'
+{ "routing": { "balancers": [
+  { "tag": "balancer", "selector": ["sub-"] }
+], "rules": [] } }
+EOF
+cat > "$xray_conf_dir/04_outbounds.json" <<'EOF'
+{ "outbounds": [
+  { "tag": "sub-a", "protocol": "vless" },
+  { "tag": "sub-b", "protocol": "trojan" },
+  { "tag": "sub-DE Frankfurt", "protocol": "vless" },
+  { "tag": "sub-block", "protocol": "blackhole" },
+  { "tag": "sub-dns", "protocol": "dns" },
+  { "tag": "sub-lb", "protocol": "loopback" },
+  { "tag": "direct", "protocol": "freedom" }
+] }
+EOF
+sb_log_file="$WORK/sb_manual.log"; : > "$sb_log_file"
+rm -f "$sb_pin_file"
+printf '{"xkeen":{}}\n' > "$xkeen_config"
+STUB_XRAY_RUNNING="yes"; STUB_API_ALIVE="yes"; STUB_CURRENT="sub-a"; STUB_BO=""; STUB_OVERRIDE=""
+
+# служебные протоколы отфильтрованы; порядок — как в outbounds-файле
+speed_balancer_settings
+sb_node_list
+check "служебные outbound'ы: в списке 3 ноды"      "$(printf '%s\n' "$sb_nodes" | grep -c .)" "3"
+check "служебные outbound'ы: sub-block исключён"   "$(printf '%s\n' "$sb_nodes" | grep -c '^sub-block$')" "0"
+check "служебные outbound'ы: sub-dns исключён"     "$(printf '%s\n' "$sb_nodes" | grep -c '^sub-dns$')" "0"
+check "служебные outbound'ы: sub-lb исключён"      "$(printf '%s\n' "$sb_nodes" | grep -c '^sub-lb$')" "0"
+check "служебные outbound'ы: порядок нод"          "$(printf '%s' "$sb_nodes" | tr '\n' '|')" "sub-a|sub-b|sub-DE Frankfurt"
+
+# --- разбор аргумента ---
+check "аргумент list"               "$(sb_command_arg list)" "list"
+check "аргумент auto"               "$(sb_command_arg auto)" "auto"
+check "аргумент число 2"            "$(sb_command_arg 2)"    "2"
+check "аргумент число 12"           "$(sb_command_arg 12)"   "12"
+check "аргумент 2a -> пусто"        "$(sb_command_arg 2a)"   ""
+check "аргумент -1 -> пусто"        "$(sb_command_arg -1)"   ""
+
+# --- sb_list ---
+out=$(sb_list 2>&1); rc=$?
+check "sb_list: rc=0"                          "$rc" "0"
+check "sb_list: 3 пронумерованные строки"      "$(printf '%s\n' "$out" | grep -cE '^ +[* ] +[0-9]+\. ')" "3"
+check "sb_list: активная нода помечена *"      "$(printf '%s\n' "$out" | grep -c '^   \*  1\. sub-a$')" "1"
+check "sb_list: нода №3 с пробелом целиком"    "$(printf '%s\n' "$out" | grep -c '^      3\. sub-DE Frankfurt$')" "1"
+check "sb_list: служебные не показаны"         "$(printf '%s\n' "$out" | grep -c 'direct\|sub-block\|sub-dns\|sub-lb')" "0"
+
+# нет нод (несуществующий балансировщик) — rc=1, понятное сообщение
+printf '{"xkeen":{"xray":{"speed_balancer":{"balancer":"nope"}}}}\n' > "$xkeen_config"
+out=$(sb_list 2>&1); rc=$?
+check "sb_list: нет нод -> rc=1"               "$rc" "1"
+check "sb_list: нет нод -> сообщение"          "$(printf '%s\n' "$out" | grep -c 'не найдены')" "1"
+printf '{"xkeen":{}}\n' > "$xkeen_config"
+
+# --- sb_select: переключение и закрепление ---
+sb_select 2 >/dev/null 2>&1; rc=$?
+check "sb_select 2: rc=0"                       "$rc" "0"
+check "sb_select 2: bo на sub-b"                "$STUB_BO" "sub-b"
+check "sb_select 2: нода закреплена"            "$(sb_pin_get)" "sub-b"
+check "sb_select 2: запись в логе"              "$(grep -c 'ручное переключение: -> sub-b' "$sb_log_file")" "1"
+out=$(sb_list 2>&1)
+check "sb_list: закреплённая нода подписана"    "$(printf '%s\n' "$out" | grep -c '^   \*  2\. sub-b  (закреплена вручную)$')" "1"
+
+# тег с пробелом переключается целиком, а не по первому слову
+sb_select 3 >/dev/null 2>&1; rc=$?
+check "sb_select 3 (тег с пробелом): rc=0"      "$rc" "0"
+check "sb_select 3: bo на тег целиком"          "$STUB_BO" "sub-DE Frankfurt"
+check "sb_select 3: закреплён тег целиком"      "$(sb_pin_get)" "sub-DE Frankfurt"
+
+# --- sb_select: отказы не трогают текущий выбор ---
+STUB_BO=""
+for bad in 0 4 99 abc 1a ""; do
+    sb_select "$bad" >/dev/null 2>&1; rc=$?
+    check "sb_select '$bad': отказ rc=1"        "$rc" "1"
+done
+check "sb_select отказы: bo не вызывался"       "$STUB_BO" ""
+check "sb_select отказы: закрепление цело"      "$(sb_pin_get)" "sub-DE Frankfurt"
+
+# xray не запущен / api молчит — отказ, закрепление не пишется
+rm -f "$sb_pin_file"
+STUB_XRAY_RUNNING="no"; STUB_API_ALIVE="no"
+sb_select 1 >/dev/null 2>&1; rc=$?
+check "sb_select: xray остановлен -> rc=1"      "$rc" "1"
+check "sb_select: xray остановлен -> нет pin"   "$(sb_pin_get)" ""
+STUB_XRAY_RUNNING="yes"; STUB_API_ALIVE="yes"
+
+# --- ручной выбор работает и при выключенной балансировке (-sb off) ---
+# enabled=false и нет cron: sb_select не должен требовать sb_enabled.
+printf '{"xkeen":{"xray":{"speed_balancer":{"enabled":false}}}}\n' > "$xkeen_config"
+sb_remove_cron
+STUB_BO=""
+out=$(sb_select 1 2>&1); rc=$?
+sb_select 1 >/dev/null 2>&1
+check "sb_select при off: rc=0"                 "$rc" "0"
+check "sb_select при off: bo на sub-a"          "$STUB_BO" "sub-a"
+check "sb_select при off: нода закреплена"      "$(sb_pin_get)" "sub-a"
+check "sb_select при off: нет фразы про автозамер" "$(printf '%s\n' "$out" | grep -c 'Автозамер приостановлен')" "0"
+
+# при включённой балансировке — подсказка про приостановку автозамера
+printf '{"xkeen":{"xray":{"speed_balancer":{"enabled":true}}}}\n' > "$xkeen_config"
+out=$(sb_select 2 2>&1)
+check "sb_select при on: подсказка про автозамер" "$(printf '%s\n' "$out" | grep -c 'Автозамер приостановлен')" "1"
+
+# --- sb_tick при закреплении ---
+# закреплено sub-b, замер пропускается, override не меняется
+STUB_SPEED_sub_a=5000000; STUB_SPEED_sub_b=100000; STUB_SPEED_sub_DE_Frankfurt=1000000
+sb_select 2 >/dev/null 2>&1
+STUB_BO=""; : > "$sb_log_file"
+sb_tick >/dev/null 2>&1; rc=$?
+check "tick при pin: rc=0"                      "$rc" "0"
+check "tick при pin: bo не вызывался"           "$STUB_BO" ""
+check "tick при pin: замер не выполнялся"       "$(grep -c 'замер sub-' "$sb_log_file")" "0"
+check "tick при pin: пропуск записан в лог"     "$(grep -c 'закреплена вручную: sub-b' "$sb_log_file")" "1"
+check "tick при pin: выбор остался sub-b"       "$(sb_current_target)" "sub-b"
+
+# рестарт Xray: override потерян (bi снова отдаёт leastPing-выбор) — tick возвращает pin
+STUB_CURRENT="sub-a"; STUB_BO=""; : > "$sb_log_file"
+sb_tick >/dev/null 2>&1; rc=$?
+check "tick после рестарта: rc=0"               "$rc" "0"
+check "tick после рестарта: bo на закреплённую" "$STUB_BO" "sub-b"
+check "tick после рестарта: нода восстановлена" "$(sb_current_target)" "sub-b"
+check "tick после рестарта: запись в лог"       "$(grep -c 'закреплённая нода восстановлена: sub-b' "$sb_log_file")" "1"
+check "tick после рестарта: замера не было"     "$(grep -c 'замер sub-' "$sb_log_file")" "0"
+
+# закреплённая нода — с пробелом: восстановление тоже по целому тегу
+sb_select 3 >/dev/null 2>&1
+STUB_CURRENT="sub-a"; STUB_BO=""
+sb_tick >/dev/null 2>&1
+check "tick после рестарта: тег с пробелом"     "$STUB_BO" "sub-DE Frankfurt"
+
+# api недоступен — tick не трогает ничего (проверка api идёт раньше pin)
+STUB_API_ALIVE="no"; STUB_BO=""
+# api-проба tick'а — bi; заглушка bi всегда отвечает, поэтому отдельно проверяем
+# только что pin при недоступном api не стирается.
+check "api недоступен: pin не стёрт"            "$(sb_pin_get)" "sub-DE Frankfurt"
+STUB_API_ALIVE="yes"
+
+# --- sb_status: режим закрепления ---
+out=$(sb_status 2>&1)
+check "status: показывает режим 'закреплена вручную'" "$(printf '%s\n' "$out" | grep -c 'Режим:.*закреплена вручную')" "1"
+
+# --- sb_auto: снятие закрепления ---
+printf '{"xkeen":{"xray":{"speed_balancer":{"enabled":false}}}}\n' > "$xkeen_config"
+STUB_BO=""
+sb_auto >/dev/null 2>&1; rc=$?
+check "sb_auto (off): rc=0"                     "$rc" "0"
+check "sb_auto (off): override сброшен (bo -r)" "$STUB_BO" "-r"
+check "sb_auto (off): закрепление снято"        "$(sb_pin_get)" ""
+check "sb_auto (off): файл pin удалён"          "$([ -e "$sb_pin_file" ] && echo yes || echo no)" "no"
+out=$(sb_status 2>&1)
+check "status после auto: нет режима pin"       "$(printf '%s\n' "$out" | grep -c 'Режим:')" "0"
+
+# при включённой балансировке sb_auto сразу запускает замер и выбирает лучшую
+printf '{"xkeen":{"xray":{"speed_balancer":{"enabled":true}}}}\n' > "$xkeen_config"
+sb_select 2 >/dev/null 2>&1
+STUB_CURRENT="sub-b"; : > "$sb_log_file"
+sb_auto >/dev/null 2>&1
+check "sb_auto (on): замер выполнен"            "$(grep -c 'замер sub-a' "$sb_log_file")" "1"
+check "sb_auto (on): выбрана быстрейшая sub-a"  "$STUB_BO" "sub-a"
+check "sb_auto (on): закрепления нет"           "$(sb_pin_get)" ""
+
+# после снятия pin tick снова сам меняет ноду
+STUB_CURRENT="sub-b"; STUB_BO=""; : > "$sb_log_file"
+sb_tick >/dev/null 2>&1
+check "tick без pin: замер идёт как раньше"     "$(grep -c 'замер sub-b' "$sb_log_file")" "1"
+
+# --- sb_disable снимает закрепление ---
+sb_install_cron
+printf '{"xkeen":{"xray":{"speed_balancer":{"enabled":true}}}}\n' > "$xkeen_config"
+sb_select 2 >/dev/null 2>&1
+check "перед disable: нода закреплена"          "$(sb_pin_get)" "sub-b"
+sb_disable >/dev/null 2>&1
+check "sb_disable: закрепление снято"           "$(sb_pin_get)" ""
+
+# --- sb_control: маршрутизация и коды возврата ---
+printf '{"xkeen":{}}\n' > "$xkeen_config"
+rm -f "$sb_pin_file"; STUB_BO=""
+sb_control list >/dev/null 2>&1; rc=$?
+check "sb_control list: rc=0"                   "$rc" "0"
+sb_control 2 >/dev/null 2>&1; rc=$?
+check "sb_control 2: rc=0"                      "$rc" "0"
+check "sb_control 2: bo на sub-b"               "$STUB_BO" "sub-b"
+sb_control 9 >/dev/null 2>&1; rc=$?
+check "sb_control 9: вне диапазона -> rc=1"     "$rc" "1"
+sb_control auto >/dev/null 2>&1; rc=$?
+check "sb_control auto: rc=0"                   "$rc" "0"
+check "sb_control auto: закрепление снято"      "$(sb_pin_get)" ""
+
+# --- sb_pin_*: чтение пустого/отсутствующего файла ---
+rm -f "$sb_pin_file"
+check "sb_pin_get: файла нет -> пусто"          "$(sb_pin_get)" ""
+: > "$sb_pin_file"
+check "sb_pin_get: пустой файл -> пусто"        "$(sb_pin_get)" ""
+sb_pin_set 'a "q" b'
+check "sb_pin_get: кавычки в теге сохраняются"  "$(sb_pin_get)" 'a "q" b'
+sb_pin_clear
+check "sb_pin_clear: файл удалён"               "$([ -e "$sb_pin_file" ] && echo yes || echo no)" "no"
+
+# === ручное переключение не требует probe-inbound ===
+# После #256 sb_ensure_api считает api настроенным только вместе с probe-inbound.
+# Для xkeen -sb N probe не нужен (он нужен замеру, а не bo): при живом api
+# переключение не должно предлагать перенастроить конфигурацию и перезапустить
+# ядро. Убираем probe-фикстуру и проверяем оба пути.
+mv "$xray_conf_dir/probe_fixture.json" "$xray_conf_dir/probe_fixture.json.off"
+printf '{"xkeen":{}}\n' > "$xkeen_config"
+rm -f "$sb_pin_file"
+STUB_XRAY_RUNNING="yes"; STUB_API_ALIVE="yes"; STUB_BO=""
+
+# состояние проверяем в текущем шелле (stdin из /dev/null: на вопрос — EOF как отказ),
+# вывод — отдельным запуском в подшелле
+sb_select 2 </dev/null >/dev/null 2>&1; rc=$?
+out=$(echo n | sb_select 2 2>&1)
+check "api жив, probe нет: sb_select rc=0"           "$rc" "0"
+check "api жив, probe нет: настройка не предлагается" "$(printf '%s\n' "$out" | grep -c 'Настроить автоматически')" "0"
+check "api жив, probe нет: bo на sub-b"              "$STUB_BO" "sub-b"
+check "api жив, probe нет: нода закреплена"          "$(sb_pin_get)" "sub-b"
+
+# api молчит при запущенном Xray — как и раньше, sb_ensure_api предлагает настройку
+rm -f "$sb_pin_file"; STUB_BO=""; STUB_API_ALIVE="no"
+sb_select 2 </dev/null >/dev/null 2>&1; rc=$?
+out=$(echo n | sb_select 2 2>&1)
+check "api мёртв: sb_select предлагает настройку"    "$(printf '%s\n' "$out" | grep -c 'Настроить автоматически')" "1"
+check "api мёртв, отказ: rc=1"                       "$rc" "1"
+check "api мёртв, отказ: bo не вызван"               "$STUB_BO" ""
+check "api мёртв, отказ: нет pin"                    "$(sb_pin_get)" ""
+STUB_API_ALIVE="yes"
+mv "$xray_conf_dir/probe_fixture.json.off" "$xray_conf_dir/probe_fixture.json"
+
+# === циклическое переключение: xkeen -sb next | prev (кнопка роутера) ===
+# Запускается без TTY из button.d: никаких вопросов, при отказе rc=1. В журнал
+# роутера пишет через logger — подменяем, чтобы поймать сообщения.
+SYSLOG="$WORK/syslog.txt"; : > "$SYSLOG"
+logger() { shift 4 2>/dev/null; printf '%s\n' "$*" >> "$SYSLOG"; }
+
+printf '{"xkeen":{}}\n' > "$xkeen_config"
+rm -f "$sb_pin_file"; rm -rf "$sb_pin_file.lock"
+sb_log_file="$WORK/sb_cycle.log"; : > "$sb_log_file"
+STUB_XRAY_RUNNING="yes"; STUB_API_ALIVE="yes"; STUB_CURRENT="sub-a"; STUB_BO=""
+
+check "аргумент next"               "$(sb_command_arg next)" "next"
+check "аргумент prev"               "$(sb_command_arg prev)" "prev"
+check "аргумент nextt -> пусто"     "$(sb_command_arg nextt)" ""
+
+# без закрепления точка отсчёта — текущая эффективная (sub-a), next -> sub-b
+sb_cycle next >/dev/null 2>&1; rc=$?
+check "next без pin: rc=0"                       "$rc" "0"
+check "next без pin: sub-a -> sub-b"             "$STUB_BO" "sub-b"
+check "next: нода закреплена"                    "$(sb_pin_get)" "sub-b"
+check "next: замок снят после выполнения"        "$([ -d "$sb_pin_file.lock" ] && echo yes || echo no)" "no"
+
+# дальше точка отсчёта — закреплённая; полный круг: b -> DE -> a -> b
+sb_cycle next >/dev/null 2>&1
+check "next: sub-b -> sub-DE Frankfurt (тег с пробелом)" "$STUB_BO" "sub-DE Frankfurt"
+sb_cycle next >/dev/null 2>&1
+check "next: переход через конец списка -> sub-a" "$STUB_BO" "sub-a"
+sb_cycle next >/dev/null 2>&1
+check "next: полный круг -> sub-b"               "$STUB_BO" "sub-b"
+
+# prev — в обратную сторону, с переходом через начало
+sb_cycle prev >/dev/null 2>&1
+check "prev: sub-b -> sub-a"                     "$STUB_BO" "sub-a"
+sb_cycle prev >/dev/null 2>&1
+check "prev: переход через начало -> последняя нода" "$STUB_BO" "sub-DE Frankfurt"
+sb_cycle prev >/dev/null 2>&1
+check "prev: sub-DE Frankfurt -> sub-b"          "$STUB_BO" "sub-b"
+
+# закреплённой ноды нет в списке (outbounds правили): next -> первая, prev -> последняя
+sb_pin_set "ghost-node"
+sb_cycle next >/dev/null 2>&1
+check "next: pin вне списка -> первая нода"      "$STUB_BO" "sub-a"
+sb_pin_set "ghost-node"
+sb_cycle prev >/dev/null 2>&1
+check "prev: pin вне списка -> последняя нода"   "$STUB_BO" "sub-DE Frankfurt"
+
+# закрепления нет, текущая — из bi (после рестарта Xray / автозамера)
+rm -f "$sb_pin_file"; STUB_CURRENT="sub-b"
+sb_cycle next >/dev/null 2>&1
+check "next: старт от ноды автовыбора (sub-b)"   "$STUB_BO" "sub-DE Frankfurt"
+
+# цикл не включает автозамер и работает при enabled=false
+printf '{"xkeen":{"xray":{"speed_balancer":{"enabled":false}}}}\n' > "$xkeen_config"
+sb_remove_cron
+sb_cycle next >/dev/null 2>&1; rc=$?
+check "next при off: rc=0"                       "$rc" "0"
+
+# вывод и журнал роутера
+: > "$SYSLOG"
+out=$(sb_cycle next 2>&1); rc=$?
+check "next: сообщение с номером и тегом"        "$(printf '%s\n' "$out" | grep -c '[0-9]/3: ')" "1"
+check "next: запись в журнал роутера"            "$(grep -c 'sb next: активная нода [0-9]/3:' "$SYSLOG")" "1"
+check "next: запись в лог балансировщика"        "$([ "$(grep -c 'ручное переключение: ->' "$sb_log_file")" -ge 1 ] && echo yes || echo no)" "yes"
+
+# --- отказы: rc=1, ничего не меняется, причина в журнале ---
+rm -f "$sb_pin_file"; STUB_BO=""; : > "$SYSLOG"
+STUB_XRAY_RUNNING="no"; STUB_API_ALIVE="no"
+sb_cycle next >/dev/null 2>&1; rc=$?
+check "next: Xray остановлен -> rc=1"            "$rc" "1"
+check "next: Xray остановлен -> bo не вызван"    "$STUB_BO" ""
+check "next: Xray остановлен -> нет pin"         "$(sb_pin_get)" ""
+check "next: Xray остановлен -> причина в журнале" "$(grep -c 'Xray не запущен' "$SYSLOG")" "1"
+STUB_XRAY_RUNNING="yes"
+sb_cycle next >/dev/null 2>&1; rc=$?
+check "next: api недоступен -> rc=1"             "$rc" "1"
+check "next: api недоступен -> причина в журнале" "$(grep -c 'api Xray недоступен' "$SYSLOG")" "1"
+STUB_API_ALIVE="yes"
+
+# отказ без вопросов: при недоступном api sb_cycle не должен читать stdin
+# (sb_ensure_api спросил бы «Настроить автоматически?» и завис без TTY)
+STUB_API_ALIVE="no"
+out=$(echo y | sb_cycle next 2>&1)
+check "next: api недоступен -> не спрашивает"    "$(printf '%s\n' "$out" | grep -c 'Настроить автоматически')" "0"
+STUB_API_ALIVE="yes"
+
+# нет нод
+printf '{"xkeen":{"xray":{"speed_balancer":{"balancer":"nope"}}}}\n' > "$xkeen_config"
+: > "$SYSLOG"
+sb_cycle next >/dev/null 2>&1; rc=$?
+check "next: нет нод -> rc=1"                    "$rc" "1"
+check "next: нет нод -> причина в журнале"       "$(grep -c 'не найдены' "$SYSLOG")" "1"
+printf '{"xkeen":{}}\n' > "$xkeen_config"
+
+# bo отказал (нода пропала из рантайма) — rc=1, закрепление не пишется
+rm -f "$sb_pin_file"
+# заглушка xray с управляемым отказом bo (STUB_BO_FAIL): нода пропала из рантайма
+STUB_BO_FAIL="yes"
+xray() {
+    if [ "$2" = "bo" ] && [ "$STUB_BO_FAIL" = "yes" ]; then return 1; fi
+    case "$2" in
+        lsrules) [ "$STUB_API_ALIVE" = "yes" ] || return 1; echo '{"rules":[]}'; return 0 ;;
+        bi)  printf '  - Selecting Override:\n'
+             [ -n "$STUB_OVERRIDE" ] && printf '    1   %s          \n' "$STUB_OVERRIDE"
+             printf '  - Selects:\n    1   %s          \n' "$STUB_CURRENT"; return 0 ;;
+        bo)  shift 2
+             _node=""; while [ $# -gt 0 ]; do case "$1" in -r) _node="-r" ;; -s|-b) shift ;; *) _node="$1" ;; esac; shift; done
+             STUB_BO="$_node"; [ "$_node" != "-r" ] && STUB_CURRENT="$_node"; return 0 ;;
+        *) return 0 ;;
+    esac
+}
+: > "$SYSLOG"; STUB_CURRENT="sub-a"
+sb_cycle next >/dev/null 2>&1; rc=$?
+check "next: bo отказал -> rc=1"                 "$rc" "1"
+check "next: bo отказал -> pin не записан"       "$(sb_pin_get)" ""
+check "next: bo отказал -> причина в журнале"    "$(grep -c 'не удалось переключиться' "$SYSLOG")" "1"
+check "next: bo отказал -> замок снят"           "$([ -d "$sb_pin_file.lock" ] && echo yes || echo no)" "no"
+STUB_BO_FAIL="no"
+
+# --- блокировка от двойного нажатия ---
+# замок держит живой процесс: второй запуск пропускается, выбор не меняется
+sleep 30 &
+_holder=$!
+mkdir "$sb_pin_file.lock"; echo "$_holder" > "$sb_pin_file.lock/pid"
+rm -f "$sb_pin_file"; STUB_BO=""; : > "$SYSLOG"
+sb_cycle next >/dev/null 2>&1; rc=$?
+check "замок занят живым процессом: rc=1"        "$rc" "1"
+check "замок занят: bo не вызван"                "$STUB_BO" ""
+check "замок занят: нажатие записано в журнал"   "$(grep -c 'нажатие пропущено' "$SYSLOG")" "1"
+check "замок занят: чужой замок не снят"         "$([ -d "$sb_pin_file.lock" ] && echo yes || echo no)" "yes"
+kill "$_holder" 2>/dev/null; wait "$_holder" 2>/dev/null
+
+# владелец умер (kill -9, перезагрузка): замок считается залипшим и снимается
+sb_cycle next >/dev/null 2>&1; rc=$?
+check "залипший замок: rc=0"                     "$rc" "0"
+check "залипший замок: переключение прошло"      "$([ -n "$STUB_BO" ] && echo yes || echo no)" "yes"
+check "залипший замок: снят после работы"        "$([ -d "$sb_pin_file.lock" ] && echo yes || echo no)" "no"
+
+# --- sb_control: маршрутизация next/prev и коды возврата ---
+rm -f "$sb_pin_file"; STUB_CURRENT="sub-a"; STUB_BO=""
+sb_control next >/dev/null 2>&1; rc=$?
+check "sb_control next: rc=0"                    "$rc" "0"
+check "sb_control next: sub-a -> sub-b"          "$STUB_BO" "sub-b"
+sb_control prev >/dev/null 2>&1; rc=$?
+check "sb_control prev: rc=0"                    "$rc" "0"
+check "sb_control prev: sub-b -> sub-a"          "$STUB_BO" "sub-a"
+sb_control auto >/dev/null 2>&1
 
 rm -rf "$WORK"
 printf '\n=== пройдено: %s, провалено: %s, известных дефектов: %s ===\n' "$pass" "$fail" "$known"

@@ -57,6 +57,7 @@ sb_probe_addr="127.0.0.1:10808"				 # адрес probe http-proxy
 sb_probe_intag="probe"					 # tag probe-inbound
 sb_rule_tag="xkeen-sb-probe"				 # ruleTag временного правила замера
 sb_log_file="$xray_log_dir/speed_balancer.log"		 # лог замеров и переключений
+sb_pin_file="$xkeen_cfg/.sb_pinned"			 # тег ноды, закреплённой вручную (xkeen -sb N)
 # читается в 02_balancer_control.sh (SSoT); при линтинге файла переменных
 # по отдельности shellcheck не видит использования в другом файле.
 # shellcheck disable=SC2034
