@@ -1,5 +1,30 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-28 08:11:45 MSK)
+
+Сборка из [`ba31718`](https://github.com/jameszeroX/XKeen/commit/ba31718bca462c17979e73662ee40391989d0ac1).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/ae6b4e8be35d4da08a869b88023fc411f0a5cc96/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`4accbf9...ba31718`](https://github.com/jameszeroX/XKeen/compare/4accbf9d59d32ca73b4b8e193de38181e5887b29...ba31718bca462c17979e73662ee40391989d0ac1).
+
+###### Коммиты
+
+- fix: redact complete credentials in diagnostic reports ([`92f2383`](https://github.com/jameszeroX/XKeen/commit/92f23838c5482d1ea5e507fb74022586111703f5)) — Vladislav Tupikin
+- Refactor sensitive data masking functions in script ([`695a0b0`](https://github.com/jameszeroX/XKeen/commit/695a0b00be33648c42ff0c8807f9416d9423255b)) — jameszeroX
+- Refactor sensitive data masking functions in script ([`41822cc`](https://github.com/jameszeroX/XKeen/commit/41822cc6d5f7b6bbf75339742f38e497dc55f471)) — jameszeroX
+- Update 03_tools_diagnostic.sh ([`dd57f20`](https://github.com/jameszeroX/XKeen/commit/dd57f2085b1a427dcabc4ec47c9b730e2ff75a55)) — jameszeroX
+- Update diagnostic script to use xkeen_config file ([`47d7dd7`](https://github.com/jameszeroX/XKeen/commit/47d7dd702662b0e25bccb507cc6a986513f4278d)) — jameszeroX
+- fix: publish complete backups and guard installation swaps ([`9ec8d7b`](https://github.com/jameszeroX/XKeen/commit/9ec8d7bf6c34135ed02e827cce80597abfb3e7ea)) — Vladislav Tupikin
+- fix: distinguish proxy daemons and refresh firewall state ([`eb63b89`](https://github.com/jameszeroX/XKeen/commit/eb63b89c975235a00b81550f8538f5d49a149dde)) — Vladislav Tupikin
+- fix: isolate concurrent deny MAC refresh sets ([`d767399`](https://github.com/jameszeroX/XKeen/commit/d7673994213640347c2c1d1b095fd1918bac6131)) — Vladislav Tupikin
+- fix: handle CLI EOF and preserve chained options ([`f7a2eb7`](https://github.com/jameszeroX/XKeen/commit/f7a2eb7a2fcba15a66451ca824d9a1665a2bfa34)) — Vladislav Tupikin
+- fix: preserve speed balancer configuration and error state ([`5050ecf`](https://github.com/jameszeroX/XKeen/commit/5050ecfb427358fad9a8f6fbb2d968755d69e498)) — Vladislav Tupikin
+- fix: restore Xray after speed balancer setup failures ([`6031fc1`](https://github.com/jameszeroX/XKeen/commit/6031fc161bc51685bf0250baaf1601e12e5ddc7b)) — Vladislav Tupikin
+- fix: propagate speed balancer tick failures ([`ba31718`](https://github.com/jameszeroX/XKeen/commit/ba31718bca462c17979e73662ee40391989d0ac1)) — Vladislav Tupikin
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-23 08:42:47 MSK)
 
 Сборка из [`f3a7fe2`](https://github.com/jameszeroX/XKeen/commit/f3a7fe23694469eee3323c6deccda9d99d6a7b89).
