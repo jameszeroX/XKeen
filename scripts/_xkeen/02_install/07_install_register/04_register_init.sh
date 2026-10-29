@@ -3701,6 +3701,7 @@ enable_killswitch() {
     }
 
     _acquire_nf_lock || return 1
+    _ks_failed=0
     for _ks_family in iptables ip6tables; do
         if [ "$_ks_family" = "iptables" ] && [ "$iptables_supported" != "true" ]; then continue; fi
         if [ "$_ks_family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ]; then continue; fi
@@ -3715,12 +3716,15 @@ enable_killswitch() {
             printf '%s\n' "-A PREROUTING $comment -j ${name_chain}_killswitch"
             printf 'COMMIT\n'
         } )
-        printf '%s' "$_ks_blob" | "$_ks_restore" --noflush || {
-            _release_nf_lock
-            return 1
+        _ks_err=$(printf '%s\n' "$_ks_blob" | "$_ks_restore" --noflush 2>&1) || {
+            _ks_failed=1
+            log_error_router "Kill-switch не установлен ($_ks_restore): $(printf '%s' "$_ks_err" | head -n1)"
+            echo "$_ks_err" >&2
+            continue
         }
     done
     _release_nf_lock
+    [ "$_ks_failed" -eq 0 ] || return 1
     log_warning_router "Kill-switch включён: трафик политики xkeen заблокирован до явного stop/start"
 }
 
@@ -3936,6 +3940,13 @@ proxy_start() {
                 done
                 unset _probe_attempt
                 if proxy_status; then
+                    # PID фиксируем сразу после успешной пробы, ДО configure_firewall,
+                    # netfilter-хука и load_ipset (это секунды на слабых роутерах).
+                    # Раньше PID брался уже внутри watchdog-subshell: если ядро успело
+                    # упасть (битый конфиг), pidof возвращал пусто, проверка
+                    # [ -n "$_crash_pid" ] давала ложь и emergency_clear/kill-switch
+                    # не вызывались, а в журнал писалось «успешно запущен».
+                    _crash_pid=$(pidof "$name_client" 2>/dev/null | awk '{print $1}')
                     if [ "$mode_proxy" != "Other" ] && ! configure_firewall; then
                         rm -f "$xkeen_rundir/ready"
                         log_error_terminal "Не удалось записать netfilter-хук"
@@ -3968,10 +3979,11 @@ proxy_start() {
                         # Это защищает от ситуаций, когда xray/mihomo
                         # успевает создать PID, но затем аварийно завершается,
                         # например, из-за битой конфигурации
-                        _crash_pid=$(pidof "$name_client" 2>/dev/null | awk '{print $1}')
                         sleep 3
 
-                        if [ -n "$_crash_pid" ] && ! kill -0 "$_crash_pid" 2>/dev/null \
+                        # Пустой PID (pidof не успел) не должен глушить проверку:
+                        # решает итоговое !proxy_status.
+                        if { [ -z "$_crash_pid" ] || ! kill -0 "$_crash_pid" 2>/dev/null; } \
                            && ! proxy_status; then
                             echo
                             echo -e "  Прокси-клиент ${red}аварийно завершился${reset}"
