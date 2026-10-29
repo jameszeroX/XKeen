@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-29 18:21:57 MSK)
+
+Сборка из [`fe9f5e9`](https://github.com/jameszeroX/XKeen/commit/fe9f5e9be59311cf0eda0bd3e5b2453f631a48b2).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/03b2dc19660342860fc63a39e01083699e53dc3a/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`15f3c27...fe9f5e9`](https://github.com/jameszeroX/XKeen/compare/15f3c276184bf92852af487dcaa1c15c141be067...fe9f5e9be59311cf0eda0bd3e5b2453f631a48b2).
+
+###### Коммиты
+
+- Fix kill-switch and proxy crash handling ([`fe9f5e9`](https://github.com/jameszeroX/XKeen/commit/fe9f5e9be59311cf0eda0bd3e5b2453f631a48b2)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-28 09:33:36 MSK)
 
 Сборка из [`b97d963`](https://github.com/jameszeroX/XKeen/commit/b97d963ea9472d2430d8f05fb5f5990f3d2f4ffd).
