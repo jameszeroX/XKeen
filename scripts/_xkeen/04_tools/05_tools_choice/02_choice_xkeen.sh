@@ -131,9 +131,13 @@ change_ipv6_support() {
                     *) [ -f "$dir/disable_ipv6" ] && echo "1" > "$dir/disable_ipv6" 2>/dev/null ;;
                 esac
             done
+            ndmc -c 'no ipv6 subnet Default' >/dev/null 2>&1
+            ndmc -c 'system configuration save' >/dev/null 2>&1
         else
             sysctl -w net.ipv6.conf.all.disable_ipv6=0 >/dev/null 2>&1
             sysctl -w net.ipv6.conf.default.disable_ipv6=0 >/dev/null 2>&1
+            ndmc -c 'ipv6 subnet Default' >/dev/null 2>&1
+            ndmc -c 'system configuration save' >/dev/null 2>&1
         fi
 
         # Перезапуск прокси-клиента, если запущен
