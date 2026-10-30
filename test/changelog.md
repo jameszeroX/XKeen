@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-30 18:22:18 MSK)
+
+Сборка из [`84d37ab`](https://github.com/jameszeroX/XKeen/commit/84d37abfc08f4cf872c2b2fd068c43c0f94da1ec).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/864ee08b161224525e91407987a6681fbad3e4cb/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`03b2dc1...84d37ab`](https://github.com/jameszeroX/XKeen/compare/03b2dc19660342860fc63a39e01083699e53dc3a...84d37abfc08f4cf872c2b2fd068c43c0f94da1ec).
+
+###### Коммиты
+
+- Fix IPv6 Default subnet handling ([`84d37ab`](https://github.com/jameszeroX/XKeen/commit/84d37abfc08f4cf872c2b2fd068c43c0f94da1ec)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-29 18:21:57 MSK)
 
 Сборка из [`fe9f5e9`](https://github.com/jameszeroX/XKeen/commit/fe9f5e9be59311cf0eda0bd3e5b2453f631a48b2).
