@@ -29,6 +29,20 @@ check 'configuration test is not a daemon' "$(proxy_status; echo "$?")" 1
 pids="$helper $daemon $tester"
 check 'only run daemon selected' "$(proxy_pids)" "$daemon"
 check 'daemon status succeeds' "$(proxy_status; echo "$?")" 0
+mkdir "$work/form"
+classify() {
+    printf '%s\n' xray "$@" | tr '\n' '\000' > "$work/form/cmdline"
+    pids="..$work/form"
+    [ "$(proxy_pids)" = "$pids" ] && echo daemon || echo oneshot
+}
+check 'bare xray is a daemon' "$(classify)" daemon
+check 'v4 config flag is a daemon' "$(classify -c config.json)" daemon
+check 'v4 confdir flag is a daemon' "$(classify -confdir /opt/etc/xray/configs)" daemon
+check 'v4 help is not a daemon' "$(classify -h)" oneshot
+check 'v4 version is not a daemon' "$(classify --version)" oneshot
+check 'config dump is not a daemon' "$(classify run -dump -c config.json)" oneshot
+check 'v4 config dump is not a daemon' "$(classify -dump=true -confdir dir)" oneshot
+check 'v4 configuration test is not a daemon' "$(classify -test -c config.json)" oneshot
 name_client=mihomo
 check 'Mihomo process selection preserved' "$(proxy_pids)" "$pids"
 proxy_status() { return 1; }
