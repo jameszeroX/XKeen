@@ -111,7 +111,6 @@ author_donate() {
     echo -e "  Поддержать разработчика форка XKeen (${green}jameszero${reset})"
     echo "     4. Карта МИР"
     echo "     5. CloudTips/ЮMoney"
-    echo "     6. Crypto"
     echo
     echo "     0. Отмена"
     echo
@@ -174,18 +173,6 @@ author_donate() {
                 echo
                 echo -e "  ${yellow}Номер ЮMoney-кошелька${reset}"
                 echo "     4100 1350 7762 40"
-                echo
-                return 0
-                ;;
-            6)
-                echo
-                echo -e "  ${yellow}USDT${reset}, TRC20"
-                echo "     TQhy1LbuGe3Bz7EVrDYn67ZFLDjDBa2VNX"
-                echo
-                echo -e "  ${yellow}USDT${reset}, ERC20"
-                echo "     0x6a5DF3b5c67E1f90dF27Ff3bd2a7691Fad234EE2"
-                echo
-                echo -e "  ${light_blue}Уточните актуальность реквизитов перед переводом${reset}"
                 echo
                 return 0
                 ;;
