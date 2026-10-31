@@ -1152,9 +1152,12 @@ proxy_pids() {
     fi
     for _proxy_pid in $(pidof "$name_client"); do
         if tr '\000' '\n' 2>/dev/null < "/proc/$_proxy_pid/cmdline" | awk '
-            NR == 2 { running = ($0 == "run") }
-            $0 == "-test" || $0 == "--test" || $0 == "-test=true" || $0 == "--test=true" { testing = 1 }
-            END { exit !(running && !testing) }
+            NR == 2 { command = $0 }
+            /^--?(test|dump)(=true)?$/ { oneshot = 1 }
+            END {
+                running = NR == 1 || command == "run" || (command ~ /^-/ && command !~ /^--?(h|help|version)$/)
+                exit !(running && !oneshot)
+            }
         '; then
             printf '%s\n' "$_proxy_pid"
         fi
@@ -2283,9 +2286,12 @@ proxy_pids() {
     fi
     for _proxy_pid in $(pidof "$name_client"); do
         if tr '\000' '\n' 2>/dev/null < "/proc/$_proxy_pid/cmdline" | awk '
-            NR == 2 { running = ($0 == "run") }
-            $0 == "-test" || $0 == "--test" || $0 == "-test=true" || $0 == "--test=true" { testing = 1 }
-            END { exit !(running && !testing) }
+            NR == 2 { command = $0 }
+            /^--?(test|dump)(=true)?$/ { oneshot = 1 }
+            END {
+                running = NR == 1 || command == "run" || (command ~ /^-/ && command !~ /^--?(h|help|version)$/)
+                exit !(running && !oneshot)
+            }
         '; then
             printf '%s\n' "$_proxy_pid"
         fi
