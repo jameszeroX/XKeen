@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-10-31 11:23:16 MSK)
+
+Сборка из [`d578a10`](https://github.com/jameszeroX/XKeen/commit/d578a1022064a6c636535170117a8d2bb19551d0).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/1898c4b0628415597e0be2a6fb27579f162f1041/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`1fd39e6...d578a10`](https://github.com/jameszeroX/XKeen/compare/1fd39e66958fd48fb41a9f3774646e345fa5af96...d578a1022064a6c636535170117a8d2bb19551d0).
+
+###### Коммиты
+
+- fix: recognize implicit Xray run invocations ([`d578a10`](https://github.com/jameszeroX/XKeen/commit/d578a1022064a6c636535170117a8d2bb19551d0)) — Vladislav Tupikin
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-31 11:16:28 MSK)
 
 Сборка из [`d621437`](https://github.com/jameszeroX/XKeen/commit/d621437172e33f2aededf05c9308cdd00c74534b).
