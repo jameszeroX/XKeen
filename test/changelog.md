@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-11-01 15:31:42 MSK)
+
+Сборка из [`fa62191`](https://github.com/jameszeroX/XKeen/commit/fa62191d259daf16c1fbf4224cf3b387e246d8b3).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/78a9b4a061d28fabd82d50e0ef93cbee6d1edc51/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`985bd74...fa62191`](https://github.com/jameszeroX/XKeen/compare/985bd74a168b4b820b14188fdb75174fac4be9d7...fa62191d259daf16c1fbf4224cf3b387e246d8b3).
+
+###### Коммиты
+
+- Fix Entware package detection and repair #260 ([`fa62191`](https://github.com/jameszeroX/XKeen/commit/fa62191d259daf16c1fbf4224cf3b387e246d8b3)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-11-01 12:39:52 MSK)
 
 Сборка из [`03c5f3b`](https://github.com/jameszeroX/XKeen/commit/03c5f3bdac295a472c37e3d3e883da39f0bb9d14).
