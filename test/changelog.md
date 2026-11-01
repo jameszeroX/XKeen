@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-11-01 12:39:52 MSK)
+
+Сборка из [`03c5f3b`](https://github.com/jameszeroX/XKeen/commit/03c5f3bdac295a472c37e3d3e883da39f0bb9d14).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/985bd74a168b4b820b14188fdb75174fac4be9d7/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`1898c4b...03c5f3b`](https://github.com/jameszeroX/XKeen/compare/1898c4b0628415597e0be2a6fb27579f162f1041...03c5f3bdac295a472c37e3d3e883da39f0bb9d14).
+
+###### Коммиты
+
+- feat: удержание killswitch на время xkeen -restart ([`03c5f3b`](https://github.com/jameszeroX/XKeen/commit/03c5f3bdac295a472c37e3d3e883da39f0bb9d14)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-10-31 11:23:16 MSK)
 
 Сборка из [`d578a10`](https://github.com/jameszeroX/XKeen/commit/d578a1022064a6c636535170117a8d2bb19551d0).
