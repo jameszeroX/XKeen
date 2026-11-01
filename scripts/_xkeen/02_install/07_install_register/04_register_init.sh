@@ -65,6 +65,7 @@ table_redirect="nat"
 table_tproxy="mangle"
 comment_tag="xkeen_rule"
 comment="-m comment --comment $comment_tag"
+allow_noisp="off"
 custom_mark=""
 
 # DSCP-метки
@@ -246,6 +247,7 @@ load_killswitch_settings() {
     [ "$_ks_v" = "on" ] && killswitch="on"
 }
 load_killswitch_settings
+keep_killswitch="off"
 
 # GOMEMLIMIT для mihomo: доля RAM или абсолютный лимит из xkeen.json.
 # Дефолт — 50% RAM (сохраняет прежнее поведение). Внешний
@@ -2240,7 +2242,6 @@ EOL
     inject_var arm64_fd "$arm64_fd"
     inject_var other_fd "$other_fd"
     inject_var aghfix "$aghfix"
-    
     inject_var ipv6_proxy "$ipv6_proxy"
     inject_var ipv4_proxy "$ipv4_proxy"
     inject_var val_exclude_ip6 "$val_exclude_ip6"
@@ -2255,6 +2256,7 @@ EOL
     apply_gomemlimit
     inject_var gomemlimit_value "$gomemlimit_value"
     inject_var killswitch "$killswitch"
+    inject_var allow_noisp "$allow_noisp"
 
     cat >> "$file_netfilter_hook" <<'EOL'
 
@@ -2747,7 +2749,7 @@ if proxy_status; then
 
         attempts=0
         max_attempts=4
-        until check_default; do
+        until { [ "$allow_noisp" = "on" ] && [ "$source_table" != "main" ]; } || check_default; do
             attempts=$((attempts + 1))
             if [ "$attempts" -ge "$max_attempts" ]; then
                 [ "$ip_version" = "4" ] && touch "/tmp/noinet"
@@ -3386,7 +3388,9 @@ clean_firewall() {
         name_chain="$3"
 
         for sys_chain in PREROUTING OUTPUT; do
-            "$family" -w -t "$table" -S "$sys_chain" 2>/dev/null | grep -E -- "$comment_tag" | sed 's/^-A /-D /' | while IFS= read -r rule; do
+            "$family" -w -t "$table" -S "$sys_chain" 2>/dev/null | grep -E -- "$comment_tag" \
+                | { if [ "$keep_killswitch" = "on" ]; then grep -v -- "-j ${name_chain}_killswitch"; else cat; fi; } \
+                | sed 's/^-A /-D /' | while IFS= read -r rule; do
                 [ -n "$rule" ] && "$family" -w -t "$table" $rule >/dev/null 2>&1
             done
         done
@@ -3415,7 +3419,7 @@ clean_firewall() {
         fi
 
         killswitch_chain="${name_chain}_killswitch"
-        if "$family" -w -t "$table" -nL "$killswitch_chain" >/dev/null 2>&1; then
+        if [ "$keep_killswitch" != "on" ] && "$family" -w -t "$table" -nL "$killswitch_chain" >/dev/null 2>&1; then
             "$family" -w -t "$table" -F "$killswitch_chain" >/dev/null 2>&1
             "$family" -w -t "$table" -X "$killswitch_chain" >/dev/null 2>&1
         fi
@@ -3715,6 +3719,8 @@ enable_killswitch() {
         if [ "$_ks_family" = "iptables" ] && [ "$iptables_supported" != "true" ]; then continue; fi
         if [ "$_ks_family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ]; then continue; fi
         _ks_restore="${_ks_family}-restore"
+        _ks_has_jump=0
+        "$_ks_family" -w -t mangle -S PREROUTING 2>/dev/null | grep -q -- "-j ${name_chain}_killswitch" && _ks_has_jump=1
         _ks_blob=$( {
             printf '*mangle\n'
             printf ':%s_killswitch -\n' "$name_chain"
@@ -3722,7 +3728,7 @@ enable_killswitch() {
                 [ -n "$_ks_mark" ] || continue
                 printf '%s\n' "-A ${name_chain}_killswitch -m conntrack ! --ctstate INVALID -m mark --mark ${_ks_mark} $comment -j DROP"
             done
-            printf '%s\n' "-A PREROUTING $comment -j ${name_chain}_killswitch"
+            [ "$_ks_has_jump" -eq 1 ] || printf '%s\n' "-A PREROUTING $comment -j ${name_chain}_killswitch"
             printf 'COMMIT\n'
         } )
         _ks_err=$(printf '%s\n' "$_ks_blob" | "$_ks_restore" --noflush 2>&1) || {
@@ -3734,7 +3740,41 @@ enable_killswitch() {
     done
     _release_nf_lock
     [ "$_ks_failed" -eq 0 ] || return 1
-    log_warning_router "Kill-switch включён: трафик политики xkeen заблокирован до явного stop/start"
+    if [ "$1" = "hold" ]; then
+        log_info_router "Kill-switch блокирует трафик политик XKeen на время перезапуска"
+    else
+        log_warning_router "Kill-switch включён: трафик политик XKeen заблокирован до явного stop/start"
+    fi
+}
+
+_ks_load_marks_from_hook() {
+    [ -f "$file_netfilter_hook" ] || return 1
+    policy_mark=$(sed -n "s/^policy_mark='\(.*\)'\$/\1/p" "$file_netfilter_hook" | head -n1)
+    policy_mark_full=$(sed -n "s/^policy_mark_full='\(.*\)'\$/\1/p" "$file_netfilter_hook" | head -n1)
+    user_policies=$(awk '
+        !inblk && /^user_policies=\047/ { inblk = 1; sub(/^user_policies=\047/, "") }
+        inblk {
+            line = $0; closing = 0
+            if (line ~ /\047$/) { sub(/\047$/, "", line); closing = 1 }
+            if (line != "") print line
+            if (closing) exit
+        }' "$file_netfilter_hook")
+    return 0
+}
+
+disable_killswitch() {
+    _acquire_nf_lock
+    _dk_rc=$?
+    for _dk_family in iptables ip6tables; do
+        if [ "$_dk_family" = "iptables" ] && [ "$iptables_supported" != "true" ]; then continue; fi
+        if [ "$_dk_family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ]; then continue; fi
+        "$_dk_family" -w -t mangle -nL "${name_chain}_killswitch" >/dev/null 2>&1 || continue
+        while "$_dk_family" -w -t mangle -D PREROUTING $comment -j "${name_chain}_killswitch" >/dev/null 2>&1; do :; done
+        "$_dk_family" -w -t mangle -F "${name_chain}_killswitch" >/dev/null 2>&1
+        "$_dk_family" -w -t mangle -X "${name_chain}_killswitch" >/dev/null 2>&1
+    done
+    [ "$_dk_rc" -ne 2 ] && _release_nf_lock
+    return 0
 }
 
 # Очистка при аварийной остановке прокси-клиента
@@ -3982,6 +4022,8 @@ proxy_start() {
                     [ "$iptables_supported" = "true" ] && [ -f "$ru_exclude_ipv4" ] && load_ipset geo_exclude "$ru_exclude_ipv4" inet
                     [ "$ip6tables_supported" = "true" ] && [ -f "$ru_exclude_ipv6" ] && load_ipset geo_exclude6 "$ru_exclude_ipv6" inet6
                     load_user_ipset
+                    keep_killswitch="off"
+                    disable_killswitch
                     echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${light_blue}${mode_proxy}${reset}"
                     (
                         # Даём ядру прокси время полностью инициализироваться
@@ -4035,6 +4077,7 @@ proxy_start() {
             _release_coldstart_guard
         fi
     else
+        keep_killswitch="off"
         clean_firewall
     fi
     if [ "$_ps_mutex_rc" -eq 0 ]; then
@@ -4186,7 +4229,24 @@ case "$1" in
             print_dscp_force_proxy_status
         fi
         ;;
-    restart) proxy_stop; proxy_start "$2"; _cmd_rc=$? ;;
+    restart)
+        if [ "$killswitch" = "on" ] && proxy_status && [ -f "$file_netfilter_hook" ]; then
+            _rs_mode=$(grep '^mode_proxy=' "$file_netfilter_hook" | awk -F"=" '{print $2}' | tr -d "'" 2>/dev/null)
+            if [ -n "$_rs_mode" ] && [ "$_rs_mode" != "Other" ]; then
+                get_ipver_support
+                _ks_load_marks_from_hook
+                enable_killswitch hold && keep_killswitch="on"
+            fi
+        fi
+        proxy_stop
+        proxy_start "$2"
+        _cmd_rc=$?
+        if [ "$keep_killswitch" = "on" ]; then
+            log_warning_router "Перезапуск не завершён: kill-switch остаётся включённым до успешного start или явного stop"
+            echo -e "  ${yellow}Kill-switch${reset} остаётся включённым: трафик политики заблокирован."
+            echo -e "  Снять блокировку: ${green}xkeen -stop${reset} (остановить) или повторить ${green}xkeen -restart${reset}"
+        fi
+        ;;
     cold_start)
         # Подстраховка: переписываем PID guard'а на свой ($$) на случай,
         # если caller-S05xkeen умер до того, как успел _set_coldstart_pid "$!".
