@@ -27,6 +27,15 @@ check_health() {
     local curl_err
     local exit_code
 
+    # Проверка репозитория Entware (test_entware) и сама загрузка выполняются
+    # через curl. Если curl отсутствует или не запускается, пакеты приходится
+    # восстанавливать до этой проверки: иначе дальше нечем её выполнить.
+    # В остальных случаях пакеты проверяет test_entware уже после репозитория.
+    if ! command -v curl >/dev/null 2>&1 || ! curl --version >/dev/null 2>&1; then
+        _load_packages_info
+        _ensure_installed_packages
+    fi
+
     check_binary_health busybox --help
     for prog in curl opkg grep; do
         check_binary_health "$prog" --version
@@ -101,8 +110,8 @@ test_entware() {
         printf "  Репозиторий Entware ${green}доступен${reset}. Продолжаем...\n"
 
         opkg update >/dev/null 2>&1
-        info_packages
-        install_packages
+        _load_packages_info
+        _ensure_installed_packages
         rm -f "$tmp_file" 2>/dev/null
         return 0
     else
