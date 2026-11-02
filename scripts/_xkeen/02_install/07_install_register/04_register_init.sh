@@ -2799,6 +2799,7 @@ if proxy_status; then
         mark="$4"
         ports="$5"
         target="$6"
+        rule_chain="${7:-PREROUTING}"
 
         [ -z "$ports" ] && return
 
@@ -2821,7 +2822,7 @@ if proxy_status; then
             else
                 set -- -m conntrack ! --ctstate INVALID -p "$net" -m multiport --dports "$chunk" $comment -j "$target"
             fi
-            ipt -A PREROUTING "$@" >/dev/null 2>&1
+            ipt -A "$rule_chain" "$@" >/dev/null 2>&1
         done
     }
 
@@ -2997,8 +2998,15 @@ USER_POLICIES_EOF
 
             proto_match="-p $net"
 
-            set -- -m conntrack ! --ctstate INVALID $proto_match $comment -j "$out_chain"
-            ipt -A OUTPUT "$@" >/dev/null 2>&1
+            if [ -n "$port_donor" ]; then
+                # В xkeen_out попадают только порты проксирования
+                add_multiport_rules "$family" "$table" "$net" "" "$port_donor" "$out_chain" OUTPUT
+            else
+                set -- -m conntrack ! --ctstate INVALID $proto_match $comment -j "$out_chain"
+                ipt -A OUTPUT "$@" >/dev/null 2>&1
+                # Порты исключения: RETURN до итогового MARK/REDIRECT
+                add_multiport_rules "$family" "$table" "$net" "" "$port_exclude" "RETURN" "$out_chain"
+            fi
 
             if [ "$table" = "$table_redirect" ]; then
                 set -- -p "$net" $comment -j REDIRECT --to-port "$port_redirect"
