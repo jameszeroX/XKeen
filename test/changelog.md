@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-11-02 10:15:43 MSK)
+
+Сборка из [`6b26912`](https://github.com/jameszeroX/XKeen/commit/6b26912e349c319283f6e5ae3eb89ba5107f17d6).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/d2a9ab8b9c853f1f7b8cde60cb6ea96042bfd752/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`78a9b4a...6b26912`](https://github.com/jameszeroX/XKeen/compare/78a9b4a061d28fabd82d50e0ef93cbee6d1edc51...6b26912e349c319283f6e5ae3eb89ba5107f17d6).
+
+###### Коммиты
+
+- Fix: порты проксирования и порты исключения теперь учитываются при проксировании Entware #262 ([`6b26912`](https://github.com/jameszeroX/XKeen/commit/6b26912e349c319283f6e5ae3eb89ba5107f17d6)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-11-01 15:31:42 MSK)
 
 Сборка из [`fa62191`](https://github.com/jameszeroX/XKeen/commit/fa62191d259daf16c1fbf4224cf3b387e246d8b3).
