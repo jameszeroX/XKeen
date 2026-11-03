@@ -1,6 +1,10 @@
 # XKeen 2.1
 
-[![CodeFactor](https://www.codefactor.io/repository/github/jameszerox/xkeen/badge)](https://www.codefactor.io/repository/github/jameszerox/xkeen) [![Github All Releases](https://img.shields.io/github/downloads/jameszeroX/XKeen/total.svg)](https://github.com/jameszeroX/XKeen/releases) [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause) [![Wiki](https://img.shields.io/badge/Wiki-Project_Docs-blue?style=flat-square)](https://github.com/jameszeroX/XKeen/wiki)
+[![CodeFactor](https://www.codefactor.io/repository/github/jameszerox/xkeen/badge)](https://www.codefactor.io/repository/github/jameszerox/xkeen) 
+[![KeeneticOS 4.0.7-5.2](https://img.shields.io/badge/KeeneticOS-4.0.7--5.2-orange)](https://github.com/jameszeroX/XKeen/wiki/Порядок-установки) 
+[![Github All Releases](https://img.shields.io/github/downloads/jameszeroX/XKeen/total.svg)](https://github.com/jameszeroX/XKeen/releases) 
+[![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause) 
+[![Wiki](https://img.shields.io/badge/Wiki-Project_Docs-blue?style=flat-square)](https://github.com/jameszeroX/XKeen/wiki)
 
 <p align="center">
   <picture>
