@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-11-03 07:52:35 MSK)
+
+Сборка из [`9359409`](https://github.com/jameszeroX/XKeen/commit/93594092c8e2dd4225b18582f37f15c277b425ee).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/58c0d65aac8617f9721a9c46b0605cde2a4b6d19/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`d2a9ab8...9359409`](https://github.com/jameszeroX/XKeen/compare/d2a9ab8b9c853f1f7b8cde60cb6ea96042bfd752...93594092c8e2dd4225b18582f37f15c277b425ee).
+
+###### Коммиты
+
+- Feat: пользовательские имена встроенных политик xkeen и xkeen_full #263 ([`8e2e2c2`](https://github.com/jameszeroX/XKeen/commit/8e2e2c223706a00e4a2d130ab6d7b5a570a96cdc)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-11-02 10:15:43 MSK)
 
 Сборка из [`6b26912`](https://github.com/jameszeroX/XKeen/commit/6b26912e349c319283f6e5ae3eb89ba5107f17d6).
