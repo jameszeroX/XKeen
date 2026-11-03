@@ -249,6 +249,86 @@ load_killswitch_settings() {
 load_killswitch_settings
 keep_killswitch="off"
 
+# Пользовательские имена встроенных политик XKeen.
+#   .xkeen.policy_name       - имя основной политики      (по умолчанию "xkeen")
+#   .xkeen.policy_full_name  - имя политики full-проксирования (по умолчанию "xkeen_full")
+# Прочитанные значения: name_policy_custom / name_policy_full_custom.
+# Ключ отсутствует, пуст или некорректен -> остаётся значение по умолчанию.
+# Предупреждения копятся в _policy_name_warn и выводятся из proxy_start
+# (load_policy_names вызывается при любой команде, в т.ч. status/stop).
+_policy_name_warn=""
+
+# Допустимое имя: не пустое, без '|' (разделитель в user_policies)
+# и без управляющих символов (в т.ч. перевода строки).
+_is_valid_policy_name() {
+    [ -n "$1" ] || return 1
+    case "$1" in *"|"*) return 1 ;; esac
+    [ "$(printf '%s' "$1" | tr -d '\000-\037\177')" = "$1" ]
+}
+
+# Читает строковый ключ .xkeen.<$1>; результат в _lpn_result ("" = не задан/некорректен).
+# Вызывать без $(...), иначе _policy_name_warn теряется в subshell.
+_read_policy_name_key() {
+    _lpn_result=""
+    _lpn_raw=$(_xkeen_cached_json | jq -r --arg k "$1" '
+        .xkeen[$k] | if type == "string" then "s:" + .
+                     elif type == "null" then empty
+                     else "x:" end' 2>/dev/null)
+    case "$_lpn_raw" in
+        "") return 0 ;;
+        "x:")
+            _policy_name_warn="${_policy_name_warn}
+  Параметр '${yellow}$1${reset}' в xkeen.json должен быть строкой, используется значение по умолчанию"
+            return 0
+            ;;
+    esac
+    _lpn_val=${_lpn_raw#s:}
+    _lpn_val=$(printf '%s' "$_lpn_val" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    [ -n "$_lpn_val" ] || return 0
+    if ! _is_valid_policy_name "$_lpn_val"; then
+        _policy_name_warn="${_policy_name_warn}
+  Параметр '${yellow}$1${reset}' в xkeen.json содержит недопустимое имя (символ '|' или управляющие символы), используется значение по умолчанию"
+        return 0
+    fi
+    _lpn_result="$_lpn_val"
+}
+
+load_policy_names() {
+    _policy_name_warn=""
+    name_policy_custom=""
+    name_policy_full_custom=""
+
+    [ -f "$xkeen_config" ] || return 0
+    command -v jq >/dev/null 2>&1 || return 0
+
+    _read_policy_name_key policy_name
+    name_policy_custom="$_lpn_result"
+    _read_policy_name_key policy_full_name
+    name_policy_full_custom="$_lpn_result"
+
+    # Сравнение без учёта регистра - как при сопоставлении с RCI (ascii_downcase)
+    _lpn_a=$(printf '%s' "${name_policy_custom:-$name_policy}" | tr '[:upper:]' '[:lower:]')
+    _lpn_b=$(printf '%s' "${name_policy_full_custom:-$name_policy_full}" | tr '[:upper:]' '[:lower:]')
+    if [ "$_lpn_a" = "$_lpn_b" ]; then
+        name_policy_custom=""
+        name_policy_full_custom=""
+        _policy_name_warn="${_policy_name_warn}
+  Имена политик '${yellow}policy_name${reset}' и '${yellow}policy_full_name${reset}' в xkeen.json совпадают, используются значения по умолчанию"
+    fi
+
+    # Пользовательское имя, если задано, заменяет имя по умолчанию
+    [ -n "$name_policy_custom" ] && name_policy="$name_policy_custom"
+    [ -n "$name_policy_full_custom" ] && name_policy_full="$name_policy_full_custom"
+    unset _lpn_raw _lpn_val _lpn_a _lpn_b
+}
+load_policy_names
+
+report_policy_name_warnings() {
+    [ -n "$_policy_name_warn" ] || return 0
+    log_warning_router "xkeen.json: некорректные имена встроенных политик, использованы значения по умолчанию"
+    log_warning_terminal "$_policy_name_warn"
+}
+
 # GOMEMLIMIT для mihomo: доля RAM или абсолютный лимит из xkeen.json.
 # Дефолт — 50% RAM (сохраняет прежнее поведение). Внешний
 # GOMEMLIMIT в окружении всегда побеждает.
@@ -3832,6 +3912,7 @@ proxy_start() {
         get_ipver_support
         info_health_binary
         validate_xkeen_json
+        report_policy_name_warnings
         check_policy_name_conflict
         check_xray_backups
         api_cache_init
@@ -4053,7 +4134,7 @@ proxy_start() {
                         fi
                     ) &
                     if [ -n "$api_policy_json" ]; then
-                        if echo "$api_policy_json" | jq --arg policy "$name_policy" -e 'any(.[]; .description | ascii_downcase == $policy)' > /dev/null; then
+                        if echo "$api_policy_json" | jq --arg policy "$name_policy" -e 'any(.[]; (.description // "" | ascii_downcase) == ($policy | ascii_downcase))' > /dev/null; then
                             if [ -e "/tmp/noinet" ]; then
                                 echo
                                 echo -e "  У политики ${yellow}$name_policy${reset} ${red}нет доступа в интернет${reset}"
