@@ -1,7 +1,7 @@
 # XKeen 2.1
 
 [![CodeFactor](https://www.codefactor.io/repository/github/jameszerox/xkeen/badge)](https://www.codefactor.io/repository/github/jameszerox/xkeen) 
-[![KeeneticOS 4.0.7-5.2](https://img.shields.io/badge/KeeneticOS-4.0.7--5.2-orange)](https://github.com/jameszeroX/XKeen/wiki/Порядок-установки) 
+[![KeeneticOS 4.0-5.2](https://img.shields.io/badge/KeeneticOS-4.0--5.2-orange)](https://github.com/jameszeroX/XKeen/wiki/Порядок-установки) 
 [![Github All Releases](https://img.shields.io/github/downloads/jameszeroX/XKeen/total.svg)](https://github.com/jameszeroX/XKeen/releases) 
 [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause) 
 [![Wiki](https://img.shields.io/badge/Wiki-Project_Docs-blue?style=flat-square)](https://github.com/jameszeroX/XKeen/wiki)
@@ -94,12 +94,10 @@ XKeen работает полностью на стороне роутера, н
 - [CloudTips](https://pay.cloudtips.ru/p/7edb30ec)
 - [ЮMoney](https://yoomoney.ru/to/41001350776240)
 - Карта МИР: `2204 1201 2976 4110`
-<!--
 - USDT, сеть TRC20: `TQhy1LbuGe3Bz7EVrDYn67ZFLDjDBa2VNX`
-- USDT, сеть ERC20: `0x6a5DF3b5c67E1f90dF27Ff3bd2a7691Fad234EE2`
 
-<sup>Уточните актуальность крипто-адресов перед переводом</sup>
--->
+<sup>Уточните актуальность крипто-адреса перед переводом</sup>
+
 ---
 
 ## Дополнения
