@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-11-04 11:14:08 MSK)
+
+Сборка из [`3b1b422`](https://github.com/jameszeroX/XKeen/commit/3b1b422c6810ea942db8ac525bb60f682e7de499).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/4e8d66c98594432f76f2b9e1d29523d5310cf6ac/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`527136a...3b1b422`](https://github.com/jameszeroX/XKeen/compare/527136a93d5acd64ddc0545329fe7a3662cbecc3...3b1b422c6810ea942db8ac525bb60f682e7de499).
+
+###### Коммиты
+
+- Adjustment of the requirement for free-space ([`3b1b422`](https://github.com/jameszeroX/XKeen/commit/3b1b422c6810ea942db8ac525bb60f682e7de499)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-11-03 17:32:31 MSK)
 
 Сборка из [`56e54aa`](https://github.com/jameszeroX/XKeen/commit/56e54aa5e9055d7f626bdb09c128a688262bb293).
