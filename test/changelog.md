@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.1.1 Beta (время сборки: 2026-11-05 07:50:11 MSK)
+
+Сборка из [`662aea3`](https://github.com/jameszeroX/XKeen/commit/662aea3785e862c5c88866f8bab8590bab983c43).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/dae606324f67215879665cc6e5c41b7e404fcf28/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`4e8d66c...662aea3`](https://github.com/jameszeroX/XKeen/compare/4e8d66c98594432f76f2b9e1d29523d5310cf6ac...662aea3785e862c5c88866f8bab8590bab983c43).
+
+###### Коммиты
+
+- В проверку исправности пакетов Entware добавлена утилита ip-full и её переустановка в случае необходимости ([`662aea3`](https://github.com/jameszeroX/XKeen/commit/662aea3785e862c5c88866f8bab8590bab983c43)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-11-04 11:14:08 MSK)
 
 Сборка из [`3b1b422`](https://github.com/jameszeroX/XKeen/commit/3b1b422c6810ea942db8ac525bb60f682e7de499).
