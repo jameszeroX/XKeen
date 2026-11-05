@@ -66,7 +66,6 @@ table_tproxy="mangle"
 comment_tag="xkeen_rule"
 comment="-m comment --comment $comment_tag"
 allow_noisp="off"
-custom_mark=""
 
 # DSCP-метки
 dscp_enable="on"
@@ -113,8 +112,9 @@ extended_msg="off"
 ## Резервное копирование XKeen при обновлении
 backup="on"
 
-## Клиенты XKeen под своими IP в журнале AdGuard Home
+## Клиенты под своими IP в журнале AdGuard Home
 aghfix="off"
+custom_mark=""
 
 if [ "$dscp_enable" = "off" ]; then
     dscp_force_proxy=""
@@ -555,6 +555,7 @@ for cmd in $utils; do
 done
 
 if readlink "$(which ip)" | grep -q 'busybox'; then
+    log_error_router "Обнаружена урезанная версия ip (BusyBox). Необходим пакет ip-full"
     log_error_terminal "Обнаружена урезанная версия ip (BusyBox). Необходим пакет: ${yellow}ip-full${reset}"
 fi
 

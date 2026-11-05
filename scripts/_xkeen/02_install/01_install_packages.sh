@@ -34,19 +34,34 @@ install_packages() {
     fi
 }
 
-# Проверка работоспособности пакета: бинарник должен запускаться.
-# Критерий — код возврата `<команда> --version`, а не наличие вывода в stderr:
-# рабочие программы могут писать предупреждения (например, ipset сообщает о
-# разнице версий протокола ядра и userspace, но завершается с кодом 0).
+_package_binary() {
+    case "$1" in
+        curl|jq|iptables|ipset) echo "$1" ;;
+        ip-full)                echo "ip" ;;
+        *)                      echo "" ;;
+    esac
+}
+
+# Проверка работоспособности пакетов. Критерий — код возврата `<команда> --V`.
+# Для ip-full дополнительно проверяется, что `ip` не подменён BusyBox: после
+# переустановки busybox его симлинк /opt/sbin/ip перезаписывает ссылку на
+# /opt/libexec/ip-full, а opkg продолжает считать ip-full установленным.
 # Для пакетов без проверки возвращает 0. В $_pkg_health_err остаётся stderr
 # проверки (для диагностики и поиска недостающей библиотеки).
 _check_package_health() {
     _pkg_health_err=""
-    case "$1" in
-        curl|jq|iptables|ipset) ;;
-        *) return 0 ;;
-    esac
-    _pkg_health_err=$("$1" --version 2>&1 >/dev/null)
+    _hc_bin=$(_package_binary "$1")
+    [ -n "$_hc_bin" ] || return 0
+
+    _pkg_health_err=$("$_hc_bin" -V 2>&1)
+    _hc_rc=$?
+
+    if [ "$1" = "ip-full" ]; then
+        case "$_pkg_health_err" in
+            *BusyBox*) return 1 ;;
+        esac
+    fi
+    return "$_hc_rc"
 }
 
 # Имя недостающей библиотеки из сообщения динамического загрузчика
@@ -77,6 +92,20 @@ _repair_package() {
     repair_tried=" "
     repair_round=0
 
+    if [ "$package_name" = "ip-full" ]; then
+        case "$_pkg_health_err" in
+            *BusyBox*)
+                _opkg_update_once
+                echo "  Утилита ip заменена версией BusyBox. Переустанавливаю пакет: ip-full" >&2
+                opkg install ip-full --force-reinstall >/dev/null 2>&1
+                _check_package_health "$package_name" && return 0
+                echo "  Не удалось восстановить ip-full: ip по-прежнему BusyBox" >&2
+                echo "  Выполните вручную: opkg install ip-full --force-reinstall" >&2
+                return 1
+                ;;
+        esac
+    fi
+
     while [ "$repair_round" -lt 4 ]; do
         missing_lib=$(_missing_lib_from_error "$_pkg_health_err")
         [ -n "$missing_lib" ] || break
@@ -105,8 +134,8 @@ _repair_package() {
 # запускаются. Отсутствующие бинарники пропускаются: ошибку их установки
 # уже показал install_packages().
 _verify_installed_packages() {
-    for verify_pkg in curl jq iptables ipset; do
-        command -v "$verify_pkg" >/dev/null 2>&1 || continue
+    for verify_pkg in curl jq iptables ipset ip-full; do
+        command -v "$(_package_binary "$verify_pkg")" >/dev/null 2>&1 || continue
         _check_package_health "$verify_pkg" || _repair_package "$verify_pkg"
     done
 }
