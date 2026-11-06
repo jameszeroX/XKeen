@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-06 08:02:45 MSK)
+
+Сборка из [`2647b1f`](https://github.com/jameszeroX/XKeen/commit/2647b1f6de7dfce5b923d73c8b6e1562c707b8dd).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/79956e081256ab8e96876b3fb584e217a1e74774/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`dae6063...2647b1f`](https://github.com/jameszeroX/XKeen/compare/dae606324f67215879665cc6e5c41b7e404fcf28...2647b1f6de7dfce5b923d73c8b6e1562c707b8dd).
+
+###### Коммиты
+
+- Bump to 2.2 Beta and fix IPv6 subnet reset ([`2647b1f`](https://github.com/jameszeroX/XKeen/commit/2647b1f6de7dfce5b923d73c8b6e1562c707b8dd)) — jameszeroX
+
+---
+
 #### XKeen 2.1.1 Beta (время сборки: 2026-11-05 07:50:11 MSK)
 
 Сборка из [`662aea3`](https://github.com/jameszeroX/XKeen/commit/662aea3785e862c5c88866f8bab8590bab983c43).
