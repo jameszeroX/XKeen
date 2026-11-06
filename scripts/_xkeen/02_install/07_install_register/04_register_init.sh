@@ -619,6 +619,7 @@ apply_ipv6_state() {
         esac
     done
 
+    ndmc -c 'ipv6 subnet Default' >/dev/null 2>&1
     ndmc -c 'no ipv6 subnet Default' >/dev/null 2>&1
     ndmc -c 'system configuration save' >/dev/null 2>&1
 
