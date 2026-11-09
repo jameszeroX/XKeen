@@ -144,10 +144,10 @@ _xkeen_secure_rundir() {
         rm -f "$d" 2>/dev/null
     fi
     if [ -d "$d" ]; then
-        set -- $(ls -ld "$d" 2>/dev/null)
+        set -- $(ls -ldn "$d" 2>/dev/null)
         mode="$1"
         owner="$3"
-        if [ "$owner" != "root" ] || [ "$mode" != "drwx------" ]; then
+        if [ "$owner" != "0" ] || [ "$mode" != "drwx------" ]; then
             rm -rf "$d" 2>/dev/null
         else
             # Каталог уже существовал и прошёл проверку owner/mode —
@@ -2250,8 +2250,8 @@ _xkeen_secure_rundir() {
     d="/tmp/.xkeen"
     if [ -e "$d" ] && [ ! -d "$d" ]; then rm -f "$d" 2>/dev/null; fi
     if [ -d "$d" ]; then
-        set -- $(ls -ld "$d" 2>/dev/null)
-        if [ "$3" = "root" ] && [ "$1" = "drwx------" ]; then
+        set -- $(ls -ldn "$d" 2>/dev/null)
+        if [ "$3" = "0" ] && [ "$1" = "drwx------" ]; then
             printf '%s' "$d"
             return 0
         fi
