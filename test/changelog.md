@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-09 15:05:46 MSK)
+
+Сборка из [`d2c86c9`](https://github.com/jameszeroX/XKeen/commit/d2c86c9153724aa5dcea2426aafc179e06c81a4b).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/b1551c0b39395cf0729d1b9d9d35b6c0df27c553/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`79956e0...d2c86c9`](https://github.com/jameszeroX/XKeen/compare/79956e081256ab8e96876b3fb584e217a1e74774...d2c86c9153724aa5dcea2426aafc179e06c81a4b).
+
+###### Коммиты
+
+- Use numeric UID for rundir ownership check #266 ([`d2c86c9`](https://github.com/jameszeroX/XKeen/commit/d2c86c9153724aa5dcea2426aafc179e06c81a4b)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-06 08:02:45 MSK)
 
 Сборка из [`2647b1f`](https://github.com/jameszeroX/XKeen/commit/2647b1f6de7dfce5b923d73c8b6e1562c707b8dd).
