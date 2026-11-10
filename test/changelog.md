@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-10 08:45:04 MSK)
+
+Сборка из [`b8646bd`](https://github.com/jameszeroX/XKeen/commit/b8646bdb886471f9d3b1b97e9562e912c618c0af).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/4309e3f9a0b84d365696ca82e736cff7182e48c4/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`b1551c0...b8646bd`](https://github.com/jameszeroX/XKeen/compare/b1551c0b39395cf0729d1b9d9d35b6c0df27c553...b8646bdb886471f9d3b1b97e9562e912c618c0af).
+
+###### Коммиты
+
+- fix: исправлен многострочный прогресс-бар загрузки в curl 8.23+ ([`b8646bd`](https://github.com/jameszeroX/XKeen/commit/b8646bdb886471f9d3b1b97e9562e912c618c0af)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-09 15:05:46 MSK)
 
 Сборка из [`d2c86c9`](https://github.com/jameszeroX/XKeen/commit/d2c86c9153724aa5dcea2426aafc179e06c81a4b).
