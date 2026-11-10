@@ -485,9 +485,9 @@ curl_with_timeout() {
         # сетевой сбой выглядел бы как успех. pipefail в POSIX sh недоступен.
         exec 3>&1
         if [ "${XKEEN_TIMEOUT_OFF:-}" = "1" ]; then
-            _curl_rc=$( { { curl -# --connect-timeout 10 "$@" 2>&1 1>&3; echo $? >&4; } | indent_stderr_live; } 4>&1 )
+            _curl_rc=$( { { COLUMNS=72 curl -# --connect-timeout 10 "$@" 2>&1 1>&3; echo $? >&4; } | indent_stderr_live; } 4>&1 )
         else
-            _curl_rc=$( { { curl -# --connect-timeout 10 -m 180 "$@" 2>&1 1>&3; echo $? >&4; } | indent_stderr_live; } 4>&1 )
+            _curl_rc=$( { { COLUMNS=72 curl -# --connect-timeout 10 -m 180 "$@" 2>&1 1>&3; echo $? >&4; } | indent_stderr_live; } 4>&1 )
         fi
         exec 3>&-
 
