@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-12 09:00:32 MSK)
+
+Сборка из [`4ff938e`](https://github.com/jameszeroX/XKeen/commit/4ff938e699c8c6941b17d1404f09c11b54e3c152).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/9e1b20ab4a9caef46cd8b9f1d39067219f18003e/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`4309e3f...4ff938e`](https://github.com/jameszeroX/XKeen/compare/4309e3f9a0b84d365696ca82e736cff7182e48c4...4ff938e699c8c6941b17d1404f09c11b54e3c152).
+
+###### Коммиты
+
+- Auto-create RCI token on KeeneticOS 5.2+ ([`4ff938e`](https://github.com/jameszeroX/XKeen/commit/4ff938e699c8c6941b17d1404f09c11b54e3c152)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-10 08:45:04 MSK)
 
 Сборка из [`b8646bd`](https://github.com/jameszeroX/XKeen/commit/b8646bdb886471f9d3b1b97e9562e912c618c0af).
