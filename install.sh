@@ -267,13 +267,15 @@ EOF
 
     _wrt_tmp="${xkeen_config}.tmp.$$"
 
+    _wrt_rc=0
+
     if strip_json_comments "$xkeen_config" | grep -q '"rci_token"'; then
         awk -v tok="$_wrt_token" '
             !done && $0 !~ /^[ \t]*\/\// && match($0, /"rci_token"[ \t]*:[ \t]*("[^"]*"|null)/) {
                 $0 = substr($0, 1, RSTART - 1) "\"rci_token\": \"" tok "\"" substr($0, RSTART + RLENGTH)
                 done = 1
             }
-            { print }' "$xkeen_config" > "$_wrt_tmp"
+            { print }' "$xkeen_config" > "$_wrt_tmp" || _wrt_rc=1
     else
         awk -v tok="$_wrt_token" '
             { lines[NR] = $0 }
@@ -292,11 +294,11 @@ EOF
                     print lines[i]
                     if (i == open) printf "    \"rci_token\": \"%s\"%s\n", tok, comma
                 }
-            }' "$xkeen_config" > "$_wrt_tmp"
+            }' "$xkeen_config" > "$_wrt_tmp" || _wrt_rc=1
     fi
 
     # cat > вместо mv — сохраняем права и владельца исходного файла
-    if [ $? -eq 0 ] && [ -s "$_wrt_tmp" ] && cat "$_wrt_tmp" > "$xkeen_config"; then
+    if [ "$_wrt_rc" -eq 0 ] && [ -s "$_wrt_tmp" ] && cat "$_wrt_tmp" > "$xkeen_config"; then
         rm -f "$_wrt_tmp"
     else
         rm -f "$_wrt_tmp"
