@@ -192,6 +192,230 @@ verify_install_sha256() {
     return 1
 }
 
+# RCI-токен (только KeeneticOS 5.2 и новее)
+rci_probe_code() {
+    if [ -n "$1" ]; then
+        curl --noproxy '*' --connect-timeout 2 -m 5 -ksS -o /dev/null -w "%{http_code}" -H "X-Ndma-Tkn: $1" "127.0.0.1:79/rci/show/version" 2>/dev/null
+    else
+        curl --noproxy '*' --connect-timeout 2 -m 5 -ksS -o /dev/null -w "%{http_code}" "127.0.0.1:79/rci/show/version" 2>/dev/null
+    fi
+}
+
+# Проба с перепроверкой 401/403 (до 3 попыток), остальные коды возвращаются сразу
+rci_probe_code_retry() {
+    _rpr_i=0
+    _rpr_code=""
+    while [ "$_rpr_i" -lt 3 ]; do
+        _rpr_code=$(rci_probe_code "$1")
+        case "$_rpr_code" in
+            401|403) _rpr_i=$((_rpr_i + 1)); [ "$_rpr_i" -lt 3 ] && sleep 1 ;;
+            *) break ;;
+        esac
+    done
+    printf '%s' "$_rpr_code"
+}
+
+# Версия прошивки
+get_keenetic_release() {
+    if [ -n "$1" ]; then
+        curl -s --noproxy '*' --connect-timeout 3 -m 5 -H "X-Ndma-Tkn: $1" 127.0.0.1:79/rci/show/version 2>/dev/null
+    else
+        curl -s --noproxy '*' --connect-timeout 3 -m 5 127.0.0.1:79/rci/show/version 2>/dev/null
+    fi | sed -n 's/.*"release"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1
+}
+
+is_firmware_52_or_newer() {
+    printf '%s\n' "$1" | awk -F. '{ exit !(($1 + 0 > 5) || ($1 + 0 == 5 && $2 + 0 >= 2)) }'
+}
+
+# Берём значение токена из вывода генерации
+extract_rci_token() {
+    printf '%s\n' "$1" | awk '
+        found { gsub(/^[ \t\r]+|[ \t\r]+$/, ""); if ($0 != "") { print; exit } next }
+        /^[ \t]*value:/ {
+            sub(/^[ \t]*value:[ \t]*/, ""); gsub(/[ \t\r]+$/, "")
+            if ($0 != "") { print; exit }
+            found = 1
+        }'
+}
+
+# Текущее значение rci_token из xkeen.json
+get_rci_token_from_config() {
+    [ -f "$xkeen_config" ] || return 1
+    strip_json_comments "$xkeen_config" | \
+        sed -n 's/.*"rci_token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1
+}
+
+# Записываем токен в xkeen.json:
+#  - файла нет                  -> создаётся минимальный файл только с rci_token;
+#  - параметр rci_token есть    -> меняется значение если не валидно;
+#  - параметра нет              -> добавляется первой строкой объекта "xkeen"
+write_rci_token() {
+    _wrt_token="$1"
+
+    if [ ! -f "$xkeen_config" ]; then
+        mkdir -p "$(dirname "$xkeen_config")" || return 1
+        cat > "$xkeen_config" <<EOF
+{
+  "xkeen": {
+    "rci_token": "$_wrt_token"
+  }
+}
+EOF
+        return $?
+    fi
+
+    _wrt_tmp="${xkeen_config}.tmp.$$"
+
+    if strip_json_comments "$xkeen_config" | grep -q '"rci_token"'; then
+        awk -v tok="$_wrt_token" '
+            !done && $0 !~ /^[ \t]*\/\// && match($0, /"rci_token"[ \t]*:[ \t]*("[^"]*"|null)/) {
+                $0 = substr($0, 1, RSTART - 1) "\"rci_token\": \"" tok "\"" substr($0, RSTART + RLENGTH)
+                done = 1
+            }
+            { print }' "$xkeen_config" > "$_wrt_tmp"
+    else
+        awk -v tok="$_wrt_token" '
+            { lines[NR] = $0 }
+            END {
+                for (i = 1; i <= NR; i++) {
+                    if (lines[i] !~ /^[ \t]*\/\// && lines[i] ~ /"xkeen"[ \t]*:[ \t]*\{[ \t\r]*$/) { open = i; break }
+                }
+                if (!open) exit 2
+                comma = ","
+                for (j = open + 1; j <= NR; j++) {
+                    if (lines[j] ~ /^[ \t\r]*$/ || lines[j] ~ /^[ \t]*\/\//) continue
+                    if (lines[j] ~ /^[ \t]*\}/) comma = ""
+                    break
+                }
+                for (i = 1; i <= NR; i++) {
+                    print lines[i]
+                    if (i == open) printf "    \"rci_token\": \"%s\"%s\n", tok, comma
+                }
+            }' "$xkeen_config" > "$_wrt_tmp"
+    fi
+
+    # cat > вместо mv — сохраняем права и владельца исходного файла
+    if [ $? -eq 0 ] && [ -s "$_wrt_tmp" ] && cat "$_wrt_tmp" > "$xkeen_config"; then
+        rm -f "$_wrt_tmp"
+    else
+        rm -f "$_wrt_tmp"
+        return 1
+    fi
+
+    [ "$(get_rci_token_from_config)" = "$_wrt_token" ]
+}
+
+rci_token_manual_hint() {
+    printf "  Создайте токен ${yellow}вручную${reset} в веб-интерфейсе роутера и впишите его в параметр\n"
+    printf "  ${light_blue}\"rci_token\"${reset} файла ${yellow}%s${reset}\n\n" "$xkeen_config"
+}
+
+# Проверка/генерация токена и запись его в xkeen.json
+setup_rci_token() {
+    _srt_old=$(get_rci_token_from_config)
+    _srt_code=$(rci_probe_code_retry "$_srt_old")
+
+    if [ -n "$_srt_old" ]; then
+        case "$_srt_code" in
+            401|403)
+                printf "  RCI роутера отклонил ${light_blue}rci_token${reset} из ${yellow}%s${reset} (HTTP %s), создаём новый\n" "$xkeen_config" "$_srt_code"
+                ;;
+            000|"")
+                return 0
+                ;;
+            *)
+                printf "  ${light_blue}rci_token${reset} из ${yellow}%s${reset} ${green}действителен${reset}, генерация пропущена\n\n" "$xkeen_config"
+                return 0
+                ;;
+        esac
+    else
+        case "$_srt_code" in
+            401|403)
+                printf "  RCI роутера требует ${yellow}токен доступа${reset} (HTTP %s)\n" "$_srt_code"
+                ;;
+            200)
+                _srt_release=$(get_keenetic_release "")
+                [ -z "$_srt_release" ] && return 0
+                is_firmware_52_or_newer "$_srt_release" || return 0     # токен нужен только на 5.2
+                printf "  Обнаружена прошивка KeeneticOS ${light_blue}%s${reset}, требуется ${yellow}RCI-токен${reset}\n" "$_srt_release"
+                ;;
+            *)
+                return 0
+                ;;
+        esac
+    fi
+
+    if ! command -v ndmc >/dev/null 2>&1; then
+        printf "  ${red}Ошибка${reset}: утилита ${yellow}ndmc${reset} не найдена, токен не создан\n"
+        rci_token_manual_hint
+        return 0
+    fi
+
+    _srt_out=$(ndmc -c 'authentication token generate XKeen' 2>&1)
+    _srt_token=$(extract_rci_token "$_srt_out")
+
+    case "$_srt_token" in
+        ""|*[!A-Za-z0-9._~+/=-]*)
+            printf "  ${red}Ошибка${reset}: не удалось сгенерировать токен автоматически\n"
+            case "$_srt_out" in
+                *"invalid username"*)
+                    printf "  Пользователю ${yellow}admin${reset} должны быть выданы права на ${yellow}«Веб-конфигуратор»${reset}\n"
+                    printf "  (даже если создан другой пользователь с правами администратора)\n"
+                    ;;
+                *)
+                    printf "  Команда ${yellow}ndmc -c${reset} работает только в нативной SSH-консоли роутера,\n"
+                    printf "  при входе через telnet и ${yellow}exec sh${reset} она недоступна\n"
+                    ;;
+            esac
+            rci_token_manual_hint
+            return 0
+            ;;
+    esac
+
+    if write_rci_token "$_srt_token"; then
+        printf "  ${green}RCI-токен создан${reset} и записан в ${yellow}%s${reset}\n" "$xkeen_config"
+        case "$(rci_probe_code_retry "$_srt_token")" in
+            401|403) printf "  ${yellow}Предупреждение${reset}: RCI пока не принимает новый токен, проверьте его вручную\n" ;;
+        esac
+        echo
+    else
+        printf "  ${red}Ошибка${reset}: токен создан, но не удалось записать его в ${yellow}%s${reset}\n" "$xkeen_config"
+        printf "  Добавьте вручную в объект \"xkeen\": ${light_blue}\"rci_token\": \"%s\"${reset}\n\n" "$_srt_token"
+    fi
+    return 0
+}
+
+is_keenetic_52() {
+    _ik_token=$(get_rci_token_from_config)
+    _ik_code=$(rci_probe_code_retry "$_ik_token")
+    case "$_ik_code" in
+        401|403)
+            return 0
+            ;;
+        200)
+            _ik_release=$(get_keenetic_release "$_ik_token")
+            [ -n "$_ik_release" ] && is_firmware_52_or_newer "$_ik_release"
+            return $?
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# Предупреждение об установке Legacy-версии XKeen на KeeneticOS 5.2
+warn_legacy_on_52() {
+    if is_keenetic_52; then
+        printf "  ${red}Внимание!${reset} Обнаружена прошивка ${yellow}KeeneticOS 5.2${reset}\n"
+        printf "  Установка предыдущих (Legacy) версий XKeen на KeeneticOS 5.2 осуществляется\n"
+        printf "  ${red}целиком и полностью на ваше усмотрение и под вашу ответственность${reset}.\n"
+        printf "  Разработчик не несёт никакой ответственности за ваш выбор и его последствия\n\n"
+        return 0
+    fi
+    return 1
+}
+
 # Функция загрузки с проверкой (дубль из scripts/_xkeen/.../01_tests_system.sh:
 # install.sh запускается до установки модулей, поэтому правки нужны в обоих местах)
 download_with_check() {
@@ -320,9 +544,13 @@ if [ -z "$VERSION_TYPE" ]; then
                 ;;
             3)
                 echo
+                legacy_warned=0
+                warn_legacy_on_52 && legacy_warned=1
                 while true; do
-                    printf "  ${red}Внимание!${reset}\n  Предыдущие версии могут быть несовместимы с новыми прошивками\n"
-                    printf "  Продолжайте только если уверены в том, что делаете\n\n"
+                    if [ "$legacy_warned" -eq 0 ]; then
+                        printf "  ${red}Внимание!${reset}\n  Предыдущие версии могут быть несовместимы с новыми прошивками\n"
+                        printf "  Продолжайте только если уверены в том, что делаете\n\n"
+                    fi
                     printf "  Введите интересующую версию XKeen (например, ${light_blue}1.1.3.9${reset} или ${light_blue}0${reset} для выхода): "
                     read -r legacy_version
 
@@ -369,6 +597,7 @@ else
                 show_help
                 exit 1
             fi
+            warn_legacy_on_52
             url="https://github.com/jameszeroX/XKeen/releases/download/${LEGACY_VERSION}/xkeen.tar.gz"
             printf "  Выбрана предыдущая версия ${yellow}%s${reset} (автоматическая установка)\n" "$LEGACY_VERSION"
             printf "  Проверяем доступность версии ${yellow}%s${reset}...\n" "$LEGACY_VERSION"
@@ -387,6 +616,8 @@ else
 fi
 
 echo
+
+setup_rci_token
 
 if ! download_xkeen_release "$url"; then
     exit 1

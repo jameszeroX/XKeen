@@ -375,6 +375,98 @@ get_rci_token() {
 }
 get_rci_token
 
+# Автоматическое создание RCI-токена (KeeneticOS 5.2 и новее)
+#
+# Берём значение токена из вывода генерации
+extract_rci_token() {
+    printf '%s\n' "$1" | awk '
+        found { gsub(/^[ \t\r]+|[ \t\r]+$/, ""); if ($0 != "") { print; exit } next }
+        /^[ \t]*value:/ {
+            sub(/^[ \t]*value:[ \t]*/, ""); gsub(/[ \t\r]+$/, "")
+            if ($0 != "") { print; exit }
+            found = 1
+        }'
+}
+
+# Записываем токен в xkeen.json (ключ xkeen.rci_token), остальной файл не трогаем
+write_rci_token() {
+    local _wrt_tmp _wrt_rc
+    _wrt_tmp="${xkeen_config}.tmp.$$"
+
+    if [ ! -f "$xkeen_config" ]; then
+        mkdir -p "$xkeen_cfg" 2>/dev/null || return 1
+        chmod 700 "$xkeen_cfg" 2>/dev/null
+        printf '{\n}\n' > "$xkeen_config" || return 1
+        chmod 600 "$xkeen_config" 2>/dev/null
+    fi
+
+    jc_set_path "xkeen.rci_token" "\"$1\"" "$xkeen_config" > "$_wrt_tmp"; _wrt_rc=$?
+
+    # rc=0 - значение заменено, rc=1 - ключ добавлен; остальное - ошибка разбора файла
+    if { [ "$_wrt_rc" = 0 ] || [ "$_wrt_rc" = 1 ]; } \
+        && [ -s "$_wrt_tmp" ] \
+        && { ! command -v jq >/dev/null 2>&1 || strip_json_comments "$_wrt_tmp" | jq -e . >/dev/null 2>&1; } \
+        && chmod 600 "$_wrt_tmp" && mv -f "$_wrt_tmp" "$xkeen_config"; then
+        return 0
+    fi
+
+    rm -f "$_wrt_tmp"
+    return 1
+}
+
+# Генерация токена через ndmc и запись в xkeen.json.
+# Аргумент (необязательный): версия прошивки для сообщения.
+# Возврат 0 — токен создан и записан (rci_token в окружении обновлён),
+# 1 — не получилось (причина уже выведена).
+auto_setup_rci_token() {
+    local _ast_out _ast_token
+
+    if [ -n "$rci_token" ]; then
+        printf "  RCI роутера отклонил ${light_blue}rci_token${reset} из ${yellow}xkeen.json${reset}, создаём новый\n"
+    elif [ -n "$1" ]; then
+        printf "  Обнаружена прошивка KeeneticOS ${light_blue}%s${reset}, требуется ${yellow}RCI-токен${reset}\n" "$1"
+    else
+        printf "  RCI роутера требует ${yellow}токен доступа${reset} (KeeneticOS 5.2 и новее), создаём его\n"
+    fi
+
+    if ! command -v ndmc >/dev/null 2>&1; then
+        printf "  ${red}Ошибка${reset}: утилита ${yellow}ndmc${reset} не найдена, токен не создан\n" >&2
+        return 1
+    fi
+
+    _ast_out=$(ndmc -c 'authentication token generate XKeen' 2>&1)
+    _ast_token=$(extract_rci_token "$_ast_out")
+
+    case "$_ast_token" in
+        ""|*[!A-Za-z0-9._~+/=-]*)
+            printf "  ${red}Ошибка${reset}: не удалось сгенерировать токен автоматически\n" >&2
+            case "$_ast_out" in
+                *"invalid username"*)
+                    printf "  Пользователю ${yellow}admin${reset} должны быть выданы права на ${yellow}«Веб-конфигуратор»${reset}\n" >&2
+                    printf "  (даже если создан другой пользователь с правами администратора)\n" >&2
+                    ;;
+                *)
+                    printf "  Команда ${yellow}ndmc -c${reset} работает только в нативной SSH-консоли роутера,\n" >&2
+                    printf "  при входе через telnet и ${yellow}exec sh${reset} она недоступна\n" >&2
+                    ;;
+            esac
+            return 1
+            ;;
+    esac
+
+    if ! write_rci_token "$_ast_token"; then
+        printf "  ${red}Ошибка${reset}: токен создан, но не удалось записать его в ${yellow}%s${reset}\n" "$xkeen_config" >&2
+        printf "  Добавьте вручную в объект \"xkeen\": ${light_blue}\"rci_token\": \"%s\"${reset}\n" "$_ast_token" >&2
+        return 1
+    fi
+
+    # Обновляем кэш разобранного файла и переменную rci_token
+    [ -f "$xkeen_config" ] && _xkeen_json_clean=$(strip_json_comments "$xkeen_config" 2>/dev/null)
+    get_rci_token
+    printf "  ${green}RCI-токен создан${reset} и записан в ${yellow}%s${reset}\n\n" "$xkeen_config"
+    return 0
+}
+
 # Проверка доступности RCI. --noproxy '*': запрос идёт на loopback и не должен
 # уходить через http_proxy/all_proxy из окружения (иначе 401/403 может
 # вернуть прокси, а не RCI). Заголовок токена шлём только если токен задан.
@@ -384,6 +476,32 @@ rci_probe_code() {
     else
         curl --noproxy '*' --connect-timeout 2 -m 5 -ksS -o /dev/null -w "%{http_code}" "127.0.0.1:79/rci/show/version" 2>/dev/null
     fi
+}
+
+# Проба с перепроверкой 401/403 (до 3 попыток), остальные коды возвращаются сразу
+rci_probe_code_retry() {
+    local _rpr_i=0 _rpr_code=""
+    while [ "$_rpr_i" -lt 3 ]; do
+        _rpr_code=$(rci_probe_code)
+        case "$_rpr_code" in
+            401|403) _rpr_i=$((_rpr_i + 1)); [ "$_rpr_i" -lt 3 ] && sleep 1 ;;
+            *) break ;;
+        esac
+    done
+    printf '%s' "$_rpr_code"
+}
+
+# Версия прошивки
+get_keenetic_release() {
+    if [ -n "$rci_token" ]; then
+        curl -s --noproxy '*' --connect-timeout 3 -m 5 -H "X-Ndma-Tkn: $rci_token" 127.0.0.1:79/rci/show/version 2>/dev/null
+    else
+        curl -s --noproxy '*' --connect-timeout 3 -m 5 127.0.0.1:79/rci/show/version 2>/dev/null
+    fi | sed -n 's/.*"release"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1
+}
+
+is_firmware_52_or_newer() {
+    printf '%s\n' "$1" | awk -F. '{ exit !(($1 + 0 > 5) || ($1 + 0 == 5 && $2 + 0 >= 2)) }'
 }
 
 # stop/status не обращаются к RCI (см. комментарий у wait_for_rci_token в
@@ -417,7 +535,31 @@ while [ "$_rci_probe_needed" = "1" ] && [ "$_rci_probe_i" -lt 3 ]; do
         *) break ;;
     esac
 done
-unset _rci_probe_i _rci_probe_needed
+unset _rci_probe_i
+
+# Проверка: токен нужен, но отсутствует или отвергнут
+if [ "$_rci_probe_needed" = "1" ] && [ -t 0 ] && [ -t 1 ]; then
+    _rci_need_token=0
+    _rci_release=""
+    case "$http_code" in
+        401|403)
+            _rci_need_token=1
+            ;;
+        200)
+            if [ -z "$rci_token" ]; then
+                _rci_release=$(get_keenetic_release)
+                if [ -n "$_rci_release" ] && is_firmware_52_or_newer "$_rci_release"; then
+                    _rci_need_token=1
+                fi
+            fi
+            ;;
+    esac
+    if [ "$_rci_need_token" = "1" ] && auto_setup_rci_token "$_rci_release"; then
+        http_code=$(rci_probe_code_retry)
+    fi
+    unset _rci_need_token _rci_release
+fi
+unset _rci_probe_needed
 
 case "$http_code" in
     401|403)
