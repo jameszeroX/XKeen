@@ -23,7 +23,7 @@
 На роутере под Entware:
 
 ```sh
-opkg update && opkg install curl tar && cd /tmp
+opkg update && opkg upgrade && opkg install curl tar && cd /tmp
 sh -c "$(curl -sSL https://raw.githubusercontent.com/jameszeroX/XKeen/main/install.sh)"
 ```
 
