@@ -2197,7 +2197,39 @@ get_exclude_ip6() {
     # Получаем провайдерский IPv6
     ipv6_eth=$(ip -o -6 route get 2a02:6b8::feed:0ff 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
     [ -n "$ipv6_eth" ] && ipv6_eth="${ipv6_eth}/128"
-    echo "${ipv6_eth} ${ipv6_exclude}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
+
+    ipv6_lan_prefixes=$(curl --noproxy '*' --connect-timeout 1 --max-time 2 -fsS \
+        'http://localhost:79/rci/show/ipv6/prefixes/' 2>/dev/null |
+        jq -r 'if type == "object" and (.prefix | type) == "array" then
+            .prefix[]? | select(type == "object" and .global == true and (.prefix | type) == "string") | .prefix
+        else empty end' 2>/dev/null | awk -F/ '
+        function valid_group(s) {
+            return length(s) > 0 && length(s) <= 4 && s ~ /^[0-9a-fA-F]+$/
+        }
+        function valid_address(addr, n, p, tmp, halves, left_n, right_n, i) {
+            if (addr !~ /^[0-9a-fA-F:]+$/ || index(addr, ":") == 0) return 0
+            if (index(addr, "::") > 0) {
+                tmp = addr
+                sub(/::/, "@", tmp)
+                if (index(tmp, "::") > 0) return 0
+                split(tmp, halves, "@")
+                left_n = halves[1] == "" ? 0 : split(halves[1], left, ":")
+                right_n = halves[2] == "" ? 0 : split(halves[2], right, ":")
+                if (left_n + right_n >= 8) return 0
+                for (i = 1; i <= left_n; i++) if (!valid_group(left[i])) return 0
+                for (i = 1; i <= right_n; i++) if (!valid_group(right[i])) return 0
+                return 1
+            }
+            n = split(addr, p, ":")
+            if (n != 8) return 0
+            for (i = 1; i <= n; i++) if (!valid_group(p[i])) return 0
+            return 1
+        }
+        NF == 2 && $2 ~ /^[0-9]+$/ && $2 > 0 && $2 <= 128 && valid_address($1) { print $0 }
+        ')
+
+    printf '%s\n' "${ipv6_eth} ${ipv6_lan_prefixes} ${ipv6_exclude}" |
+        tr ' ' '\n' | awk 'NF && !seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
 }
 
 validate_api_policy_response() {
