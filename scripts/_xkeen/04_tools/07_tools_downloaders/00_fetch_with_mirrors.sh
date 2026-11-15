@@ -512,8 +512,7 @@ verify_github_sha256() {
         return 0
     fi
     printf "  ${red}Ошибка${reset}: Контрольная сумма ${light_blue}SHA-256${reset} файла %s не совпала с ожидаемой\n" "$_vgs_asset"
-    [ "$verify_downloads" = "strict" ] && return 1
-    return 0
+    return 1
 }
 
 # Функция для получения ожидаемого размера файла
