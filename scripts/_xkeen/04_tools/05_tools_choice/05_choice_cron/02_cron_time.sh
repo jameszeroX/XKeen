@@ -37,7 +37,7 @@ choice_cron_time() {
     echo
 
     while :; do
-        read -r -p "  Ваш выбор: " day_choice
+        read -r -p "  Ваш выбор: " day_choice || { echo; return 1; }
         echo "$day_choice" | grep -qE '^[0-8]$' && break
         echo -e "  ${red}Некорректный номер действия.${reset} Пожалуйста, выберите снова"
         echo
@@ -52,7 +52,7 @@ choice_cron_time() {
     echo
 
     while :; do
-        read -r -p "  Выберите час (0-23): " hour
+        read -r -p "  Выберите час (0-23): " hour || { echo; return 1; }
         case "$hour" in
             ''|*[!0-9]*) ;;
             *) [ "$hour" -ge 0 ] && [ "$hour" -le 23 ] && break ;;
@@ -61,7 +61,7 @@ choice_cron_time() {
     done
 
     while :; do
-        read -r -p "  Выберите минуту (0-59): " minute
+        read -r -p "  Выберите минуту (0-59): " minute || { echo; return 1; }
         case "$minute" in
             ''|*[!0-9]*) ;;
             *) [ "$minute" -ge 0 ] && [ "$minute" -le 59 ] && break ;;

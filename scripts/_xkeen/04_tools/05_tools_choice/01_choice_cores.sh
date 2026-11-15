@@ -27,7 +27,7 @@ choice_add_proxy_cores() {
     add_mihomo=false
 
     while true; do
-        read -r -p "  Ваш выбор: " proxy_choice
+        read -r -p "  Ваш выбор: " proxy_choice || { echo; return 1; }
 
         if echo "$proxy_choice" | grep -qE '^[0-3]$'; then
             break

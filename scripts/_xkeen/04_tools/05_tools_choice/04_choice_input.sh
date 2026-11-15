@@ -49,7 +49,7 @@ toggle_param() {
 
         echo
         while true; do
-            read -r -p "  Ваш выбор: " choice
+            read -r -p "  Ваш выбор: " choice || { echo; return 1; }
             case "$choice" in
                 0) 
                     echo
