@@ -17,7 +17,7 @@ choice_channel_xkeen() {
 
     echo
     while true; do
-        read -r -p "  Ваш выбор: " choice
+        read -r -p "  Ваш выбор: " choice || { echo; return 1; }
         if echo "$choice" | grep -qE '^[0-1]$'; then
             case "$choice" in
                 1)
@@ -98,7 +98,7 @@ change_ipv6_support() {
 
         echo
         while true; do
-            read -r -p "  Ваш выбор: " choice
+            read -r -p "  Ваш выбор: " choice || { echo; return 1; }
             if echo "$choice" | grep -qE '^[0-1]$'; then
                 case "$choice" in
                     0) 

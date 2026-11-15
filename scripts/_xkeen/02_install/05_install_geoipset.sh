@@ -194,7 +194,7 @@ install_geoipset() {
                 printf "     1. Загрузить и установить в исключения IP-подсети России (${yellow}GeoIPSET${reset})\n"
                 printf "     0. Пропустить\n\n"
                 printf "  Ваш выбор: "
-                read -r choice
+                read -r choice || choice=0
 
                 case "$choice" in
                     0)

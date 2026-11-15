@@ -89,7 +89,7 @@ choice_geodata() {
         echo
 
         while true; do
-            read -r -p "  Ваш выбор: " data_choices
+            read -r -p "  Ваш выбор: " data_choices || { echo; return 1; }
             data_choices=$(echo "$data_choices" | sed 's/,/, /g')
 
             if echo "$data_choices" | grep -qE '^[0-6 ]+$'; then

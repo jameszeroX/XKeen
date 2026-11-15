@@ -76,7 +76,7 @@ choice_update_cron() {
         echo
 
         while true; do
-            read -r -p "  Ваш выбор: " update_choices
+            read -r -p "  Ваш выбор: " update_choices || { echo; return 1; }
             update_choices=$(echo "$update_choices" | sed 's/,/, /g')
 
             if echo "$update_choices" | grep -qE '^[0-2]$'; then

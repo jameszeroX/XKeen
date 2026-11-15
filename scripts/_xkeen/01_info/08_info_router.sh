@@ -73,7 +73,7 @@ info_firmware() {
             echo "  0) Отмена установки"
             echo
             printf "  Введите ваш выбор: "
-            read -r user_input
+            read -r user_input || { echo; echo "  Установка отменена: ввод закрыт"; exit 1; }
 
             case "$user_input" in
                 1)

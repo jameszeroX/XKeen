@@ -92,7 +92,12 @@ download_xray() {
         echo "     0. Пропустить загрузку Xray"
 
         printf "\n  Введите порядковый номер релиза (0 - пропустить, 9 - ручной ввод): "
-        read -r choice
+        read -r choice || {
+            bypass_xray="true"
+            [ -n "$_dlx_cache" ] && rm -f "$_dlx_cache"
+            printf "  Загрузка Xray пропущена: ввод закрыт\n"
+            return 0
+        }
 
         case "$choice" in
             [0-9]) ;;
@@ -112,7 +117,12 @@ download_xray() {
 
         if [ "$choice" = "9" ]; then
             printf "  Введите версию Xray для загрузки (например: v26.7.28): "
-            read -r version_selected
+            read -r version_selected || {
+                bypass_xray="true"
+                [ -n "$_dlx_cache" ] && rm -f "$_dlx_cache"
+                printf "  Загрузка Xray пропущена: ввод закрыт\n"
+                return 0
+            }
             if [ -z "$version_selected" ]; then
                 printf "  ${red}Ошибка${reset}: Версия не может быть пустой\n"
                 sleep 1

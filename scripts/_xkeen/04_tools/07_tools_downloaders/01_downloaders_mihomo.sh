@@ -34,7 +34,12 @@ download_mihomo() {
             echo "     0. Пропустить загрузку Mihomo"
 
             printf "\n  Введите порядковый номер релиза (0 - пропустить, 9 - ручной ввод): "
-            read -r choice
+            read -r choice || {
+                bypass_mihomo="true"
+                [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
+                printf "  Загрузка Mihomo пропущена: ввод закрыт\n"
+                return 0
+            }
 
             case "$choice" in
                 [0-9]) ;;
@@ -54,7 +59,12 @@ download_mihomo() {
 
             if [ "$choice" = "9" ]; then
                 printf "  Введите версию Mihomo для загрузки (например: v1.19.26): "
-                read -r version_selected
+                read -r version_selected || {
+                    bypass_mihomo="true"
+                    [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
+                    printf "  Загрузка Mihomo пропущена: ввод закрыт\n"
+                    return 0
+                }
                 if [ -z "$version_selected" ]; then
                     printf "  ${red}Ошибка${reset}: Версия не может быть пустой\n"
                     sleep 1
