@@ -121,16 +121,25 @@ sb_write_setting() {
     [ -n "$new" ] || { echo "  Не удалось разобрать xkeen.json — настройку не записать"; return 1; }
 
     bak="$xkeen_config.bak"
-    cp "$xkeen_config" "$bak" 2>/dev/null
+    bak_tmp=$(mktemp "${bak}.XXXXXX") || {
+        echo "  Не удалось подготовить резервную копию xkeen.json"
+        return 1
+    }
+    if ! cp -p "$xkeen_config" "$bak_tmp" 2>/dev/null || ! mv "$bak_tmp" "$bak"; then
+        rm -f "$bak_tmp"
+        echo "  Не удалось создать резервную копию xkeen.json; настройки не изменены"
+        return 1
+    fi
 
     # jc_set_path сама решает: заменить существующий блок (rc=0) или вставить
     # недостающий хвост пути хоть в .xkeen.xray, хоть в .xkeen, хоть прямо в
     # корень файла, если нет вообще ничего (rc=1) — четыре прежних варианта
     # (_sb_replace_block / _sb_insert_into_xray / _sb_insert_xray_into_xkeen /
     # jq-фолбэк по всему файлу) больше не нужны, а rc=2/4 (конфликт типов или
-    # битый файл) обрабатываются общей веткой отката ниже, как раньше делал
-    # любой "иной" код возврата.
-    tmp="$xkeen_config.sb.tmp"
+    tmp=$(mktemp "${xkeen_config}.sb.XXXXXX") || {
+        echo "  Не удалось подготовить запись xkeen.json"
+        return 1
+    }
     jc_set_path "xkeen.xray.speed_balancer" "$new" "$xkeen_config" > "$tmp"; rc=$?
 
     # Критерий структуры повторяет validate_xkeen_json (04_register_init.sh):
@@ -151,10 +160,8 @@ sb_write_setting() {
         return 0
     fi
 
-    # Сбой хирургии или проверки: не оставляем ни битого tmp, ни повреждённого конфига.
     rm -f "$tmp"
-    [ -f "$bak" ] && cp "$bak" "$xkeen_config" 2>/dev/null
-    echo "  Не удалось безопасно обновить блок балансера в $xkeen_config (восстановлено из бэкапа)"
+    echo "  Не удалось безопасно обновить блок балансера в $xkeen_config (исходный файл не изменён)"
     return 1
 }
 
@@ -340,8 +347,22 @@ sb_install_cron() {
     mkdir -p "$cron_dir"; touch "$path"; chmod +x "$path"
     grep -v "$install_dir/xkeen -sbt" "$path" > "$path.tmp" 2>/dev/null
     mv "$path.tmp" "$path"
-    printf '*/%s * * * * %s/xkeen -sbt\n' "$sb_interval" "$install_dir" >> "$path"
+    printf '* * * * * %s/xkeen -sbtx\n' "$install_dir" >> "$path"
     sed -i '/^$/d' "$path"
+}
+
+sb_tick_if_due() {
+    local interval now_epoch minute
+    interval="$sb_interval"
+    case "$interval" in ''|*[!0-9]*) return 1 ;; esac
+    while [ "${interval#0}" != "$interval" ]; do interval=${interval#0}; done
+    [ -n "$interval" ] || return 1
+
+    now_epoch="${1:-$(date +%s 2>/dev/null)}"
+    case "$now_epoch" in ''|*[!0-9]*) return 1 ;; esac
+    minute=$((now_epoch / 60))
+    [ $((minute % interval)) -eq 0 ] || return 0
+    sb_tick
 }
 
 sb_remove_cron() {
@@ -402,8 +423,17 @@ sb_enable() {
 }
 
 sb_disable() {
+    local rc
+    sb_lock_acquire_wait || return 1
+    sb_disable_locked "$@"; rc=$?
+    sb_lock_release
+    return "$rc"
+}
+
+sb_disable_locked() {
     speed_balancer_settings
-    if [ "$sb_enabled" != "true" ] && ! sb_cron_installed; then
+    if [ "$sb_enabled" != "true" ] && ! sb_cron_installed &&
+       [ ! -e "$sb_pin_file" ] && [ ! -L "$sb_pin_file" ]; then
         echo
         echo -e "  Балансировка по скорости уже ${yellow}выключена${reset}."
         return 0
@@ -413,7 +443,10 @@ sb_disable() {
         echo -e "  ${red}✗${reset} Не удалось снять override — балансировка остаётся включённой."
         return 1
     fi
-    sb_pin_clear
+    if ! sb_pin_clear; then
+        echo -e "  ${red}✗${reset} Не удалось удалить закрепление балансировщика. Повторите отключение."
+        return 1
+    fi
     sb_remove_cron
     sb_write_setting enabled false || return 1
     echo
@@ -492,13 +525,21 @@ EOF_LIST
 
 # Применить ноду вручную: override через bo и закрепление выбора. Общая часть
 # `xkeen -sb N` и циклического переключения (-sb next/prev). Вывода не делает —
-# сообщения печатает вызывающий. Возврат 1, если bo не принял ноду.
 sb_apply_node() {
+    local previous
+    previous=$(sb_current_target)
     if ! xray api bo -s "$sb_api_addr" -b "$sb_balancer" "$1" >/dev/null 2>&1; then
         sb_log "ручное переключение на $1 не удалось"
         return 1
     fi
-    sb_pin_set "$1"
+    if ! sb_pin_set "$1"; then
+        if [ -n "$previous" ] && xray api bo -s "$sb_api_addr" -b "$sb_balancer" "$previous" >/dev/null 2>&1; then
+            sb_log "не удалось сохранить pin для $1; восстановлена нода $previous"
+            return 1
+        fi
+        sb_log "API переключён на $1, но pin не сохранён и прежнюю ноду восстановить не удалось"
+        return 2
+    fi
     sb_log "ручное переключение: -> $1 (закреплена)"
     return 0
 }
@@ -508,27 +549,6 @@ sb_apply_node() {
 sb_syslog() {
     command -v logger >/dev/null 2>&1 || return 0
     logger -p notice -t XKeen "$1" 2>/dev/null
-}
-
-# Блокировка от двойных нажатий кнопки: второй запуск, пока идёт первый,
-# иначе прочитал бы ту же текущую ноду и «съел» нажатие. mkdir атомарен;
-# в каталоге лежит pid владельца, чтобы переживший kill замок не залип.
-sb_lock_acquire() {
-    local d pid
-    d="$sb_pin_file.lock"
-    if mkdir "$d" 2>/dev/null; then echo $$ > "$d/pid"; return 0; fi
-    pid=$(cat "$d/pid" 2>/dev/null)
-    # pid ещё не записан — владелец только что создал замок, даём ему секунду
-    [ -n "$pid" ] || { sleep 1; pid=$(cat "$d/pid" 2>/dev/null); }
-    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then return 1; fi
-    rm -rf "$d"
-    mkdir "$d" 2>/dev/null || return 1
-    echo $$ > "$d/pid"
-    return 0
-}
-
-sb_lock_release() {
-    rm -rf "$sb_pin_file.lock" 2>/dev/null
 }
 
 # Циклическое переключение на следующую (next) или предыдущую (prev) ноду.
@@ -548,7 +568,7 @@ sb_cycle() {
 }
 
 sb_cycle_locked() {
-    local dir cur idx total n tag
+    local dir cur idx total n tag apply_rc
     dir="$1"
     speed_balancer_settings
 
@@ -583,9 +603,15 @@ sb_cycle_locked() {
     fi
 
     tag=$(printf '%s\n' "$sb_nodes" | sed -n "${n}p")
-    if ! sb_apply_node "$tag"; then
-        echo -e "  ${red}✗${reset} Не удалось переключить балансировщик на ${yellow}$tag${reset}"
-        sb_syslog "sb $dir: не удалось переключиться на $tag"
+    sb_apply_node "$tag"; apply_rc=$?
+    if [ "$apply_rc" -ne 0 ]; then
+        if [ "$apply_rc" -eq 2 ]; then
+            echo -e "  ${red}✗${reset} Xray переключился на ${yellow}$tag${reset}, но сохранить выбор не удалось."
+            sb_syslog "sb $dir: Xray переключился на $tag, pin не сохранён"
+        else
+            echo -e "  ${red}✗${reset} Не удалось переключить балансировщик на ${yellow}$tag${reset}"
+            sb_syslog "sb $dir: не удалось переключиться на $tag"
+        fi
         return 1
     fi
     echo -e "  ${green}✔${reset} Нода ${yellow}$n${reset}/$total: ${yellow}$tag${reset} (закреплена вручную)"
@@ -611,7 +637,15 @@ sb_ensure_switch_api() {
 # автозамер (cron) его не перебивает, а после перезапуска Xray он возвращается
 # на место при ближайшем тике. Снять закрепление — sb_auto.
 sb_select() {
-    local idx tag total
+    local rc
+    sb_lock_acquire_wait || return 1
+    sb_select_locked "$@"; rc=$?
+    sb_lock_release
+    return "$rc"
+}
+
+sb_select_locked() {
+    local idx tag total apply_rc
     idx="$1"
     speed_balancer_settings
     sb_ensure_switch_api || return 1
@@ -630,8 +664,13 @@ sb_select() {
     fi
 
     tag=$(printf '%s\n' "$sb_nodes" | sed -n "${idx}p")
-    if ! sb_apply_node "$tag"; then
-        echo -e "  ${red}✗${reset} Не удалось переключить балансировщик на ${yellow}$tag${reset}"
+    sb_apply_node "$tag"; apply_rc=$?
+    if [ "$apply_rc" -ne 0 ]; then
+        if [ "$apply_rc" -eq 2 ]; then
+            echo -e "  ${red}✗${reset} Xray переключился на ${yellow}$tag${reset}, но сохранить выбор не удалось."
+        else
+            echo -e "  ${red}✗${reset} Не удалось переключить балансировщик на ${yellow}$tag${reset}"
+        fi
         return 1
     fi
     echo
@@ -645,17 +684,41 @@ sb_select() {
 # Снять ручное закрепление: сбросить override (балансировщик возвращается к
 # своей strategy) и, если автозамер включён, сразу выбрать лучшую ноду.
 sb_auto() {
+    local rc
+    sb_lock_acquire_wait || return 1
+    sb_auto_locked "$@"; rc=$?
+    sb_lock_release
+    return "$rc"
+}
+
+sb_auto_locked() {
+    local pinned tick_rc
     speed_balancer_settings
-    sb_pin_clear
-    if sb_api_alive; then
-        xray api bo -s "$sb_api_addr" -b "$sb_balancer" -r >/dev/null 2>&1
+    pinned=$(sb_pin_get)
+    if ! sb_api_alive; then
+        sb_log "не удалось снять ручное закрепление: api Xray недоступен"
+        echo -e "  ${red}✗${reset} API Xray недоступен; ручное закрепление сохранено."
+        return 1
+    fi
+    if ! xray api bo -s "$sb_api_addr" -b "$sb_balancer" -r >/dev/null 2>&1; then
+        sb_log "не удалось сбросить ручное закрепление через api Xray"
+        echo -e "  ${red}✗${reset} Xray не принял сброс; ручное закрепление сохранено."
+        return 1
+    fi
+    if ! sb_pin_clear; then
+        if [ -n "$pinned" ]; then
+            xray api bo -s "$sb_api_addr" -b "$sb_balancer" "$pinned" >/dev/null 2>&1 || :
+        fi
+        sb_log "Xray сбросил override, но файл закрепления удалить не удалось"
+        echo -e "  ${red}✗${reset} Override сброшен, но файл закрепления удалить не удалось."
+        return 1
     fi
     sb_log "ручное закрепление снято"
     echo
     echo -e "  ${green}✔${reset} Ручное закрепление снято."
     if [ "$sb_enabled" = "true" ] && sb_api_alive; then
         echo -e "  ${yellow}Замер...${reset}"
-        sb_tick
+        sb_tick_locked || { tick_rc=$?; echo -e "  ${red}✗${reset} Закрепление снято, но замер завершился с ошибкой."; return "$tick_rc"; }
         echo -e "  Текущая нода: ${yellow}$(sb_current_target)${reset}"
     fi
     return 0
