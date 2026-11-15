@@ -1,13 +1,43 @@
 # Функция создания диагностического отчёта
+diagnostic_process_snapshot() {
+    local pids pid
+
+    pids=$(pidof xray 2>/dev/null)
+    pid=$(printf '%s\n' "$pids" | awk '{ for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+$/) { print $i; exit } }')
+    if [ -n "$pid" ]; then
+        name_client=xray
+        diagnostic_pid="$pid"
+        return 0
+    fi
+
+    pids=$(pidof mihomo 2>/dev/null)
+    pid=$(printf '%s\n' "$pids" | awk '{ for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+$/) { print $i; exit } }')
+    if [ -n "$pid" ]; then
+        name_client=mihomo
+        diagnostic_pid="$pid"
+        return 0
+    fi
+    return 1
+}
+
+diagnostic_process_stats() {
+    local proc_dir fd_count limit
+    proc_dir="${diagnostic_proc_root:-/proc}/$diagnostic_pid"
+    if [ ! -d "$proc_dir" ]; then
+        printf 'Процесс PID %s завершился во время диагностики\n' "$diagnostic_pid"
+        return 0
+    fi
+    fd_count=$(ls "$proc_dir/fd" 2>/dev/null | wc -l | awk '{print $1}')
+    limit=$(awk '/Max open files/ {print $4; exit}' "$proc_dir/limits" 2>/dev/null)
+    printf 'Открыто файловых дескрипторов: %s\n' "${fd_count:-недоступно}"
+    printf 'Лимит файловых дескрипторов: %s\n' "${limit:-недоступен}"
+}
+
 diagnostic() {
     # Установка пути к файлу diagnostic
     diagnostic="/opt/diagnostic.txt"
 
-    if pidof "xray" >/dev/null; then
-        name_client=xray
-    elif pidof "mihomo" >/dev/null; then
-        name_client=mihomo
-    else
+    if ! diagnostic_process_snapshot; then
         echo
         echo -e "  Диагностика возможна только при работающем ${yellow}XKeen${reset}"
         echo -e "  Запустите ${yellow}XKeen${reset} командой '${green}xkeen -start${reset}'"
@@ -102,7 +132,7 @@ diagnostic() {
     # Функция маскировки пользовательских IP-адресов
     mask_ips() {
         local input
-        local masked="***MASKED***"
+        local ipv4 ipv6
 
         # Если аргумент передан, обрабатываем его как строку
         if [ $# -gt 0 ]; then
@@ -112,18 +142,43 @@ diagnostic() {
             input=$(cat)
         fi
 
-        # Маскируем IPv4, если получен
-        if [ -n "$ipv4_eth" ]; then
-            input=$(echo "$input" | sed "s/$ipv4_eth/$masked/g")
-        fi
-
-        # Маскируем IPv6, если получен (включая квадратные скобки)
-        if [ -n "$ipv6_eth" ]; then
-            input=$(echo "$input" | sed "s/$ipv6_eth/$masked/g")
-            input=$(echo "$input" | sed "s/\[$ipv6_eth\]/\[$masked\]/g")
-        fi
-
-        echo "$input"
+        ipv4=${ipv4_eth:-}
+        ipv6=${ipv6_eth:-}
+        printf '%s\n' "$input" | awk -v ipv4="$ipv4" -v ipv6="$ipv6" '
+            function replace_ip(text, needle, replacement, v6, result, pos, before, after, left_ok, right_ok, n) {
+                if (needle == "") return text
+                n = length(needle)
+                result = ""
+                while ((pos = index(text, needle)) > 0) {
+                    before = pos > 1 ? substr(text, pos - 1, 1) : ""
+                    after = substr(text, pos + n, 1)
+                    if (v6) {
+                        left_ok = before == "" || before !~ /[[:alnum:]:.]/
+                        right_ok = after == "" || after !~ /[[:alnum:]:.]/
+                    } else {
+                        left_ok = before == "" || before !~ /[[:alnum:]_.-]/
+                        right_ok = after == "" || after !~ /[[:alnum:]_.-]/
+                    }
+                    result = result substr(text, 1, pos - 1)
+                    if (left_ok && right_ok) {
+                        result = result replacement
+                        text = substr(text, pos + n)
+                    } else {
+                        result = result substr(text, pos, 1)
+                        text = substr(text, pos + 1)
+                    }
+                }
+                return result text
+            }
+            {
+                line = $0
+                line = replace_ip(line, ipv4, "***MASKED***", 0)
+                if (ipv6 != "") {
+                    line = replace_ip(line, "[" ipv6 "]", "[***MASKED***]", 0)
+                    line = replace_ip(line, ipv6, "***MASKED***", 1)
+                }
+                print line
+            }'
     }
 
     # Функция дампа iptables/ip6tables
@@ -134,6 +189,7 @@ diagnostic() {
             $cmd -w -t nat -nvL "$chain" 2>&1 | mask_ips | log_block "Результат таблицы NAT цепи $chain $ver"
             $cmd -w -t mangle -nvL "$chain" 2>&1 | mask_ips | log_block "Результат таблицы MANGLE цепи $chain $ver"
         done
+        $cmd -w -t mangle -nvL "xkeen_killswitch" 2>&1 | mask_ips | log_block "Результат таблицы MANGLE цепи xkeen_killswitch $ver"
         $cmd -w -t nat -nvL "_NDM_HOTSPOT_DNSREDIR" 2>&1 | mask_ips | log_block "Результат таблицы NAT цепи _NDM_HOTSPOT_DNSREDIR $ver"
     }
 
@@ -191,10 +247,8 @@ diagnostic() {
     {
         if [ "${name_client}" = "xray" ]; then xray version; else mihomo -v; fi
         echo
-        echo "Открыто файловых дескрипторов:"
-        ls "/proc/$(pidof ${name_client})/fd" | wc -l
-        echo "Лимит файловых дескрипторов:"
-        grep 'Max open files' "/proc/$(pidof ${name_client})/limits" | awk '{print $4}'
+        echo "PID процесса: $diagnostic_pid"
+        diagnostic_process_stats
     } | log_block "Версия $name_client и файловые дескрипторы"
 
     echo "XKeen $xkeen_current_version $xkeen_build (время сборки: $build_timestamp)" | log_block "Версия XKeen"
