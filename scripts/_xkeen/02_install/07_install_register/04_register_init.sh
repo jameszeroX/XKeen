@@ -3617,6 +3617,7 @@ missing_files_template='
 '
 
 check_binary() {
+    local file path check_cmd
     file="$1"
     path="$install_dir/$file"
 
@@ -3629,13 +3630,14 @@ check_binary() {
     [ "$file" = "yq" ] && check_cmd="--version"
     [ "$file" = "mihomo" ] && check_cmd="-v"
 
-    if ! "$file" $check_cmd >/dev/null 2>&1; then
+    if ! "$path" "$check_cmd" >/dev/null 2>&1; then
         log_error_router "Бинарный файл $file аварийно остановлен"
         log_error_terminal "
   Бинарный файл ${yellow}$file${reset} аварийно остановлен
   ${red}Файл повреждён или несовместим с процессором${reset} вашего роутера
   Установите другую версию ${yellow}$file${reset}
 "
+        return 1
     fi
 
     return 0
