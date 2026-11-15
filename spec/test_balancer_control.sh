@@ -11,8 +11,11 @@ common=/repo/scripts/_xkeen/01_info/01_info_common.sh
 for fn in strip_json_comments jc_set_path validate_xkeen_json_syntax; do
     eval "$(awk -v name="$fn" '$0 == name "() {" { on=1 } on {print} on && /^}/ {exit}' "$common")"
 done
+. /repo/scripts/_xkeen/04_tools/08_tools_balancer/01_balancer_core.sh
 . /repo/scripts/_xkeen/04_tools/08_tools_balancer/02_balancer_control.sh
 xkeen_config="$work/xkeen.json"
+sb_pin_file="$work/.sb_pinned"
+sb_pin_clear() { rm -f "$sb_pin_file"; }
 cat > "$xkeen_config" <<'JSON'
 /* fake root { "xkeen": {} } */
 {"xkeen":{

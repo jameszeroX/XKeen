@@ -8,16 +8,59 @@
 
 # Запись строки в лог замеров с меткой времени. Лог усечён до последних строк
 # отдельно (sb_log_trim), чтобы не расти без предела на tmpfs.
+sb_log_lock_acquire() {
+    local lockdir pid current
+    [ -n "$sb_log_file" ] || return 1
+    lockdir="${sb_log_file}.lock.d"
+    while ! mkdir "$lockdir" 2>/dev/null; do
+        [ -d "$lockdir" ] || return 1
+        pid=$(cat "$lockdir/pid" 2>/dev/null)
+        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            sleep 1
+            continue
+        fi
+        [ -n "$pid" ] || sleep 1
+        current=$(cat "$lockdir/pid" 2>/dev/null)
+        [ "$current" = "$pid" ] || continue
+        rm -rf "$lockdir" 2>/dev/null || return 1
+    done
+    if ! printf '%s\n' "$$" > "$lockdir/pid" 2>/dev/null; then
+        rm -rf "$lockdir" 2>/dev/null
+        return 1
+    fi
+    return 0
+}
+
+sb_log_lock_release() {
+    [ -n "$sb_log_file" ] && rm -rf "${sb_log_file}.lock.d" 2>/dev/null
+}
+
 sb_log() {
     [ "$sb_log_enabled" = "false" ] && return 0
     [ -n "$sb_log_file" ] || return 0
+    local rc
+    sb_log_lock_acquire || return 1
     printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" >> "$sb_log_file" 2>/dev/null
+    rc=$?
+    sb_log_lock_release
+    return "$rc"
 }
 
 # Оставить в логе только последние 200 строк.
 sb_log_trim() {
     [ -f "$sb_log_file" ] || return 0
-    tail -n 200 "$sb_log_file" > "$sb_log_file.tmp" 2>/dev/null && mv "$sb_log_file.tmp" "$sb_log_file" 2>/dev/null
+    local tmp rc
+    sb_log_lock_acquire || return 1
+    tmp="${sb_log_file}.tmp.$$"
+    if tail -n 200 "$sb_log_file" > "$tmp" 2>/dev/null \
+        && mv -f "$tmp" "$sb_log_file" 2>/dev/null; then
+        rc=0
+    else
+        rm -f "$tmp" 2>/dev/null
+        rc=1
+    fi
+    sb_log_lock_release
+    return "$rc"
 }
 
 # Список нод балансировщика: outbound-теги, попадающие под его selector.
@@ -128,6 +171,28 @@ sb_pin_clear() {
     rm -f "$sb_pin_file" 2>/dev/null
 }
 
+sb_lock_acquire() {
+    local d pid
+    d="$sb_pin_file.lock"
+    if mkdir "$d" 2>/dev/null; then echo $$ > "$d/pid"; return 0; fi
+    pid=$(cat "$d/pid" 2>/dev/null)
+    [ -n "$pid" ] || { sleep 1; pid=$(cat "$d/pid" 2>/dev/null); }
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then return 1; fi
+    rm -rf "$d"
+    mkdir "$d" 2>/dev/null || return 1
+    echo $$ > "$d/pid"
+    return 0
+}
+
+sb_lock_release() {
+    rm -rf "$sb_pin_file.lock" 2>/dev/null
+}
+
+sb_lock_acquire_wait() {
+    while ! sb_lock_acquire; do sleep 1; done
+    return 0
+}
+
 # Текущая ЭФФЕКТИВНАЯ нода балансировщика. bi печатает две секции:
 #   - Selecting Override:   форс через bo (реально активная нода)
 #   - Selects:              выбор leastPing (что было бы без override)
@@ -155,6 +220,17 @@ sb_current_target() {
 # Один цикл: замерить все ноды, выбрать самую быструю, переключиться с учётом
 # гистерезиса. Настройки должны быть загружены (speed_balancer_settings).
 sb_tick() {
+    local rc
+    if ! sb_lock_acquire; then
+        sb_log "замер уже выполняется — повторный тик пропущен"
+        return 1
+    fi
+    sb_tick_locked "$@"; rc=$?
+    sb_lock_release
+    return "$rc"
+}
+
+sb_tick_locked() {
     if ! xray api bi -s "$sb_api_addr" "$sb_balancer" >/dev/null 2>&1; then
         sb_log "api недоступен ($sb_api_addr) — пропуск"
         return 1
@@ -163,7 +239,8 @@ sb_tick() {
     # Нода закреплена вручную (xkeen -sb N): автозамер не трогает выбор.
     # Override живёт только в памяти Xray и теряется при его перезапуске,
     # поэтому если он слетел — возвращаем закреплённую ноду на место.
-    local pinned
+    local pinned tick_rc trim_rc
+    tick_rc=0
     pinned=$(sb_pin_get)
     if [ -n "$pinned" ]; then
         if [ "$(sb_current_target)" != "$pinned" ]; then
@@ -171,12 +248,15 @@ sb_tick() {
                 sb_log "закреплённая нода восстановлена: $pinned"
             else
                 sb_log "не удалось восстановить закреплённую ноду: $pinned"
+                tick_rc=1
             fi
         else
             sb_log "нода закреплена вручную: $pinned — замер пропущен"
         fi
         sb_log_trim
-        return 0
+        trim_rc=$?
+        [ "$tick_rc" -ne 0 ] && return "$tick_rc"
+        return "$trim_rc"
     fi
     if ! sb_node_list; then
         sb_log "ноды балансировщика '$sb_balancer' не найдены — пропуск"
@@ -184,6 +264,7 @@ sb_tick() {
     fi
 
     local n s best best_speed current current_speed threshold
+    tick_rc=0
     best=""; best_speed=0
     current=$(sb_current_target); current_speed=0
 
@@ -228,10 +309,14 @@ EOF_NODES
             sb_log "переключение: $current ($current_speed) -> $best ($best_speed КБ/с)"
         else
             sb_log "bo не смог переключить на $best"
+            tick_rc=1
         fi
     else
         sb_log "оставляем $current: кандидат $best ($best_speed) не выше порога $threshold КБ/с"
     fi
 
     sb_log_trim
+    trim_rc=$?
+    [ "$tick_rc" -ne 0 ] && return "$tick_rc"
+    return "$trim_rc"
 }

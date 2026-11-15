@@ -91,6 +91,11 @@ xray() {
 }
 
 curl() {
+    if [ -f "$WORK/block-measure" ]; then
+        : > "$WORK/measure-started"
+        while [ ! -f "$WORK/release-measure" ]; do sleep 1; done
+        rm -f "$WORK/block-measure"
+    fi
     # Узнаём ноду из правила, записанного sb_measure_node, и отдаём её скорость.
     # Правило копируется наружу: sb_measure_node удаляет его за собой, а вызов
     # идёт из субшелла — файл единственный способ проверить, что в нём было.
@@ -590,7 +595,7 @@ check "sb_control on: отказ -> rc=1" "$?" "1"
 STUB_XRAY_RUNNING="yes"; STUB_API_ALIVE="yes"
 sb_control on >/dev/null 2>&1
 check "sb_control on: успех -> rc=0"        "$?" "0"
-check "sb_control on: cron-задача создана"  "$(grep -c 'xkeen -sbt' "$cron_dir/$cron_file")" "1"
+check "sb_control on: cron-задача создана"  "$(grep -c 'xkeen -sbtx' "$cron_dir/$cron_file")" "1"
 check "sb_control on: enabled=true"         "$(rjq '.xkeen.xray.speed_balancer.enabled')" "true"
 
 sb_control status >/dev/null 2>&1
@@ -598,7 +603,7 @@ check "sb_control status: rc=0" "$?" "0"
 
 sb_control off >/dev/null 2>&1
 check "sb_control off: rc=0"               "$?" "0"
-check "sb_control off: cron-задача снята"  "$(grep -c 'xkeen -sbt' "$cron_dir/$cron_file")" "0"
+check "sb_control off: cron-задача снята"  "$(grep -c 'xkeen -sbtx' "$cron_dir/$cron_file")" "0"
 check "sb_control off: enabled=false"      "$(rjq '.xkeen.xray.speed_balancer.enabled')" "false"
 
 # запись настройки не удалась — выключение тоже не выдаёт себя за успех.
@@ -639,7 +644,7 @@ check "повторный on: ответ y не запускает замер" "
 # enabled правили руками в xkeen.json — расписания ещё нет, включение доводится
 sb_remove_cron
 sb_control on </dev/null >/dev/null 2>&1
-check "on без cron: расписание восстановлено" "$(grep -c 'xkeen -sbt' "$cron_dir/$cron_file")" "1"
+check "on без cron: расписание восстановлено" "$(grep -c 'xkeen -sbtx' "$cron_dir/$cron_file")" "1"
 
 sb_control off >/dev/null 2>&1
 out=$(sb_control off 2>&1); rc=$?
@@ -984,6 +989,7 @@ xray() {
              printf '  - Selects:\n    1   %s          \n' "$STUB_CURRENT"; return 0 ;;
         bo)  shift 2
              _node=""; while [ $# -gt 0 ]; do case "$1" in -r) _node="-r" ;; -s|-b) shift ;; *) _node="$1" ;; esac; shift; done
+             [ -z "$SB_RACE_BO_LOG" ] || printf '%s\n' "$_node" >> "$SB_RACE_BO_LOG"
              STUB_BO="$_node"; [ "$_node" != "-r" ] && STUB_CURRENT="$_node"; return 0 ;;
         *) return 0 ;;
     esac
@@ -1024,6 +1030,36 @@ sb_control prev >/dev/null 2>&1; rc=$?
 check "sb_control prev: rc=0"                    "$rc" "0"
 check "sb_control prev: sub-b -> sub-a"          "$STUB_BO" "sub-a"
 sb_control auto >/dev/null 2>&1
+
+cat > "$sb_routing_file" <<'EOF'
+{"routing":{"balancers":[{"tag":"balancer","selector":["sub-"]}],"rules":[]}}
+EOF
+cat > "$sb_outbounds_file" <<'EOF'
+{"outbounds":[{"tag":"sub-a"},{"tag":"sub-b"}]}
+EOF
+printf '{"xkeen":{"xray":{"speed_balancer":{"enabled":true}}}}\n' > "$xkeen_config"
+speed_balancer_settings
+sb_balancer="balancer"
+STUB_XRAY_RUNNING="yes"; STUB_API_ALIVE="yes"; STUB_CURRENT="sub-a"; STUB_BO_FAIL="no"
+STUB_SPEED_sub_a=1024; STUB_SPEED_sub_b=204800
+SB_RACE_BO_LOG="$WORK/race-bo.log"; export SB_RACE_BO_LOG
+: > "$SB_RACE_BO_LOG"
+rm -f "$WORK/measure-started" "$WORK/release-measure"
+: > "$WORK/block-measure"
+sb_tick >/dev/null 2>&1 & _tick_pid=$!
+_wait_i=0
+while [ ! -f "$WORK/measure-started" ] && [ "$_wait_i" -lt 20 ]; do sleep 1; _wait_i=$((_wait_i + 1)); done
+check "гонка: автозамер дошёл до управляемой паузы" "$([ -f "$WORK/measure-started" ] && echo yes || echo no)" yes
+sb_select 1 >/dev/null 2>&1 & _manual_pid=$!
+sleep 1
+check "гонка: ручной bo не выполняется внутри замера" "$(cat "$SB_RACE_BO_LOG")" ""
+: > "$WORK/release-measure"
+wait "$_tick_pid"; _tick_rc=$?
+wait "$_manual_pid"; _manual_rc=$?
+check "гонка: замер завершился" "$_tick_rc" 0
+check "гонка: ручной выбор завершился" "$_manual_rc" 0
+check "гонка: ручной выбор применён после автозамера" "$(cat "$SB_RACE_BO_LOG")" "$(printf 'sub-b\nsub-a')"
+check "гонка: ручной выбор сохранён" "$(sb_pin_get)" sub-a
 
 rm -rf "$WORK"
 printf '\n=== пройдено: %s, провалено: %s, известных дефектов: %s ===\n' "$pass" "$fail" "$known"

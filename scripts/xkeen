@@ -135,13 +135,11 @@ parse_auto_opt() {
 
 # Self-heal пакетов (opkg-форк + опциональная установка curl/jq/ip-full/conntrack/
 # iptables/ipset/ca-bundle/coreutils-uname/coreutils-nohup) пропускается для
-# команд, не зависящих от статуса пакетов: -sbt — тик балансировщика по
-# расписанию cron, может вызываться раз в минуту; -sb next|prev —
 # переключение сервера аппаратной кнопкой роутера — и help/meta-ключей.
 # Запуск без аргументов сюда же: он тоже лишь показывает справку. Для
 # всех остальных команд поведение не изменилось.
 case "$1" in
-    ""|-sbt|-h|-help|-v|-version|-about|-ad|-donate|-af|-feedback) ;;
+    ""|-sbt|-sbtx|-h|-help|-v|-version|-about|-ad|-donate|-af|-feedback) ;;
     # -i/-install, -uk и -k сами вызывают test_entware: он сначала проверяет
     # доступность репозитория Entware и только после этого устанавливает
     # недостающие пакеты (_ensure_installed_packages). Проверка здесь
@@ -1887,6 +1885,13 @@ while [ $# -gt 0 ]; do
             speed_balancer_settings
             if [ "$sb_enabled" = "true" ]; then
                 sb_tick || xkeen_rc=1
+            fi
+        ;;
+
+        -sbtx)   # Тик балансировки по cron только при достижении интервала
+            speed_balancer_settings
+            if [ "$sb_enabled" = "true" ]; then
+                sb_tick_if_due || xkeen_rc=1
             fi
         ;;
 
