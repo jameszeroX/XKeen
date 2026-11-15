@@ -2586,10 +2586,23 @@ if proxy_status; then
     }
 
     _xkeen_apply() {
-        [ "$iptables_supported" = "true" ] && _xkeen_apply_table iptables nat _xkeen_v4_nat_rules || true
-        [ "$iptables_supported" = "true" ] && _xkeen_apply_table iptables mangle _xkeen_v4_mangle_rules || true
-        [ "$ip6tables_supported" = "true" ] && _xkeen_apply_table ip6tables nat _xkeen_v6_nat_rules || true
-        [ "$ip6tables_supported" = "true" ] && _xkeen_apply_table ip6tables mangle _xkeen_v6_mangle_rules || true
+        _apply_failed=0
+        if [ "$iptables_supported" = "true" ]; then
+            _xkeen_apply_table iptables nat _xkeen_v4_nat_rules || _apply_failed=1
+            _xkeen_apply_table iptables mangle _xkeen_v4_mangle_rules || _apply_failed=1
+        fi
+        if [ "$ip6tables_supported" = "true" ]; then
+            _xkeen_apply_table ip6tables nat _xkeen_v6_nat_rules || _apply_failed=1
+            _xkeen_apply_table ip6tables mangle _xkeen_v6_mangle_rules || _apply_failed=1
+        fi
+        return "$_apply_failed"
+    }
+
+    _xkeen_apply_checked() {
+        _xkeen_apply && return 0
+        log_error_router "Не удалось применить все поддерживаемые таблицы netfilter; новые правила XKeen не считаются активными"
+        _xkeen_release_nf_lock
+        return 1
     }
 
     # Пока NDM держит цепочки снесёнными, пакет установленного UDP-потока
@@ -2807,13 +2820,55 @@ if proxy_status; then
         # fi
     }
 
+    _xkeen_normalize_fwmark() {
+        _mark_value=${1%%/*}
+        _mark_value=${_mark_value#0x}
+        _mark_value=${_mark_value#0X}
+        case "$_mark_value" in
+            ''|*[!0-9a-fA-F]*) return 1 ;;
+        esac
+        _mark_value=$(printf '%s\n' "$_mark_value" | tr 'A-F' 'a-f' | sed 's/^0*//')
+        [ -n "$_mark_value" ] || _mark_value=0
+        printf '0x%s\n' "$_mark_value"
+    }
+
+    _xkeen_find_policy_table() {
+        [ -n "$1" ] || return 1
+        _wanted_mark=$(_xkeen_normalize_fwmark "$1") || return 1
+        _rule_output=$(ip rule show 2>/dev/null) || return 1
+        printf '%s\n' "$_rule_output" | awk -v wanted="$_wanted_mark" '
+            function norm_mark(value) {
+                sub(/\/.*/, "", value)
+                value = tolower(value)
+                sub(/^0x/, "", value)
+                sub(/^0+/, "", value)
+                if (value == "") value = "0"
+                return "0x" value
+            }
+            {
+                for (i = 1; i < NF; i++) {
+                    if (tolower($i) != "fwmark" || norm_mark($(i + 1)) != wanted) continue
+                    for (j = i + 2; j < NF; j++) {
+                        if (tolower($j) == "lookup" || tolower($j) == "table") {
+                            table = $(j + 1)
+                            if (table != "" && tolower(table) != "blackhole") {
+                                print table
+                                exit
+                            }
+                        }
+                    }
+                }
+            }
+        '
+    }
+
     # Настройка таблицы маршрутов
     configure_route() {
         ip_version="$1"
 
         # Определяем таблицу маршрутизации
         if [ -n "$policy_mark" ]; then
-            policy_table=$(ip rule show | awk -v policy="$policy_mark" '$0 ~ policy && /lookup/ && !/blackhole/ {print $(NF); exit}')
+            policy_table=$(_xkeen_find_policy_table "$policy_mark")
         fi
         source_table="${policy_table:-main}"
 
@@ -2848,8 +2903,8 @@ if proxy_status; then
         # rule) уже действует — не трогаем. Любое расхождение -> полная
         # пересборка, как раньше.
         _cur_routes=$(ip -"$ip_version" route show table "$table_id" 2>/dev/null)
-        _want_routes=$(ip -"$ip_version" route show table "$source_table" 2>/dev/null | \
-            grep -v '^default\|^unreachable\|^blackhole')
+        _source_routes=$(ip -"$ip_version" route show table "$source_table" 2>/dev/null) || return 1
+        _want_routes=$(printf '%s\n' "$_source_routes" | grep -v '^default\|^unreachable\|^blackhole')
         if [ -n "$_cur_routes" ] && \
            printf '%s\n' "$_cur_routes" | grep -q '^local default dev lo' && \
            [ "$(printf '%s\n' "$_cur_routes" | grep -v '^local default dev lo' | sort)" = \
@@ -2858,19 +2913,41 @@ if proxy_status; then
             return 0
         fi
 
-        ip -"$ip_version" rule del fwmark "$table_mark" lookup "$table_id" >/dev/null 2>&1 || true
-        ip -"$ip_version" route flush table "$table_id" >/dev/null 2>&1 || true
-        ip -"$ip_version" route add local default dev lo table "$table_id" >/dev/null 2>&1 || true
-        ip -"$ip_version" rule add fwmark "$table_mark" lookup "$table_id" >/dev/null 2>&1 || true
+        if ip -"$ip_version" rule show 2>/dev/null | grep -Fq "fwmark $table_mark lookup $table_id"; then
+            ip -"$ip_version" rule del fwmark "$table_mark" lookup "$table_id" >/dev/null 2>&1 || return 1
+        fi
+        ip -"$ip_version" route flush table "$table_id" >/dev/null 2>&1 || return 1
+        if ! ip -"$ip_version" route add local default dev lo table "$table_id" >/dev/null 2>&1; then
+            ip -"$ip_version" route flush table "$table_id" >/dev/null 2>&1
+            return 1
+        fi
 
-        # Копируем маршруты
-        ip -"$ip_version" route show table "$source_table" 2>/dev/null | while read -r route_line; do
+        _route_copy_failed=0
+        while IFS= read -r route_line; do
             case "$route_line" in
                 default*|unreachable*|blackhole*) continue ;;
-                *) ip -"$ip_version" route add table "$table_id" $route_line >/dev/null 2>&1 || true ;;
+                '') continue ;;
+                *) ip -"$ip_version" route add table "$table_id" $route_line >/dev/null 2>&1 || _route_copy_failed=1 ;;
             esac
-        done
+        done <<EOF
+$_want_routes
+EOF
+        if [ "$_route_copy_failed" -ne 0 ]; then
+            ip -"$ip_version" route flush table "$table_id" >/dev/null 2>&1
+            return 1
+        fi
+        if ! ip -"$ip_version" rule add fwmark "$table_mark" lookup "$table_id" >/dev/null 2>&1; then
+            ip -"$ip_version" route flush table "$table_id" >/dev/null 2>&1
+            return 1
+        fi
         return 0
+    }
+
+    _xkeen_configure_route_checked() {
+        configure_route "$1" && return 0
+        log_error_router "Не удалось настроить policy routing IPv$1; правила TProxy не будут применены"
+        _xkeen_release_nf_lock
+        return 1
     }
 
     # Создание множественных правил multiport
@@ -3244,7 +3321,19 @@ USER_POLICIES_EOF
 
     _xkeen_cache_valid() {
         [ -s "$_xkeen_cache_dir/key" ] || return 1
-        [ "$(cat "$_xkeen_cache_dir/key" 2>/dev/null)" = "$(md5sum "$0" 2>/dev/null | awk '{print $1}')" ]
+        [ "$(cat "$_xkeen_cache_dir/key" 2>/dev/null)" = "$(md5sum "$0" 2>/dev/null | awk '{print $1}')" ] || return 1
+        for _cache_name in v4_nat v4_mangle v6_nat v6_mangle; do
+            _cache_file="$_xkeen_cache_dir/$_cache_name"
+            [ -f "$_cache_file" ] || return 1
+            while IFS= read -r _cache_line || [ -n "$_cache_line" ]; do
+                [ -z "$_cache_line" ] && continue
+                case "$_cache_line" in
+                    '-A '*|'-I '*|'-D '*) ;;
+                    *) return 1 ;;
+                esac
+            done < "$_cache_file"
+        done
+        return 0
     }
 
     # Восстанавливает хвостовой перевод строки, съеденный $(cat ...):
@@ -3289,9 +3378,13 @@ USER_POLICIES_EOF
         [ "$iptables_supported" = "true" ] && _xkeen_refill_geo_if_empty geo_exclude "$ru_exclude_ipv4" inet
         [ "$ip6tables_supported" = "true" ] && _xkeen_refill_geo_if_empty geo_exclude6 "$ru_exclude_ipv6" inet6
         _xkeen_cache_load
-        [ "$iptables_supported" = "true" ] && configure_route 4
-        [ "$ip6tables_supported" = "true" ] && configure_route 6
-        _xkeen_apply
+        if [ "$iptables_supported" = "true" ]; then
+            _xkeen_configure_route_checked 4 || exit 1
+        fi
+        if [ "$ip6tables_supported" = "true" ]; then
+            _xkeen_configure_route_checked 6 || exit 1
+        fi
+        _xkeen_apply_checked || exit 1
         [ -n "$_xkeen_cur_wan" ] && printf '%s' "$_xkeen_cur_wan" > "$_xkeen_wan_state"
         _xkeen_release_nf_lock
         _xkeen_flush_udp_conntrack
@@ -3310,11 +3403,11 @@ USER_POLICIES_EOF
         if [ "$family" = "ip6tables" ]; then
             exclude_list="$val_exclude_ip6"
             proxy_ip="$ipv6_proxy"
-            configure_route 6
+            _xkeen_configure_route_checked 6 || exit 1
         else
             exclude_list="$val_exclude_ip4"
             proxy_ip="$ipv4_proxy"
-            configure_route 4
+            _xkeen_configure_route_checked 4 || exit 1
         fi
         if [ -n "$port_redirect" ] && [ -n "$port_tproxy" ]; then
             for table in "$table_tproxy" "$table_redirect"; do
@@ -3341,7 +3434,7 @@ USER_POLICIES_EOF
 
     # Атомарно применяем все аккумулированные правила одним
     # iptables-restore --noflush per (family, table).
-    _xkeen_apply
+    _xkeen_apply_checked || exit 1
 
     # Блобы детерминированы конфигурацией — сохраняем для быстрых
     # последующих прогонов (см. _xkeen_cache_* выше).
