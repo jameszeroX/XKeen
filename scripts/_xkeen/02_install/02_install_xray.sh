@@ -1,4 +1,11 @@
 # Функция для установки Xray
+xray_conf_has_transport_key() {
+    local file="$1"
+    [ -f "$file" ] || return 1
+    strip_json_comments "$file" | jq -e 'any(.. | objects; has("transport"))' >/dev/null 2>&1 && return 0
+    return 1
+}
+
 install_xray() {
     echo -e "  ${yellow}Выполняется установка${reset} Xray. Пожалуйста, подождите..."
 
@@ -119,7 +126,7 @@ install_xray() {
     if [ -d "$xray_conf_dir" ]; then
         for file in "$xray_conf_dir"/*.json; do
             [ -f "$file" ] || continue
-            grep -qE '"transport"[[:space:]]*:' "$file" && mv "$file" "${file}.obsolete"
+            xray_conf_has_transport_key "$file" && mv "$file" "${file}.obsolete"
         done
     fi
 
