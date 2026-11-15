@@ -368,10 +368,22 @@ retries_download_settings
 get_rci_token() {
     rci_token=""
     [ ! -f "$xkeen_config" ] && return 1
+    command -v jq >/dev/null 2>&1 || return 1
 
-    rci_token=$(printf '%s' "$_xkeen_json_clean" | sed -n 's/.*"rci_token": *"\([^"]*\)".*/\1/p' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' 2>/dev/null)
-
-    [ "$rci_token" = "null" ] && rci_token=""
+    _grt_value=$(printf '%s' "$_xkeen_json_clean" | jq -er '
+        if type != "object" then error("root is not an object")
+        elif (.xkeen | type) != "object" then ""
+        elif (.xkeen | has("rci_token") | not) then ""
+        elif (.xkeen.rci_token | type) != "string" then ""
+        elif (.xkeen.rci_token | explode | all(.[];
+            (. >= 45 and . <= 57) or (. >= 65 and . <= 90) or
+            (. >= 97 and . <= 122) or . == 61 or . == 95 or . == 126
+        )) then .xkeen.rci_token
+        else error("invalid token characters") end
+    ' 2>/dev/null) || return 1
+    rci_token="$_grt_value"
+    unset _grt_value
+    return 0
 }
 get_rci_token
 
