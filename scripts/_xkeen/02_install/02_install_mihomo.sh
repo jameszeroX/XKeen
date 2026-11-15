@@ -12,7 +12,10 @@ install_mihomo() {
     fi
 
     if [ -f "$install_dir/mihomo" ]; then
-        mv "$install_dir/mihomo" "$install_dir/mihomo_bak"
+        if ! mv "$install_dir/mihomo" "$install_dir/mihomo_bak"; then
+            echo -e "  ${red}Ошибка${reset}: Не удалось сохранить предыдущий бинарник Mihomo"
+            return 1
+        fi
     fi
 
     [ -d "$mtmp_dir" ] && rm -rf "$mtmp_dir"

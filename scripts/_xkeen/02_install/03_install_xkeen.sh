@@ -27,25 +27,56 @@ install_xkeen() {
             return 1
         fi
         chmod +x "$stage_dir/xkeen"
-        mv "$stage_dir/xkeen" "$install_dir/xkeen.new" || { rm -rf "$stage_dir"; return 1; }
-        rm -f "$install_dir/xkeen.old"
-        [ -f "$install_dir/xkeen" ] && mv "$install_dir/xkeen" "$install_dir/xkeen.old"
+        if ! mv "$stage_dir/xkeen" "$install_dir/xkeen.new"; then
+            rm -rf "$stage_dir"
+            return 1
+        fi
+        if ! rm -f "$install_dir/xkeen.old" || ! rm -rf "$install_dir/.xkeen.old"; then
+            rm -f "$install_dir/xkeen.new"
+            rm -rf "$stage_dir"
+            return 1
+        fi
+
+        _had_old_wrapper=0
+        _had_old_modules=0
+        if [ -e "$install_dir/xkeen" ]; then
+            if ! mv "$install_dir/xkeen" "$install_dir/xkeen.old"; then
+                rm -f "$install_dir/xkeen.new"
+                rm -rf "$stage_dir"
+                return 1
+            fi
+            _had_old_wrapper=1
+        fi
+        if [ -d "$install_dir/.xkeen" ]; then
+            if ! mv "$install_dir/.xkeen" "$install_dir/.xkeen.old"; then
+                if [ "$_had_old_wrapper" -eq 1 ]; then
+                    mv "$install_dir/xkeen.old" "$install_dir/xkeen" || \
+                        echo -e "  ${red}Ошибка${reset}: не удалось вернуть предыдущий XKeen wrapper"
+                fi
+                rm -f "$install_dir/xkeen.new"
+                rm -rf "$stage_dir"
+                return 1
+            fi
+            _had_old_modules=1
+        fi
+
         if ! mv "$install_dir/xkeen.new" "$install_dir/xkeen"; then
-            [ -f "$install_dir/xkeen.old" ] && mv "$install_dir/xkeen.old" "$install_dir/xkeen"
+            [ "$_had_old_wrapper" -eq 0 ] || mv "$install_dir/xkeen.old" "$install_dir/xkeen"
+            [ "$_had_old_modules" -eq 0 ] || mv "$install_dir/.xkeen.old" "$install_dir/.xkeen"
             rm -rf "$stage_dir"
             return 1
         fi
-        rm -rf "$install_dir/.xkeen.old"
-        [ -d "$install_dir/.xkeen" ] && mv "$install_dir/.xkeen" "$install_dir/.xkeen.old"
-        if mv "$stage_dir/_xkeen" "$install_dir/.xkeen"; then
-            rm -f "$install_dir/xkeen.old"
-            rm -rf "$install_dir/.xkeen.old" "$stage_dir"
-        else
-            [ -f "$install_dir/xkeen.old" ] && mv "$install_dir/xkeen.old" "$install_dir/xkeen"
-            [ -d "$install_dir/.xkeen.old" ] && mv "$install_dir/.xkeen.old" "$install_dir/.xkeen"
+
+        if ! mv "$stage_dir/_xkeen" "$install_dir/.xkeen"; then
+            rm -f "$install_dir/xkeen"
+            [ "$_had_old_wrapper" -eq 0 ] || mv "$install_dir/xkeen.old" "$install_dir/xkeen"
+            [ "$_had_old_modules" -eq 0 ] || mv "$install_dir/.xkeen.old" "$install_dir/.xkeen"
             rm -rf "$stage_dir"
             return 1
         fi
+
+        rm -f "$install_dir/xkeen.old" || return 1
+        rm -rf "$install_dir/.xkeen.old" "$stage_dir" || return 1
     fi
     [ -d "$log_dir/xkeen" ] && rm -rf "$log_dir/xkeen"
     return 0

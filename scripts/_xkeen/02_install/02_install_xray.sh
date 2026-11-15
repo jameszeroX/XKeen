@@ -12,7 +12,10 @@ install_xray() {
     fi
 
     if [ -f "$install_dir/xray" ]; then
-        mv "$install_dir/xray" "$install_dir/xray_bak"
+        if ! mv "$install_dir/xray" "$install_dir/xray_bak"; then
+            echo -e "  ${red}Ошибка${reset}: Не удалось сохранить предыдущий бинарник Xray"
+            return 1
+        fi
     fi
 
     [ -d "$xtmp_dir" ] && rm -rf "$xtmp_dir"
