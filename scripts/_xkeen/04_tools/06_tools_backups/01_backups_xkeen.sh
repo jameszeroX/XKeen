@@ -27,6 +27,37 @@ backup_xkeen() {
 }
 
 # Восстановление XKeen из резервной копии
+_rollback_xkeen_restore() {
+    _rx_install="$1"
+    _rx_stage="$2"
+    _rx_previous="$3"
+    _rx_failed=false
+
+    if [ -e "$_rx_install/.xkeen" ] && ! mv "$_rx_install/.xkeen" "$_rx_stage/failed-modules"; then
+        _rx_failed=true
+    fi
+    if [ -e "$_rx_install/xkeen" ] && ! mv "$_rx_install/xkeen" "$_rx_stage/failed-wrapper"; then
+        _rx_failed=true
+    fi
+    if [ -e "$_rx_previous/.xkeen" ]; then
+        if [ -e "$_rx_install/.xkeen" ] || ! mv "$_rx_previous/.xkeen" "$_rx_install/.xkeen"; then
+            _rx_failed=true
+        fi
+    fi
+    if [ -e "$_rx_previous/xkeen" ]; then
+        if [ -e "$_rx_install/xkeen" ] || ! mv "$_rx_previous/xkeen" "$_rx_install/xkeen"; then
+            _rx_failed=true
+        fi
+    fi
+
+    if [ "$_rx_failed" = true ]; then
+        echo -e "  ${red}Ошибка${reset}: откат XKeen не завершён; сохранённые копии находятся в $_rx_previous и $_rx_stage"
+        return 1
+    fi
+    rm -rf "${_rx_previous:?}" "${_rx_stage:?}"
+    return 0
+}
+
 restore_backup_xkeen() {
     latest_backup_dir=""
 
@@ -37,21 +68,55 @@ restore_backup_xkeen() {
     done
 
     if [ -n "$latest_backup_dir" ]; then
-        # Используем временную директорию для безопасности при восстановлении
-        # Чтобы не удалить старый .xkeen, пока не убедимся, что копия цела
-
-        if cp -r "$latest_backup_dir/_xkeen" "$install_dir/" && \
-           cp -f "$latest_backup_dir/xkeen" "$install_dir/"; then
-
-            rm -rf "${install_dir:?}/.xkeen"
-            mv "$install_dir/_xkeen" "$install_dir/.xkeen"
-            
-            echo -e "  XKeen ${green}успешно восстановлен${reset} из: $(basename "$latest_backup_dir")"
-        else
-            rm -rf "${install_dir:?}/_xkeen"
-            echo -e "  ${red}Ошибка:${reset} Не удалось скопировать файлы из резервной копии"
+        if [ -z "$install_dir" ] || [ "$install_dir" = / ]; then
+            echo -e "  ${red}Ошибка:${reset} Недопустимый каталог установки XKeen"
+            return 1
         fi
+
+        _rx_stage=$(mktemp -d "$install_dir/.restore-XXXXXX") || {
+            echo -e "  ${red}Ошибка${reset}: не удалось подготовить восстановление XKeen"
+            return 1
+        }
+        if ! cp -r "$latest_backup_dir/_xkeen" "$_rx_stage/.xkeen" ||
+           ! cp -p "$latest_backup_dir/xkeen" "$_rx_stage/xkeen" ||
+           [ ! -d "$_rx_stage/.xkeen" ] || [ ! -f "$_rx_stage/xkeen" ]; then
+            rm -rf "${_rx_stage:?}"
+            echo -e "  ${red}Ошибка:${reset} Не удалось подготовить полную копию XKeen"
+            return 1
+        fi
+
+        _rx_previous=$(mktemp -d "$install_dir/.restore-old-XXXXXX") || {
+            rm -rf "${_rx_stage:?}"
+            echo -e "  ${red}Ошибка${reset}: не удалось подготовить откат XKeen"
+            return 1
+        }
+        if [ -e "$install_dir/xkeen" ] && ! mv "$install_dir/xkeen" "$_rx_previous/xkeen"; then
+            rm -rf "${_rx_previous:?}" "${_rx_stage:?}"
+            echo -e "  ${red}Ошибка${reset}: не удалось сохранить текущую оболочку XKeen"
+            return 1
+        fi
+        if [ -e "$install_dir/.xkeen" ] && ! mv "$install_dir/.xkeen" "$_rx_previous/.xkeen"; then
+            if [ -e "$_rx_previous/xkeen" ] && ! mv "$_rx_previous/xkeen" "$install_dir/xkeen"; then
+                echo -e "  ${red}Ошибка${reset}: оболочка XKeen сохранена в $_rx_previous"
+            else
+                rm -rf "${_rx_previous:?}" "${_rx_stage:?}"
+            fi
+            echo -e "  ${red}Ошибка${reset}: не удалось сохранить текущие модули XKeen"
+            return 1
+        fi
+
+        if ! mv "$_rx_stage/.xkeen" "$install_dir/.xkeen" ||
+           ! mv "$_rx_stage/xkeen" "$install_dir/xkeen"; then
+            _rollback_xkeen_restore "$install_dir" "$_rx_stage" "$_rx_previous"
+            echo -e "  ${red}Ошибка:${reset} Не удалось опубликовать полную копию XKeen"
+            return 1
+        fi
+
+        rm -rf "${_rx_previous:?}" "${_rx_stage:?}"
+        echo -e "  XKeen ${green}успешно восстановлен${reset} из: $(basename "$latest_backup_dir")"
+        return 0
     else
         echo -e "  ${red}Ошибка:${reset} Подходящая резервная копия XKeen не найдена"
+        return 1
     fi
 }
