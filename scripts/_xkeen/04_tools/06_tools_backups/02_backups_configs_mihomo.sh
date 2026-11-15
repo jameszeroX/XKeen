@@ -17,6 +17,60 @@ backup_configs_mihomo() {
 }
 
 # Восстановление конфигурации Mihomo из резервной копии
+_restore_config_tree_mihomo() {
+    _rctm_source="$1"
+    _rctm_target="$2"
+    if [ -z "$_rctm_target" ] || [ "$_rctm_target" = / ]; then
+        echo -e "  ${red}Ошибка${reset}: недопустимый путь конфигурации Mihomo"
+        return 1
+    fi
+    _rctm_stage=$(mktemp -d "${_rctm_target}.restore-XXXXXX") || {
+        echo -e "  ${red}Ошибка${reset}: не удалось подготовить восстановление Mihomo"
+        return 1
+    }
+
+    if ! cp -r "$_rctm_source"/. "$_rctm_stage/"; then
+        rm -rf "${_rctm_stage:?}"
+        echo -e "  ${red}Ошибка${reset} при копировании резервной копии Mihomo"
+        return 1
+    fi
+
+    _rctm_previous=$(mktemp -d "${_rctm_target}.previous-XXXXXX") || {
+        rm -rf "${_rctm_stage:?}"
+        echo -e "  ${red}Ошибка${reset}: не удалось подготовить откат Mihomo"
+        return 1
+    }
+    _rctm_had_target=false
+    if [ -e "$_rctm_target" ] || [ -L "$_rctm_target" ]; then
+        if ! mv "$_rctm_target" "$_rctm_previous/"; then
+            rm -rf "${_rctm_stage:?}" "${_rctm_previous:?}"
+            echo -e "  ${red}Ошибка${reset}: не удалось сохранить текущую конфигурацию Mihomo"
+            return 1
+        fi
+        _rctm_had_target=true
+    fi
+
+    if mv "$_rctm_stage" "$_rctm_target"; then
+        if ! rm -rf "${_rctm_previous:?}"; then
+            echo -e "  ${yellow}Предупреждение${reset}: старая конфигурация Mihomo осталась в $_rctm_previous"
+        fi
+        echo -e "  Конфигурация Mihomo ${green}успешно восстановлена${reset}"
+        return 0
+    fi
+
+    if [ "$_rctm_had_target" = true ]; then
+        _rctm_name=$(basename "$_rctm_target")
+        if ! mv "$_rctm_previous/$_rctm_name" "$_rctm_target"; then
+            rm -rf "${_rctm_stage:?}"
+            echo -e "  ${red}Ошибка${reset}: сбой восстановления Mihomo; прежняя конфигурация сохранена в $_rctm_previous"
+            return 1
+        fi
+    fi
+    rm -rf "${_rctm_stage:?}" "${_rctm_previous:?}"
+    echo -e "  ${red}Ошибка${reset} при публикации конфигурации Mihomo"
+    return 1
+}
+
 restore_backup_configs_mihomo() {
     latest_backup=""
 
@@ -27,22 +81,9 @@ restore_backup_configs_mihomo() {
     done
 
     if [ -n "$latest_backup" ]; then
-        # Копируем бэкап во временную директорию рядом с целевой и заменяем
-        # текущую конфигурацию только при успешном копировании, чтобы сбой
-        # cp -r (диск заполнен, обрыв сессии) не оставил mihomo_conf_dir пустой
-        restore_tmp_dir="${mihomo_conf_dir}.restore_tmp"
-        rm -rf "${restore_tmp_dir:?}"
-        mkdir -p "$restore_tmp_dir"
-
-        if cp -r "$latest_backup"/* "$restore_tmp_dir/"; then
-            rm -rf "${mihomo_conf_dir:?}"
-            mv "$restore_tmp_dir" "$mihomo_conf_dir"
-            echo -e "  Конфигурация Mihomo ${green}успешно восстановлена${reset} из: $(basename "$latest_backup")"
-        else
-            rm -rf "${restore_tmp_dir:?}"
-            echo -e "  ${red}Ошибка${reset} при восстановлении файлов"
-        fi
+        _restore_config_tree_mihomo "$latest_backup" "$mihomo_conf_dir"
     else
         echo -e "  ${red}Ошибка:${reset} Резервные копии не найдены в $backups_dir"
+        return 1
     fi
 }

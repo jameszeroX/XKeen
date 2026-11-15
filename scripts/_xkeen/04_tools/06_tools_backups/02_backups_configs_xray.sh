@@ -17,6 +17,60 @@ backup_configs_xray() {
 }
 
 # Восстановление конфигурации Xray из резервной копии
+_restore_config_tree_xray() {
+    _rctx_source="$1"
+    _rctx_target="$2"
+    if [ -z "$_rctx_target" ] || [ "$_rctx_target" = / ]; then
+        echo -e "  ${red}Ошибка${reset}: недопустимый путь конфигурации Xray"
+        return 1
+    fi
+    _rctx_stage=$(mktemp -d "${_rctx_target}.restore-XXXXXX") || {
+        echo -e "  ${red}Ошибка${reset}: не удалось подготовить восстановление Xray"
+        return 1
+    }
+
+    if ! cp -r "$_rctx_source"/. "$_rctx_stage/"; then
+        rm -rf "${_rctx_stage:?}"
+        echo -e "  ${red}Ошибка${reset} при копировании резервной копии Xray"
+        return 1
+    fi
+
+    _rctx_previous=$(mktemp -d "${_rctx_target}.previous-XXXXXX") || {
+        rm -rf "${_rctx_stage:?}"
+        echo -e "  ${red}Ошибка${reset}: не удалось подготовить откат Xray"
+        return 1
+    }
+    _rctx_had_target=false
+    if [ -e "$_rctx_target" ] || [ -L "$_rctx_target" ]; then
+        if ! mv "$_rctx_target" "$_rctx_previous/"; then
+            rm -rf "${_rctx_stage:?}" "${_rctx_previous:?}"
+            echo -e "  ${red}Ошибка${reset}: не удалось сохранить текущую конфигурацию Xray"
+            return 1
+        fi
+        _rctx_had_target=true
+    fi
+
+    if mv "$_rctx_stage" "$_rctx_target"; then
+        if ! rm -rf "${_rctx_previous:?}"; then
+            echo -e "  ${yellow}Предупреждение${reset}: старая конфигурация Xray осталась в $_rctx_previous"
+        fi
+        echo -e "  Конфигурация Xray ${green}успешно восстановлена${reset}"
+        return 0
+    fi
+
+    if [ "$_rctx_had_target" = true ]; then
+        _rctx_name=$(basename "$_rctx_target")
+        if ! mv "$_rctx_previous/$_rctx_name" "$_rctx_target"; then
+            rm -rf "${_rctx_stage:?}"
+            echo -e "  ${red}Ошибка${reset}: сбой восстановления Xray; прежняя конфигурация сохранена в $_rctx_previous"
+            return 1
+        fi
+    fi
+    rm -rf "${_rctx_stage:?}" "${_rctx_previous:?}"
+    echo -e "  ${red}Ошибка${reset} при публикации конфигурации Xray"
+    return 1
+}
+
 restore_backup_configs_xray() {
     latest_backup=""
 
@@ -27,22 +81,9 @@ restore_backup_configs_xray() {
     done
 
     if [ -n "$latest_backup" ]; then
-        # Копируем бэкап во временную директорию рядом с целевой и заменяем
-        # текущую конфигурацию только при успешном копировании, чтобы сбой
-        # cp -r (диск заполнен, обрыв сессии) не оставил xray_conf_dir пустой
-        restore_tmp_dir="${xray_conf_dir}.restore_tmp"
-        rm -rf "${restore_tmp_dir:?}"
-        mkdir -p "$restore_tmp_dir"
-
-        if cp -r "$latest_backup"/* "$restore_tmp_dir/"; then
-            rm -rf "${xray_conf_dir:?}"
-            mv "$restore_tmp_dir" "$xray_conf_dir"
-            echo -e "  Конфигурация Xray ${green}успешно восстановлена${reset} из: $(basename "$latest_backup")"
-        else
-            rm -rf "${restore_tmp_dir:?}"
-            echo -e "  ${red}Ошибка${reset} при восстановлении файлов"
-        fi
+        _restore_config_tree_xray "$latest_backup" "$xray_conf_dir"
     else
         echo -e "  ${red}Ошибка:${reset} Резервные копии не найдены в $backups_dir"
+        return 1
     fi
 }
