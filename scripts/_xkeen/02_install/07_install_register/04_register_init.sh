@@ -2064,11 +2064,28 @@ get_exclude_ip6() {
     echo "${ipv6_eth} ${ipv6_exclude}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
 }
 
+validate_api_policy_response() {
+    [ -n "$api_policy_json" ] || return 1
+    printf '%s' "$api_policy_json" | jq -e '
+        if type == "array" then
+            all(.[]; type == "object" and (.description | type == "string"))
+        elif type == "object" and (has("status") | not) then
+            all(to_entries[]; (.value | type) == "object" and (.value.description | type) == "string")
+        else
+            false
+        end
+    ' >/dev/null 2>&1
+}
+
+should_reset_policy_mark() {
+    [ -z "$(get_policy_mark "$1")" ] && validate_api_policy_response
+}
+
 # Получение метки политики
 get_policy_mark() {
     _mark=""
     if [ -n "$api_policy_json" ] && [ -n "$1" ]; then
-        _mark=$(echo "$api_policy_json" | jq -r --arg pname "$1" '.[] | select(.description | ascii_downcase == ($pname | ascii_downcase)) | .mark // empty' 2>/dev/null)
+        _mark=$(printf '%s' "$api_policy_json" | jq -r --arg pname "$1" 'if type == "array" then .[] else .[] end | select(.description | ascii_downcase == ($pname | ascii_downcase)) | .mark // empty' 2>/dev/null)
     fi
 
     if [ -n "$_mark" ]; then
@@ -2124,20 +2141,56 @@ sync_deny_mac_ipset() {
         unset _xkeen_deny_tmp _xkeen_hotspot_json
         return 0
     fi
-    if printf '%s' "$_xkeen_hotspot_json" | jq -r '
+    if ! printf '%s' "$_xkeen_hotspot_json" | jq -e '
+        if type == "array" then true
+        elif type == "object" and (.host | type) == "array" then true
+        else false
+        end
+    ' >/dev/null 2>&1; then
+        log_warning_router "Некорректный ответ hotspot API; $name_ipset_deny_mac оставлен без изменений"
+        ipset destroy "$_xkeen_deny_tmp" 2>/dev/null
+        unset _xkeen_deny_tmp _xkeen_hotspot_json
+        return 1
+    fi
+
+    _xkeen_deny_entries=$(mktemp 2>/dev/null) || {
+        ipset destroy "$_xkeen_deny_tmp" 2>/dev/null
+        unset _xkeen_deny_tmp _xkeen_hotspot_json
+        return 1
+    }
+    _xkeen_deny_commands="${_xkeen_deny_entries}.restore"
+    if ! printf '%s' "$_xkeen_hotspot_json" | jq -r '
         ((.host // . // []) |
          (if type == "array" then .[] else . end)) |
         select((.access // "") == "deny" and (.mac // "") != "") |
         .mac
-    ' 2>/dev/null | tr '[:lower:]' '[:upper:]' | \
-         awk -v set="$_xkeen_deny_tmp" '/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/ {print "add " set " " $0 " -exist"}' | \
-         ipset restore -exist; then
-        ipset swap "$_xkeen_deny_tmp" "$name_ipset_deny_mac" 2>/dev/null
+    ' 2>/dev/null > "$_xkeen_deny_entries"; then
+        rm -f "$_xkeen_deny_entries" "$_xkeen_deny_commands"
+        ipset destroy "$_xkeen_deny_tmp" 2>/dev/null
+        unset _xkeen_deny_tmp _xkeen_hotspot_json _xkeen_deny_entries _xkeen_deny_commands
+        return 1
+    fi
+    tr '[:lower:]' '[:upper:]' < "$_xkeen_deny_entries" | \
+        awk -v set="$_xkeen_deny_tmp" '/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/ {print "add " set " " $0 " -exist"}' > "$_xkeen_deny_commands" || {
+            rm -f "$_xkeen_deny_entries" "$_xkeen_deny_commands"
+            ipset destroy "$_xkeen_deny_tmp" 2>/dev/null
+            unset _xkeen_deny_tmp _xkeen_hotspot_json _xkeen_deny_entries _xkeen_deny_commands
+            return 1
+        }
+    _xkeen_deny_rc=1
+    if ipset restore -exist < "$_xkeen_deny_commands"; then
+        if ipset swap "$_xkeen_deny_tmp" "$name_ipset_deny_mac" 2>/dev/null; then
+            _xkeen_deny_rc=0
+        else
+            log_warning_router "Не удалось заменить $name_ipset_deny_mac после hotspot API"
+        fi
     else
         log_warning_router "Не удалось восстановить $name_ipset_deny_mac из hotspot API"
     fi
     ipset destroy "$_xkeen_deny_tmp" 2>/dev/null
-    unset _xkeen_deny_tmp _xkeen_hotspot_json
+    rm -f "$_xkeen_deny_entries" "$_xkeen_deny_commands"
+    unset _xkeen_deny_tmp _xkeen_hotspot_json _xkeen_deny_entries _xkeen_deny_commands
+    return "$_xkeen_deny_rc"
 }
 
 # Получаем пользовательские политики
@@ -2435,6 +2488,16 @@ if proxy_status; then
             # Сбой curl/RCI: не затираем живой deny-MAC пустым набором.
             ipset destroy "$_tmp" 2>/dev/null
             return 0
+        fi
+        if ! printf '%s' "$_hjson" | jq -e '
+            if type == "array" then true
+            elif type == "object" and (has("status") | not) and (.host | type) == "array" then true
+            else false
+            end
+        ' >/dev/null 2>&1; then
+            logger -p warning -t XKeen "Некорректный ответ hotspot API; $name_ipset_deny_mac оставлен без изменений"
+            ipset destroy "$_tmp" 2>/dev/null
+            return 1
         fi
         if printf '%s' "$_hjson" | jq -r '
             ((.host // . // []) |
@@ -3924,8 +3987,7 @@ proxy_start() {
             _pm_tmp="${policy_mark_cache}.tmp.$$"
             (umask 077; printf '%s\n' "$policy_mark" > "$_pm_tmp") &&
                 chmod 600 "$_pm_tmp" && mv -f "$_pm_tmp" "$policy_mark_cache"
-        elif [ -n "$api_policy_json" ] && \
-             printf '%s' "$api_policy_json" | jq -e 'type == "array" or type == "object"' >/dev/null 2>&1; then
+        elif should_reset_policy_mark "$name_policy"; then
             # RCI ответил корректно, но политики xkeen в ответе нет:
             # её удалили вручную. Кеш недействителен, режим "для всех клиентов".
             if [ -e "$policy_mark_cache" ]; then

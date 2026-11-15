@@ -1,5 +1,5 @@
 #!/bin/sh
-root=/repo
+root=${ROOT:-/repo}
 file="$root/scripts/_xkeen/02_install/07_install_register/04_register_init.sh"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT INT TERM
@@ -23,7 +23,11 @@ name_ipset_deny_mac=xkeen_deny_mac
 url_server=unused
 url_hotspot=unused
 curl_api() {
-    printf '%s\n' '{"host":[{"access":"deny","mac":"aa:bb:cc:dd:ee:ff"},{"access":"permit","mac":"02:00:00:00:00:01"},{"access":"deny","mac":"invalid"}]}'
+    if [ -n "${RESPONSE:-}" ]; then
+        printf '%s\n' "$RESPONSE"
+    else
+        printf '%s\n' '{"host":[{"access":"deny","mac":"aa:bb:cc:dd:ee:ff"},{"access":"permit","mac":"02:00:00:00:00:01"},{"access":"deny","mac":"invalid"}]}'
+    fi
 }
 log_warning_router() { :; }
 logger() { :; }
@@ -33,14 +37,17 @@ ipset() {
             [ "$2" = "$name_ipset_deny_mac" ] || printf '%s\n' "$2" > "$scratch/created.$$"
             ;;
         restore) cat > "$scratch/restored.$$" ;;
+        swap) : > "$scratch/swapped.$$" ;;
     esac
     return 0
 }
 RUN
-    awk -v name="$name" '
+    close_line="}"
+    [ "$name" = "_xkeen_sync_deny_mac_ipset" ] && close_line="    }"
+    awk -v name="$name" -v close_line="$close_line" '
         $0 == name "() {" || $0 == "    " name "() {" {on=1}
+        on && $0 == close_line {print; exit}
         on {print}
-        on && ($0 == "}" || $0 == "    }") {exit}
     ' "$file" >> "$case_dir/runner.sh"
     printf '\n%s\n' "$name" >> "$case_dir/runner.sh"
     sh "$case_dir/runner.sh" "$case_dir" & first=$!
@@ -51,6 +58,12 @@ RUN
     check "$name concurrent calls use distinct staging sets" "$count" 2
     actual=$(cat "$case_dir"/restored.* | awk '{print $3}' | sort -u)
     check "$name only denied valid MAC is restored" "$actual" 'AA:BB:CC:DD:EE:FF'
+    invalid_dir="$work/${name}_invalid"
+    mkdir -p "$invalid_dir"
+    cp "$case_dir/runner.sh" "$invalid_dir/runner.sh"
+    RESPONSE='{"status":"error"}' sh "$invalid_dir/runner.sh" "$invalid_dir"
+    swaps=$(find "$invalid_dir" -name 'swapped.*' | wc -l | tr -d ' ')
+    check "$name malformed RCI does not swap the live set" "$swaps" 0
 done
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
