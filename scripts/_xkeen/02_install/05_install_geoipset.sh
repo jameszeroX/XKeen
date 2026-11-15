@@ -47,7 +47,14 @@ install_geoipset_lst() {
     # безусловна (в отличие от process_geo_file(), которая обслуживает ещё и
     # произвольные пользовательские URL)
     if _download_and_validate_loop "$url" "$tmp_file" "$expected_size" "$_validator_name" "$display_name" && verify_github_sha256 "$tmp_file" "$url"; then
-        mv -f "$tmp_file" "$dest_file"
+        if ! mv -f "$tmp_file" "$dest_file"; then
+            rm -f "$tmp_file"
+            printf "  ${red}Ошибка${reset}: не удалось установить файл %s\n" "$display_name"
+            if [ -f "$dest_file" ] || [ -L "$dest_file" ]; then
+                printf "  ${green}Оставляем старый файл${reset} %s\n\n" "$display_name"
+            fi
+            return 1
+        fi
     else
         if [ -f "$tmp_file" ]; then
             rm -f "$tmp_file"
