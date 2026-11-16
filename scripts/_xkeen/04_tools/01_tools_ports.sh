@@ -42,11 +42,41 @@ ports_conflict_check() {
     ports1=$(read_ports_file "$file1")
     ports2=$(read_ports_file "$file2")
 
-    if [ -n "$ports1" ] && [ -n "$ports2" ]; then
-        return 0
-    fi
+    [ -n "$ports1" ] && [ -n "$ports2" ] || return 1
 
-    return 1
+    printf '%s\n%s\n' "$ports1" "$ports2" | awk -F, '
+        NR == 1 {
+            left_count = split($0, left_ports, ",")
+            for (i = 1; i <= left_count; i++) {
+                n = split(left_ports[i], endpoint, ":")
+                left_start[i] = endpoint[1] + 0
+                left_end[i] = n == 2 ? endpoint[2] + 0 : left_start[i]
+                if (left_start[i] > left_end[i]) {
+                    temp = left_start[i]; left_start[i] = left_end[i]; left_end[i] = temp
+                }
+            }
+            next
+        }
+        NR == 2 {
+            right_count = split($0, right_ports, ",")
+            for (i = 1; i <= right_count; i++) {
+                n = split(right_ports[i], endpoint, ":")
+                right_start[i] = endpoint[1] + 0
+                right_end[i] = n == 2 ? endpoint[2] + 0 : right_start[i]
+                if (right_start[i] > right_end[i]) {
+                    temp = right_start[i]; right_start[i] = right_end[i]; right_end[i] = temp
+                }
+            }
+        }
+        END {
+            for (i = 1; i <= left_count; i++) {
+                for (j = 1; j <= right_count; j++) {
+                    if (left_start[i] <= right_end[j] && right_start[j] <= left_end[i]) exit 0
+                }
+            }
+            exit 1
+        }
+    '
 }
 
 # Функция нормализации портов
