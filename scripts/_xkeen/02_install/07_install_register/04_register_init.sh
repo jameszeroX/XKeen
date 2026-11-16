@@ -2915,7 +2915,8 @@ if proxy_status; then
                         ipt -A "$chain" -d "$exclude" -p udp --dport 53 $comment -j RETURN >/dev/null 2>&1
                         ;;
                     nat/Redirect)
-                        # Redirect DNS follows the existing interception path.
+                        ipt -A "$chain" -d "$exclude" -p tcp ! --dport 53 \
+                            $comment -j RETURN >/dev/null 2>&1
                         ;;
                     *)
                         ipt -A "$chain" -d "$exclude" $comment -j RETURN >/dev/null 2>&1

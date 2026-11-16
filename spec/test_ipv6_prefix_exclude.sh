@@ -173,8 +173,14 @@ case "$rules" in *'-p tcp ! --dport 53'*'-p udp --dport 53'*) got=yes ;; *) got=
 check 'Hybrid nat complements mangle for TCP and UDP DNS' "$got" yes
 
 mode_proxy=Redirect; table=nat; rules=$(run_excludes)
+case "$rules" in *'-d 2a02:2168:1234:5600::/56 -p tcp ! --dport 53'*'-j RETURN'*) got=yes ;; *) got=no ;; esac
+check 'Redirect DNS on emits a local TCP/443 bypass rule (!53)' "$got" yes
+case "$rules" in *'-d 2a02:2168:1234:5600::/56 -p tcp --dport 53'*'-j RETURN'*) got=yes ;; *) got=no ;; esac
+check 'Redirect DNS on does not exclude local TCP 53' "$got" no
+
+file_dns=false; proxy_dns=off; rules=$(run_excludes)
 case "$rules" in *'-d 2a02:2168:1234:5600::/56'*'-j RETURN'*) got=yes ;; *) got=no ;; esac
-check 'Redirect DNS on leaves local TCP/UDP 53 for redirect handling' "$got" no
+check 'Redirect DNS off fully excludes delegated local IPv6' "$got" yes
 
 mode_proxy=TProxy; table=mangle; chain=xkeen_force; rules=$(run_excludes)
 case "$rules" in *'-d 2a02:2168:1234:5600::/56'*'-j RETURN'*) got=yes ;; *) got=no ;; esac
@@ -204,9 +210,20 @@ mode_proxy=Hybrid; table=nat; rules=$(run_ipt_rules)
 case "$rules" in *'-p tcp ! --dport 53'*'-p udp --dport 53'*'-j REDIRECT'*) got=yes ;; *) got=no ;; esac
 check 'Hybrid nat preserves DNS split before REDIRECT action' "$got" yes
 mode_proxy=Redirect; table=nat; rules=$(run_ipt_rules)
-case "$rules" in *'-d 2a02:2168:1234:5600::/56'*'-j RETURN'*) got=bad ;; *) got=good ;; esac
-case "$rules" in *'-j REDIRECT --to-port 12346'*) got="$got/yes" ;; *) got="$got/no" ;; esac
-check 'Redirect leaves DNS unexcluded and applies its REDIRECT action' "$got" good/yes
+file_dns=true; proxy_dns=on
+rules=$(run_ipt_rules)
+tcp_return_line=$(printf '%s\n' "$rules" | awk '/-d 2a02:2168:1234:5600::\/56 -p tcp ! --dport 53 .* -j RETURN/ { print NR; exit }')
+redirect_line=$(printf '%s\n' "$rules" | awk '/-j REDIRECT --to-port 12346/ { print NR; exit }')
+[ -n "$tcp_return_line" ] && [ -n "$redirect_line" ] && [ "$tcp_return_line" -lt "$redirect_line" ] && got=yes || got=no
+check 'Redirect local TCP bypass precedes final REDIRECT' "$got" yes
+case "$rules" in *'-d 2a02:2168:1234:5600::/56 -p tcp ! --dport 53'*'-j REDIRECT --to-port 12346'*) got=yes ;; *) got=no ;; esac
+check 'Redirect TCP 443 bypass rule preserves TCP 53 REDIRECT' "$got" yes
+case "$rules" in *'-d 2a02:2168:1234:5600::/56 -p tcp --dport 53'*'-j RETURN'*) got=yes ;; *) got=no ;; esac
+check 'Redirect TCP 53 is not covered by local bypass RETURN' "$got" no
+
+file_dns=false; proxy_dns=off; rules=$(run_ipt_rules)
+case "$rules" in *'-d 2a02:2168:1234:5600::/56'*'-j RETURN'*) got=yes ;; *) got=no ;; esac
+check 'Redirect DNS off keeps full local-prefix RETURN' "$got" yes
 
 run_force_rules() {
     : > "$work/rules"
@@ -214,6 +231,7 @@ run_force_rules() {
     add_force_ipt_rule ip6tables "$table_tproxy" xkeen_force
     cat "$work/rules"
 }
+file_dns=true; proxy_dns=on
 mode_proxy=TProxy; table=mangle; port_dscp_force_proxy_tproxy=12347
 network_dscp_force_proxy_tproxy=udp
 rules=$(run_force_rules)
