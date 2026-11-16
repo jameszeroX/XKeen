@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-16 13:58:16 MSK)
+
+Сборка из [`2e894c0`](https://github.com/jameszeroX/XKeen/commit/2e894c0904b0e8d7cf820e1d74e149b2a5af9a20).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/594dce59074e83801cc1ca1ed44a163f2cd4b812/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`a6a8368...2e894c0`](https://github.com/jameszeroX/XKeen/compare/a6a83682e68a41aac32be05cab428ca2dc5251b6...2e894c0904b0e8d7cf820e1d74e149b2a5af9a20).
+
+###### Коммиты
+
+- fix(register): проверять установленный бинарник ([`2e894c0`](https://github.com/jameszeroX/XKeen/commit/2e894c0904b0e8d7cf820e1d74e149b2a5af9a20)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-16 09:54:27 MSK)
 
 Сборка из [`19d7eed`](https://github.com/jameszeroX/XKeen/commit/19d7eeda3ed31996a37f62ec71c944b4cb269db4).
