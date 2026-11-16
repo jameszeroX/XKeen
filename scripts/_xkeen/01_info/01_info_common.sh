@@ -376,7 +376,7 @@ get_rci_token() {
         elif (.xkeen | has("rci_token") | not) then ""
         elif (.xkeen.rci_token | type) != "string" then ""
         elif (.xkeen.rci_token | explode | all(.[];
-            (. >= 45 and . <= 57) or (. >= 65 and . <= 90) or
+            . == 43 or (. >= 45 and . <= 57) or (. >= 65 and . <= 90) or
             (. >= 97 and . <= 122) or . == 61 or . == 95 or . == 126
         )) then .xkeen.rci_token
         else error("invalid token characters") end

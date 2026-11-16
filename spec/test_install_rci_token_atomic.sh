@@ -78,5 +78,10 @@ check 'new config is created atomically' "$rc" 0
 check 'new config contains the token' "$(get_rci_token_from_config)" 'first-token'
 check 'new config is assigned private permissions' "$chmod_mode" 600
 
+printf '%s\n' '{' '  "other": {' '    "rci_token": "decoy"' '  },' '  "xkeen": {' '    "rci_token": "real+/token"' '  }' '}' > "$xkeen_config"
+token=$(get_rci_token_from_config)
+rc=$?
+check 'bootstrap parser reads only xkeen.rci_token' "$token:$rc" 'real+/token:0'
+
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

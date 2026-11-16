@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck disable=SC2154  # get_rci_token sets the global in the extracted function.
 set -u
 root=${ROOT:-/repo}
 work=$(mktemp -d) || exit 1
@@ -35,6 +36,11 @@ printf '%s\n' '{"xkeen":{"rci_token":"abc\/123"}}' > "$xkeen_config"
 _xkeen_json_clean=$(strip_json_comments "$xkeen_config")
 get_rci_token
 check 'escaped slash in JSON string is decoded' "$rci_token" 'abc/123'
+
+printf '%s\n' '{"xkeen":{"rci_token":"abc+/123="}}' > "$xkeen_config"
+_xkeen_json_clean=$(strip_json_comments "$xkeen_config")
+get_rci_token
+check 'generated token alphabet including plus is accepted' "$rci_token" 'abc+/123='
 
 printf '%s\n' '{"xkeen":{"rci_token":"abc\nX"}}' > "$xkeen_config"
 _xkeen_json_clean=$(strip_json_comments "$xkeen_config")

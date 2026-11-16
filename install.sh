@@ -242,8 +242,21 @@ extract_rci_token() {
 # Текущее значение rci_token из xkeen.json
 get_rci_token_from_config() {
     [ -f "$xkeen_config" ] || return 1
-    strip_json_comments "$xkeen_config" | \
-        sed -n 's/.*"rci_token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1
+    command -v jq >/dev/null 2>&1 || return 1
+    _grt_value=$(strip_json_comments "$xkeen_config" | jq -er '
+        if type != "object" then error("root is not an object")
+        elif (.xkeen | type) != "object" then ""
+        elif (.xkeen | has("rci_token") | not) then ""
+        elif (.xkeen.rci_token | type) != "string" then ""
+        elif (.xkeen.rci_token | explode | all(.[];
+            . == 43 or (. >= 45 and . <= 57) or (. >= 65 and . <= 90) or
+            (. >= 97 and . <= 122) or . == 61 or . == 95 or . == 126
+        )) then .xkeen.rci_token
+        else error("invalid token characters") end
+    ' 2>/dev/null) || return 1
+    [ -n "$_grt_value" ] || return 1
+    printf '%s\n' "$_grt_value"
+    unset _grt_value
 }
 
 # Записываем токен в xkeen.json:
