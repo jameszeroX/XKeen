@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-16 09:29:16 MSK)
+
+Сборка из [`4d64817`](https://github.com/jameszeroX/XKeen/commit/4d64817b151afc7b07a3cbc0d69b9b845f286eb1).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/a3d0cd79ac0ac2d1dc1801366a9fbe3000cdb1fb/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`e293cd1...4d64817`](https://github.com/jameszeroX/XKeen/compare/e293cd10e08d5895af84a0177487ab22e5f49c61...4d64817b151afc7b07a3cbc0d69b9b845f286eb1).
+
+###### Коммиты
+
+- fix(rci): разбирать токен из JSONC ([`4d64817`](https://github.com/jameszeroX/XKeen/commit/4d64817b151afc7b07a3cbc0d69b9b845f286eb1)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-16 08:58:23 MSK)
 
 Сборка из [`3c385a0`](https://github.com/jameszeroX/XKeen/commit/3c385a03bd46f97a368e01ffcea65559a5bc58af).
