@@ -244,6 +244,25 @@ update_user_geofiles() {
         return 1
     fi
 
+    if ! strip_json_comments "$xkeen_config" | jq -e '
+        if ((.xkeen? | type) != "object") then true
+        elif ((.xkeen.xray? | type) != "object") then true
+        elif (.xkeen.xray | has("geodata") | not) then true
+        else
+            (.xkeen.xray.geodata | type == "array" and all(.[];
+                type == "object"
+                and (.file | type == "string" and length > 0 and . != "." and . != ".."
+                     and (contains("/") | not) and (contains("\\") | not)
+                     and (test("[[:cntrl:]]") | not))
+                and (.url | type == "string"
+                     and test("^https?://[^/?#[:space:]]+([/?#][^[:space:]]*)?$"))
+            ))
+        end
+    ' >/dev/null 2>&1; then
+        printf "  ${red}Ошибка${reset}: Некорректная структура пользовательских geodata в ${yellow}xkeen.json${reset}\n\n"
+        return 1
+    fi
+
     local tmp_list="${geo_dir}/.geofile_list.$$"
     if ! strip_json_comments "$xkeen_config" | jq -c '.xkeen.xray.geodata[]?' > "$tmp_list" 2>/dev/null; then
         rm -f "$tmp_list"
