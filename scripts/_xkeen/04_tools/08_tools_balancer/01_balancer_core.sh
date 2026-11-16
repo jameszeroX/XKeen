@@ -132,6 +132,7 @@ sb_measure_node() {
 
     xray api rmrules -s "$sb_api_addr" "$sb_rule_tag" >/dev/null 2>&1
     if ! xray api adrules -s "$sb_api_addr" -append "$sb_rule_tmp" >/dev/null 2>&1; then
+        rm -f "$sb_rule_tmp" 2>/dev/null
         echo "0 adrules"; return 1
     fi
 
