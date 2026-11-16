@@ -1085,40 +1085,61 @@ validate_pbr_routing_mark() {
 }
 
 load_user_ipset_family() {
-    set_name="$1"
-    family="$2"
-    addr_regex="$3"
-    source_file="$4"
-    tmp="${set_name}_tmp"
+    local set_name="$1" family="$2" addr_regex="$3" source_file="$4"
+    local tmp="${1}_tmp" restore_file result=1
 
-    # Заполняем tmp; основной набор подменяется только после успешного pipeline
-    ipset create "$set_name" hash:net family "$family" -exist
-    ipset create "$tmp" hash:net family "$family" -exist
-    ipset flush "$tmp"
+    [ -f "$source_file" ] || return 1
+    restore_file=$(mktemp "${TMPDIR:-/tmp}/xkeen-ipset.XXXXXX") || return 1
 
     if sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$source_file" |
        grep -Eo "$addr_regex" |
-       awk -v s="$tmp" '{print "add "s" "$1}' | ipset restore -exist; then
-        ipset swap "$set_name" "$tmp"
+       awk -v s="$tmp" '{print "add "s" "$1}' > "$restore_file" &&
+       ipset create "$tmp" hash:net family "$family" -exist &&
+       ipset flush "$tmp" &&
+       ipset restore -exist < "$restore_file" &&
+       ipset create "$set_name" hash:net family "$family" -exist &&
+       ipset swap "$set_name" "$tmp"; then
+        result=0
     fi
-    ipset destroy "$tmp"
+
+    if ipset destroy "$tmp"; then
+        :
+    else
+        result=1
+    fi
+    rm -f "$restore_file" || result=1
+    return "$result"
 }
 
 # Функция загрузки пользовательских исключений в ipset
 load_user_ipset() {
-    [ ! -f "$file_ip_exclude" ] && return
-    [ "$iptables_supported" = "true" ] && load_user_ipset_family user_exclude inet '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' "$file_ip_exclude"
-    [ "$ip6tables_supported" = "true" ] && load_user_ipset_family user_exclude6 inet6 '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' "$file_ip_exclude"
+    local result=0
+    [ -f "$file_ip_exclude" ] || return 0
+    if [ "$iptables_supported" = "true" ] &&
+       ! load_user_ipset_family user_exclude inet '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' "$file_ip_exclude"; then
+        result=1
+    fi
+    if [ "$ip6tables_supported" = "true" ] &&
+       ! load_user_ipset_family user_exclude6 inet6 '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' "$file_ip_exclude"; then
+        result=1
+    fi
 
     # Обработка списка исключений из geo_exclude
     if [ -f "$ru_override" ]; then
-        [ "$iptables_supported" = "true" ] && load_user_ipset_family geo_override inet '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' "$ru_override"
-        [ "$ip6tables_supported" = "true" ] && load_user_ipset_family geo_override6 inet6 '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' "$ru_override"
+        if [ "$iptables_supported" = "true" ] &&
+           ! load_user_ipset_family geo_override inet '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' "$ru_override"; then
+            result=1
+        fi
+        if [ "$ip6tables_supported" = "true" ] &&
+           ! load_user_ipset_family geo_override6 inet6 '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?' "$ru_override"; then
+            result=1
+        fi
     else
         # Если файла исключений нет, создаем пустые сеты, чтобы iptables не ругался на их отсутствие
-        [ "$iptables_supported" = "true" ] && ipset create geo_override hash:net family inet -exist
-        [ "$ip6tables_supported" = "true" ] && ipset create geo_override6 hash:net family inet6 -exist
+        [ "$iptables_supported" != "true" ] || ipset create geo_override hash:net family inet -exist || result=1
+        [ "$ip6tables_supported" != "true" ] || ipset create geo_override6 hash:net family inet6 -exist || result=1
     fi
+    return "$result"
 }
 
 # Функция чтения пользовательских портов из файлов
@@ -3635,10 +3656,8 @@ monitor_fd() {
 }
 
 load_ipset() {
-    set="$1"
-    file="$2"
-    family="$3"
-    tmp="${set}_tmp"
+    local set="$1" file="$2" family="$3"
+    local tmp="${1}_tmp" addr_regex result=1 restore_file
 
     # Тот же паттерн, что и в load_user_ipset_family
     if [ "$family" = "inet6" ]; then
@@ -3647,17 +3666,28 @@ load_ipset() {
         addr_regex='([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?'
     fi
 
-    # Заполняем tmp; основной набор подменяется только после успешного restore
-    ipset create "$set" hash:net family "$family" -exist
-    ipset create "$tmp" hash:net family "$family" -exist
-    ipset flush "$tmp"
+    [ -f "$file" ] || return 1
+    restore_file=$(mktemp "${TMPDIR:-/tmp}/xkeen-ipset.XXXXXX") || return 1
 
-    if [ -f "$file" ] && sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file" |
+    if sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file" |
        grep -Eo "$addr_regex" |
-       awk -v s="$tmp" '{print "add "s" "$1}' | ipset restore -exist; then
-        ipset swap "$set" "$tmp"
+       awk -v s="$tmp" '{print "add "s" "$1}' > "$restore_file" &&
+       [ -s "$restore_file" ] &&
+       ipset create "$tmp" hash:net family "$family" -exist &&
+       ipset flush "$tmp" &&
+       ipset restore -exist < "$restore_file" &&
+       ipset create "$set" hash:net family "$family" -exist &&
+       ipset swap "$set" "$tmp"; then
+        result=0
     fi
-    ipset destroy "$tmp"
+
+    if ipset destroy "$tmp"; then
+        :
+    else
+        result=1
+    fi
+    rm -f "$restore_file" || result=1
+    return "$result"
 }
 
 cleanup_fd_monitor() {
@@ -4174,9 +4204,17 @@ proxy_start() {
                     fi
                     # Последовательно: параллельный ipset restore больших RU-списков
                     # сразу после fork mihomo даёт пик RAM / OOM на слабых роутерах.
-                    [ "$iptables_supported" = "true" ] && [ -f "$ru_exclude_ipv4" ] && load_ipset geo_exclude "$ru_exclude_ipv4" inet
-                    [ "$ip6tables_supported" = "true" ] && [ -f "$ru_exclude_ipv6" ] && load_ipset geo_exclude6 "$ru_exclude_ipv6" inet6
-                    load_user_ipset
+                    if [ "$iptables_supported" = "true" ] && [ -f "$ru_exclude_ipv4" ] &&
+                       ! load_ipset geo_exclude "$ru_exclude_ipv4" inet; then
+                        log_error_router "Не удалось обновить IPv4-набор GeoIPSET; сохранено предыдущее состояние"
+                    fi
+                    if [ "$ip6tables_supported" = "true" ] && [ -f "$ru_exclude_ipv6" ] &&
+                       ! load_ipset geo_exclude6 "$ru_exclude_ipv6" inet6; then
+                        log_error_router "Не удалось обновить IPv6-набор GeoIPSET; сохранено предыдущее состояние"
+                    fi
+                    if ! load_user_ipset; then
+                        log_error_router "Не удалось полностью обновить наборы пользовательских исключений"
+                    fi
                     keep_killswitch="off"
                     disable_killswitch
                     echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${light_blue}${mode_proxy}${reset}"
