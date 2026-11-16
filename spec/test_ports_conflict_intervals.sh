@@ -19,6 +19,7 @@ extract() {
     awk -v name="$1" '$0 == name "() {" { on=1 } on { print } on && /^}/ { exit }' "$root/scripts/_xkeen/04_tools/01_tools_ports.sh"
 }
 eval "$(extract read_ports_file)"
+eval "$(extract normalize_ports)"
 eval "$(extract ports_conflict_check)"
 
 file1="$work/ports1"

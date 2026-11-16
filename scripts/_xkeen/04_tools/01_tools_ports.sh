@@ -4,14 +4,8 @@ read_ports_file() {
 
     [ -f "$file" ] || return
 
-    sed 's/\r$//' "$file" | \
-    sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | \
-    grep -v '^#' | \
-    grep -v '^$' | \
-    sed 's/-/:/g' | \
-    grep -E '^[0-9]+(:[0-9]+)?$' | \
-    tr '\n' ',' | \
-    sed 's/,$//'
+    raw_ports=$(sed -e 's/\r$//' -e 's/#.*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d' "$file" | tr '\n' ',')
+    normalize_ports "$raw_ports"
 }
 
 # Функция записи портов в файлы
