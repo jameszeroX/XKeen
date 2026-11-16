@@ -4,7 +4,7 @@ register_cron_initd() {
     opkg list-installed 2>/dev/null | grep -q "^cron " && return
 
     # Определение переменных
-    required_script_version="0.6"
+    required_script_version="0.7"
 
     # Получение текущей версии скрипта
     if [ -e "${initd_cron}" ]; then
@@ -15,7 +15,7 @@ register_cron_initd() {
     script_content='#!/bin/sh
 
 # Информация о службе: Запуск / Остановка Cron
-# version="0.6"
+# version="0.7"
 
 green="\\033[32m"
 red="\\033[31m"
@@ -38,8 +38,15 @@ start() {
     if cron_status; then
         printf "  Cron ${yellow}уже запущен${reset}\\n"
     else
-        $cron_initd -L /dev/null
-        printf "  Cron ${green}запущен${reset}\\n"
+        if $cron_initd -L /dev/null; then
+            sleep 1
+            if cron_status; then
+                printf "  Cron ${green}запущен${reset}\\n"
+                return 0
+            fi
+        fi
+        printf "  Cron ${red}не удалось запустить${reset}\\n" >&2
+        return 1
     fi
 }
 
@@ -57,8 +64,12 @@ stop() {
 restart() {
     stop > /dev/null 2>&1
     sleep 1
-    start > /dev/null 2>&1
+    if ! start > /dev/null 2>&1; then
+        printf "  Cron ${red}не удалось перезапустить${reset}\\n" >&2
+        return 1
+    fi
     printf "  Cron ${green}перезапущен${reset}\\n"
+    return 0
 }
 
 # Обработка аргументов командной строки
