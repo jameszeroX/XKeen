@@ -10,6 +10,12 @@ toggle_param() {
         return 1
     fi
 
+    param_count=$(awk -v param="$param" '$0 ~ "^[[:space:]]*" param "=" { count++ } END { print count + 0 }' "$initd_file")
+    if [ "$param_count" -ne 1 ]; then
+        echo -e "  ${red}Ошибка${reset}: параметр $param отсутствует или указан несколько раз"
+        return 1
+    fi
+
     current_state=$(grep -m 1 -E "^[[:space:]]*$param=" "$initd_file" | cut -d'=' -f2 | tr -d '"[:space:]')
 
     if [ "$force_state" = "on" ] || [ "$force_state" = "off" ]; then
@@ -66,15 +72,26 @@ toggle_param() {
         done
     fi
 
-    if awk -v param="$param" -v value="$desired_state" '
+    if ! awk -v param="$param" -v value="$desired_state" '
         !found && $0 ~ "^[[:space:]]*" param "=" {
             sub(/"[^"]*"/, "\"" value "\"")
             found=1
         }
         {print}
-    ' "$initd_file" > "$initd_file.tmp" && mv "$initd_file.tmp" "$initd_file"; then
+    ' "$initd_file" > "$initd_file.tmp"; then
+        rm -f "$initd_file.tmp"
+        echo
+        echo -e "  ${red}Ошибка${reset} при подготовке параметра $param"
+        return 1
+    fi
+    if ! mv "$initd_file.tmp" "$initd_file"; then
+        rm -f "$initd_file.tmp"
+        echo
+        echo -e "  ${red}Ошибка${reset} при изменении параметра $param"
+        return 1
+    fi
 
-        [ "$bypass_autostart_msg" = "yes" ] && return 0
+    [ "$bypass_autostart_msg" = "yes" ] && return 0
 
         if [ "$desired_state" = "on" ]; then
             echo -e "  Новое состояние ${description} ${green}включено${reset}"
@@ -90,12 +107,7 @@ toggle_param() {
             echo -e "  ${yellow}Перезапустите XKeen для применения изменений${reset}"
         fi
 
-        add_chmod_init
-    else
-        echo
-        echo -e "  ${red}Ошибка${reset} при изменении параметра $param"
-        return 1
-    fi
+    add_chmod_init
 }
 
 choice_menu() {
