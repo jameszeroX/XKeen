@@ -4062,16 +4062,41 @@ disable_killswitch() {
     _acquire_nf_lock
     _dk_rc=$?
     [ "$_dk_rc" -eq 1 ] && return 1
+    local _dk_failed=0 _dk_rules _dk_chain="${name_chain}_killswitch"
     for _dk_family in iptables ip6tables; do
         if [ "$_dk_family" = "iptables" ] && [ "$iptables_supported" != "true" ]; then continue; fi
         if [ "$_dk_family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ]; then continue; fi
-        "$_dk_family" -w -t mangle -nL "${name_chain}_killswitch" >/dev/null 2>&1 || continue
-        while "$_dk_family" -w -t mangle -D PREROUTING $comment -j "${name_chain}_killswitch" >/dev/null 2>&1; do :; done
-        "$_dk_family" -w -t mangle -F "${name_chain}_killswitch" >/dev/null 2>&1
-        "$_dk_family" -w -t mangle -X "${name_chain}_killswitch" >/dev/null 2>&1
+        "$_dk_family" -w -t mangle -nL "$_dk_chain" >/dev/null 2>&1 || continue
+
+        while "$_dk_family" -w -t mangle -D PREROUTING $comment -j "$_dk_chain" >/dev/null 2>&1; do :; done
+        _dk_rules=$("$_dk_family" -w -t mangle -S PREROUTING 2>/dev/null) || {
+            _dk_failed=1
+            log_error_router "Не удалось проверить jump kill-switch в $_dk_family"
+            continue
+        }
+        if printf '%s\n' "$_dk_rules" | grep -Fq -- "-j $_dk_chain"; then
+            _dk_failed=1
+            log_error_router "Не удалось удалить jump kill-switch в $_dk_family"
+            continue
+        fi
+
+        if ! "$_dk_family" -w -t mangle -F "$_dk_chain" >/dev/null 2>&1; then
+            _dk_failed=1
+            log_error_router "Не удалось очистить цепочку $_dk_chain в $_dk_family"
+            continue
+        fi
+        if ! "$_dk_family" -w -t mangle -X "$_dk_chain" >/dev/null 2>&1; then
+            _dk_failed=1
+            log_error_router "Не удалось удалить цепочку $_dk_chain в $_dk_family"
+            continue
+        fi
+        if "$_dk_family" -w -t mangle -nL "$_dk_chain" >/dev/null 2>&1; then
+            _dk_failed=1
+            log_error_router "Цепочка $_dk_chain всё ещё существует в $_dk_family"
+        fi
     done
-    [ "$_dk_rc" -ne 2 ] && _release_nf_lock
-    return 0
+    [ "$_dk_rc" -eq 2 ] || _release_nf_lock || _dk_failed=1
+    return "$_dk_failed"
 }
 
 # Очистка при аварийной остановке прокси-клиента
@@ -4328,8 +4353,11 @@ proxy_start() {
                         log_error_router "Не удалось полностью обновить наборы пользовательских исключений"
                     fi
                     keep_killswitch="off"
-                    disable_killswitch
-                    echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${light_blue}${mode_proxy}${reset}"
+                    if disable_killswitch; then
+                        echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${light_blue}${mode_proxy}${reset}"
+                    else
+                        echo -e "  Прокси-клиент запущен, но не удалось подтвердить отключение Kill-switch; часть трафика может оставаться заблокированной" >&2
+                    fi
                     (
                         # Даём ядру прокси время полностью инициализироваться
                         # Это защищает от ситуаций, когда xray/mihomo
