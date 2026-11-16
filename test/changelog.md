@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-16 08:34:06 MSK)
+
+Сборка из [`cce3173`](https://github.com/jameszeroX/XKeen/commit/cce317373d09c97509c9acae6de5e2ce68aea4d5).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/866fb4e29ddb2d9f4b32a6a6f45db223cc9ede69/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`7bda1c9...cce3173`](https://github.com/jameszeroX/XKeen/compare/7bda1c94c4afb1c360560ce35980960670f3f4d3...cce317373d09c97509c9acae6de5e2ce68aea4d5).
+
+###### Коммиты
+
+- fix(diagnostics): исправить маскирование и выбор PID ([`cce3173`](https://github.com/jameszeroX/XKeen/commit/cce317373d09c97509c9acae6de5e2ce68aea4d5)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-16 08:32:25 MSK)
 
 Сборка из [`604706e`](https://github.com/jameszeroX/XKeen/commit/604706e3a20db7c484928a2266057dd5548ce312).
