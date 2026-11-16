@@ -1,6 +1,7 @@
 # Определение статуса для задач cron
 get_existing_cron_time() {
-    crontab -l 2>/dev/null | grep 'xkeen -ug' | head -n1 | awk '{print $1,$2,$3,$4,$5}'
+    crontab -l 2>/dev/null | awk -v exe="$install_dir/xkeen" \
+        'NF >= 7 && $6 == exe && $7 == "-ug" { print $1,$2,$3,$4,$5; exit }'
 }
 
 format_cron_time() {
