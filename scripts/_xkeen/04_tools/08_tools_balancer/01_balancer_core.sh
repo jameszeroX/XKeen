@@ -148,7 +148,10 @@ sb_measure_node() {
         "$sb_test_url" 2>/dev/null)
     size="${1:-0}"; time="${2:-0}"; code="${3:-000}"
 
-    xray api rmrules -s "$sb_api_addr" "$sb_rule_tag" >/dev/null 2>&1
+    if ! xray api rmrules -s "$sb_api_addr" "$sb_rule_tag" >/dev/null 2>&1; then
+        rm -f "$sb_rule_tmp" 2>/dev/null
+        echo "0 rmrules"; return 2
+    fi
     rm -f "$sb_rule_tmp" 2>/dev/null
 
     # curl при таймауте (max_time) выходит с ошибкой, но код и объём уже отдал:
@@ -269,13 +272,19 @@ sb_tick_locked() {
     best=""; best_speed=0
     current=$(sb_current_target); current_speed=0
 
-    local r code
+    local r code measure_rc
     # построчный перебор: тег может содержать пробелы (см. sb_node_list).
     # </dev/null у замера — чтобы команды внутри не съели stdin-heredoc списка.
     while IFS= read -r n; do
         [ -n "$n" ] || continue
         r=$(sb_measure_node "$n" </dev/null)
+        measure_rc=$?
         s=${r%% *}; code=${r#* }
+        if [ "$measure_rc" -eq 2 ]; then
+            sb_log "не удалось удалить временное routing-правило после замера $n — остальные замеры остановлены"
+            sb_log_trim
+            return 1
+        fi
         if [ "$s" -gt 0 ] 2>/dev/null; then
             sb_log "замер $n: $s КБ/с"
         else
