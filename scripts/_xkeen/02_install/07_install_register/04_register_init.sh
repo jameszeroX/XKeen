@@ -3609,6 +3609,9 @@ SCHEDULE_EOL
 clean_firewall() {
     _acquire_nf_lock
     _cf_nf_rc=$?
+    # Re-entrant calls from the lock owner are safe; never clean without
+    # either acquiring the lock or confirming that this PID already owns it.
+    [ "$_cf_nf_rc" -eq 1 ] && return 1
 
     # Атомарно гасим хук: truncate live mid-renew больше не оставляем.
     if [ -f "$file_netfilter_hook" ] || [ -e "$file_netfilter_hook" ]; then
@@ -3975,13 +3978,9 @@ _acquire_nf_lock() {
         _lock_try=$((_lock_try + 1))
         usleep 100000 2>/dev/null || sleep 1
     done
-    # Stop/emergency важнее застрявшего хука: забираем замок силой.
-    rm -rf "$_xkeen_nf_lock" 2>/dev/null
-    if mkdir "$_xkeen_nf_lock" 2>/dev/null; then
-        _xkeen_lock_owned=1
-        printf '%s' "$$" > "$_xkeen_nf_lock/pid"
-        return 0
-    fi
+    # The PID may still own the lock while applying netfilter rules. Never
+    # remove an unverified/live lock after timeout; callers must leave state
+    # untouched and report the busy lock.
     return 1
 }
 
@@ -4008,7 +4007,9 @@ enable_killswitch() {
         return 1
     }
 
-    _acquire_nf_lock || return 1
+    _acquire_nf_lock
+    _ks_lock_rc=$?
+    [ "$_ks_lock_rc" -eq 1 ] && return 1
     _ks_failed=0
     for _ks_family in iptables ip6tables; do
         if [ "$_ks_family" = "iptables" ] && [ "$iptables_supported" != "true" ]; then continue; fi
@@ -4060,6 +4061,7 @@ _ks_load_marks_from_hook() {
 disable_killswitch() {
     _acquire_nf_lock
     _dk_rc=$?
+    [ "$_dk_rc" -eq 1 ] && return 1
     for _dk_family in iptables ip6tables; do
         if [ "$_dk_family" = "iptables" ] && [ "$iptables_supported" != "true" ]; then continue; fi
         if [ "$_dk_family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ]; then continue; fi
