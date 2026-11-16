@@ -21,11 +21,15 @@ extract() {
 }
 eval "$(extract load_user_ipset_family "$root/scripts/_xkeen/02_install/07_install_register/04_register_init.sh")"
 eval "$(extract load_user_ipset "$root/scripts/_xkeen/02_install/07_install_register/04_register_init.sh")"
+eval "$(extract _acquire_geoipset_lock "$root/scripts/_xkeen/02_install/07_install_register/04_register_init.sh")"
+eval "$(extract _release_geoipset_lock "$root/scripts/_xkeen/02_install/07_install_register/04_register_init.sh")"
 eval "$(extract load_ipset "$root/scripts/_xkeen/02_install/07_install_register/04_register_init.sh")"
 
 state_dir="$work/ipset"
 fixture="$work/ips.lst"
-mkdir -p "$state_dir"
+xkeen_rundir="$work/run"
+mkdir -p "$state_dir" "$xkeen_rundir"
+usleep() { return 0; }
 fail_create_name=''
 fail_flush_name=''
 fail_restore=false

@@ -19,6 +19,8 @@ extract() {
     awk "/^$1\\(\\) \\{/,/^\\}/" "$2"
 }
 eval "$(extract load_geoipset /repo/scripts/_xkeen/02_install/05_install_geoipset.sh)"
+eval "$(extract _acquire_geoipset_lock /repo/scripts/_xkeen/02_install/07_install_register/04_register_init.sh)"
+eval "$(extract _release_geoipset_lock /repo/scripts/_xkeen/02_install/07_install_register/04_register_init.sh)"
 eval "$(extract load_ipset /repo/scripts/_xkeen/02_install/07_install_register/04_register_init.sh)"
 eval "$(extract load_user_ipset_family /repo/scripts/_xkeen/02_install/07_install_register/04_register_init.sh)"
 
@@ -46,6 +48,9 @@ rundir="$(mktemp -d)"
 _xkeen_secure_rundir() {
     printf '%s' "$rundir"
 }
+# Shared runtime lock directory consumed by the extracted load_ipset function.
+# shellcheck disable=SC2034
+xkeen_rundir="$rundir"
 
 # Заглушка ipset: реальный бинарь недоступен и не нужен — проверяется только
 # текстовый пайплайн санитизации, а не поведение ipset restore/swap/destroy.
