@@ -52,10 +52,10 @@ check 'cron failure removes any partial schedule' "$cron_state" absent
 install_rc=0
 tick_rc=7
 sb_enable > "$work/tick-failure.log" 2>&1; rc=$?
-check 'first measurement failure is reported' "$rc" 1
+check 'scheduled activation succeeds despite first measurement error' "$rc" 0
 check 'failed first measurement keeps scheduled activation' "$sb_enabled" true
 check 'cron remains installed after measurement failure' "$cron_state" installed
-check 'first measurement failure is explicit' "$(grep -ci 'первый замер' "$work/tick-failure.log")" 1
+check 'first measurement failure is explicit' "$(grep -c 'завершился ошибкой' "$work/tick-failure.log")" 1
 
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

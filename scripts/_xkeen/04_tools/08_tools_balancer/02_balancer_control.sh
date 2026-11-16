@@ -423,11 +423,12 @@ sb_enable() {
     echo -e "  ${green}✔${reset} Балансировка по скорости включена (замер каждые ${yellow}$sb_interval${reset} мин)."
     echo -e "  Первый замер выполняется сейчас..."
     speed_balancer_settings
-    if ! sb_tick; then
-        echo -e "  ${red}✗${reset} Балансировка включена, но первый замер завершился ошибкой; повтор будет по расписанию."
-        return 1
+    if sb_tick; then
+        echo -e "  Готово. Текущая нода: ${yellow}$(sb_current_target)${reset}"
+    else
+        echo -e "  ${red}✗${reset} Первый замер завершился ошибкой; балансировка включена, повтор будет по расписанию."
     fi
-    echo -e "  Готово. Текущая нода: ${yellow}$(sb_current_target)${reset}"
+    return 0
 }
 
 sb_disable() {

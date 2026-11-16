@@ -501,7 +501,7 @@ cat > "$xkeen_config" <<'JSON'
 JSON
 cp "$xkeen_config" "$WORK/orig_bad.json"
 sb_write_setting enabled true >/dev/null 2>&1; check "битая policy: rc=1" "$?" "1"
-check "битая policy: sb НЕ добавлен"      "$(rjq '.xkeen.xray.speed_balancer.enabled // "нет"')" "нет"
+check "битая policy: sb НЕ добавлен"      "$(rjq '.xkeen.xray.speed_balancer.enabled // "missing"')" "missing"
 check "битая policy: файл не изменён"     "$(cmp -s "$xkeen_config" "$WORK/orig_bad.json" && echo same || echo diff)" "same"
 
 # === формат записанного блока: по ключу на строку, с отступом по месту вставки ===
