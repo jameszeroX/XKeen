@@ -253,6 +253,7 @@ update_user_geofiles() {
     fi
 
     local entry file url update_flag
+    local failed_files=''
 
     while IFS= read -r entry; do
         file=$(printf '%s' "$entry" | jq -r '.file // empty')
@@ -269,8 +270,15 @@ update_user_geofiles() {
             update_flag="false"
         fi
 
-        process_geo_file "$url" "$file" "$file" "$update_flag"
+        if ! process_geo_file "$url" "$file" "$file" "$update_flag"; then
+            failed_files="${failed_files}${failed_files:+, }${file}"
+        fi
     done < "$tmp_list"
 
     rm -f "$tmp_list"
+    if [ -n "$failed_files" ]; then
+        printf "  ${red}Ошибка${reset}: не удалось обновить пользовательские geofile: %s\n\n" "$failed_files"
+        return 1
+    fi
+    return 0
 }
