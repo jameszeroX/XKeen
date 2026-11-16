@@ -21,10 +21,17 @@ write_ports_file() {
 
     tmpfile="${file}.tmp.$$"
 
-    echo "# XKeen ports list" > "$tmpfile"
-    echo "$ports" | tr ',' '\n' >> "$tmpfile"
+    if ! printf '%s\n' "# XKeen ports list" > "$tmpfile" ||
+        ! printf '%s\n' "$ports" | tr ',' '\n' >> "$tmpfile"; then
+        rm -f "$tmpfile"
+        return 1
+    fi
 
-    mv "$tmpfile" "$file"
+    if ! mv -f "$tmpfile" "$file"; then
+        rm -f "$tmpfile"
+        return 1
+    fi
+    return 0
 }
 
 # Функция проверки конфликта портов
@@ -186,7 +193,10 @@ add_ports_donor() {
     current_ports=$(normalize_ports "$current_ports")
     all_ports=$(merge_ports_lists "$current_ports" "$new_ports")
     all_ports=$(ensure_web_ports "$all_ports")
-    write_ports_file "$file_port_proxying" "$all_ports"
+    if ! write_ports_file "$file_port_proxying" "$all_ports"; then
+        echo -e "  ${red}Ошибка${reset}: не удалось сохранить список портов проксирования"
+        return 1
+    fi
 
     echo -e "  ${green}Порты проксирования обновлены${reset}"
 }
@@ -218,7 +228,10 @@ del_ports_donor() {
     # Запрос подтверждения перед удалением указанных портов
     if confirm_deletion "proxying" "$ports_to_del"; then
         new_ports=$(remove_ports_from_list "$current_ports" "$ports_to_del")
-        write_ports_file "$file_port_proxying" "$new_ports"
+        if ! write_ports_file "$file_port_proxying" "$new_ports"; then
+            echo -e "  ${red}Ошибка${reset}: не удалось сохранить список портов проксирования"
+            return 1
+        fi
         echo -e "  ${green}Порты удалены${reset}"
     fi
 }
@@ -239,7 +252,10 @@ add_ports_exclude() {
     current_ports=$(read_ports_file "$file_port_exclude")
     current_ports=$(normalize_ports "$current_ports")
     all_ports=$(merge_ports_lists "$current_ports" "$new_ports")
-    write_ports_file "$file_port_exclude" "$all_ports"
+    if ! write_ports_file "$file_port_exclude" "$all_ports"; then
+        echo -e "  ${red}Ошибка${reset}: не удалось сохранить список исключённых портов"
+        return 1
+    fi
 
     echo -e "  ${green}Порты исключения обновлены${reset}"
 }
@@ -271,7 +287,10 @@ del_ports_exclude() {
     # Запрос подтверждения перед удалением указанных портов
     if confirm_deletion "exclude" "$ports_to_del"; then
         new_ports=$(remove_ports_from_list "$current_ports" "$ports_to_del")
-        write_ports_file "$file_port_exclude" "$new_ports"
+        if ! write_ports_file "$file_port_exclude" "$new_ports"; then
+            echo -e "  ${red}Ошибка${reset}: не удалось сохранить список исключённых портов"
+            return 1
+        fi
         echo -e "  ${green}Порты исключения удалены${reset}"
     fi
 }
