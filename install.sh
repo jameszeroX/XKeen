@@ -228,6 +228,11 @@ is_firmware_52_or_newer() {
     printf '%s\n' "$1" | awk -F. '{ exit !(($1 + 0 > 5) || ($1 + 0 == 5 && $2 + 0 >= 2)) }'
 }
 
+# Read user input without treating EOF as an empty line/default selection.
+read_install_input() {
+    IFS= read -r "$1"
+}
+
 # Берём значение токена из вывода генерации
 extract_rci_token() {
     printf '%s\n' "$1" | awk '
@@ -522,7 +527,10 @@ if [ -z "$VERSION_TYPE" ]; then
         printf "  3) Предыдущую версию (${light_blue}Legacy${reset})\n\n"
         printf "  0) Отмена\n\n"
         printf "  Выберите пункт меню [по умолчанию 1]: "
-        read -r version_choice
+        if ! read_install_input version_choice; then
+            printf "\n  ${red}Ошибка${reset}: ввод закрыт, установка отменена.\n"
+            exit 1
+        fi
 
         # Если пользователь просто нажал Enter, выбираем 1
         [ -z "$version_choice" ] && version_choice=1
@@ -554,7 +562,10 @@ if [ -z "$VERSION_TYPE" ]; then
                         printf "  Продолжайте только если уверены в том, что делаете\n\n"
                     fi
                     printf "  Введите интересующую версию XKeen (например, ${light_blue}1.1.3.9${reset} или ${light_blue}0${reset} для выхода): "
-                    read -r legacy_version
+                    if ! read_install_input legacy_version; then
+                        printf "\n  ${red}Ошибка${reset}: ввод закрыт, установка отменена.\n"
+                        exit 1
+                    fi
 
                     if [ -z "$legacy_version" ]; then
                         printf "  ${red}Ошибка${reset}: версия не может быть пустой.\n\n"
