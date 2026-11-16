@@ -2056,16 +2056,26 @@ get_exclude_ip4() {
 
 # Получение исключений IPv6.
 get_exclude_ip6() {
+    ipv6_local_prefixes=""
+    ipv6_exclude_static=""
+    ipv6_exclude_ip6=""
     [ "$ip6tables_supported" != "true" ] && return
 
     # Получаем провайдерский IPv6
     ipv6_eth=$(ip -o -6 route get 2a02:6b8::feed:0ff 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
     [ -n "$ipv6_eth" ] && ipv6_eth="${ipv6_eth}/128"
 
-    ipv6_lan_prefixes=$(curl --noproxy '*' --connect-timeout 1 --max-time 2 -fsS \
-        'http://localhost:79/rci/show/ipv6/prefixes/' 2>/dev/null |
+    # RCI may mark a ULA prefix global=true. The static fd00::/8 exclusion
+    # keeps the established ULA behavior; only active global-unicast ranges
+    # with a delegatable prefix length are dynamic local exclusions.
+    ipv6_local_prefixes=$(curl_api "${url_server}/rci/show/ipv6/prefixes/" 2>/dev/null |
         jq -r 'if type == "object" and (.prefix | type) == "array" then
-            .prefix[]? | select(type == "object" and .global == true and (.prefix | type) == "string") | .prefix
+            .prefix[]? |
+            select(type == "object" and .global == true and
+                (.prefix | type) == "string" and
+                ((."valid-lifetime" == "infinite") or
+                 ((."valid-lifetime" | tostring) | test("^[1-9][0-9]*$")))) |
+            .prefix
         else empty end' 2>/dev/null | awk -F/ '
         function valid_group(s) {
             return length(s) > 0 && length(s) <= 4 && s ~ /^[0-9a-fA-F]+$/
@@ -2089,11 +2099,22 @@ get_exclude_ip6() {
             for (i = 1; i <= n; i++) if (!valid_group(p[i])) return 0
             return 1
         }
-        NF == 2 && $2 ~ /^[0-9]+$/ && $2 > 0 && $2 <= 128 && valid_address($1) { print $0 }
+        NF == 2 && $2 ~ /^[0-9]+$/ && $2 >= 48 && $2 <= 64 &&
+            substr(tolower($1), 1, 1) ~ /^[23]$/ && valid_address($1) { print $0 }
+        ' | awk -v static="${ipv6_eth} ${ipv6_exclude}" '
+            BEGIN {
+                n = split(static, items, /[[:space:]]+/)
+                for (i = 1; i <= n; i++) if (items[i] != "") seen[items[i]] = 1
+            }
+            !seen[$0]++ { print $0 }
         ')
 
-    printf '%s\n' "${ipv6_eth} ${ipv6_lan_prefixes} ${ipv6_exclude}" |
-        tr ' ' '\n' | awk 'NF && !seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
+    ipv6_exclude_static=$(printf '%s\n' "${ipv6_eth} ${ipv6_exclude}" |
+        tr ' ' '\n' | awk 'NF && !seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//')
+
+    ipv6_exclude_ip6=$(printf '%s\n' "${ipv6_exclude_static} ${ipv6_local_prefixes}" |
+        tr ' ' '\n' | awk 'NF && !seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//')
+    printf '%s\n' "$ipv6_exclude_ip6"
 }
 
 # Получение метки политики
@@ -2271,7 +2292,10 @@ configure_firewall() {
     file_netfilter_hook="$_hook_tmp"
 
     # Pre-evaluate dynamic variables
-    val_exclude_ip6="$(get_exclude_ip6)"
+    get_exclude_ip6 >/dev/null
+    val_exclude_ip6="$ipv6_exclude_ip6"
+    val_exclude_ip6_static="$ipv6_exclude_static"
+    val_exclude_ip6_local="$ipv6_local_prefixes"
     val_exclude_ip4="$(get_exclude_ip4)"
 
     cat > "$file_netfilter_hook" <<'EOL'
@@ -2359,6 +2383,8 @@ EOL
     inject_var ipv6_proxy "$ipv6_proxy"
     inject_var ipv4_proxy "$ipv4_proxy"
     inject_var val_exclude_ip6 "$val_exclude_ip6"
+    inject_var val_exclude_ip6_static "$val_exclude_ip6_static"
+    inject_var val_exclude_ip6_local "$val_exclude_ip6_local"
     inject_var val_exclude_ip4 "$val_exclude_ip4"
     inject_var name_ipset_deny_mac "$name_ipset_deny_mac"
     inject_var url_server "$url_server"
@@ -2661,6 +2687,36 @@ if proxy_status; then
                         # Остальные исключения (WAN роутера, 224.0.0.0/4, 100.64.0.0/10,
                         # 255.255.255.255, IPv6 ff00::/8 и пользовательские адреса) ставятся
                         # как без перехвата DNS: без ветки *) case молча их отбрасывал.
+                        ipt -A "$chain" -d "$exclude" $comment -j RETURN >/dev/null 2>&1
+                        ;;
+                esac
+            else
+                ipt -A "$chain" -d "$exclude" $comment -j RETURN >/dev/null 2>&1
+            fi
+        done
+
+        # Delegated local prefixes are distinct from static exclusions.
+        # Keep their DNS handling aligned with fd00::/8 and fe80::/10 so
+        # DNS packets still reach the intended TProxy/Redirect interception.
+        for exclude in $local_exclude_list; do
+            if [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ] && [ "$chain" != "${name_chain}_out" ]; then
+                case "$table/$mode_proxy" in
+                    mangle/TProxy)
+                        ipt -A "$chain" -d "$exclude" -p tcp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
+                        ipt -A "$chain" -d "$exclude" -p udp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
+                        ;;
+                    mangle/Hybrid)
+                        ipt -A "$chain" -d "$exclude" -p tcp --dport 53 $comment -j RETURN >/dev/null 2>&1
+                        ipt -A "$chain" -d "$exclude" -p udp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
+                        ;;
+                    nat/Hybrid)
+                        ipt -A "$chain" -d "$exclude" -p tcp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
+                        ipt -A "$chain" -d "$exclude" -p udp --dport 53 $comment -j RETURN >/dev/null 2>&1
+                        ;;
+                    nat/Redirect)
+                        # Redirect DNS follows the existing interception path.
+                        ;;
+                    *)
                         ipt -A "$chain" -d "$exclude" $comment -j RETURN >/dev/null 2>&1
                         ;;
                 esac
@@ -3340,11 +3396,13 @@ USER_POLICIES_EOF
         [ "$family" = "iptables" ] && [ "$iptables_supported" != "true" ] && continue
 
         if [ "$family" = "ip6tables" ]; then
-            exclude_list="$val_exclude_ip6"
+            exclude_list="$val_exclude_ip6_static"
+            local_exclude_list="$val_exclude_ip6_local"
             proxy_ip="$ipv6_proxy"
             configure_route 6
         else
             exclude_list="$val_exclude_ip4"
+            local_exclude_list=""
             proxy_ip="$ipv4_proxy"
             configure_route 4
         fi
