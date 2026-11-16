@@ -37,6 +37,11 @@ chmod() {
     chmod_mode="$1"
     command chmod "$@"
 }
+cp_fail=false
+cp() {
+    [ "$cp_fail" = true ] && return 1
+    command cp "$@"
+}
 mv() {
     [ "$fail_mv" = true ] && return 1
     command mv "$@"
@@ -48,15 +53,24 @@ check 'failed atomic rename returns failure' "$rc" 1
 after=$(command cat "$xkeen_config")
 check 'failed rename preserves original config' "$after" "$original"
 
+cp_fail=true
+write_rci_token 'new-token'
+rc=$?
+check 'failed mode-preserving copy returns failure' "$rc" 1
+check 'failed mode-preserving copy preserves original' "$(command cat "$xkeen_config")" "$original"
+cp_fail=false
+
 fail_mv=false
+stat() { return 127; }
 chmod 640 "$xkeen_config"
-expected_mode=$(stat -c '%a' "$xkeen_config")
+expected_mode=$(command ls -ld "$xkeen_config" | awk '{print $1}')
 write_rci_token 'new-token'
 rc=$?
 check 'valid token update succeeds' "$rc" 0
 check 'updated token is present' "$(get_rci_token_from_config)" 'new-token'
 check 'other config values are retained' "$(command grep -c 'keep.*this setting' "$xkeen_config")" 1
-check 'original mode is retained' "$chmod_mode" "$expected_mode"
+actual_mode=$(command ls -ld "$xkeen_config" | awk '{print $1}')
+check 'original mode is retained without stat -c' "$actual_mode" "$expected_mode"
 
 original=$(command cat "$xkeen_config")
 write_rci_token 'invalid"token'
