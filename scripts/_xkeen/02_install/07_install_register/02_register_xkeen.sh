@@ -41,6 +41,31 @@ fixed_register_packages() {
 	awk 'BEGIN {RS=""; ORS="\n\n"} {gsub(/\n\n+/,"\n\n")}1' "$status_file" > "${register_dir}/tmp_status_file" && mv "${register_dir}/tmp_status_file" "$status_file"
 }
 
+create_initd_backup() {
+    local source_file="$1"
+    local backup_file="$2"
+    local base_file="$2"
+    local suffix=0
+
+    [ -f "$source_file" ] || return 0
+    mkdir -p "$backups_dir" || return 1
+
+    if [ -e "$backup_file" ]; then
+        backup_file="${base_file}.$$"
+        while [ -e "$backup_file" ]; do
+            suffix=$((suffix + 1))
+            backup_file="${base_file}.$$.${suffix}"
+        done
+    fi
+
+    cp "$source_file" "$backup_file" || {
+        rm -f "$backup_file"
+        return 1
+    }
+    [ -f "$backup_file" ] || return 1
+    printf '%s\n' "$backup_file"
+}
+
 register_xkeen_initd() {
     old_initd_file="${initd_dir}/S24xray"
     pre_initd_file="${initd_dir}/S99xkeen"
@@ -56,18 +81,30 @@ register_xkeen_initd() {
 
     if [ -f "$initd_file" ]; then
         source_main_backup="${backups_dir}/${current_datetime}_$(basename "$initd_file")"
-        cp "$initd_file" "$source_main_backup"
+        source_main_backup=$(create_initd_backup "$initd_file" "$source_main_backup") || {
+            echo "Ошибка: Не удалось сохранить предыдущий init-скрипт $initd_file" >&2
+            exit 1
+        }
     elif [ -f "$pre_initd_file" ]; then
         source_main_backup="${backups_dir}/${current_datetime}_$(basename "$pre_initd_file")"
-        cp "$pre_initd_file" "$source_main_backup"
+        source_main_backup=$(create_initd_backup "$pre_initd_file" "$source_main_backup") || {
+            echo "Ошибка: Не удалось сохранить предыдущий init-скрипт $pre_initd_file" >&2
+            exit 1
+        }
     elif [ -f "$old_initd_file" ] || [ -f "$old_start_file" ]; then
         if [ -f "$old_initd_file" ]; then
             source_main_backup="${backups_dir}/${current_datetime}_$(basename "$old_initd_file")"
-            cp "$old_initd_file" "$source_main_backup"
+            source_main_backup=$(create_initd_backup "$old_initd_file" "$source_main_backup") || {
+                echo "Ошибка: Не удалось сохранить предыдущий init-скрипт $old_initd_file" >&2
+                exit 1
+            }
         fi
         if [ -f "$old_start_file" ]; then
             source_start_backup="${backups_dir}/${current_datetime}_$(basename "$old_start_file")"
-            cp "$old_start_file" "$source_start_backup"
+            source_start_backup=$(create_initd_backup "$old_start_file" "$source_start_backup") || {
+                echo "Ошибка: Не удалось сохранить предыдущий init-скрипт $old_start_file" >&2
+                exit 1
+            }
         fi
     fi
 
