@@ -14,7 +14,7 @@ location_entware_storage() {
 
 # Информационный варнинг при установке во внутреннюю память
 preinstall_warn() {
-    if [ -n "$preinstall_warn" ]; then
+    if [ "$preinstall_warn" = "true" ]; then
         echo
         echo -e "  ${red}Внимание${reset}: Инициирована установка XKeen $entware_storage"
         echo "  Убедитесь, что на ней достаточно свободного места. Сбой при такой"
