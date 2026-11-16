@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-16 08:58:23 MSK)
+
+Сборка из [`3c385a0`](https://github.com/jameszeroX/XKeen/commit/3c385a03bd46f97a368e01ffcea65559a5bc58af).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/e293cd10e08d5895af84a0177487ab22e5f49c61/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`7a2fa74...3c385a0`](https://github.com/jameszeroX/XKeen/compare/7a2fa74b92ff509b1877f9f9840092f2d0313e50...3c385a03bd46f97a368e01ffcea65559a5bc58af).
+
+###### Коммиты
+
+- fix(installer): сохранять файлы при сбое обновления ([`3c385a0`](https://github.com/jameszeroX/XKeen/commit/3c385a03bd46f97a368e01ffcea65559a5bc58af)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-16 08:57:22 MSK)
 
 Сборка из [`8c8bbf4`](https://github.com/jameszeroX/XKeen/commit/8c8bbf4fddab856099326ea7d11395365be5d82f).
