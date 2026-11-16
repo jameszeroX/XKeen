@@ -413,12 +413,20 @@ sb_enable() {
     fi
 
     sb_write_setting enabled true || return 1
-    sb_install_cron
+    if ! sb_install_cron; then
+        echo -e "  ${red}✗${reset} Не удалось установить расписание балансировки."
+        sb_remove_cron || echo -e "  ${red}✗${reset} Не удалось удалить частично созданную задачу cron."
+        sb_write_setting enabled false || echo -e "  ${red}✗${reset} Не удалось отменить настройку балансировки."
+        return 1
+    fi
     echo
     echo -e "  ${green}✔${reset} Балансировка по скорости включена (замер каждые ${yellow}$sb_interval${reset} мин)."
     echo -e "  Первый замер выполняется сейчас..."
     speed_balancer_settings
-    sb_tick
+    if ! sb_tick; then
+        echo -e "  ${red}✗${reset} Балансировка включена, но первый замер завершился ошибкой; повтор будет по расписанию."
+        return 1
+    fi
     echo -e "  Готово. Текущая нода: ${yellow}$(sb_current_target)${reset}"
 }
 
