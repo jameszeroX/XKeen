@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-16 08:57:22 MSK)
+
+Сборка из [`8c8bbf4`](https://github.com/jameszeroX/XKeen/commit/8c8bbf4fddab856099326ea7d11395365be5d82f).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/7a2fa74b92ff509b1877f9f9840092f2d0313e50/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`6f1cd3e...8c8bbf4`](https://github.com/jameszeroX/XKeen/compare/6f1cd3e8c91c4b053d2ab082245c5aa3724a2baa...8c8bbf4fddab856099326ea7d11395365be5d82f).
+
+###### Коммиты
+
+- fix(xray): находить transport по ключу JSON ([`8c8bbf4`](https://github.com/jameszeroX/XKeen/commit/8c8bbf4fddab856099326ea7d11395365be5d82f)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-16 08:35:05 MSK)
 
 Сборка из [`b5987c0`](https://github.com/jameszeroX/XKeen/commit/b5987c0bec7225193fe809ce52434eba00f479f5).
