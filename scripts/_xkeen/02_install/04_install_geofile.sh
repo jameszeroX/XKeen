@@ -1,11 +1,28 @@
 geofiles_update_state() {
     geofile_update="true"
     [ ! -f "$xkeen_config" ] && return 0
-    local json_clean
-    json_clean=$(strip_json_comments "$xkeen_config")
     local val
-    val=$(printf '%s' "$json_clean" | sed -n 's/.*"geofile_update": *\([a-zA-Z]*\).*/\1/p' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' 2>/dev/null)
-    [ "$val" = "false" ] && geofile_update="false"
+    if ! command -v jq >/dev/null 2>&1; then
+        printf '  Предупреждение: jq не найден, geofile_update использует значение по умолчанию\n' >&2
+        return 1
+    fi
+    val=$(strip_json_comments "$xkeen_config" | jq -er '
+        if type != "object" then error("root is not an object")
+        elif (.xkeen | type) != "object" then "default"
+        elif (.xkeen | has("geofile_update") | not) then "default"
+        elif (.xkeen.geofile_update | type) == "boolean" then
+            if .xkeen.geofile_update then "true" else "false" end
+        elif .xkeen.geofile_update == null then "default"
+        else error("geofile_update must be a boolean or null") end
+    ' 2>/dev/null) || {
+        printf '  Предупреждение: некорректный geofile_update; используется значение по умолчанию\n' >&2
+        return 1
+    }
+    case "$val" in
+        false) geofile_update="false" ;;
+        true|default) ;;
+        *) return 1 ;;
+    esac
 }
 
 # Проверяет, что URL — стандартный GitHub Release asset-URL
