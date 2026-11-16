@@ -3655,9 +3655,44 @@ monitor_fd() {
     done
 }
 
+_acquire_geoipset_lock() {
+    _xkeen_geoipset_lock="$xkeen_rundir/geoipset.lock.d"
+    _xkeen_geoipset_lock_owned=""
+    _xkeen_geoipset_try=0
+    while [ "$_xkeen_geoipset_try" -lt 50 ]; do
+        if mkdir "$_xkeen_geoipset_lock" 2>/dev/null; then
+            _xkeen_geoipset_lock_owned=1
+            printf '%s' "$$" > "$_xkeen_geoipset_lock/pid" || {
+                rm -rf "$_xkeen_geoipset_lock" 2>/dev/null
+                _xkeen_geoipset_lock_owned=""
+                return 1
+            }
+            return 0
+        fi
+        _xkeen_geoipset_pid=$(cat "$_xkeen_geoipset_lock/pid" 2>/dev/null)
+        [ "$_xkeen_geoipset_pid" = "$$" ] && return 2
+        if [ -n "$_xkeen_geoipset_pid" ] && ! kill -0 "$_xkeen_geoipset_pid" 2>/dev/null; then
+            rm -rf "$_xkeen_geoipset_lock" 2>/dev/null
+            continue
+        fi
+        _xkeen_geoipset_try=$((_xkeen_geoipset_try + 1))
+        usleep 100000 2>/dev/null || sleep 1
+    done
+    return 1
+}
+
+_release_geoipset_lock() {
+    if [ "$_xkeen_geoipset_lock_owned" = "1" ]; then
+        rm -rf "$xkeen_rundir/geoipset.lock.d" 2>/dev/null || return 1
+        _xkeen_geoipset_lock_owned=""
+    fi
+    return 0
+}
+
 load_ipset() {
     local set="$1" file="$2" family="$3"
     local tmp="${1}_tmp" addr_regex result=1 restore_file
+    local lock_rc
 
     # Тот же паттерн, что и в load_user_ipset_family
     if [ "$family" = "inet6" ]; then
@@ -3668,6 +3703,13 @@ load_ipset() {
 
     [ -f "$file" ] || return 1
     restore_file=$(mktemp "${TMPDIR:-/tmp}/xkeen-ipset.XXXXXX") || return 1
+    # Share the install/cron loader lock because both writers use one staging set.
+    _acquire_geoipset_lock
+    lock_rc=$?
+    if [ "$lock_rc" -eq 1 ]; then
+        rm -f "$restore_file"
+        return 1
+    fi
 
     if sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file" |
        grep -Eo "$addr_regex" |
@@ -3687,6 +3729,9 @@ load_ipset() {
         result=1
     fi
     rm -f "$restore_file" || result=1
+    if [ "$lock_rc" -ne 2 ]; then
+        _release_geoipset_lock || result=1
+    fi
     return "$result"
 }
 
