@@ -33,7 +33,10 @@ check_health() {
     # В остальных случаях пакеты проверяет test_entware уже после репозитория.
     if ! command -v curl >/dev/null 2>&1 || ! curl --version >/dev/null 2>&1; then
         _load_packages_info
-        _ensure_installed_packages
+        if ! _ensure_installed_packages; then
+            printf "  ${red}Не удалось установить или проверить обязательные пакеты Entware${reset}\n"
+            return 1
+        fi
     fi
 
     check_binary_health busybox --help
@@ -111,7 +114,11 @@ test_entware() {
 
         opkg update >/dev/null 2>&1
         _load_packages_info
-        _ensure_installed_packages
+        if ! _ensure_installed_packages; then
+            rm -f "$tmp_file" 2>/dev/null
+            printf "  ${red}Не удалось установить или проверить обязательные пакеты Entware${reset}\n"
+            exit 1
+        fi
         rm -f "$tmp_file" 2>/dev/null
         return 0
     else

@@ -154,13 +154,19 @@ case "$1" in
             next|prev) ;;
             *)
                 _load_packages_info
-                _ensure_installed_packages
+                if ! _ensure_installed_packages; then
+                    echo "Ошибка: Не удалось подготовить обязательные пакеты Entware" >&2
+                    exit 1
+                fi
                 ;;
         esac
         ;;
     *)
         _load_packages_info
-        _ensure_installed_packages
+        if ! _ensure_installed_packages; then
+            echo "Ошибка: Не удалось подготовить обязательные пакеты Entware" >&2
+            exit 1
+        fi
         ;;
 esac
 

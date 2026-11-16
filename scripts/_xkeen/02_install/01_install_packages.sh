@@ -134,29 +134,35 @@ _repair_package() {
 # запускаются. Отсутствующие бинарники пропускаются: ошибку их установки
 # уже показал install_packages().
 _verify_installed_packages() {
+    local result=0
     for verify_pkg in curl jq iptables ipset ip-full; do
         command -v "$(_package_binary "$verify_pkg")" >/dev/null 2>&1 || continue
-        _check_package_health "$verify_pkg" || _repair_package "$verify_pkg"
+        if ! _check_package_health "$verify_pkg" && ! _repair_package "$verify_pkg"; then
+            result=1
+        fi
     done
+    return "$result"
 }
 
 # Устанавливает отсутствующие пакеты по данным _load_packages_info() и проверяет
 # работоспособность установленных. Вызывается явно из scripts/xkeen вместе с
 # _load_packages_info(). Если список установленных пакетов получить не удалось,
 # ничего не делает.
+# shellcheck disable=SC2154
 _ensure_installed_packages() {
     [ "${packages_info_ok:-0}" = "1" ] || return 0
 
-    install_packages "$info_packages_curl" "curl"
-    install_packages "$info_packages_jq" "jq"
-    install_packages "$info_packages_ip_full" "ip-full"
-    install_packages "$info_packages_iptables" "iptables"
-    install_packages "$info_packages_ipset" "ipset"
-    install_packages "$info_packages_cabundle" "ca-bundle"
-    install_packages "$info_packages_uname" "coreutils-uname"
-    install_packages "$info_packages_nohup" "coreutils-nohup"
-    install_packages "$info_packages_conntrack" "conntrack"
+    local result=0
+    install_packages "$info_packages_curl" "curl" || result=1
+    install_packages "$info_packages_jq" "jq" || result=1
+    install_packages "$info_packages_ip_full" "ip-full" || result=1
+    install_packages "$info_packages_iptables" "iptables" || result=1
+    install_packages "$info_packages_ipset" "ipset" || result=1
+    install_packages "$info_packages_cabundle" "ca-bundle" || result=1
+    install_packages "$info_packages_uname" "coreutils-uname" || result=1
+    install_packages "$info_packages_nohup" "coreutils-nohup" || result=1
+    install_packages "$info_packages_conntrack" "conntrack" || result=1
 
-    _verify_installed_packages
-    return 0
+    _verify_installed_packages || result=1
+    return "$result"
 }
