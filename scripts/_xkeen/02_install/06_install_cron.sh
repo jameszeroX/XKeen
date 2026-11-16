@@ -15,7 +15,7 @@ install_cron() {
         chmod +x "$cron_file_path"
 
         if [ -n "$cron_entry" ]; then
-            grep -v "$install_dir/xkeen -ug" "$cron_file_path" > "$cron_file_path.tmp"
+            awk -v exe="$install_dir/xkeen" 'NF < 7 || $6 != exe || $7 != "-ug"' "$cron_file_path" > "$cron_file_path.tmp"
             mv "$cron_file_path.tmp" "$cron_file_path"
             printf "%s\n" "$cron_entry" >> "$cron_file_path"
         fi
