@@ -281,7 +281,13 @@ write_rci_token() {
         fi
         _wrt_mode=600
     else
-        _wrt_mode=$(stat -c '%a' "$xkeen_config") || { rm -f "$_wrt_tmp"; return 1; }
+        # Copy the existing file first so its mode is preserved without
+        # depending on GNU stat, which is not available in every Keenetic ash.
+        if ! cp -p "$xkeen_config" "$_wrt_tmp"; then
+            rm -f "$_wrt_tmp"
+            return 1
+        fi
+        _wrt_mode=''
         if strip_json_comments "$xkeen_config" | grep -q '"rci_token"'; then
             if ! awk -v tok="$_wrt_token" '
                 !done && $0 !~ /^[ \t]*\/\// && match($0, /"rci_token"[ \t]*:[ \t]*("[^"]*"|null)/) {
@@ -325,7 +331,7 @@ write_rci_token() {
         fi
     fi
 
-    if [ ! -s "$_wrt_tmp" ] || ! chmod "$_wrt_mode" "$_wrt_tmp" || ! mv -f "$_wrt_tmp" "$xkeen_config"; then
+    if [ ! -s "$_wrt_tmp" ] || { [ -n "$_wrt_mode" ] && ! chmod "$_wrt_mode" "$_wrt_tmp"; } || ! mv -f "$_wrt_tmp" "$xkeen_config"; then
         rm -f "$_wrt_tmp"
         return 1
     fi
