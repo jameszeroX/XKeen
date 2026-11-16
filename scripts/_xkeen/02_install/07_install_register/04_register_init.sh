@@ -4353,21 +4353,31 @@ case "$1" in
         fi
         ;;
     restart)
+        _rs_fail=0
         if [ "$killswitch" = "on" ] && proxy_status && [ -f "$file_netfilter_hook" ]; then
             _rs_mode=$(grep '^mode_proxy=' "$file_netfilter_hook" | awk -F"=" '{print $2}' | tr -d "'" 2>/dev/null)
             if [ -n "$_rs_mode" ] && [ "$_rs_mode" != "Other" ]; then
                 get_ipver_support
                 _ks_load_marks_from_hook
-                enable_killswitch hold && keep_killswitch="on"
+                if enable_killswitch hold; then
+                    keep_killswitch="on"
+                else
+                    _rs_fail=1
+                    _cmd_rc=1
+                    log_error_router "Перезапуск отменён: не удалось установить hold kill-switch"
+                    printf '%s\n' "  ${red}Перезапуск отменён${reset}: действующее прокси-ядро оставлено запущенным, поскольку hold kill-switch не установлен."
+                fi
             fi
         fi
-        proxy_stop
-        proxy_start "$2"
-        _cmd_rc=$?
+        if [ "$_rs_fail" -eq 0 ]; then
+            proxy_stop
+            proxy_start "$2"
+            _cmd_rc=$?
+        fi
         if [ "$keep_killswitch" = "on" ]; then
             log_warning_router "Перезапуск не завершён: kill-switch остаётся включённым до успешного start или явного stop"
-            echo -e "  ${yellow}Kill-switch${reset} остаётся включённым: трафик политики заблокирован."
-            echo -e "  Снять блокировку: ${green}xkeen -stop${reset} (остановить) или повторить ${green}xkeen -restart${reset}"
+            printf '%s\n' "  ${yellow}Kill-switch${reset} остаётся включённым: трафик политики заблокирован."
+            printf '%s\n' "  Снять блокировку: ${green}xkeen -stop${reset} (остановить) или повторить ${green}xkeen -restart${reset}"
         fi
         ;;
     cold_start)
