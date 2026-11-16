@@ -3545,15 +3545,40 @@ clean_firewall() {
 }
 
 # Мониторинг файловых дескрипторов
+proxy_process_pids() {
+    local _proxy_pid _proc_root
+    _proc_root="${xkeen_proc_root:-/proc}"
+    if [ "$1" != "xray" ]; then
+        pidof "$1"
+        return
+    fi
+    # pidof может вернуть короткоживущий `xray api` или config-test раньше
+    # основного демона. Используем тот же argv-фильтр, что и proxy_pids().
+    for _proxy_pid in $(pidof "$1"); do
+        if tr '\000' '\n' 2>/dev/null < "$_proc_root/$_proxy_pid/cmdline" | awk '
+            NR == 2 { command = $0 }
+            /^--?(test|dump)(=true)?$/ { oneshot = 1 }
+            END {
+                running = NR == 1 || command == "run" || (command ~ /^-/ && command !~ /^--?(h|help|version)$/)
+                exit !(running && !oneshot)
+            }
+        '; then
+            printf '%s\n' "$_proxy_pid"
+        fi
+    done
+}
+
 monitor_fd() {
+    local client_pid limit current proc_root
+    proc_root="${xkeen_proc_root:-/proc}"
     while true; do
-        client_pid=$(pidof "$name_client" | awk '{print $1}')
-        if [ -n "$client_pid" ] && [ -d "/proc/$client_pid/fd" ]; then
-            limit=$(awk '/Max open files/ {print $4}' "/proc/$client_pid/limits")
+        for client_pid in $(proxy_process_pids "$name_client"); do
+          if [ -n "$client_pid" ] && [ -d "$proc_root/$client_pid/fd" ]; then
+            limit=$(awk '/Max open files/ {print $4}' "$proc_root/$client_pid/limits")
             case "$limit" in
                 ''|*[!0-9]*) ;;
                 *)
-                    set -- /proc/$client_pid/fd/*
+                    set -- "$proc_root/$client_pid"/fd/*
                     [ -e "$1" ] || set --
                     current=$#
                     if [ "$limit" -gt 0 ] && [ "$current" -gt $((limit * 90 / 100)) ]; then
@@ -3566,7 +3591,8 @@ monitor_fd() {
                     fi
                     ;;
             esac
-        fi
+          fi
+        done
         sleep "$delay_fd"
     done
 }
