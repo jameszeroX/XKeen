@@ -53,7 +53,7 @@ ports_conflict_check() {
 normalize_ports() {
     echo "$1" | tr ',' '\n' | awk '
     function valid(p) {
-        return (p ~ /^[0-9]+$/ && p >= 0 && p <= 65535)
+        return (p ~ /^[0-9]+$/ && p >= 1 && p <= 65535)
     }
 
     {
