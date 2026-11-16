@@ -130,13 +130,42 @@ _repair_package() {
     return 1
 }
 
+# Восстанавливает пакет, который числится установленным в opkg, но потерял
+# обязательный исполняемый файл. Не запускаем обычный install: для installed
+# opkg может ничего не сделать, поэтому применяется точечный force-reinstall.
+_repair_missing_package_binary() {
+    local package_name="$1"
+    local binary_name
+    binary_name=$(_package_binary "$package_name")
+
+    if ! opkg status "$package_name" 2>/dev/null | grep -q '^Status: .* installed$'; then
+        echo "  Пакет $package_name не числится установленным в opkg, бинарник $binary_name отсутствует" >&2
+        return 1
+    fi
+
+    _opkg_update_once
+    echo "  Восстанавливаю отсутствующий бинарник $binary_name из пакета $package_name" >&2
+    if ! opkg install --force-reinstall "$package_name" >/dev/null 2>&1 ||
+        ! command -v "$binary_name" >/dev/null 2>&1 ||
+        ! _check_package_health "$package_name"; then
+        echo "  Не удалось восстановить бинарник $binary_name пакета $package_name" >&2
+        return 1
+    fi
+    return 0
+}
+
 # Проверяет, что установленные пакеты не просто числятся в базе opkg, но и
-# запускаются. Отсутствующие бинарники пропускаются: ошибку их установки
-# уже показал install_packages().
+# запускаются; отсутствующий бинарник точечно восстанавливается для пакета,
+# который числится установленным.
 _verify_installed_packages() {
     local result=0
+    local binary_name
     for verify_pkg in curl jq iptables ipset ip-full; do
-        command -v "$(_package_binary "$verify_pkg")" >/dev/null 2>&1 || continue
+        binary_name=$(_package_binary "$verify_pkg")
+        if ! command -v "$binary_name" >/dev/null 2>&1; then
+            _repair_missing_package_binary "$verify_pkg" || result=1
+            continue
+        fi
         if ! _check_package_health "$verify_pkg" && ! _repair_package "$verify_pkg"; then
             result=1
         fi
