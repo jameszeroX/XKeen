@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-16 09:54:27 MSK)
+
+Сборка из [`19d7eed`](https://github.com/jameszeroX/XKeen/commit/19d7eeda3ed31996a37f62ec71c944b4cb269db4).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/a6a83682e68a41aac32be05cab428ca2dc5251b6/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`a3d0cd7...19d7eed`](https://github.com/jameszeroX/XKeen/compare/a3d0cd79ac0ac2d1dc1801366a9fbe3000cdb1fb...19d7eeda3ed31996a37f62ec71c944b4cb269db4).
+
+###### Коммиты
+
+- Add NVMe detection to Entware storage check ([`19d7eed`](https://github.com/jameszeroX/XKeen/commit/19d7eeda3ed31996a37f62ec71c944b4cb269db4)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-16 09:29:16 MSK)
 
 Сборка из [`4d64817`](https://github.com/jameszeroX/XKeen/commit/4d64817b151afc7b07a3cbc0d69b9b845f286eb1).
