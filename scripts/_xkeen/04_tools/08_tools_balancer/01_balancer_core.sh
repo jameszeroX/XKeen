@@ -126,9 +126,21 @@ sb_measure_node() {
     # без "type": "field" — поле deprecated с xray-core v1.8.10 и правилу не нужно
     # JSON собирается через jq, а не printf: тег может содержать пробелы,
     # кавычки и бэкслеши, которые в строке printf сломали бы JSON.
-    jq -nc --arg rt "$sb_rule_tag" --arg it "$sb_probe_intag" --arg ot "$node" \
+    if ! jq -nc --arg rt "$sb_rule_tag" --arg it "$sb_probe_intag" --arg ot "$node" \
         '{routing:{rules:[{ruleTag:$rt,inboundTag:[$it],outboundTag:$ot}]}}' \
-        > "$sb_rule_tmp" 2>/dev/null
+        > "$sb_rule_tmp" 2>/dev/null; then
+        rm -f "$sb_rule_tmp" 2>/dev/null
+        echo "0 prepare"; return 1
+    fi
+    if ! jq -e --arg rt "$sb_rule_tag" --arg it "$sb_probe_intag" --arg ot "$node" \
+        'type == "object" and (.routing | type == "object")
+         and (.routing.rules | type == "array" and length == 1)
+         and (.routing.rules[0] | type == "object" and .ruleTag == $rt
+              and .inboundTag == [$it] and .outboundTag == $ot)' \
+        "$sb_rule_tmp" >/dev/null 2>&1; then
+        rm -f "$sb_rule_tmp" 2>/dev/null
+        echo "0 prepare"; return 1
+    fi
 
     xray api rmrules -s "$sb_api_addr" "$sb_rule_tag" >/dev/null 2>&1
     if ! xray api adrules -s "$sb_api_addr" -append "$sb_rule_tmp" >/dev/null 2>&1; then
