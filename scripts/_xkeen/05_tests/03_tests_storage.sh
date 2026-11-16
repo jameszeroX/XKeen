@@ -63,10 +63,19 @@ check_free_space() {
         *)      return 0 ;;
     esac
 
+    local df_output
+    if ! df_output=$(df -m "$target_dir" 2>/dev/null); then
+        printf "  ${red}Ошибка${reset}: не удалось определить свободное место для установки %s\n" "$client_name" >&2
+        return 1
+    fi
     local free_space
-    free_space=$(df -m "$target_dir" | awk 'NR==2 {print $4}')
-
-    [ -z "$free_space" ] && return 0
+    free_space=$(printf '%s\n' "$df_output" | awk 'NR==2 {print $4}')
+    case "$free_space" in
+        ''|*[!0-9]*)
+            printf "  ${red}Ошибка${reset}: df вернул некорректный объём свободного места для установки %s\n" "$client_name" >&2
+            return 1
+            ;;
+    esac
 
     if [ "$free_space" -lt "$required_space" ]; then
         smart_clear
