@@ -60,6 +60,7 @@ check 'failed rmrules does not report successful speed' "$(cat "$work/remove-fai
 check 'failed rmrules still cleans probe JSON' "$(test -e "$sb_rule_tmp" && echo present || echo absent)" absent
 
 eval "$(awk '$0 == "sb_tick() {" { on=1 } on { print } on && /^}/ { exit }' "$core")"
+eval "$(awk '$0 == "sb_tick_locked() {" { on=1 } on { print } on && /^}/ { exit }' "$core")"
 # This test isolates stop-on-cleanup-failure. The open balancer PR adds
 # serialization around ticks, so keep that unrelated lock successful here.
 sb_lock_acquire() { return 0; }
