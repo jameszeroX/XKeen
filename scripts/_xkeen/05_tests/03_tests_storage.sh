@@ -1,16 +1,15 @@
 # Определение места установки Entware
 location_entware_storage() {
+    preinstall_warn="false"
     mount_point=$(mount | grep 'on /opt ')
     device=$(echo "$mount_point" | awk '{print $1}')
 
-    if echo "$device" | grep -q "^/dev/sd"; then
-        entware_storage="на внешний USB-накопитель"
-    elif echo "$device" | grep -q "^/dev/ubi"; then
-        entware_storage="во внутреннюю память роутера"
-        preinstall_warn="true"
-    else
-        entware_storage="на неидентифицированный носитель информации"
-    fi
+    case "$device" in
+        /dev/sd*)   entware_storage="на внешний USB-накопитель" ;;
+        /dev/nvme*) entware_storage="на NVMe-накопитель" ;;
+        /dev/ubi*)  entware_storage="во внутреннюю память роутера"; preinstall_warn="true" ;;
+        *)          entware_storage="на неидентифицированный носитель информации" ;;
+    esac
 }
 
 # Информационный варнинг при установке во внутреннюю память
