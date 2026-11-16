@@ -26,6 +26,7 @@ extract() {
 }
 eval "$(extract _acquire_geoipset_lock "$register_source")"
 eval "$(extract _release_geoipset_lock "$register_source")"
+eval "$(extract _filter_ip_cidr_family "$register_source")"
 eval "$(extract load_ipset "$register_source")"
 
 xkeen_rundir="$work/run"
