@@ -26,22 +26,53 @@ delete_geoipset() {
         esac
     done
 
-    ipset flush geo_exclude 2>/dev/null
-    ipset flush geo_exclude6 2>/dev/null
+    if _delete_geoipset_resources; then
+        printf "  Списки исключений GeoIPSET ${green}успешно удалены${reset}\n\n"
+        return 0
+    fi
 
-    [ -f "$ru_exclude_ipv4" ] && rm -f "$ru_exclude_ipv4" 2>/dev/null
-    [ -f "$ru_exclude_ipv6" ] && rm -f "$ru_exclude_ipv6" 2>/dev/null
-    # [ -d "$ipset_cfg" ] && rm -rf "$ipset_cfg"
+    printf "  ${red}Не удалось полностью удалить списки исключений GeoIPSET${reset}\n\n"
+    return 1
+}
 
-    printf "  Списки исключений GeoIPSET ${green}успешно удалены${reset}\n\n"
-    return 0
+_delete_geoipset_resources() {
+    local failed=false
+    local set
+    local set_names
+    local set_entries
+    local file
+
+    if ! set_names=$(ipset list -name 2>/dev/null); then
+        failed=true
+        set_names=''
+    else
+        set_names=$(printf '%s\n' "$set_names" | tr '\n' ' ')
+    fi
+
+    for set in geo_exclude geo_exclude6; do
+        case " $set_names " in
+            *" $set "*)
+                if ! ipset flush "$set" 2>/dev/null; then
+                    failed=true
+                elif ! set_entries=$(ipset save "$set" 2>/dev/null); then
+                    failed=true
+                elif printf '%s\n' "$set_entries" | grep -F "add $set " >/dev/null 2>&1; then
+                    failed=true
+                fi
+                ;;
+        esac
+    done
+
+    for file in "$ru_exclude_ipv4" "$ru_exclude_ipv6"; do
+        if { [ -e "$file" ] || [ -L "$file" ]; } &&
+            { ! rm -f "$file" 2>/dev/null || [ -e "$file" ] || [ -L "$file" ]; }; then
+            failed=true
+        fi
+    done
+
+    [ "$failed" = false ]
 }
 
 delete_geoipset_key() {
-    ipset flush geo_exclude 2>/dev/null
-    ipset flush geo_exclude6 2>/dev/null
-
-    [ -f "$ru_exclude_ipv4" ] && rm -f "$ru_exclude_ipv4" 2>/dev/null
-    [ -f "$ru_exclude_ipv6" ] && rm -f "$ru_exclude_ipv6" 2>/dev/null
-    # [ -d "$ipset_cfg" ] && rm -rf "$ipset_cfg"
+    _delete_geoipset_resources
 }
