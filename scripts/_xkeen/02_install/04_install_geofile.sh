@@ -253,9 +253,16 @@ update_user_geofiles() {
                 type == "object"
                 and (.file | type == "string" and length > 0 and . != "." and . != ".."
                      and (contains("/") | not) and (contains("\\") | not)
-                     and (test("[[:cntrl:]]") | not))
-                and (.url | type == "string"
-                     and test("^https?://[^/?#[:space:]]+([/?#][^[:space:]]*)?$"))
+                     and (explode | all(.[]; . >= 32 and . != 127)))
+                and ((.url | type == "string") and (.url as $url
+                    | (if ($url | startswith("https://")) then $url[8:]
+                       elif ($url | startswith("http://")) then $url[7:]
+                       else "" end) as $url_tail
+                    | ($url_tail | split("/")[0] | split("?")[0] | split("#")[0]) as $authority
+                    | ($url_tail | length > 0)
+                      and ($authority | length > 0)
+                      and ($url_tail | explode | all(.[]; . > 32 and . != 127))
+                ))
             ))
         end
     ' >/dev/null 2>&1; then

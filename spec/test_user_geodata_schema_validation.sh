@@ -23,6 +23,20 @@ geofile="$root/scripts/_xkeen/02_install/04_install_geofile.sh"
 eval "$(awk '$0 == "strip_json_comments() {" { on=1 } on { print } on && /^}/ { exit }' "$common")"
 eval "$(awk '$0 == "update_user_geofiles() {" { on=1 } on { print } on && /^}/ { exit }' "$geofile")"
 
+# Keenetic's bundled jq can be built without Oniguruma, which removes test().
+# Keep the rest of jq real while reproducing that runtime capability here.
+jq() {
+    case "$*" in
+        *'test('*|*'match('*|*'gsub('* )
+            _jq_input=$(cat) || return 1
+            case "$_jq_input" in *'"url":'*) return 5 ;; esac
+            printf '%s\n' "$_jq_input" | command jq "$@"
+            return "$?"
+            ;;
+    esac
+    command jq "$@"
+}
+
 xkeen_config="$work/xkeen.json"
 geo_dir="$work/geofiles"
 geofile_update=true
