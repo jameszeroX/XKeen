@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-16 08:24:39 MSK)
+
+Сборка из [`589b8f3`](https://github.com/jameszeroX/XKeen/commit/589b8f38db65fa8aca9a8e58566fe07c53689dd0).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/bfc63f775cd094ced5a1595b31bfc54537bb34a2/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`9e1b20a...589b8f3`](https://github.com/jameszeroX/XKeen/compare/9e1b20ab4a9caef46cd8b9f1d39067219f18003e...589b8f38db65fa8aca9a8e58566fe07c53689dd0).
+
+###### Коммиты
+
+- fix(cli): завершать меню при закрытом вводе ([`589b8f3`](https://github.com/jameszeroX/XKeen/commit/589b8f38db65fa8aca9a8e58566fe07c53689dd0)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-12 09:00:32 MSK)
 
 Сборка из [`4ff938e`](https://github.com/jameszeroX/XKeen/commit/4ff938e699c8c6941b17d1404f09c11b54e3c152).
