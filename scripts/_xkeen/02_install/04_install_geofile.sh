@@ -245,15 +245,19 @@ update_user_geofiles() {
     fi
 
     local tmp_list="${geo_dir}/.geofile_list.$$"
-    strip_json_comments "$xkeen_config" | jq -c '.xkeen.xray.geodata[]?' > "$tmp_list" 2>/dev/null
+    if ! strip_json_comments "$xkeen_config" | jq -c '.xkeen.xray.geodata[]?' > "$tmp_list" 2>/dev/null; then
+        rm -f "$tmp_list"
+        return 1
+    fi
 
     if [ ! -s "$tmp_list" ]; then
-        rm -f "$tmp_list"
+        rm -f "$tmp_list" || return 1
         return 0
     fi
 
     local entry file url update_flag
     local failed_files=''
+    local invalid_entry=false
 
     while IFS= read -r entry; do
         file=$(printf '%s' "$entry" | jq -r '.file // empty')
@@ -261,7 +265,8 @@ update_user_geofiles() {
 
         if [ -z "$file" ] || [ -z "$url" ]; then
             printf "  ${red}Ошибка${reset}: Некорректная запись в разделе ${light_blue}geofile${reset} файла ${yellow}xkeen.json${reset}\n\n"
-            return 1
+            invalid_entry=true
+            break
         fi
 
         if [ -f "$geo_dir/$file" ] || [ -L "$geo_dir/$file" ]; then
@@ -275,7 +280,11 @@ update_user_geofiles() {
         fi
     done < "$tmp_list"
 
-    rm -f "$tmp_list"
+    if ! rm -f "$tmp_list"; then
+        printf "  ${red}Ошибка${reset}: не удалось удалить временный список пользовательских geofile\n\n"
+        return 1
+    fi
+    [ "$invalid_entry" = false ] || return 1
     if [ -n "$failed_files" ]; then
         printf "  ${red}Ошибка${reset}: не удалось обновить пользовательские geofile: %s\n\n" "$failed_files"
         return 1
