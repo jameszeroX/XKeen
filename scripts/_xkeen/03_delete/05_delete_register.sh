@@ -58,7 +58,7 @@ delete_register_xkeen() {
     # атомарно через tmp+mv — см. delete_register_xray)
     if [ -f "$status_file" ]; then
         status_tmp="${status_file}.tmp.$$"
-        awk -v pkg="Package: xkeen" 'BEGIN{RS=""} $0 !~ ("^" pkg) {print; print ""}' "$status_file" > "$status_tmp"
+        awk -v pkg="Package: xkeen" 'BEGIN{RS=""} { split($0, lines, "\n"); if (lines[1] != pkg) {print; print ""} }' "$status_file" > "$status_tmp"
         mv -f "$status_tmp" "$status_file"
     fi
 
