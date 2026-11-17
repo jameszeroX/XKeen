@@ -10,13 +10,16 @@ toggle_param() {
         return 1
     fi
 
-    param_count=$(awk -v param="$param" '$0 ~ "^[[:space:]]*" param "=" { count++ } END { print count + 0 }' "$initd_file")
+    # Учитываем только объявление настройки в шапке (с начала строки).
+    # Присваивания с отступом внутри функций (например, принудительное
+    # proxy_router="off" в validate_client_routing_mark) не считаются.
+    param_count=$(awk -v param="$param" '$0 ~ "^" param "=" { count++ } END { print count + 0 }' "$initd_file")
     if [ "$param_count" -ne 1 ]; then
         echo -e "  ${red}Ошибка${reset}: параметр $param отсутствует или указан несколько раз"
         return 1
     fi
 
-    current_state=$(grep -m 1 -E "^[[:space:]]*$param=" "$initd_file" | cut -d'=' -f2 | tr -d '"[:space:]')
+    current_state=$(grep -m 1 -E "^$param=" "$initd_file" | cut -d'=' -f2 | tr -d '"[:space:]')
 
     if [ "$force_state" = "on" ] || [ "$force_state" = "off" ]; then
         if [ "$current_state" = "$force_state" ]; then
@@ -73,7 +76,7 @@ toggle_param() {
     fi
 
     if ! awk -v param="$param" -v value="$desired_state" '
-        !found && $0 ~ "^[[:space:]]*" param "=" {
+        !found && $0 ~ "^" param "=" {
             sub(/"[^"]*"/, "\"" value "\"")
             found=1
         }
@@ -84,6 +87,7 @@ toggle_param() {
         echo -e "  ${red}Ошибка${reset} при подготовке параметра $param"
         return 1
     fi
+
     if ! mv "$initd_file.tmp" "$initd_file"; then
         rm -f "$initd_file.tmp"
         echo
@@ -91,21 +95,29 @@ toggle_param() {
         return 1
     fi
 
+    # Повторно читаем значение и убеждаемся, что запись действительно прошла
+    new_state=$(grep -m 1 -E "^$param=" "$initd_file" | cut -d'=' -f2 | tr -d '"[:space:]')
+    if [ "$new_state" != "$desired_state" ]; then
+        echo
+        echo -e "  ${red}Ошибка${reset}: параметр $param не изменился"
+        return 1
+    fi
+
     [ "$bypass_autostart_msg" = "yes" ] && return 0
 
-        if [ "$desired_state" = "on" ]; then
-            echo -e "  Новое состояние ${description} ${green}включено${reset}"
-        else
-            echo -e "  Новое состояние ${description} ${light_blue}отключено${reset}"
-        fi
+    if [ "$desired_state" = "on" ]; then
+        echo -e "  Новое состояние ${description} ${green}включено${reset}"
+    else
+        echo -e "  Новое состояние ${description} ${light_blue}отключено${reset}"
+    fi
 
-        if [ "$restart_needed" = "reboot" ]; then
-            echo
-            echo -e "  ${yellow}Перезагрузите роутер для применения изменений${reset}"
-        elif [ "$restart_needed" = "restart" ] && [ "$apply" != "restart" ]; then
-            echo
-            echo -e "  ${yellow}Перезапустите XKeen для применения изменений${reset}"
-        fi
+    if [ "$restart_needed" = "reboot" ]; then
+        echo
+        echo -e "  ${yellow}Перезагрузите роутер для применения изменений${reset}"
+    elif [ "$restart_needed" = "restart" ] && [ "$apply" != "restart" ]; then
+        echo
+        echo -e "  ${yellow}Перезапустите XKeen для применения изменений${reset}"
+    fi
 
     add_chmod_init
 }
