@@ -69,9 +69,32 @@ choice_xray_core() {
             # пересобираются _xkeen_apply_table (04_register_init.sh) при следующем `xkeen -start`,
             # который сообщение об успешной смене ядра ниже и так предписывает выполнить.
             if pidof "mihomo" >/dev/null; then
-                $initd_file stop
+                "$initd_file" stop || {
+                    echo -e "  ${red}Ошибка${reset}: Не удалось остановить активное ядро Mihomo; выбор ядра не изменён"
+                    return 1
+                }
             fi
-            sed -i 's/name_client="mihomo"/name_client="xray"/' $initd_file
+            core_tmp="${initd_file}.tmp.$$"
+            cp -p "$initd_file" "$core_tmp" || {
+                rm -f "$core_tmp"
+                echo -e "  ${red}Ошибка${reset}: Не удалось подготовить настройки для выбора Xray"
+                return 1
+            }
+            sed -i 's/name_client="mihomo"/name_client="xray"/' "$core_tmp" || {
+                rm -f "$core_tmp"
+                echo -e "  ${red}Ошибка${reset}: Не удалось изменить выбранное ядро на Xray"
+                return 1
+            }
+            grep -q 'name_client="xray"' "$core_tmp" || {
+                rm -f "$core_tmp"
+                echo -e "  ${red}Ошибка${reset}: Выбор ядра Xray не подтверждён"
+                return 1
+            }
+            mv -f "$core_tmp" "$initd_file" || {
+                rm -f "$core_tmp"
+                echo -e "  ${red}Ошибка${reset}: Не удалось сохранить выбор ядра Xray"
+                return 1
+            }
             add_chmod_init
             echo -e "  ${green}Выполнена${reset} смена ядра на ${yellow}Xray${reset}"
             echo -e "  Настройте конфигурацию по пути '${yellow}$xray_conf_dir/${reset}'"
@@ -101,9 +124,32 @@ choice_mihomo_core() {
             # пересобираются _xkeen_apply_table (04_register_init.sh) при следующем `xkeen -start`,
             # который сообщение об успешной смене ядра ниже и так предписывает выполнить.
             if pidof "xray" >/dev/null; then
-                $initd_file stop
+                "$initd_file" stop || {
+                    echo -e "  ${red}Ошибка${reset}: Не удалось остановить активное ядро Xray; выбор ядра не изменён"
+                    return 1
+                }
             fi
-            sed -i 's/name_client="xray"/name_client="mihomo"/' $initd_file
+            core_tmp="${initd_file}.tmp.$$"
+            cp -p "$initd_file" "$core_tmp" || {
+                rm -f "$core_tmp"
+                echo -e "  ${red}Ошибка${reset}: Не удалось подготовить настройки для выбора Mihomo"
+                return 1
+            }
+            sed -i 's/name_client="xray"/name_client="mihomo"/' "$core_tmp" || {
+                rm -f "$core_tmp"
+                echo -e "  ${red}Ошибка${reset}: Не удалось изменить выбранное ядро на Mihomo"
+                return 1
+            }
+            grep -q 'name_client="mihomo"' "$core_tmp" || {
+                rm -f "$core_tmp"
+                echo -e "  ${red}Ошибка${reset}: Выбор ядра Mihomo не подтверждён"
+                return 1
+            }
+            mv -f "$core_tmp" "$initd_file" || {
+                rm -f "$core_tmp"
+                echo -e "  ${red}Ошибка${reset}: Не удалось сохранить выбор ядра Mihomo"
+                return 1
+            }
             add_chmod_init
             echo -e "  ${green}Выполнена${reset} смена ядра на ${yellow}Mihomo${reset}"
             echo -e "  Настройте конфигурацию по пути '${yellow}$mihomo_conf_dir/${reset}'"
