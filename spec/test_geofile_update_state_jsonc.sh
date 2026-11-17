@@ -25,29 +25,55 @@ work=$(mktemp -d) || exit 1
 trap 'command rm -rf "$work"' EXIT INT TERM
 xkeen_config="$work/xkeen.json"
 
-printf '%s\n' '{' '  "xkeen" : {' '    /* config note */' '    "geofile_update"  : false' '  }' '}' > "$xkeen_config"
+# false в .xkeen.xray + JSONC/whitespace
+printf '%s\n' '{' '  "xkeen" : {' '    /* config note */' '    "xray" : {' '      "geofile_update"  : false' '    }' '  }' '}' > "$xkeen_config"
 geofiles_update_state
 check 'false with JSONC and whitespace disables updates' "$geofile_update" false
 
-printf '%s\n' '{' '  "other": { "geofile_update": false },' '  "xkeen": { "geofile_update": true }' '}' > "$xkeen_config"
+# decoy на уровне .xkeen не должен переопределять .xkeen.xray
+printf '%s\n' \
+    '{' \
+    '  "xkeen": {' \
+    '    "geofile_update": false,' \
+    '    "xray": { "geofile_update": true }' \
+    '  }' \
+    '}' > "$xkeen_config"
 geofiles_update_state
-check 'nested decoy does not override xkeen setting' "$geofile_update" true
+check 'decoy at .xkeen does not override .xkeen.xray setting' "$geofile_update" true
 
-printf '%s\n' '{"xkeen":{"geofile_update":null}}' > "$xkeen_config"
+# decoy в другой ветке (например, .mihomo) тоже не должен влиять
+printf '%s\n' \
+    '{' \
+    '  "other": { "xray": { "geofile_update": false } },' \
+    '  "xkeen": { "xray": { "geofile_update": true } }' \
+    '}' > "$xkeen_config"
+geofiles_update_state
+check 'nested decoy in other branch does not override' "$geofile_update" true
+
+# null -> default (true)
+printf '%s\n' '{"xkeen":{"xray":{"geofile_update":null}}}' > "$xkeen_config"
 geofiles_update_state
 check 'null uses documented default' "$geofile_update" true
 
-printf '%s\n' '{"xkeen":{}}' > "$xkeen_config"
+# ключа нет -> default (true)
+printf '%s\n' '{"xkeen":{"xray":{}}}' > "$xkeen_config"
 geofiles_update_state
 check 'missing option uses documented default' "$geofile_update" true
 
-printf '%s\n' '{"xkeen":{"geofile_update":"false"}}' > "$xkeen_config"
+# .xkeen.xray отсутствует как объект -> default (true)
+printf '%s\n' '{"xkeen":{}}' > "$xkeen_config"
+geofiles_update_state
+check 'missing .xkeen.xray uses documented default' "$geofile_update" true
+
+# строка "false" -> ошибка, дефолт true
+printf '%s\n' '{"xkeen":{"xray":{"geofile_update":"false"}}}' > "$xkeen_config"
 geofiles_update_state
 rc=$?
 check 'invalid type is reported' "$rc" 1
 check 'invalid type keeps default enabled' "$geofile_update" true
 
-printf '%s\n' '{"xkeen":' > "$xkeen_config"
+# битый JSON -> ошибка, дефолт true
+printf '%s\n' '{"xkeen":{"xray":' > "$xkeen_config"
 geofiles_update_state
 rc=$?
 check 'malformed JSON is reported' "$rc" 1
