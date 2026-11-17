@@ -70,7 +70,7 @@ rc=$?
 check 'restart propagates failed start' "$rc" 1
 case "$output" in *'перезапущен'*) restarted=misreported ;; *) restarted=not-reported ;; esac
 check 'restart does not claim success after failed start' "$restarted" not-reported
-check 'initd template version is bumped for existing installations' "$(grep -c 'required_script_version="0.7"' "$root/scripts/_xkeen/02_install/07_install_register/03_register_cron.sh")" 1
+check 'initd template version is bumped for existing installations' "$(grep -c 'required_script_version="0.8"' "$root/scripts/_xkeen/02_install/07_install_register/03_register_cron.sh")" 1
 
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
