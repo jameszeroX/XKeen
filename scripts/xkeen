@@ -104,6 +104,24 @@ get_auto_arg() {
     [ "$1" = "auto" ] && echo "true"
 }
 
+geofiles_update_needed() {
+    [ "$update_refilter_geosite" = "true" ] || \
+    [ "$update_v2fly_geosite" = "true" ] || \
+    [ "$update_zkeen_geosite" = "true" ] || \
+    [ "$update_refilter_geoip" = "true" ] || \
+    [ "$update_v2fly_geoip" = "true" ] || \
+    [ "$update_zkeenip_geoip" = "true" ] || \
+    [ -f "$ru_exclude_ipv4" ] || [ -f "$ru_exclude_ipv6" ] || \
+    [ "$has_user_geodata" = "true" ]
+}
+
+restart_active_proxy_after_geofile_update() {
+    if pidof mihomo >/dev/null 2>&1 || pidof xray >/dev/null 2>&1; then
+        "$initd_file" restart on >/dev/null 2>&1 || return 1
+    fi
+    return 0
+}
+
 # Версия ядра вида X.Y.Z / vX.Y.Z
 is_version_arg() {
     echo "$1" | grep -Eq '^v?[0-9]+(\.[0-9]+){2}$'
@@ -713,28 +731,24 @@ while [ $# -gt 0 ]; do
             # $has_user_geodata выставляет has_user_geodata() (02_install/04_install_geofile.sh),
             # как и шесть $update_* выше — их выставляют info_geosite/info_geoip.
             has_user_geodata
-            if
-                [ "$update_refilter_geosite" = "true" ] || \
-                [ "$update_v2fly_geosite" = "true" ] || \
-                [ "$update_zkeen_geosite" = "true" ] || \
-                [ "$update_refilter_geoip" = "true" ] || \
-                [ "$update_v2fly_geoip" = "true" ] || \
-                [ "$update_zkeenip_geoip" = "true" ] || \
-                [ -f "$ru_exclude_ipv4" ] || \
-                [ "$has_user_geodata" = "true" ]; then
+            if geofiles_update_needed; then
 
                 echo
                 geofiles_update_state
-                install_geosite
-                install_geoip
-                update_user_geofiles
-                install_geoipset update
+                geofile_update_status=0
+                install_geosite || geofile_update_status=1
+                install_geoip || geofile_update_status=1
+                update_user_geofiles || geofile_update_status=1
+                install_geoipset update || geofile_update_status=1
 
-                if pidof mihomo >/dev/null; then
-                    # GeoIPSET загружается в ipset при старте — нужен reapply.
-                    "$initd_file" restart on >/dev/null 2>&1
-                elif pidof xray >/dev/null; then
-                    "$initd_file" restart on >/dev/null 2>&1
+                if ! restart_active_proxy_after_geofile_update; then
+                    echo -e "  ${red}Ошибка${reset}: базы обновлены, но перезапуск XKeen завершился ошибкой"
+                    exit 1
+                fi
+
+                if [ "$geofile_update_status" -ne 0 ]; then
+                    echo -e "  ${red}Ошибка${reset}: обновление одной или нескольких баз GeoFile/GeoIPSET завершилось с ошибкой"
+                    exit 1
                 fi
 
                 echo -e "  Обновление установленных баз GeoFile/GeoIPSET ${green}завершено${reset}"
@@ -1487,14 +1501,20 @@ while [ $# -gt 0 ]; do
 
             choice_geosite
             delete_geosite
-            install_geosite
+            geofile_update_status=0
+            install_geosite || geofile_update_status=1
             sleep 2
 
             smart_clear
             choice_geoip
             delete_geoip
-            install_geoip
+            install_geoip || geofile_update_status=1
             sleep 2
+
+            if [ "$geofile_update_status" -ne 0 ]; then
+                echo -e "  ${red}Ошибка${reset}: переустановка одной или нескольких баз GeoFile завершилась с ошибкой"
+                exit 1
+            fi
 
             echo -e "  Переустановка баз GeoFile ${green}выполнена${reset}"
         ;;
