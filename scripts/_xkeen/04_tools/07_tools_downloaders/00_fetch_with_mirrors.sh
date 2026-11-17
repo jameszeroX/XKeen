@@ -187,11 +187,12 @@ probe_with_mirrors() {
         _last_http="$_pwm_code"
         case "$_pwm_code" in
             2[0-9][0-9])
+                [ "$_last_curl_rc" -eq 0 ] 2>/dev/null || continue
                 _mirror_cache_write "$_pwm_prefix"
                 return 0
                 ;;
             40[0-9])
-                _pwm_fail_4xx=$((_pwm_fail_4xx + 1))
+                [ "$_last_curl_rc" -eq 0 ] && _pwm_fail_4xx=$((_pwm_fail_4xx + 1))
                 ;;
         esac
     done <<EOF

@@ -45,7 +45,7 @@ check_health() {
     done
 
     # Делаем быстрый HTTPS запрос
-    curl_err=$(curl --connect-timeout 3 -IsS "https://$conn_URL" 2>&1 >/dev/null)
+    curl_err=$(curl --connect-timeout 3 --max-time 10 -IsS "https://$conn_URL" 2>&1 >/dev/null)
     exit_code=$?
 
     # Если успешно, сразу выходим из функции
