@@ -4,7 +4,7 @@ register_cron_initd() {
     opkg list-installed 2>/dev/null | grep -q "^cron " && return
 
     # Определение переменных
-    required_script_version="0.7"
+    required_script_version="0.8"
 
     # Получение текущей версии скрипта
     if [ -e "${initd_cron}" ]; then
@@ -15,7 +15,7 @@ register_cron_initd() {
     script_content='#!/bin/sh
 
 # Информация о службе: Запуск / Остановка Cron
-# version="0.7"
+# version="0.8"
 
 green="\\033[32m"
 red="\\033[31m"
@@ -95,7 +95,7 @@ case "$1" in
         ;;
 esac
 
-exit 0'
+exit $?'
     
     # Создание или замена файла, если версия скрипта не соответствует требуемой версии 
     if [ "${script_version}" != "${required_script_version}" ]; then
