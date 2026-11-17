@@ -120,6 +120,7 @@ change_ipv6_support() {
 
     if [ -f "$initd_file" ]; then
         sed -i "s/ipv6_support=\"[a-z]*\"/ipv6_support=\"$desired_state\"/" "$initd_file"
+        _ipv6_ndm_ok=true
 
         if [ "$desired_state" = "off" ]; then
             sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
@@ -131,14 +132,14 @@ change_ipv6_support() {
                     *) [ -f "$dir/disable_ipv6" ] && echo "1" > "$dir/disable_ipv6" 2>/dev/null ;;
                 esac
             done
-            ndmc -c 'ipv6 subnet Default' >/dev/null 2>&1
-            ndmc -c 'no ipv6 subnet Default' >/dev/null 2>&1
-            ndmc -c 'system configuration save' >/dev/null 2>&1
+            ndmc -c 'ipv6 subnet Default' >/dev/null 2>&1 || _ipv6_ndm_ok=false
+            ndmc -c 'no ipv6 subnet Default' >/dev/null 2>&1 || _ipv6_ndm_ok=false
+            ndmc -c 'system configuration save' >/dev/null 2>&1 || _ipv6_ndm_ok=false
         else
             sysctl -w net.ipv6.conf.all.disable_ipv6=0 >/dev/null 2>&1
             sysctl -w net.ipv6.conf.default.disable_ipv6=0 >/dev/null 2>&1
-            ndmc -c 'ipv6 subnet Default' >/dev/null 2>&1
-            ndmc -c 'system configuration save' >/dev/null 2>&1
+            ndmc -c 'ipv6 subnet Default' >/dev/null 2>&1 || _ipv6_ndm_ok=false
+            ndmc -c 'system configuration save' >/dev/null 2>&1 || _ipv6_ndm_ok=false
         fi
 
         # Перезапуск прокси-клиента, если запущен
@@ -150,18 +151,21 @@ change_ipv6_support() {
         # Проверка и вывод результата
         if [ "$desired_state" = "off" ]; then
             echo
-            if ! check_ipv6_active; then
+            if [ "$_ipv6_ndm_ok" = true ] && ! check_ipv6_active; then
                 echo -e "  Поддержка IPv6 в KeeneticOS ${green}отключена${reset}"
                 echo -e "  ${red}Дополнительно убедитесь, что IPv6 отключен в веб-интерфейсе роутера${reset}"
             else
                 echo -e "  ${red}Ошибка${reset} при выключении IPv6"
+                return 1
             fi
         else
             echo
-            if [ "$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)" -eq 0 ]; then
+            _ipv6_disable_state=$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null)
+            if [ "$_ipv6_ndm_ok" = true ] && [ "$_ipv6_disable_state" = 0 ]; then
                 echo -e "  Поддержка IPv6 в KeeneticOS ${green}включена${reset}"
             else
                 echo -e "  ${red}Ошибка${reset} при включении IPv6"
+                return 1
             fi
         fi
     else
@@ -197,6 +201,11 @@ choice_autostart_xkeen() {
             else
                 echo -e "  Автозагрузка XKeen ${light_blue}отключена${reset}"
             fi
+        else
+            case " ${auto_failed:-} " in
+                *" autostart "*) ;;
+                *) auto_failed="${auto_failed:+$auto_failed }autostart" ;;
+            esac
         fi
         echo
         return 0
