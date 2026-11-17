@@ -139,16 +139,13 @@ get_user_proxy() {
     local json_clean
     json_clean=$(strip_json_comments "$xkeen_config")
 
-    if command -v jq >/dev/null 2>&1; then
-        gh_proxy_user=$(printf '%s' "$json_clean" | jq -r '.xkeen.gh_proxy // empty' 2>/dev/null)
-    fi
-
-    if [ -z "$gh_proxy_user" ]; then
-        gh_proxy_user=$(printf '%s' "$json_clean" | sed -n 's/.*"gh_proxy": *"\([^"]*\)".*/\1/p' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' 2>/dev/null)
-    fi
+    command -v jq >/dev/null 2>&1 || return 1
+    gh_proxy_user=$(printf '%s' "$json_clean" | jq -r '.xkeen.gh_proxy // empty' 2>/dev/null) || return 1
 
     [ "$gh_proxy_user" = "null" ] && gh_proxy_user=""
+    [ -n "$gh_proxy_user" ] || return 1
     gh_proxy_user="${gh_proxy_user%/}"
+    return 0
 }
 
 # Функция проверки доступности GitHub.

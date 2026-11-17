@@ -64,13 +64,107 @@ strip_json_comments() {
 }
 
 # Функция извлечения пользовательского прокси из /opt/etc/xkeen/xkeen.json
+# Минимальное чтение конкретного JSON-пути для режима без jq. Чужие одноимённые ключи
+# игнорируются; нестандартные escape-последовательности дают пустой результат.
+jsonc_get_xkeen_gh_proxy() {
+    awk '
+    { source = source $0 "\n" }
+    END {
+        n = length(source)
+        depth = 0
+        bracket_depth = 0
+        xkeen_depth = 0
+        found = 0
+        malformed = 0
+        i = 1
+        while (i <= n) {
+            c = substr(source, i, 1)
+            if (c == "\"") {
+                token = ""
+                unsupported = 0
+                escaped = 0
+                closed = 0
+                i++
+                while (i <= n) {
+                    c = substr(source, i, 1)
+                    if (escaped) {
+                        if (c == "/") token = token c
+                        else unsupported = 1
+                        escaped = 0
+                        i++
+                        continue
+                    }
+                    if (c == "\\") { escaped = 1; i++; continue }
+                    if (c == "\"") { closed = 1; i++; break }
+                    token = token c
+                    i++
+                }
+                if (!closed) malformed = 1
+                j = i
+                while (j <= n && substr(source, j, 1) ~ /[[:space:]]/) j++
+                if (substr(source, j, 1) == ":") {
+                    pending_key[depth] = token
+                    if (depth == xkeen_depth && token == "gh_proxy") awaiting_value[depth] = token
+                    if (depth == xkeen_depth && token == "gh_proxy") {
+                        found = 0
+                        proxy = ""
+                    }
+                } else if (awaiting_value[depth] != "") {
+                    if (xkeen_depth > 0 && depth == xkeen_depth && awaiting_value[depth] == "gh_proxy") {
+                        if (unsupported) { found = 0; proxy = "" }
+                        else { found = 1; proxy = token }
+                    }
+                    delete awaiting_value[depth]
+                    delete pending_key[depth]
+                }
+                continue
+            }
+            if (c ~ /[[:space:]]/) { i++; continue }
+            if (c == ":") { i++; continue }
+            if (awaiting_value[depth] != "") {
+                if (xkeen_depth > 0 && depth == xkeen_depth && awaiting_value[depth] == "gh_proxy") {
+                    found = 0
+                    proxy = ""
+                }
+                delete awaiting_value[depth]
+                delete pending_key[depth]
+            }
+            if (c == "{") {
+                if (depth == 1 && pending_key[depth] == "xkeen") {
+                    xkeen_depth = depth + 1
+                    found = 0
+                    proxy = ""
+                }
+                depth++
+            } else if (c == "}") {
+                if (depth == 0) malformed = 1
+                if (depth == xkeen_depth) xkeen_depth = 0
+                delete pending_key[depth]
+                depth--
+            } else if (c == "[") {
+                bracket_depth++
+            } else if (c == "]") {
+                if (bracket_depth == 0) malformed = 1
+                bracket_depth--
+            }
+            i++
+        }
+        if (depth != 0 || bracket_depth != 0 || xkeen_depth != 0) malformed = 1
+        if (found && !malformed) print proxy
+    }'
+}
+
 get_user_proxy() {
     gh_proxy_user=""
     [ ! -f "$xkeen_config" ] && return 1
 
-    gh_proxy_user=$(strip_json_comments "$xkeen_config" | \
-        sed -n 's/.*"gh_proxy"[[:space:]]*: *"\([^"]*\)".*/\1/p' | \
-        sed 's/^[[:space:]]*//; s/[[:space:]]*$//' 2>/dev/null)
+    local json_clean
+    json_clean=$(strip_json_comments "$xkeen_config")
+    if command -v jq >/dev/null 2>&1; then
+        gh_proxy_user=$(printf '%s' "$json_clean" | jq -r '.xkeen.gh_proxy // empty' 2>/dev/null) || return 1
+    else
+        gh_proxy_user=$(printf '%s' "$json_clean" | jsonc_get_xkeen_gh_proxy)
+    fi
 
     [ "$gh_proxy_user" = "null" ] && gh_proxy_user=""
     [ -z "$gh_proxy_user" ] && return 1
