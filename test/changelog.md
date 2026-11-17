@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-17 14:31:08 MSK)
+
+Сборка из [`15b7187`](https://github.com/jameszeroX/XKeen/commit/15b718766b2f6a9ba8121f2a83a3c15fa3870fdf).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/a92aa42d3a9e37a0c6da741f4a493b3df2e16b48/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`92b556d...15b7187`](https://github.com/jameszeroX/XKeen/compare/92b556d5de3ad2b99315ede876d646d2dbfaef84...15b718766b2f6a9ba8121f2a83a3c15fa3870fdf).
+
+###### Коммиты
+
+- Validate xkeen.json before RCI token setup ([`15b7187`](https://github.com/jameszeroX/XKeen/commit/15b718766b2f6a9ba8121f2a83a3c15fa3870fdf)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-17 13:20:00 MSK)
 
 Сборка из [`1f5abd1`](https://github.com/jameszeroX/XKeen/commit/1f5abd11d4d4884bf44b43cf78e5a61675579750).
