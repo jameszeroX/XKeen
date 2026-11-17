@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-17 13:20:00 MSK)
+
+Сборка из [`1f5abd1`](https://github.com/jameszeroX/XKeen/commit/1f5abd11d4d4884bf44b43cf78e5a61675579750).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/92b556d5de3ad2b99315ede876d646d2dbfaef84/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`25dd8ae...1f5abd1`](https://github.com/jameszeroX/XKeen/compare/25dd8ae7a523b36ab1043bb5e0ab91ec8101dd19...1f5abd11d4d4884bf44b43cf78e5a61675579750).
+
+###### Коммиты
+
+- fix(download): reject curl transfer failures ([`1f5abd1`](https://github.com/jameszeroX/XKeen/commit/1f5abd11d4d4884bf44b43cf78e5a61675579750)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-17 13:17:08 MSK)
 
 Сборка из [`a3bd5b1`](https://github.com/jameszeroX/XKeen/commit/a3bd5b1c1148948ba2cbfeeb4656f9bbf3814111).
