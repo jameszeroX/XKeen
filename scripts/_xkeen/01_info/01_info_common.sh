@@ -333,6 +333,9 @@ jc_set_path() {
 # построчно сохраняет их количество) и возвращает 1.
 validate_xkeen_json_syntax() {
     local err
+    # Без jq проверить нечего. Раньше сообщение шелла "jq: not found"
+    # попадало в err и выдавалось за синтаксическую ошибку файла.
+    command -v jq >/dev/null 2>&1 || return 0
     err=$(strip_json_comments "$xkeen_config" | jq . 2>&1 >/dev/null)
     if [ -n "$err" ]; then
         echo -e "  ${red}Ошибка${reset}: файл ${yellow}xkeen.json${reset} содержит синтаксические ошибки JSON:\n"
@@ -341,6 +344,64 @@ validate_xkeen_json_syntax() {
     fi
     return 0
 }
+
+# Предварительная проверка xkeen.json — самое первое действие любой команды,
+# до пробы RCI, автосоздания токена, проверки пакетов и т.п.
+#
+# Битый xkeen.json иначе обнаруживался только в init-скрипте при запуске
+# прокси (validate_xkeen_json в 04_register_init.sh), а к тому моменту
+# auto_setup_rci_token уже успевал создать токен в роутере и не мог записать
+# его в файл: при каждом повторном запуске создавался ещё один токен.
+#
+# Критерий тот же, что у validate_xkeen_json: JSON после вырезания
+# комментариев должен разбираться и давать значение (пустой файл — ошибка).
+#
+# Команды, которым битый файл не мешает (справка, остановка, статус,
+# диагностика, восстановление из резервной копии, удаление), не блокируются:
+# иначе файл нельзя было бы починить штатными средствами. Команда считается
+# такой, только если ВСЕ её ключи входят в список (как у -stop/-status ниже);
+# значения без "-" (auto, on, off, vX.Y.Z) ключами не считаются.
+# Для них защита от создания токена остаётся в auto_setup_rci_token.
+# Позиционные параметры xkeen здесь видны: файл подключается из import.sh.
+xkeen_json_preflight() {
+    local _xjp_exempt=1 _xjp_arg
+
+    _xkeen_json_invalid=""
+    [ -f "$xkeen_config" ] || return 0
+    command -v jq >/dev/null 2>&1 || return 0
+
+    # Файл валиден — ничего не делаем (проверка тихая, как в init-скрипте)
+    if printf '%s' "$_xkeen_json_clean" | jq -e . >/dev/null 2>&1; then
+        return 0
+    fi
+
+    for _xjp_arg in "$@"; do
+        case "$_xjp_arg" in
+            -h|-help|-v|-version|-about|-ad|-donate|-af|-feedback) ;;
+            -stop|-status|-diag|-kbr|-remove|-dk|-toff) ;;
+            -*) _xjp_exempt=0; break ;;
+        esac
+    done
+    # Команда, которой битый файл не мешает: не блокируем и молчим, но
+    # запоминаем, что файл невалиден — проба RCI ниже не должна пытаться
+    # создать токен (он не запишется в файл).
+    if [ "$_xjp_exempt" = 1 ]; then
+        _xkeen_json_invalid=1
+        return 0
+    fi
+
+    if ! validate_xkeen_json_syntax >&2; then
+        :
+    elif ! printf '%s' "$_xkeen_json_clean" | jq -e . >/dev/null 2>&1; then
+        printf "  ${red}Ошибка${reset}: файл ${yellow}xkeen.json${reset} пуст или не содержит данных JSON\n" >&2
+    else
+        return 0
+    fi
+
+    printf "\n  Исправьте файл ${yellow}%s${reset} и повторите команду\n\n" "$xkeen_config" >&2
+    exit 1
+}
+xkeen_json_preflight "$@"
 
 # Параметры повтора загрузок
 retries_download_settings() {
@@ -432,6 +493,13 @@ write_rci_token() {
 # 1 — не получилось (причина уже выведена).
 auto_setup_rci_token() {
     local _ast_out _ast_token
+
+    # Токен нельзя ни записать в битый xkeen.json, ни потом найти: он остался
+    # бы в роутере лишним. Проверяем ДО генерации и ничего не создаём.
+    if [ -f "$xkeen_config" ] && ! validate_xkeen_json_syntax >&2; then
+        printf "\n  Токен не создан: сначала исправьте ${yellow}%s${reset}\n" "$xkeen_config" >&2
+        return 1
+    fi
 
     if [ -n "$rci_token" ]; then
         printf "  RCI роутера отклонил ${light_blue}rci_token${reset} из ${yellow}xkeen.json${reset}, создаём новый\n"
@@ -566,7 +634,7 @@ if [ "$_rci_probe_needed" = "1" ] && [ -t 0 ] && [ -t 1 ]; then
             fi
             ;;
     esac
-    if [ "$_rci_need_token" = "1" ] && auto_setup_rci_token "$_rci_release"; then
+    if [ "$_rci_need_token" = "1" ] && [ -z "$_xkeen_json_invalid" ] && auto_setup_rci_token "$_rci_release"; then
         http_code=$(rci_probe_code_retry)
     fi
     unset _rci_need_token _rci_release
@@ -575,7 +643,9 @@ unset _rci_probe_needed
 
 case "$http_code" in
     401|403)
-        if [ -n "$rci_token" ]; then
+        if [ -n "$_xkeen_json_invalid" ]; then
+            printf "  ${red}Ошибка${reset}: RCI роутера отказал в доступе (HTTP ${http_code}), а ${yellow}xkeen.json${reset} содержит синтаксические ошибки,\n  поэтому токен доступа прочитать и создать нельзя. Исправьте файл ${yellow}%s${reset}\n" "$xkeen_config" >&2
+        elif [ -n "$rci_token" ]; then
             printf "  ${red}Ошибка${reset}: RCI роутера отклонил ${light_blue}токен доступа${reset} из ${yellow}xkeen.json${reset} (HTTP ${http_code})
 
   Токен недействителен или устарел. Создайте новый в веб-интерфейсе
