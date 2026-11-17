@@ -1644,8 +1644,14 @@ get_mihomo_config_cache() {
         return 0
     fi
     cache_tmp="${cache_file}.tmp.$$"
-    yq -o=json '.' "$mihomo_config" >"$cache_tmp" 2>/dev/null
-    mv "$cache_tmp" "$cache_file"
+    if ! yq -o=json '.' "$mihomo_config" >"$cache_tmp" 2>/dev/null || [ ! -s "$cache_tmp" ]; then
+        rm -f "$cache_tmp"
+        return 1
+    fi
+    if ! mv -f "$cache_tmp" "$cache_file"; then
+        rm -f "$cache_tmp"
+        return 1
+    fi
     cat "$cache_file"
 }
 
