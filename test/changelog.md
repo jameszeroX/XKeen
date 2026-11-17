@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-17 09:27:25 MSK)
+
+Сборка из [`e74aae1`](https://github.com/jameszeroX/XKeen/commit/e74aae1465ccb33b0acdfc3a31446843dde3ed96).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/1992af7fa9455f43ee856157bd560c719e88efef/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`49c1477...e74aae1`](https://github.com/jameszeroX/XKeen/compare/49c14775becebeea25cd5cdd1591010ae4ffa80c...e74aae1465ccb33b0acdfc3a31446843dde3ed96).
+
+###### Коммиты
+
+- fix(install): abort when init script backup fails ([`e74aae1`](https://github.com/jameszeroX/XKeen/commit/e74aae1465ccb33b0acdfc3a31446843dde3ed96)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-17 09:16:35 MSK)
 
 Сборка из [`61f0d3d`](https://github.com/jameszeroX/XKeen/commit/61f0d3d87df0199ddb9003316bd5b9f166f0d220).
