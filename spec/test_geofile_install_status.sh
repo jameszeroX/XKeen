@@ -79,7 +79,7 @@ geofile_symlinks_enabled() { return 0; }
 : > "$geo_dir/zkeen.dat"
 : > "$geo_dir/geosite_zkeen.dat"
 ln() {
-    case "$*" in *"$geo_dir/zkeen.dat") return 1 ;; esac
+    case "$*" in *"$geo_dir/zkeen.dat.tmp."*) return 1 ;; esac
     command ln "$@"
 }
 install_geosite >/dev/null 2>&1
@@ -99,6 +99,22 @@ mv() {
 }
 install_geosite >/dev/null 2>&1
 check 'previous GeoSite alias survives failed atomic rename' "$([ -f "$geo_dir/zkeen.dat" ] && echo yes || echo no)" yes
+
+reset_vars
+install_refilter_geoip=false
+install_v2fly_geoip=false
+install_zkeenip_geoip=true
+fail_file=never
+: > "$geo_dir/zkeenip.dat"
+: > "$geo_dir/geoip_zkeenip.dat"
+ln() {
+    case "$*" in *"$geo_dir/zkeenip.dat.tmp."*) return 1 ;; esac
+    command ln "$@"
+}
+install_geoip >/dev/null 2>&1
+rc=$?
+check 'GeoIP alias replacement failure reaches caller' "$rc" 1
+check 'previous GeoIP alias survives failed symlink replacement' "$([ -f "$geo_dir/zkeenip.dat" ] && echo yes || echo no)" yes
 
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
