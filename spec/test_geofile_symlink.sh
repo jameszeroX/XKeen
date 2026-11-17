@@ -37,6 +37,10 @@ extract() {
 }
 eval "$(extract /repo/scripts/_xkeen/02_install/04_install_geofile.sh install_geosite)"
 eval "$(extract /repo/scripts/_xkeen/02_install/04_install_geofile.sh install_geoip)"
+eval "$(awk '$0 == "strip_json_comments() {" { on=1 } on { print } on && /^}/ { exit }' \
+        /repo/scripts/_xkeen/01_info/01_info_common.sh)"
+eval "$(extract /repo/scripts/_xkeen/02_install/04_install_geofile.sh geofile_symlinks_enabled)"
+xkeen_config="/nonexistent/xkeen.json"
 
 pass=0; fail=0
 check() {
@@ -49,6 +53,7 @@ check() {
 
 reset_geo() {
     rm -rf "$geo_dir"; mkdir -p "$geo_dir"
+    _geofile_symlinks_state=""
     install_zkeen_geosite="true"; update_zkeen_geosite="false"
     install_refilter_geosite="false"; update_refilter_geosite="false"
     install_v2fly_geosite="false"; update_v2fly_geosite="false"
