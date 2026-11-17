@@ -420,13 +420,53 @@ write_rci_token() {
             return 1
         fi
         _wrt_mode=''
-        if strip_json_comments "$xkeen_config" | grep -q '"rci_token"'; then
+        if strip_json_comments "$xkeen_config" | jq -e '(.xkeen | type) == "object" and (.xkeen | has("rci_token"))' >/dev/null 2>&1; then
             if ! awk -v tok="$_wrt_token" '
-                !done && $0 !~ /^[ \t]*\/\// && match($0, /"rci_token"[ \t]*:[ \t]*("[^"]*"|null)/) {
-                    $0 = substr($0, 1, RSTART - 1) "\"rci_token\": \"" tok "\"" substr($0, RSTART + RLENGTH)
-                    done = 1
+                function visible_text(s,   out,i,c,n,instr,esc,inlinec) {
+                    out=""; instr=0; esc=0; inlinec=0
+                    for (i=1; i<=length(s); i++) {
+                        c=substr(s,i,1); n=substr(s,i+1,1)
+                        if (in_block) {
+                            if (c=="*" && n=="/") { in_block=0; out=out "  "; i++ }
+                            else out=out " "
+                        } else if (inlinec) out=out " "
+                        else if (instr) {
+                            out=out c
+                            if (esc) esc=0
+                            else if (c=="\\") esc=1
+                            else if (c=="\"") instr=0
+                        } else if (c=="\"") { instr=1; out=out c }
+                        else if (c=="/" && n=="/") { inlinec=1; out=out "  "; i++ }
+                        else if (c=="/" && n=="*") { in_block=1; out=out "  "; i++ }
+                        else out=out c
+                    }
+                    return out
                 }
-                { print }' "$xkeen_config" > "$_wrt_tmp"; then
+                {
+                    visible=visible_text($0)
+                    if (!in_xkeen && depth==1 && visible ~ /"xkeen"[ \t]*:[ \t]*\{/) {
+                        in_xkeen=1; xkeen_depth=depth+1
+                    }
+                    if (!done && in_xkeen && depth==xkeen_depth && visible ~ /^[ \t]*"rci_token"[ \t]*:/ &&
+                        match($0, /"rci_token"[ \t]*:[ \t]*("[^"\\]*"|null)/)) {
+                        $0=substr($0,1,RSTART-1) "\"rci_token\": \"" tok "\"" substr($0,RSTART+RLENGTH)
+                        done=1
+                    }
+                    print
+                    instr=0; esc=0
+                    for (i=1; i<=length(visible); i++) {
+                        c=substr(visible,i,1)
+                        if (instr) {
+                            if (esc) esc=0
+                            else if (c=="\\") esc=1
+                            else if (c=="\"") instr=0
+                        } else if (c=="\"") instr=1
+                        else if (c=="{") depth++
+                        else if (c=="}") depth--
+                    }
+                    if (in_xkeen && depth<xkeen_depth) in_xkeen=0
+                }
+                END { if (!done) exit 2 }' "$xkeen_config" > "$_wrt_tmp"; then
                 rm -f "$_wrt_tmp"
                 return 1
             fi
@@ -513,6 +553,10 @@ setup_rci_token() {
 
     # Меню могло ждать выбора сколько угодно — файл за это время мог измениться.
     # Токен нельзя записать в битый xkeen.json, поэтому не создаём его вовсе.
+    if ! command -v jq >/dev/null 2>&1; then
+        printf "  ${yellow}Предупреждение${reset}: jq ещё не установлен, создание RCI-токена отложено до запуска XKeen\n"
+        return 0
+    fi
     validate_xkeen_json_early || exit 1
 
     if ! command -v ndmc >/dev/null 2>&1; then
