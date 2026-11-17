@@ -39,34 +39,73 @@ green=''
 reset=''
 smart_clear() { :; }
 df_mode=good
-df() {
-    case "$df_mode" in
-        fail) return 1 ;;
-        empty) return 0 ;;
-        invalid) printf 'Filesystem 1M-blocks Used Available Use%% Mounted on\n/dev/test 100 20 unknown 20%% /opt\n' ;;
-        low) printf 'Filesystem 1M-blocks Used Available Use%% Mounted on\n/dev/test 100 80 20 80%% /opt\n' ;;
-        good) printf 'Filesystem 1M-blocks Used Available Use%% Mounted on\n/dev/test 100 20 80 20%% /opt\n' ;;
-    esac
-}
+mkdir "$work/bin" "$work/empty-path"
+cat > "$work/bin/df" <<'EOF'
+#!/bin/sh
+case "$DF_MODE" in
+    fail) exit 1 ;;
+    empty) exit 0 ;;
+    invalid) printf 'Filesystem 1M-blocks Used Available Use%% Mounted on\n/dev/test 100 20 unknown 20%% /opt\n' ;;
+    low) printf 'Filesystem 1M-blocks Used Available Use%% Mounted on\n/dev/test 100 80 20 80%% /opt\n' ;;
+    good) printf 'Filesystem 1M-blocks Used Available Use%% Mounted on\n/dev/test 100 20 80 20%% /opt\n' ;;
+esac
+EOF
+chmod +x "$work/bin/df"
+PATH="$work/bin:$PATH"
+export PATH
+DF_MODE=good
+export DF_MODE
 
 check_free_space xray >/dev/null 2>&1
 check 'sufficient free space proceeds' "$?" 0
 
-df_mode=fail
+DF_MODE=fail
 check_free_space xray >/dev/null 2>&1
 check 'df failure blocks automatic install' "$?" 1
 
-df_mode=empty
+DF_MODE=empty
 check_free_space xray >/dev/null 2>&1
 check 'empty df output blocks automatic install' "$?" 1
 
-df_mode=invalid
+DF_MODE=invalid
 check_free_space xray >/dev/null 2>&1
 check 'nonnumeric free space blocks automatic install' "$?" 1
 
-df_mode=low
+DF_MODE=low
 check_free_space xray >/dev/null 2>&1
 check 'known insufficient space still blocks automatic install' "$?" 1
+
+autoinstall_mode=false
+DF_MODE=invalid
+output=$(check_free_space xray <<'EOF'
+1
+EOF
+)
+check 'unknown space offers an interactive continue choice' "$?" 0
+case "$output" in *'не удалось определить свободное место'*) warning=shown ;; *) warning=missing ;; esac
+check 'unknown space explains the warning' "$warning" shown
+case "$output" in *'Продолжить установку'*) choice=shown ;; *) choice=missing ;; esac
+check 'unknown space offers continue and cancel' "$choice" shown
+
+output=$(check_free_space xray <<'EOF'
+0
+EOF
+)
+check 'unknown space can be canceled' "$?" 1
+
+output=$(check_free_space xray <<'EOF'
+invalid
+EOF
+)
+check 'unknown space rejects an invalid choice' "$?" 1
+
+output=$(PATH="$work/empty-path" check_free_space xray <<'EOF'
+1
+EOF
+)
+check 'missing df offers the same interactive choice' "$?" 0
+case "$output" in *'df'*) utility_notice=shown ;; *) utility_notice=missing ;; esac
+check 'missing df is reported' "$utility_notice" shown
 
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

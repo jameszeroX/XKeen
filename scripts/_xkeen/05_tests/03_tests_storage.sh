@@ -63,52 +63,61 @@ check_free_space() {
         *)      return 0 ;;
     esac
 
-    local df_output
-    if ! df_output=$(df -m "$target_dir" 2>/dev/null); then
-        printf "  ${red}Ошибка${reset}: не удалось определить свободное место для установки %s\n" "$client_name" >&2
-        return 1
+    local df_output free_space space_unknown
+    space_unknown=false
+    if ! command -v df >/dev/null 2>&1; then
+        space_unknown=true
+    elif df_output=$(df -m "$target_dir" 2>/dev/null); then
+        free_space=$(printf '%s\n' "$df_output" | awk 'NR==2 {print $4}')
+        case "$free_space" in
+            ''|*[!0-9]*) space_unknown=true ;;
+        esac
+    else
+        space_unknown=true
     fi
-    local free_space
-    free_space=$(printf '%s\n' "$df_output" | awk 'NR==2 {print $4}')
-    case "$free_space" in
-        ''|*[!0-9]*)
-            printf "  ${red}Ошибка${reset}: df вернул некорректный объём свободного места для установки %s\n" "$client_name" >&2
-            return 1
-            ;;
-    esac
 
-    if [ "$free_space" -lt "$required_space" ]; then
+    if [ "$space_unknown" = "true" ]; then
+        echo
+        echo -e "  ${red}Внимание: не удалось определить свободное место для установки $client_name${reset}"
+        echo "  Проверьте работоспособность утилиты df и состояние накопителя."
+        echo
+    elif [ "$free_space" -lt "$required_space" ]; then
         smart_clear
         echo
         echo -e "  ${red}Внимание: Недостаточно свободного места для установки $client_name${reset}"
         echo -e "  Требуется: ${light_blue}${required_space} MB${reset}, доступно: ${light_blue}${free_space} MB${reset}"
         echo
-
-        if [ "$autoinstall_mode" = "true" ]; then
-            echo -e "  Установка ${yellow}$client_name${reset} отменена"
-            return 1
-        fi
-
-        echo -e "  1) Продолжить установку ${yellow}$client_name${reset} ${red}на свой страх и риск${reset}"
-        echo -e "  0) Отменить установку ${yellow}$client_name${reset} (${green}Рекомендуется${reset})"
-        echo
-        printf "  Выберите вариант: "
-        read -r response
-
-        case "$response" in
-            1)
-                echo "  Предупреждение проигнорировано. Продолжаем..."
-                return 0
-                ;;
-            0|"")
-                echo -e "  Установка ${yellow}$client_name${reset} отменена пользователем"
-                return 1
-                ;;
-            *)
-                echo -e "  Неверный ввод. В целях безопасности установка ${yellow}$client_name${reset} отменена"
-                return 1
-                ;;
-        esac
+    else
+        return 0
     fi
-    return 0
+
+    if [ "$autoinstall_mode" = "true" ]; then
+        if [ "$space_unknown" = "true" ]; then
+            echo -e "  Установка ${yellow}$client_name${reset} отменена: объём свободного места неизвестен"
+        else
+            echo -e "  Установка ${yellow}$client_name${reset} отменена: недостаточно места"
+        fi
+        return 1
+    fi
+
+    echo -e "  1) Продолжить установку ${yellow}$client_name${reset} ${red}на свой страх и риск${reset}"
+    echo -e "  0) Отменить установку ${yellow}$client_name${reset} (${green}Рекомендуется${reset})"
+    echo
+    printf "  Выберите вариант: "
+    read -r response
+
+    case "$response" in
+        1)
+            echo "  Предупреждение проигнорировано. Продолжаем..."
+            return 0
+            ;;
+        0|"")
+            echo -e "  Установка ${yellow}$client_name${reset} отменена пользователем"
+            return 1
+            ;;
+        *)
+            echo -e "  Неверный ввод. В целях безопасности установка ${yellow}$client_name${reset} отменена"
+            return 1
+            ;;
+    esac
 }
