@@ -139,8 +139,12 @@ download_mihomo() {
                         [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
                         return 1
                     fi
-                    chmod +x "$yq_tmp_file"
-                    mv -f "$yq_tmp_file" "$install_dir/yq" || { rm -f "$yq_tmp_file"; [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"; return 1; }
+                    if ! _publish_yq_candidate "$yq_tmp_file"; then
+                        rm -f "$yq_tmp_file"
+                        [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
+                        return 1
+                    fi
+                    rm -f "$yq_tmp_file"
                     yq_available="true"
                     printf "  Yq ${green}успешно загружен${reset}\n"
                 fi
@@ -169,6 +173,36 @@ download_mihomo() {
         printf "  Mihomo ${green}успешно загружен${reset}\n"
         return 0
     done
+}
+
+# Публикация Yq через staging в install_dir: /tmp и /opt могут быть разными ФС.
+# Проверка запуска и финальный mv выполняются на целевой ФС, поэтому старый
+# бинарник остаётся на месте до успешной атомарной замены.
+_publish_yq_candidate() {
+    local yq_candidate="$1"
+    local yq_stage_file="$install_dir/.yq.$$"
+
+    if ! cp "$yq_candidate" "$yq_stage_file"; then
+        rm -f "$yq_stage_file"
+        printf "  ${red}Ошибка${reset}: Не удалось подготовить Yq в директории установки\n"
+        return 1
+    fi
+    if ! chmod +x "$yq_stage_file"; then
+        rm -f "$yq_stage_file"
+        printf "  ${red}Ошибка${reset}: Не удалось сделать Yq исполняемым\n"
+        return 1
+    fi
+    if ! "$yq_stage_file" --version >/dev/null 2>&1; then
+        rm -f "$yq_stage_file"
+        printf "  ${red}Ошибка${reset}: Загруженный Yq не запускается на этой системе\n"
+        return 1
+    fi
+    if ! mv -f "$yq_stage_file" "$install_dir/yq"; then
+        rm -f "$yq_stage_file"
+        printf "  ${red}Ошибка${reset}: Не удалось опубликовать Yq\n"
+        return 1
+    fi
+    return 0
 }
 
 # Загрузка и обновление Yq
@@ -206,8 +240,11 @@ download_yq() {
             rm -f "$yq_tmp_file"
             return 1
         fi
-        chmod +x "$yq_tmp_file"
-        mv -f "$yq_tmp_file" "$install_dir/yq" || { rm -f "$yq_tmp_file"; return 1; }
+        if ! _publish_yq_candidate "$yq_tmp_file"; then
+            rm -f "$yq_tmp_file"
+            return 1
+        fi
+        rm -f "$yq_tmp_file"
         printf "  Yq ${green}успешно загружен${reset}\n"
         return 0
     else
