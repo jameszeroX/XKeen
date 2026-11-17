@@ -55,9 +55,13 @@ add_mihomo_config() {
         if [ -f "$mihomo_conf_dir/config.yaml" ]; then
             return 0
         elif [ ! -d "$mihomo_conf_dir" ]; then
-            mkdir "$mihomo_conf_dir"
+            mkdir -p "$mihomo_conf_dir" || {
+                echo -e "  ${red}Ошибка${reset}: Не удалось создать директорию конфигурации Mihomo $mihomo_conf_dir" >&2
+                return 1
+            }
         fi
-            cat << EOF > "$mihomo_conf_dir/config.yaml"
+        config_tmp="$mihomo_conf_dir/.config.yaml.tmp.$$"
+        if ! cat > "$config_tmp" << EOF
 find-process-mode: off # снижает нагрузку на роутер
 # Не открывайте external-controller в LAN без secret — это полный контроль над ядром
 
@@ -73,6 +77,16 @@ listeners:
 
 # Руководство по конфигурации Mihomo - https://wiki.metacubex.one/ru/config/
 EOF
+        then
+            rm -f "$config_tmp"
+            echo -e "  ${red}Ошибка${reset}: Не удалось записать шаблон конфигурации Mihomo" >&2
+            return 1
+        fi
+        mv -f "$config_tmp" "$mihomo_conf_dir/config.yaml" || {
+            rm -f "$config_tmp"
+            echo -e "  ${red}Ошибка${reset}: Не удалось сохранить шаблон конфигурации Mihomo" >&2
+            return 1
+        }
 
         echo "  Добавлен шаблон конфигурационного файла Mihomo:"
         echo -e "  ${yellow}config.yaml${reset}"
