@@ -97,5 +97,20 @@ token=$(get_rci_token_from_config)
 rc=$?
 check 'bootstrap parser reads only xkeen.rci_token' "$token:$rc" 'real+/token:0'
 
+printf '%s\n' '{' '  "other": { "rci_token": "decoy" },' '  "xkeen": {' '    "keep": "preserved" // retain comment' '  }' '}' > "$xkeen_config"
+write_rci_token 'inserted-token'
+rc=$?
+check 'decoy rci_token does not block adding the xkeen path' "$rc" 0
+check 'token is written to xkeen.rci_token' "$(get_rci_token_from_config)" 'inserted-token'
+check 'decoy token remains unchanged' "$(grep -c '"rci_token": "decoy"' "$xkeen_config")" 1
+check 'JSONC comment remains in the original file' "$(grep -c 'retain comment' "$xkeen_config")" 1
+
+printf '%s\n' '{' '  "other": { "rci_token": "decoy" },' '  "xkeen": {' '    "rci_token": "old-token",' '    "keep": "preserved"' '  }' '}' > "$xkeen_config"
+write_rci_token 'replacement-token'
+rc=$?
+check 'existing xkeen token update succeeds when a decoy comes first' "$rc" 0
+check 'only xkeen.rci_token is replaced' "$(get_rci_token_from_config)" 'replacement-token'
+check 'decoy is still unchanged after replacement' "$(grep -c '"rci_token": "decoy"' "$xkeen_config")" 1
+
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
