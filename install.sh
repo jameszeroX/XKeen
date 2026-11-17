@@ -79,6 +79,39 @@ get_user_proxy() {
     return 0
 }
 
+# Проверка xkeen.json — первое действие установщика, до проверки репозитория,
+# меню, автосоздания RCI-токена и каких-либо изменений на диске.
+#
+# Битый xkeen.json иначе обнаруживался бы только после установки (в xkeen -i),
+# а к тому моменту setup_rci_token уже успевал создать токен в роутере и не мог
+# записать его в файл: при каждом повторном запуске создавался ещё один токен.
+# Дубль логики xkeen_json_preflight из scripts/_xkeen/01_info/01_info_common.sh
+# (install.sh не подключает модули, поэтому правки нужны в обоих местах).
+#
+# Критерий тот же: JSON после вырезания комментариев должен разбираться и
+# давать значение (пустой файл — ошибка). Файла нет (для KeeneticOS ниже 5.2
+# он не обязателен) или jq ещё не установлен (на чистой системе он ставится
+# позже, внутри xkeen -i) — проверять нечего, возвращается 0.
+# Возврат: 0 — файл в порядке или проверка невозможна, 1 — файл невалиден
+# (причина уже выведена).
+validate_xkeen_json_early() {
+    [ -f "$xkeen_config" ] || return 0
+    command -v jq >/dev/null 2>&1 || return 0
+
+    _vj_err=$(strip_json_comments "$xkeen_config" | jq -e . 2>&1 >/dev/null)
+    _vj_rc=$?
+    [ "$_vj_rc" = 0 ] && return 0
+
+    printf "  ${red}Ошибка${reset}: файл ${yellow}xkeen.json${reset} содержит синтаксические ошибки JSON:\n\n"
+    if [ -n "$_vj_err" ]; then
+        printf '%s\n' "$_vj_err" | sed 's/^/    /'
+    else
+        printf "    файл пуст или не содержит данных JSON\n"
+    fi
+    printf "\n  Исправьте файл ${yellow}%s${reset} и повторите установку\n\n" "$xkeen_config"
+    return 1
+}
+
 # Функция проверки доступности версии
 check_version_available() {
     local test_url="$1"
@@ -379,6 +412,10 @@ setup_rci_token() {
         esac
     fi
 
+    # Меню могло ждать выбора сколько угодно — файл за это время мог измениться.
+    # Токен нельзя записать в битый xkeen.json, поэтому не создаём его вовсе.
+    validate_xkeen_json_early || exit 1
+
     if ! command -v ndmc >/dev/null 2>&1; then
         printf "  ${red}Ошибка${reset}: утилита ${yellow}ndmc${reset} не найдена, токен не создан\n"
         rci_token_manual_hint
@@ -538,6 +575,9 @@ done
 
 [ -t 1 ] && clear
 echo
+
+# Первым делом проверяем валидность xkeen.json
+validate_xkeen_json_early || exit 1
 
 # Проверяем доступность репозитория Entware до начала установки
 check_entware_repo
