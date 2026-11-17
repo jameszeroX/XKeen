@@ -18,7 +18,10 @@ register_xkeen_list() {
     [ ! -e "$list_tmp" ] || return 1
 
     if [ -f "$register_dir/xkeen.list" ]; then
-        cp -p "$register_dir/xkeen.list" "$list_tmp" || return 1
+        cp -p "$register_dir/xkeen.list" "$list_tmp" || {
+            rm -f "$list_tmp"
+            return 1
+        }
         : > "$list_tmp" || { rm -f "$list_tmp"; return 1; }
     else
         : > "$list_tmp" || return 1

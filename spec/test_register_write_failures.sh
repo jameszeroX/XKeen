@@ -35,7 +35,15 @@ check 'find error is returned by register_xkeen_list' "$rc" 1
 check 'find error preserves previous registration list' "$(command cat "$register_dir/xkeen.list")" 'previous-list'
 unset -f find
 
+cp() { printf 'partial copy\n' > "$3"; return 1; }
+register_xkeen_list; rc=$?
+unset -f cp
+check 'copy failure is returned by register_xkeen_list' "$rc" 1
+check 'copy failure preserves previous registration list' "$(command cat "$register_dir/xkeen.list")" 'previous-list'
+check 'copy failure removes its temporary list' "$(find "$register_dir" -name '.xkeen.list.tmp.*' | wc -l | tr -d ' ')" 0
+
 # A failed publication must also leave the previous file intact.
+printf 'previous-list\n' > "$register_dir/xkeen.list"
 mv() { return 1; }
 register_xkeen_list; rc=$?
 check 'list publication failure is returned' "$rc" 1
