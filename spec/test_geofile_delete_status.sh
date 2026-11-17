@@ -44,10 +44,8 @@ output=$(logs_delete_geoip_info_console)
 case "$output" in *'Файл zkeenip.dat не удален'*) alias_check=yes ;; *) alias_check=no ;; esac
 check 'GeoIP verifier checks compatibility alias' "$alias_check" yes
 
-grep -Fq 'if ! delete_geosite_key; then' "$root/scripts/xkeen"
-check 'CLI handles GeoSite deletion failure' "$?" 0
-grep -Fq 'if ! delete_geoip_key; then' "$root/scripts/xkeen"
-check 'CLI handles GeoIP deletion failure' "$?" 0
+check 'CLI handles both GeoSite deletion failure call sites' "$(grep -Fc 'if ! delete_geosite_key; then' "$root/scripts/xkeen")" 2
+check 'CLI handles both GeoIP deletion failure call sites' "$(grep -Fc 'if ! delete_geoip_key; then' "$root/scripts/xkeen")" 2
 
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
