@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-17 09:16:35 MSK)
+
+Сборка из [`61f0d3d`](https://github.com/jameszeroX/XKeen/commit/61f0d3d87df0199ddb9003316bd5b9f166f0d220).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/49c14775becebeea25cd5cdd1591010ae4ffa80c/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`594dce5...61f0d3d`](https://github.com/jameszeroX/XKeen/compare/594dce59074e83801cc1ca1ed44a163f2cd4b812...61f0d3d87df0199ddb9003316bd5b9f166f0d220).
+
+###### Коммиты
+
+- fix(config): preserve xkeen config on backup failure ([`61f0d3d`](https://github.com/jameszeroX/XKeen/commit/61f0d3d87df0199ddb9003316bd5b9f166f0d220)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-16 13:58:16 MSK)
 
 Сборка из [`2e894c0`](https://github.com/jameszeroX/XKeen/commit/2e894c0904b0e8d7cf820e1d74e149b2a5af9a20).
