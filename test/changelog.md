@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-17 12:29:34 MSK)
+
+Сборка из [`5ee112c`](https://github.com/jameszeroX/XKeen/commit/5ee112c51e868e10c94c8f6b2069f002432c217a).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/7b8157db157fe4d0c69240781afd0b799694059f/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`a800bb7...5ee112c`](https://github.com/jameszeroX/XKeen/compare/a800bb7365e8435669da090693f5830ca863b033...5ee112c51e868e10c94c8f6b2069f002432c217a).
+
+###### Коммиты
+
+- fix(toggle_param): учитывать только объявления параметров с начала строки #293 ([`5ee112c`](https://github.com/jameszeroX/XKeen/commit/5ee112c51e868e10c94c8f6b2069f002432c217a)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-17 10:06:07 MSK)
 
 Сборка из [`7dad7c8`](https://github.com/jameszeroX/XKeen/commit/7dad7c83d0a455663f5899b42663871f15f5a509).
