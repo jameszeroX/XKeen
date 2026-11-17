@@ -1,5 +1,21 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-17 10:03:59 MSK)
+
+Сборка из [`5635edf`](https://github.com/jameszeroX/XKeen/commit/5635edf22b20df8e74f3c9fb56adf5f4dff9733b).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/cbeed190f9f419c97256847188b5825af106c878/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`e2fe283...5635edf`](https://github.com/jameszeroX/XKeen/compare/e2fe283bf3e2ff9768afe9ecabf5d649f854ad00...5635edf22b20df8e74f3c9fb56adf5f4dff9733b).
+
+###### Коммиты
+
+- fix(cron): match exact GeoFile update command ([`5a29520`](https://github.com/jameszeroX/XKeen/commit/5a29520b0d3ab230f97781466e9277e42870bddf)) — rangerxxyy
+- fix(cron): verify crond after startup ([`3f87c40`](https://github.com/jameszeroX/XKeen/commit/3f87c40915f7e7155c095d7a5930ca0a40202e83)) — rangerxxyy
+- fix(cron): select exact GeoFile update schedule ([`5635edf`](https://github.com/jameszeroX/XKeen/commit/5635edf22b20df8e74f3c9fb56adf5f4dff9733b)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-17 10:02:05 MSK)
 
 Сборка из [`e19f69e`](https://github.com/jameszeroX/XKeen/commit/e19f69e55f15985ff376a3854393908870fbb7ac).
