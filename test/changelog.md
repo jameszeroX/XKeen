@@ -1,5 +1,23 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-17 13:17:08 MSK)
+
+Сборка из [`a3bd5b1`](https://github.com/jameszeroX/XKeen/commit/a3bd5b1c1148948ba2cbfeeb4656f9bbf3814111).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/25dd8ae7a523b36ab1043bb5e0ab91ec8101dd19/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`7b8157d...a3bd5b1`](https://github.com/jameszeroX/XKeen/compare/7b8157db157fe4d0c69240781afd0b799694059f...a3bd5b1c1148948ba2cbfeeb4656f9bbf3814111).
+
+###### Коммиты
+
+- fix(geofile): parse update flag from JSONC ([`19ebe0f`](https://github.com/jameszeroX/XKeen/commit/19ebe0f8d02b2731909e93f5a57185eb2d1e4aba)) — rangerxxyy
+- fix(geofile): report user file update failures ([`fccde26`](https://github.com/jameszeroX/XKeen/commit/fccde261586647ad809c5a5cbb98e1fda8f41978)) — rangerxxyy
+- fix(geofile): clean temporary user update list ([`a98300b`](https://github.com/jameszeroX/XKeen/commit/a98300b133fe3f1f6c77103fa15877daeac32506)) — rangerxxyy
+- fix(geofile): validate user geodata schema before download ([`7767a27`](https://github.com/jameszeroX/XKeen/commit/7767a27615e59aef00461ab878e72a3b84afdda7)) — rangerxxyy
+- fix(geofile): support jq builds without regex ([`a3bd5b1`](https://github.com/jameszeroX/XKeen/commit/a3bd5b1c1148948ba2cbfeeb4656f9bbf3814111)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-17 12:29:34 MSK)
 
 Сборка из [`5ee112c`](https://github.com/jameszeroX/XKeen/commit/5ee112c51e868e10c94c8f6b2069f002432c217a).
