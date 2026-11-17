@@ -9,10 +9,11 @@ geofiles_update_state() {
     val=$(strip_json_comments "$xkeen_config" | jq -er '
         if type != "object" then error("root is not an object")
         elif (.xkeen | type) != "object" then "default"
-        elif (.xkeen | has("geofile_update") | not) then "default"
-        elif (.xkeen.geofile_update | type) == "boolean" then
-            if .xkeen.geofile_update then "true" else "false" end
-        elif .xkeen.geofile_update == null then "default"
+        elif (.xkeen.xray | type) != "object" then "default"
+        elif (.xkeen.xray | has("geofile_update") | not) then "default"
+        elif (.xkeen.xray.geofile_update | type) == "boolean" then
+            if .xkeen.xray.geofile_update then "true" else "false" end
+        elif .xkeen.xray.geofile_update == null then "default"
         else error("geofile_update must be a boolean or null") end
     ' 2>/dev/null) || {
         printf '  Предупреждение: некорректный geofile_update; используется значение по умолчанию\n' >&2
@@ -23,6 +24,43 @@ geofiles_update_state() {
         true|default) ;;
         *) return 1 ;;
     esac
+}
+
+# Создавать ли симлинки zkeen.dat <-> geosite_zkeen.dat и
+# zkeenip.dat <-> geoip_zkeenip.dat: ключ .xkeen.xray.geofile_symlinks
+# в xkeen.json (boolean, на одном уровне с geofile_update и geodata;
+# нет ключа / null / нет .xkeen.xray / нет файла / нет jq /
+# некорректное значение — true, как и раньше).
+# false отключает только СОЗДАНИЕ симлинков: уже существующие не удаляются.
+#
+# Читается здесь, а не в geofiles_update_state(): та вызывается лишь из -ug, а
+# install_geosite/install_geoip работают ещё и из -i и -g, где geofile_update
+# выставляется напрямую. Результат запоминается на время процесса, чтобы не
+# разбирать файл и не выводить предупреждение дважды (GeoSite и GeoIP).
+# Возврат: 0 — создавать симлинки, 1 — не создавать.
+_geofile_symlinks_state=""
+geofile_symlinks_enabled() {
+    local val
+    if [ -z "$_geofile_symlinks_state" ]; then
+        _geofile_symlinks_state="true"
+        if [ -f "$xkeen_config" ] && command -v jq >/dev/null 2>&1; then
+            val=$(strip_json_comments "$xkeen_config" | jq -er '
+                if type != "object" then error("root is not an object")
+                elif (.xkeen | type) != "object" then "default"
+                elif (.xkeen.xray | type) != "object" then "default"
+                elif (.xkeen.xray | has("geofile_symlinks") | not) then "default"
+                elif (.xkeen.xray.geofile_symlinks | type) == "boolean" then
+                    if .xkeen.xray.geofile_symlinks then "true" else "false" end
+                elif .xkeen.xray.geofile_symlinks == null then "default"
+                else error("geofile_symlinks must be a boolean or null") end
+            ' 2>/dev/null) || {
+                printf '  Предупреждение: некорректный geofile_symlinks; используется значение по умолчанию (true)\n' >&2
+                val="default"
+            }
+            [ "$val" = "false" ] && _geofile_symlinks_state="false"
+        fi
+    fi
+    [ "$_geofile_symlinks_state" = "true" ]
 }
 
 # Проверяет, что URL — стандартный GitHub Release asset-URL
@@ -174,7 +212,8 @@ install_geosite() {
     fi
 
     # Симлинки zkeen, если целевой файл присутствует (успешная загрузка либо уже был на диске)
-    if [ -n "$zkeen_datfile" ] && [ -f "$geo_dir/$zkeen_datfile" ]; then
+    # и их создание не отключено (xkeen.xray.geofile_symlinks = false)
+    if [ -n "$zkeen_datfile" ] && [ -f "$geo_dir/$zkeen_datfile" ] && geofile_symlinks_enabled; then
         if [ "$zkeen_datfile" = "geosite_zkeen.dat" ]; then
             rm -f "$geo_dir/zkeen.dat"
             ln -sf "$geo_dir/geosite_zkeen.dat" "$geo_dir/zkeen.dat"
@@ -216,7 +255,8 @@ install_geoip() {
     fi
 
     # Симлинки zkeenip, если целевой файл присутствует (успешная загрузка либо уже был на диске)
-    if [ -n "$zkeenip_datfile" ] && [ -f "$geo_dir/$zkeenip_datfile" ]; then
+    # и их создание не отключено (xkeen.xray.geofile_symlinks = false)
+    if [ -n "$zkeenip_datfile" ] && [ -f "$geo_dir/$zkeenip_datfile" ] && geofile_symlinks_enabled; then
         if [ "$zkeenip_datfile" = "geoip_zkeenip.dat" ]; then
             rm -f "$geo_dir/zkeenip.dat"
             ln -sf "$geo_dir/geoip_zkeenip.dat" "$geo_dir/zkeenip.dat"
