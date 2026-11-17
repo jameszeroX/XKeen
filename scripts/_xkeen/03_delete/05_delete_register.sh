@@ -10,8 +10,14 @@ delete_register_xray() {
     # status_file одним mv -f (атомарно).
     if [ -f "$status_file" ]; then
         status_tmp="${status_file}.tmp.$$"
-        awk -v pkg="Package: xray_s" 'BEGIN{RS=""} $0 !~ ("^" pkg) {print; print ""}' "$status_file" > "$status_tmp"
-        mv -f "$status_tmp" "$status_file"
+        awk -v pkg="Package: xray_s" 'BEGIN{RS=""} $0 !~ ("^" pkg) {print; print ""}' "$status_file" > "$status_tmp" || {
+            rm -f "$status_tmp"
+            return 1
+        }
+        mv -f "$status_tmp" "$status_file" || {
+            rm -f "$status_tmp"
+            return 1
+        }
     fi
 
     # Удаляем файлы регистрации, если они существуют
@@ -26,8 +32,14 @@ delete_register_mihomo() {
     # атомарно через tmp+mv — см. delete_register_xray)
     if [ -f "$status_file" ]; then
         status_tmp="${status_file}.tmp.$$"
-        awk -v pkg="Package: mihomo_s" 'BEGIN{RS=""} $0 !~ ("^" pkg) {print; print ""}' "$status_file" > "$status_tmp"
-        mv -f "$status_tmp" "$status_file"
+        awk -v pkg="Package: mihomo_s" 'BEGIN{RS=""} $0 !~ ("^" pkg) {print; print ""}' "$status_file" > "$status_tmp" || {
+            rm -f "$status_tmp"
+            return 1
+        }
+        mv -f "$status_tmp" "$status_file" || {
+            rm -f "$status_tmp"
+            return 1
+        }
     fi
 
     # Удаляем файлы регистрации, если они существуют
@@ -42,8 +54,14 @@ delete_register_yq() {
     # атомарно через tmp+mv — см. delete_register_xray)
     if [ -f "$status_file" ]; then
         status_tmp="${status_file}.tmp.$$"
-        awk -v pkg="Package: yq_s" 'BEGIN{RS=""} $0 !~ ("^" pkg) {print; print ""}' "$status_file" > "$status_tmp"
-        mv -f "$status_tmp" "$status_file"
+        awk -v pkg="Package: yq_s" 'BEGIN{RS=""} $0 !~ ("^" pkg) {print; print ""}' "$status_file" > "$status_tmp" || {
+            rm -f "$status_tmp"
+            return 1
+        }
+        mv -f "$status_tmp" "$status_file" || {
+            rm -f "$status_tmp"
+            return 1
+        }
     fi
 
     # Удаляем файлы регистрации, если они существуют
@@ -58,8 +76,14 @@ delete_register_xkeen() {
     # атомарно через tmp+mv — см. delete_register_xray)
     if [ -f "$status_file" ]; then
         status_tmp="${status_file}.tmp.$$"
-        awk -v pkg="Package: xkeen" 'BEGIN{RS=""} { split($0, lines, "\n"); if (lines[1] != pkg) {print; print ""} }' "$status_file" > "$status_tmp"
-        mv -f "$status_tmp" "$status_file"
+        awk -v pkg="Package: xkeen" 'BEGIN{RS=""} { split($0, lines, "\n"); if (lines[1] != pkg) {print; print ""} }' "$status_file" > "$status_tmp" || {
+            rm -f "$status_tmp"
+            return 1
+        }
+        mv -f "$status_tmp" "$status_file" || {
+            rm -f "$status_tmp"
+            return 1
+        }
     fi
 
     # Удаляем файлы регистрации, если они существуют

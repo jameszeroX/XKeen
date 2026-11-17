@@ -13,21 +13,35 @@ register_xkeen_control() {
 }
 
 register_xkeen_list() {
-    cd "$register_dir/" || exit
+    local list_tmp="${register_dir}/.xkeen.list.tmp.$$"
+    [ -d "$register_dir" ] || return 1
+    [ ! -e "$list_tmp" ] || return 1
 
-    # Создание файла xkeen.list
-    touch xkeen.list
+    if [ -f "$register_dir/xkeen.list" ]; then
+        cp -p "$register_dir/xkeen.list" "$list_tmp" || return 1
+        : > "$list_tmp" || { rm -f "$list_tmp"; return 1; }
+    else
+        : > "$list_tmp" || return 1
+    fi
 
-    # Генерация списка файлов и директорий
-    find "$xkeen_dir" -mindepth 1 | while read -r entry; do
-        echo "$entry" >> xkeen.list
-    done
+    if ! find "$xkeen_dir" -mindepth 1 > "$list_tmp"; then
+        rm -f "$list_tmp"
+        return 1
+    fi
 
-    # Добавление дополнительных путей
-    echo "$install_dir/xkeen" >> xkeen.list
-    echo "$xkeen_dir" >> xkeen.list
-    echo "$initd_file" >> xkeen.list
-    echo "$log_dir/xkeen-detached.log" >> xkeen.list
+    if ! printf '%s\n' \
+        "$install_dir/xkeen" \
+        "$xkeen_dir" \
+        "$initd_file" \
+        "$log_dir/xkeen-detached.log" >> "$list_tmp"; then
+        rm -f "$list_tmp"
+        return 1
+    fi
+
+    if ! mv -f "$list_tmp" "$register_dir/xkeen.list"; then
+        rm -f "$list_tmp"
+        return 1
+    fi
 }
 
 register_xkeen_status() {
