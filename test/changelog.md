@@ -1,5 +1,22 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-17 10:06:07 MSK)
+
+Сборка из [`7dad7c8`](https://github.com/jameszeroX/XKeen/commit/7dad7c83d0a455663f5899b42663871f15f5a509).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/a800bb7365e8435669da090693f5830ca863b033/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`cbeed19...7dad7c8`](https://github.com/jameszeroX/XKeen/compare/cbeed190f9f419c97256847188b5825af106c878...7dad7c83d0a455663f5899b42663871f15f5a509).
+
+###### Коммиты
+
+- fix(ports): propagate list publication failures ([`66a2718`](https://github.com/jameszeroX/XKeen/commit/66a271821482b17d316d56514be402867a642b86)) — rangerxxyy
+- fix(ports): reject port zero in CLI normalization ([`a366c8b`](https://github.com/jameszeroX/XKeen/commit/a366c8b9d4d53b34b1124918b382c793dd5173df)) — rangerxxyy
+- fix(ports): compare numeric intervals for conflicts ([`6767cac`](https://github.com/jameszeroX/XKeen/commit/6767cac60122fe8da16adf2743eac4e2ce2f9dde)) — rangerxxyy
+- fix(ports): align CLI and runtime file parsing ([`7dad7c8`](https://github.com/jameszeroX/XKeen/commit/7dad7c83d0a455663f5899b42663871f15f5a509)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-17 10:03:59 MSK)
 
 Сборка из [`5635edf`](https://github.com/jameszeroX/XKeen/commit/5635edf22b20df8e74f3c9fb56adf5f4dff9733b).
