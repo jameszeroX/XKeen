@@ -1,5 +1,20 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-17 09:58:32 MSK)
+
+Сборка из [`f9e84d8`](https://github.com/jameszeroX/XKeen/commit/f9e84d801e60010db233f6b32fbc137a3608a5a8).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/4213bb7434d4ef583861eb57feda00bb15e08c27/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`d2ae60b...f9e84d8`](https://github.com/jameszeroX/XKeen/compare/d2ae60b7a17deae3450d42d99d607b1a427e7368...f9e84d801e60010db233f6b32fbc137a3608a5a8).
+
+###### Коммиты
+
+- fix(packages): propagate dependency preparation failures ([`410f2a3`](https://github.com/jameszeroX/XKeen/commit/410f2a3ec0cf074e4679c0ddcdd2cc08402e6bad)) — rangerxxyy
+- fix(packages): restore installed packages missing binaries ([`f9e84d8`](https://github.com/jameszeroX/XKeen/commit/f9e84d801e60010db233f6b32fbc137a3608a5a8)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-17 09:39:13 MSK)
 
 Сборка из [`dca687a`](https://github.com/jameszeroX/XKeen/commit/dca687ab4a1debea696fac274838e8317e337fa6).
