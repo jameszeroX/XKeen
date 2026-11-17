@@ -185,6 +185,7 @@ process_geo_file() {
 install_geosite() {
     [ "$geofile_update" = "true" ] || return 0
     mkdir -p "$geo_dir" || { echo "Ошибка: Не удалось создать директорию $geo_dir"; exit 1; }
+    local geofile_status=0
 
     local zkeen_datfile=""
     if [ "$install_zkeen_geosite" = "true" ] || [ "$update_zkeen_geosite" = "true" ]; then
@@ -200,34 +201,42 @@ install_geosite() {
 
     # Последовательная загрузка геофайлов вместо параллельной для совместимости с прогресс-баром
     if [ "$install_refilter_geosite" = "true" ] || [ "$update_refilter_geosite" = "true" ]; then
-        process_geo_file "$refilter_url" "geosite_refilter.dat" "GeoSite Re:filter" "$update_refilter_geosite"
+        process_geo_file "$refilter_url" "geosite_refilter.dat" "GeoSite Re:filter" "$update_refilter_geosite" || geofile_status=1
     fi
 
     if [ "$install_v2fly_geosite" = "true" ] || [ "$update_v2fly_geosite" = "true" ]; then
-        process_geo_file "$v2fly_url" "geosite_v2fly.dat" "GeoSite V2Fly" "$update_v2fly_geosite"
+        process_geo_file "$v2fly_url" "geosite_v2fly.dat" "GeoSite V2Fly" "$update_v2fly_geosite" || geofile_status=1
     fi
 
     if [ -n "$zkeen_datfile" ]; then
-        process_geo_file "$zkeen_url" "$zkeen_datfile" "GeoSite ZKeen" "$update_zkeen_geosite"
+        process_geo_file "$zkeen_url" "$zkeen_datfile" "GeoSite ZKeen" "$update_zkeen_geosite" || geofile_status=1
     fi
 
     # Симлинки zkeen, если целевой файл присутствует (успешная загрузка либо уже был на диске)
     # и их создание не отключено (xkeen.xray.geofile_symlinks = false)
     if [ -n "$zkeen_datfile" ] && [ -f "$geo_dir/$zkeen_datfile" ] && geofile_symlinks_enabled; then
         if [ "$zkeen_datfile" = "geosite_zkeen.dat" ]; then
-            rm -f "$geo_dir/zkeen.dat"
-            ln -sf "$geo_dir/geosite_zkeen.dat" "$geo_dir/zkeen.dat"
+            local alias_tmp="$geo_dir/zkeen.dat.tmp.$$"
+            if ! ln -s "$geo_dir/geosite_zkeen.dat" "$alias_tmp" || ! mv -f "$alias_tmp" "$geo_dir/zkeen.dat"; then
+                rm -f "$alias_tmp"
+                geofile_status=1
+            fi
         else
-            rm -f "$geo_dir/geosite_zkeen.dat"
-            ln -sf "$geo_dir/zkeen.dat" "$geo_dir/geosite_zkeen.dat"
+            local alias_tmp="$geo_dir/geosite_zkeen.dat.tmp.$$"
+            if ! ln -s "$geo_dir/zkeen.dat" "$alias_tmp" || ! mv -f "$alias_tmp" "$geo_dir/geosite_zkeen.dat"; then
+                rm -f "$alias_tmp"
+                geofile_status=1
+            fi
         fi
     fi
+    return "$geofile_status"
 }
 
 # Функция для установки и обновления GeoIP
 install_geoip() {
     [ "$geofile_update" = "true" ] || return 0
     mkdir -p "$geo_dir" || { echo "Ошибка: Не удалось создать директорию $geo_dir"; exit 1; }
+    local geofile_status=0
 
     local zkeenip_datfile=""
     if [ "$install_zkeenip_geoip" = "true" ] || [ "$update_zkeenip_geoip" = "true" ]; then
@@ -243,28 +252,35 @@ install_geoip() {
 
     # Последовательная загрузка геофайлов вместо параллельной для совместимости с прогресс-баром
     if [ "$install_refilter_geoip" = "true" ] || [ "$update_refilter_geoip" = "true" ]; then
-        process_geo_file "$refilterip_url" "geoip_refilter.dat" "GeoIP Re:filter" "$update_refilter_geoip"
+        process_geo_file "$refilterip_url" "geoip_refilter.dat" "GeoIP Re:filter" "$update_refilter_geoip" || geofile_status=1
     fi
 
     if [ "$install_v2fly_geoip" = "true" ] || [ "$update_v2fly_geoip" = "true" ]; then
-        process_geo_file "$v2flyip_url" "geoip_v2fly.dat" "GeoIP V2Fly" "$update_v2fly_geoip"
+        process_geo_file "$v2flyip_url" "geoip_v2fly.dat" "GeoIP V2Fly" "$update_v2fly_geoip" || geofile_status=1
     fi
 
     if [ -n "$zkeenip_datfile" ]; then
-        process_geo_file "$zkeenip_url" "$zkeenip_datfile" "GeoIP ZKeenIP" "$update_zkeenip_geoip"
+        process_geo_file "$zkeenip_url" "$zkeenip_datfile" "GeoIP ZKeenIP" "$update_zkeenip_geoip" || geofile_status=1
     fi
 
     # Симлинки zkeenip, если целевой файл присутствует (успешная загрузка либо уже был на диске)
     # и их создание не отключено (xkeen.xray.geofile_symlinks = false)
     if [ -n "$zkeenip_datfile" ] && [ -f "$geo_dir/$zkeenip_datfile" ] && geofile_symlinks_enabled; then
         if [ "$zkeenip_datfile" = "geoip_zkeenip.dat" ]; then
-            rm -f "$geo_dir/zkeenip.dat"
-            ln -sf "$geo_dir/geoip_zkeenip.dat" "$geo_dir/zkeenip.dat"
+            local alias_tmp="$geo_dir/zkeenip.dat.tmp.$$"
+            if ! ln -s "$geo_dir/geoip_zkeenip.dat" "$alias_tmp" || ! mv -f "$alias_tmp" "$geo_dir/zkeenip.dat"; then
+                rm -f "$alias_tmp"
+                geofile_status=1
+            fi
         else
-            rm -f "$geo_dir/geoip_zkeenip.dat"
-            ln -sf "$geo_dir/zkeenip.dat" "$geo_dir/geoip_zkeenip.dat"
+            local alias_tmp="$geo_dir/geoip_zkeenip.dat.tmp.$$"
+            if ! ln -s "$geo_dir/zkeenip.dat" "$alias_tmp" || ! mv -f "$alias_tmp" "$geo_dir/geoip_zkeenip.dat"; then
+                rm -f "$alias_tmp"
+                geofile_status=1
+            fi
         fi
     fi
+    return "$geofile_status"
 }
 
 # Функция для обновления пользовательских геофайлов
