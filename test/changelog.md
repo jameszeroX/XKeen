@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-17 09:59:34 MSK)
+
+Сборка из [`2ebc0b8`](https://github.com/jameszeroX/XKeen/commit/2ebc0b8853be49bbf31342ef6c1a67c0daaea8a8).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/a2caf774e2522e95508d11eba40b8c2d2e4e18e2/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`4213bb7...2ebc0b8`](https://github.com/jameszeroX/XKeen/compare/4213bb7434d4ef583861eb57feda00bb15e08c27...2ebc0b8853be49bbf31342ef6c1a67c0daaea8a8).
+
+###### Коммиты
+
+- fix(opkg): match exact package during unregister ([`2ebc0b8`](https://github.com/jameszeroX/XKeen/commit/2ebc0b8853be49bbf31342ef6c1a67c0daaea8a8)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-17 09:58:32 MSK)
 
 Сборка из [`f9e84d8`](https://github.com/jameszeroX/XKeen/commit/f9e84d801e60010db233f6b32fbc137a3608a5a8).
