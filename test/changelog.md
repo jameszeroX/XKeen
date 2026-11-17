@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-17 10:02:05 MSK)
+
+Сборка из [`e19f69e`](https://github.com/jameszeroX/XKeen/commit/e19f69e55f15985ff376a3854393908870fbb7ac).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/e2fe283bf3e2ff9768afe9ecabf5d649f854ad00/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`a2caf77...e19f69e`](https://github.com/jameszeroX/XKeen/compare/a2caf774e2522e95508d11eba40b8c2d2e4e18e2...e19f69e55f15985ff376a3854393908870fbb7ac).
+
+###### Коммиты
+
+- fix(config): report missing toggle parameters ([`e19f69e`](https://github.com/jameszeroX/XKeen/commit/e19f69e55f15985ff376a3854393908870fbb7ac)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-17 09:59:34 MSK)
 
 Сборка из [`2ebc0b8`](https://github.com/jameszeroX/XKeen/commit/2ebc0b8853be49bbf31342ef6c1a67c0daaea8a8).
