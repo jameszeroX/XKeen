@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-17 15:51:36 MSK)
+
+Сборка из [`0619676`](https://github.com/jameszeroX/XKeen/commit/06196768191b023ebf2079c503e902c245924911).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/d5789a54a0147f54d39e3a43b192fea0706354df/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`a92aa42...0619676`](https://github.com/jameszeroX/XKeen/compare/a92aa42d3a9e37a0c6da741f4a493b3df2e16b48...06196768191b023ebf2079c503e902c245924911).
+
+###### Коммиты
+
+- Add geofile_symlinks option to xkeen.xray ([`0619676`](https://github.com/jameszeroX/XKeen/commit/06196768191b023ebf2079c503e902c245924911)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-17 14:31:08 MSK)
 
 Сборка из [`15b7187`](https://github.com/jameszeroX/XKeen/commit/15b718766b2f6a9ba8121f2a83a3c15fa3870fdf).
