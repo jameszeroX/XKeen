@@ -4476,17 +4476,36 @@ proxy_stop() {
     if [ "$_pstop_mutex_rc" -eq 0 ]; then
         trap '_release_proxy_mutex; trap - INT TERM HUP' INT TERM HUP
     fi
-    rm -f "$xkeen_rundir/ready"
     if ! proxy_status; then
         echo -e "  Прокси-клиент ${red}не запущен${reset}"
+        if ! clean_firewall; then
+            log_error_terminal "Не удалось очистить правила firewall; состояние остановки не изменено"
+            if [ "$_pstop_mutex_rc" -eq 0 ]; then
+                _release_proxy_mutex
+                trap - INT TERM HUP
+            fi
+            return 1
+        fi
+        rm -f "$xkeen_rundir/ready"
         cleanup_fd_monitor
-        clean_firewall
     else
         [ -f "$xkeen_rundir/coldstart.lock" ] || log_info_router "Инициирована остановка прокси-клиента"
-        cleanup_fd_monitor
         attempt=1
+        _stop_cleanup_done=0
         while [ "$attempt" -le "$start_attempts" ]; do
-            clean_firewall
+            if ! clean_firewall; then
+                log_error_terminal "Не удалось очистить правила firewall; работающий прокси оставлен без изменений"
+                if [ "$_pstop_mutex_rc" -eq 0 ]; then
+                    _release_proxy_mutex
+                    trap - INT TERM HUP
+                fi
+                return 1
+            fi
+            rm -f "$xkeen_rundir/ready"
+            if [ "$_stop_cleanup_done" -eq 0 ]; then
+                cleanup_fd_monitor
+                _stop_cleanup_done=1
+            fi
             killall -q "$name_client" 2>/dev/null
             _stop_attempt=0
             while [ "$_stop_attempt" -lt 30 ]; do
