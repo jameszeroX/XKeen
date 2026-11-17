@@ -152,21 +152,27 @@ get_user_proxy() {
 }
 
 # Функция проверки доступности GitHub.
-# Тонкая обёртка над probe_with_mirrors: идентичная философия (пара URL
-# через одну цепочку префиксов, exclusive gh_proxy_user, exit 1 на
-# полную недоступность), но один engine fallback в helper'е вместо
-# дублирования логики direct/proxy1/proxy2 здесь.
+# The caller may select a release or development URL. Legacy callers still
+# require both sources to be reachable.
 test_github() {
-    [ -n "$_gh_probed" ] && return 0
+    _gh_probe_url="${1:-}"
+    _gh_probe_key="${_gh_probe_url:-__pair__}"
+    [ "$_gh_probed" = "$_gh_probe_key" ] && return 0
 
     get_user_proxy
 
     printf "  ${yellow}Проверка доступности${reset} GitHub. Пожалуйста, подождите...\n"
 
-    # Pair probe: github.com (releases) + raw.githubusercontent.com
-    # (для dev-обновления). Разные CDN, разный uptime, проверяем оба.
-    if probe_with_mirrors "$xkeen_tar_url" && probe_with_mirrors "$xkeen_dev_url"; then
-        _gh_probed=1
+    # Do not require the unused channel to be available for an operation that
+    # explicitly selected one. Preserve the historical pair check otherwise.
+    if [ -n "$_gh_probe_url" ]; then
+        probe_with_mirrors "$_gh_probe_url" || _gh_probe_url=""
+    elif probe_with_mirrors "$xkeen_tar_url" && probe_with_mirrors "$xkeen_dev_url"; then
+        _gh_probe_url="$_gh_probe_key"
+    fi
+
+    if [ -n "$_gh_probe_url" ]; then
+        _gh_probed="$_gh_probe_key"
         if [ -n "$gh_proxy_user" ]; then
             printf "  Используется ${green}пользовательский прокси${reset}: ${yellow}$gh_proxy_user${reset}\n"
         elif [ -n "$_mirror_cache" ] && [ -r "$_mirror_cache" ] && grep -q "__direct__" "$_mirror_cache" 2>/dev/null; then

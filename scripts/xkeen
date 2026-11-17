@@ -84,7 +84,11 @@ if [ -n "$detach_eligible" ] && [ -z "$XKEEN_DETACHED" ] \
     } >>"$log"
     start-stop-daemon -S -b -n "xkdtch.$$" \
         -x "$0" -- "$@" \
-        >>"$log" 2>&1
+        >>"$log" 2>&1 || {
+            _detach_rc=$?
+            echo "  Ошибка: не удалось запустить XKeen в фоновом режиме (код $_detach_rc), лог: $log" >&2
+            exit "$_detach_rc"
+        }
     echo "  Запуск в фоновом режиме, лог: $log" >&2
     exit 0
 fi
@@ -754,7 +758,11 @@ while [ $# -gt 0 ]; do
             test_connection
             check_health	
             test_entware
-            test_github
+            if [ "$xkeen_build" = "Stable" ]; then
+                test_github "$xkeen_tar_url"
+            else
+                test_github "$xkeen_dev_url"
+            fi
             sleep 2
 
             smart_clear
@@ -775,7 +783,11 @@ while [ $# -gt 0 ]; do
                 fi
             fi
 
-            backup_xkeen
+            if ! backup_xkeen; then
+                echo -e "  ${red}Ошибка${reset}: не удалось создать резервную копию XKeen; обновление отменено"
+                delete_tmp
+                exit 1
+            fi
             "$download_func"
 
             if ! install_xkeen; then
@@ -899,7 +911,11 @@ while [ $# -gt 0 ]; do
 
                     sleep 2
                     if pidof xray >/dev/null; then
-                        "$initd_file" restart on >/dev/null 2>&1
+                        if ! "$initd_file" restart on >/dev/null 2>&1; then
+                            echo -e "  ${red}Ошибка${reset}: Xray обновлён, но его перезапуск не выполнен"
+                            delete_tmp
+                            exit 1
+                        fi
                     fi
 
                     echo
@@ -1009,7 +1025,11 @@ while [ $# -gt 0 ]; do
                     logs_register_yq_status_info_console
 
                     if pidof mihomo >/dev/null; then
-                        "$initd_file" restart on >/dev/null 2>&1
+                        if ! "$initd_file" restart on >/dev/null 2>&1; then
+                            echo -e "  ${red}Ошибка${reset}: Mihomo обновлён, но его перезапуск не выполнен"
+                            delete_tmp
+                            exit 1
+                        fi
                     fi
                     echo
                     echo -e "  Обновление ядра ${yellow}Mihomo${reset} ${green}выполнено${reset}"
@@ -1372,7 +1392,11 @@ while [ $# -gt 0 ]; do
                 else
                     download_func="download_xkeen_dev"
                 fi
-                test_github
+                if [ "$xkeen_build" = "Stable" ]; then
+                    test_github "$xkeen_tar_url"
+                else
+                    test_github "$xkeen_dev_url"
+                fi
                 sleep 2
                 "$download_func"
             fi
