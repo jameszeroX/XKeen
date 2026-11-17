@@ -1,7 +1,10 @@
 # Функция для установки файлов конфигурации Xray
 xray_conf_install() {
     if [ ! -d "$xray_conf_dir" ]; then
-        mkdir -p "$xray_conf_dir"
+        mkdir -p "$xray_conf_dir" || {
+            echo -e "  ${red}Ошибка${reset}: Не удалось создать директорию конфигурации Xray $xray_conf_dir" >&2
+            return 1
+        }
     fi
 
     if ls "$xray_conf_dir"/*.json >/dev/null 2>&1; then
@@ -11,7 +14,10 @@ xray_conf_install() {
     xray_files="$xray_conf_smpl"/*.json
     for file in $xray_files; do
         filename=$(basename "$file")
-        cp "$file" "$xray_conf_dir/"
+        if ! cp "$file" "$xray_conf_dir/"; then
+            echo -e "  ${red}Ошибка${reset}: Не удалось скопировать шаблон конфигурации Xray $filename" >&2
+            return 1
+        fi
         echo "  Добавлен шаблон конфигурационного файла Xray:"
         echo -e "  ${yellow}$filename${reset}"
         sleep 1
