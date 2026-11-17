@@ -31,7 +31,8 @@ write_opkg_status() {
     package_name="$1"
     package_version="$2"
     package_depends="$3"
-    status_entry="$(mktemp)"
+    status_entry="$(mktemp)" || return 1
+    [ -n "$status_entry" ] || return 1
 
     {
         echo "Package: $package_name"
@@ -40,7 +41,10 @@ write_opkg_status() {
         echo "Status: install user installed"
         echo "Architecture: $status_architecture"
         echo "Installed-Time: $(date +%s)"
-    } > "$status_entry"
+    } > "$status_entry" || {
+        rm -f "$status_entry"
+        return 1
+    }
 
     # Атомарная запись: новое содержимое (старый status_file, если он есть,
     # + строфа) собирается целиком во временном файле в той же директории,
@@ -48,13 +52,36 @@ write_opkg_status() {
     # обрыв между несколькими >> оставляет строфу без Installed-Time: и
     # следующий delete_register_* стирает чужую соседнюю запись opkg.
     status_tmp="${status_file}.tmp.$$"
-    {
-        [ -f "$status_file" ] && cat "$status_file"
-        echo ""
-        cat "$status_entry"
-        echo ""
-    } > "$status_tmp"
+    if [ -f "$status_file" ]; then
+        cat "$status_file" > "$status_tmp" || {
+            rm -f "$status_entry" "$status_tmp"
+            return 1
+        }
+    else
+        : > "$status_tmp" || {
+            rm -f "$status_entry" "$status_tmp"
+            return 1
+        }
+    fi
+    printf '\n' >> "$status_tmp" || {
+        rm -f "$status_entry" "$status_tmp"
+        return 1
+    }
+    cat "$status_entry" >> "$status_tmp" || {
+        rm -f "$status_entry" "$status_tmp"
+        return 1
+    }
+    printf '\n' >> "$status_tmp" || {
+        rm -f "$status_entry" "$status_tmp"
+        return 1
+    }
     rm -f "$status_entry"
-    sed -i '/^$/{N;/^\n$/D}' "$status_tmp"
-    mv -f "$status_tmp" "$status_file"
+    sed -i '/^$/{N;/^\n$/D}' "$status_tmp" || {
+        rm -f "$status_tmp"
+        return 1
+    }
+    mv -f "$status_tmp" "$status_file" || {
+        rm -f "$status_tmp"
+        return 1
+    }
 }
