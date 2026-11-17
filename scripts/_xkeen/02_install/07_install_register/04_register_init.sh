@@ -1564,15 +1564,17 @@ get_mihomo_listener_field_by_name() {
     listener_name="$1"
     field_name="$2"
 
-    get_mihomo_config_cache | jq -r --arg name "$listener_name" --arg field "$field_name" '
+    get_mihomo_config_cache >/dev/null || return 1
+    jq -r --arg name "$listener_name" --arg field "$field_name" '
         .listeners[]? | select(.name == $name) | .[$field] // ""
-    ' 2>/dev/null | sed -n '1p'
+    ' "$xkeen_rundir/mihomo-config-cache" 2>/dev/null | sed -n '1p'
 }
 
 get_mihomo_listener_rule_proxy_by_name() {
     listener_name="$1"
 
-    get_mihomo_config_cache | jq -r '.rules[]? // empty' 2>/dev/null | awk -F',' -v tag="$listener_name" '
+    get_mihomo_config_cache >/dev/null || return 1
+    jq -r '.rules[]? // empty' "$xkeen_rundir/mihomo-config-cache" 2>/dev/null | awk -F',' -v tag="$listener_name" '
         {
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", $1)
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2)
@@ -1597,7 +1599,7 @@ get_mihomo_listener_network_by_name() {
             echo "tcp"
             ;;
         tproxy)
-            udp_enabled=$(get_mihomo_listener_field_by_name "$listener_name" "udp")
+            udp_enabled=$(get_mihomo_listener_field_by_name "$listener_name" "udp") || return 1
             if [ "$udp_enabled" = "true" ]; then
                 echo "tcp udp"
             else
@@ -1737,6 +1739,7 @@ resolve_dscp_force_proxy() {
     find_dscp_force_listener() {
         listener_names="$1"
 
+        dscp_force_proxy_reason=""
         dscp_force_found_tag=""
         dscp_force_found_port=""
         dscp_force_found_mode=""
@@ -1744,10 +1747,23 @@ resolve_dscp_force_proxy() {
         dscp_force_found_proxy=""
 
         for listener_name in $listener_names; do
-            port_lookup=$(get_mihomo_listener_field_by_name "$listener_name" "port")
-            mode_lookup=$(get_mihomo_listener_field_by_name "$listener_name" "type")
-            proxy_lookup=$(get_mihomo_listener_field_by_name "$listener_name" "proxy")
-            network_lookup=$(normalize_network_list "$(get_mihomo_listener_network_by_name "$listener_name" "$mode_lookup")")
+            if ! port_lookup=$(get_mihomo_listener_field_by_name "$listener_name" "port"); then
+                dscp_force_proxy_reason="не удалось прочитать актуальную конфигурацию Mihomo"
+                return 2
+            fi
+            if ! mode_lookup=$(get_mihomo_listener_field_by_name "$listener_name" "type"); then
+                dscp_force_proxy_reason="не удалось прочитать актуальную конфигурацию Mihomo"
+                return 2
+            fi
+            if ! proxy_lookup=$(get_mihomo_listener_field_by_name "$listener_name" "proxy"); then
+                dscp_force_proxy_reason="не удалось прочитать актуальную конфигурацию Mihomo"
+                return 2
+            fi
+            if ! network_raw=$(get_mihomo_listener_network_by_name "$listener_name" "$mode_lookup"); then
+                dscp_force_proxy_reason="не удалось прочитать актуальную конфигурацию Mihomo"
+                return 2
+            fi
+            network_lookup=$(normalize_network_list "$network_raw")
             if [ -n "$port_lookup" ] || [ -n "$mode_lookup" ] || [ -n "$proxy_lookup" ]; then
                 dscp_force_found_tag="$listener_name"
                 dscp_force_found_port="$port_lookup"
@@ -1789,7 +1805,13 @@ resolve_dscp_force_proxy() {
         validate_names="$3"
         validate_label="$4"
 
-        if ! find_dscp_force_listener "$validate_names"; then
+        if find_dscp_force_listener "$validate_names"; then
+            :
+        else
+            listener_lookup_status=$?
+            if [ "$listener_lookup_status" -eq 2 ]; then
+                return 2
+            fi
             dscp_force_proxy_reason="не найден ${validate_label} listener для DSCP 61 (ожидается name '${dscp_force_proxy_tag}'"
             case "$validate_mode" in
                 redir) dscp_force_proxy_reason="${dscp_force_proxy_reason} или '${dscp_force_proxy_tag}-redirect'" ;;
@@ -1818,7 +1840,10 @@ resolve_dscp_force_proxy() {
         esac
 
         if [ -z "$dscp_force_found_proxy" ]; then
-            rule_proxy_lookup=$(get_mihomo_listener_rule_proxy_by_name "$dscp_force_found_tag")
+            if ! rule_proxy_lookup=$(get_mihomo_listener_rule_proxy_by_name "$dscp_force_found_tag"); then
+                dscp_force_proxy_reason="не удалось прочитать актуальную конфигурацию Mihomo"
+                return 2
+            fi
             if [ -z "$rule_proxy_lookup" ]; then
                 dscp_force_proxy_reason="listener '${dscp_force_found_tag}' должен явно задавать proxy либо иметь правило IN-NAME,${dscp_force_found_tag} в rules"
                 return 2
