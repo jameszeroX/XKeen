@@ -1220,7 +1220,11 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  Удаление всех баз ${yellow}GeoIP${reset}"
 
-            delete_geoip_key
+            if ! delete_geoip_key; then
+                logs_delete_geoip_info_console
+                echo -e "  ${red}Ошибка${reset}: не удалось удалить все базы GeoIP"
+                exit 1
+            fi
             logs_delete_geoip_info_console
 
             echo
@@ -1237,7 +1241,11 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  Удаление всех баз ${yellow}GeoSite${reset}"
 
-            delete_geosite_key
+            if ! delete_geosite_key; then
+                logs_delete_geosite_info_console
+                echo -e "  ${red}Ошибка${reset}: не удалось удалить все базы GeoSite"
+                exit 1
+            fi
             logs_delete_geosite_info_console
 
             echo
@@ -1266,7 +1274,11 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  Удаление всех баз ${yellow}GeoSite${reset}"
 
-            delete_geosite_key
+            if ! delete_geosite_key; then
+                logs_delete_geosite_info_console
+                echo -e "  ${red}Ошибка${reset}: не удалось удалить все базы GeoSite"
+                exit 1
+            fi
             logs_delete_geosite_info_console
 
             echo -e "  Удаление всех баз GeoSite ${green}выполнено${reset}"
@@ -1277,7 +1289,11 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  Удаление всех баз ${yellow}GeoIP${reset}"
 
-            delete_geoip_key
+            if ! delete_geoip_key; then
+                logs_delete_geoip_info_console
+                echo -e "  ${red}Ошибка${reset}: не удалось удалить все базы GeoIP"
+                exit 1
+            fi
             logs_delete_geoip_info_console
 
             echo -e "  Удаление всех баз GeoIP ${green}выполнено${reset}"
