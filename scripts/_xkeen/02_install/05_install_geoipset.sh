@@ -106,7 +106,6 @@ load_geoipset() {
     local family="$3"
     local tmp="${set}_tmp"
     local addr_regex
-    local result=1 restore_file=""
 
     # Тот же паттерн, что и в load_user_ipset_family (04_register_init.sh)
     if [ "$family" = "inet6" ]; then
@@ -156,41 +155,22 @@ load_geoipset() {
         trap 'rm -rf "$_gi_lockdir" 2>/dev/null' EXIT
     fi
 
-    # ru_exclude*.lst проходят install_geoipset_lst() только при наличии
-    # адреса. Не публикуем пустой набор при ошибке/пустом входном файле.
-    if [ -f "$file" ] && grep -Eq "$addr_regex" "$file"; then
-        restore_file=$(mktemp "${_gi_rundir:-/tmp}/geoipset.XXXXXX") || restore_file=""
-    fi
+    # Заполняем tmp; основной набор подменяется только после успешного restore
+    ipset create "$set" hash:net family "$family" -exist
+    ipset create "$tmp" hash:net family "$family" -exist
+    ipset flush "$tmp"
 
-    # Формируем и проверяем staging-набор поэтапно. Рабочий набор меняется
-    # только после успешного restore и атомарного ipset swap.
-    if [ -n "$restore_file" ] &&
-       sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file" |
+    if [ -f "$file" ] && sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file" |
        grep -Eo "$addr_regex" |
-       awk -v s="$tmp" '{print "add "s" "$1}' > "$restore_file" &&
-       [ -s "$restore_file" ] &&
-       ipset create "$set" hash:net family "$family" -exist &&
-       ipset create "$tmp" hash:net family "$family" -exist &&
-       ipset flush "$tmp" &&
-       ipset restore -exist < "$restore_file" &&
-       ipset swap "$set" "$tmp"; then
-        result=0
+       awk -v s="$tmp" '{print "add "s" "$1}' | ipset restore -exist; then
+        ipset swap "$set" "$tmp"
     fi
-
-    [ -z "$restore_file" ] || rm -f "$restore_file" || result=1
-    # On pre-swap failures this removes only staging data. After a successful
-    # swap, tmp contains the previous set and is safe to destroy.
-    if ipset destroy "$tmp"; then
-        :
-    else
-        result=1
-    fi
+    ipset destroy "$tmp"
 
     if [ -n "$_gi_lock_owned" ]; then
         trap - EXIT
-        rm -rf "$_gi_lockdir" 2>/dev/null || result=1
+        rm -rf "$_gi_lockdir" 2>/dev/null
     fi
-    return "$result"
 }
 
 install_geoipset() {
