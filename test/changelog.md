@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-18 11:52:44 MSK)
+
+Сборка из [`fde4770`](https://github.com/jameszeroX/XKeen/commit/fde4770abfe8d269ee37e4a7fa0f55f0d9984a88).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/ff47cf028260ccb5ea6ab0d58c1369ac64bc0565/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`f5539a5...fde4770`](https://github.com/jameszeroX/XKeen/compare/f5539a566320fda50b1628a9fa54c7101c0355d4...fde4770abfe8d269ee37e4a7fa0f55f0d9984a88).
+
+###### Коммиты
+
+- fix(ipv6): report failed NDM settings ([`fde4770`](https://github.com/jameszeroX/XKeen/commit/fde4770abfe8d269ee37e4a7fa0f55f0d9984a88)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-18 11:31:55 MSK)
 
 Сборка из [`3e99f3e`](https://github.com/jameszeroX/XKeen/commit/3e99f3e371ef9153703c8bec6989f7b9cb3a6a78).
