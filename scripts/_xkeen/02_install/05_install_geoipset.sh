@@ -257,7 +257,7 @@ install_geoipset() {
     fi
 
     if [ -d "$ipset_cfg" ]; then
-        local do_v4=0 do_v6=0 failed=0
+        local do_v4=0 do_v6=0
         if ip -4 addr show 2>/dev/null | grep -q "inet " && command -v iptables >/dev/null 2>&1; then
             if [ "$action" = "init" ] || [ -f "$ru_exclude_ipv4" ]; then
                 do_v4=1
@@ -270,14 +270,10 @@ install_geoipset() {
         fi
     
         # Последовательная загрузка списков вместо параллельной для совместимости с прогресс-баром
-        if [ "$do_v4" = "1" ]; then
-            install_geoipset_lst "$geoipv4_url" "$ru_exclude_ipv4" "IPv4 (IPSet)" "ipv4" || failed=1
-            load_geoipset geo_exclude "$ru_exclude_ipv4" inet || failed=1
-        fi
-        if [ "$do_v6" = "1" ]; then
-            install_geoipset_lst "$geoipv6_url" "$ru_exclude_ipv6" "IPv6 (IPSet)" "ipv6" || failed=1
-            load_geoipset geo_exclude6 "$ru_exclude_ipv6" inet6 || failed=1
-        fi
+        [ "$do_v4" = "1" ] && install_geoipset_lst "$geoipv4_url" "$ru_exclude_ipv4" "IPv4 (IPSet)" "ipv4"
+        [ "$do_v6" = "1" ] && install_geoipset_lst "$geoipv6_url" "$ru_exclude_ipv6" "IPv6 (IPSet)" "ipv6"
+        [ "$do_v4" = "1" ] && load_geoipset geo_exclude "$ru_exclude_ipv4" inet
+        [ "$do_v6" = "1" ] && load_geoipset geo_exclude6 "$ru_exclude_ipv6" inet6
     
         if [ ! -f "$ru_override" ]; then
             cat << EOF > "$ru_override"
@@ -285,6 +281,5 @@ install_geoipset() {
 # Добавьте IP и подсети, которые нужно исключить из IPSET ru_exclude
 EOF
         fi
-        [ "$failed" = "0" ] || return 1
     fi
 }
