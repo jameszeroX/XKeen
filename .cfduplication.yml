@@ -6,5 +6,6 @@
 # verify_install_sha256() в нём — урезанный дубликат verify_github_sha256() из
 # 00_fetch_with_mirrors.sh. Исключаем install.sh из анализа на дублирование кода
 IgnorePatterns:
+  - spec/**
   - scripts/_xkeen/02_install/07_install_register/04_register_init.sh
   - install.sh
