@@ -334,7 +334,6 @@ change_killswitch() {
         && strip_json_comments "$tmp" | jq -e . >/dev/null 2>&1 \
         && chmod 600 "$tmp" && mv -f "$tmp" "$xkeen_config"; then
         echo -e "  Kill-switch ${green}${state}${reset}"
-        register_xkeen_initd
     else
         rm -f "$tmp"
         echo -e "  ${red}Ошибка${reset}: не удалось сохранить настройку kill-switch"

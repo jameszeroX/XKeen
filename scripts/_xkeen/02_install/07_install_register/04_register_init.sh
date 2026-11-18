@@ -122,10 +122,8 @@ if [ "$dscp_enable" = "off" ]; then
     dscp_proxy=""
 fi
 
-# Функции журналирования
-log_info_router() { logger -p notice -t "$name_app" "$1"; }
-log_warning_router() { logger -p warning -t "$name_app" "$1"; }
-log_error_router() { logger -p error -t "$name_app" "$1"; }
+# Функция журналирования
+log_router() { logger -p "$1" -t "$name_app" "$2"; }
 
 # Сообщения начинаются с пустой строки и не заканчиваются ею. Если выводилось
 # хотя бы одно сообщение, перед дальнейшим выводом (старт прокси-клиента)
@@ -164,13 +162,127 @@ if ! xkeen_rundir=$(_xkeen_secure_rundir); then
     case "$1" in
         stop|status)
             xkeen_rundir="/tmp/.xkeen-unavailable"
-            log_warning_router "Недоступен runtime-каталог; продолжаем $1 без runtime-state"
+            log_router "warn" "Недоступен runtime-каталог; продолжаем $1 без runtime-state"
             ;;
         *)
             exit 1
             ;;
     esac
 fi
+
+# ── Ранний диспетчер ────────────────────────────────────────────────────────
+# sh разбирает и исполняет файл команда за командой: всё, что расположено
+# ниже, НЕ читается и НЕ разбирается, если здесь вызван exit. Поэтому
+# start без аргумента (обычный запуск из init.d: лишь порождает фоновый
+# cold_start) и status обрабатываются здесь, не платя за разбор ~4000 строк
+# и за чтение xkeen.json. Остальные команды идут дальше обычным путём.
+
+# Проверка обязательных утилит (builtin command -v, без форков)
+utils="jq curl grep awk sed ipset ip killall"
+[ "$name_client" = "mihomo" ] && utils="$utils yq"
+for cmd in $utils; do
+    command -v "$cmd" >/dev/null 2>&1 || log_error_terminal "Не найдена необходимая утилита: ${yellow}$cmd${reset}"
+done
+
+# Проверка статуса прокси-клиента
+proxy_pids() {
+    if [ "$name_client" != "xray" ]; then
+        pidof "$name_client"
+        return
+    fi
+    for _proxy_pid in $(pidof "$name_client"); do
+        if tr '\000' '\n' 2>/dev/null < "/proc/$_proxy_pid/cmdline" | awk '
+            NR == 2 { command = $0 }
+            /^--?(test|dump)(=true)?$/ { oneshot = 1 }
+            END {
+                running = NR == 1 || command == "run" || (command ~ /^-/ && command !~ /^--?(h|help|version)$/)
+                exit !(running && !oneshot)
+            }
+        '; then
+            printf '%s\n' "$_proxy_pid"
+        fi
+    done
+}
+
+proxy_status() { [ -n "$(proxy_pids)" ]; }
+
+# Атомарный single-instance guard на cold_start. mkdir — POSIX-атомарен,
+# единственный надёжный lock в busybox-ash без flock. Закрывает гонку
+# повторного S05xkeen start от NDM (fs.d + init.d + reconnect-триггеры).
+# Flag-файл xkeen_coldstart.lock сохранён для совместимости с условиями
+# подавления логов в proxy_start/proxy_stop ("[ -f lock ] || log_router").
+# PID владельца записывает _set_coldstart_pid после `nohup cold_start &` —
+# текущий $$ это caller (S05xkeen start), который завершается сразу;
+# проверка живости должна идти по PID фонового cold_start ($!).
+_acquire_coldstart_guard() {
+    if mkdir "$xkeen_rundir/coldstart.lock.d" 2>/dev/null; then
+        printf '%s\n' "$$" > "$xkeen_rundir/coldstart.lock.d/pid"
+        : > "$xkeen_rundir/coldstart.lock"
+        return 0
+    fi
+    _gpid=$(cat "$xkeen_rundir/coldstart.lock.d/pid" 2>/dev/null)
+    if [ -n "$_gpid" ] && kill -0 "$_gpid" 2>/dev/null; then
+        return 1
+    fi
+    # PID is written together with mkdir.  A guard without it is stale, not a
+    # permanent denial of service.
+    # PID exists but its process died → reclaim stale guard.
+    # Реcheck перед rm -rf: между чтением протухшего pid выше и этой строкой
+    # другой процесс мог успеть сделать свой mkdir+printf — не сносим чужой
+    # свежий lock.
+    [ "$(cat "$xkeen_rundir/coldstart.lock.d/pid" 2>/dev/null)" = "$_gpid" ] || return 1
+    rm -rf "$xkeen_rundir/coldstart.lock.d"
+    mkdir "$xkeen_rundir/coldstart.lock.d" 2>/dev/null || return 1
+    printf '%s\n' "$$" > "$xkeen_rundir/coldstart.lock.d/pid"
+    : > "$xkeen_rundir/coldstart.lock"
+    return 0
+}
+
+_set_coldstart_pid() {
+    [ -d "$xkeen_rundir/coldstart.lock.d" ] || return 0
+    printf '%s\n' "$1" > "$xkeen_rundir/coldstart.lock.d/pid"
+}
+
+_xkeen_create_ext_ipsets() {
+    ipset create ext_exclude hash:ip family inet -exist
+    ipset create ext_exclude6 hash:ip family inet6 -exist
+}
+
+cmd_status() {
+    if proxy_status; then
+        mode_proxy=""
+        if [ -f "$file_netfilter_hook" ]; then
+            mode_proxy=$(grep '^mode_proxy=' "$file_netfilter_hook" | awk -F"=" '{print $2}' | tr -d "'" 2>/dev/null)
+        fi
+        [ -z "$mode_proxy" ] && mode_proxy="Other"
+        echo -e "  Прокси-клиент ${yellow}$name_client${reset} ${green}запущен${reset} в режиме ${light_blue}$mode_proxy${reset}"
+        return 0
+    fi
+    echo -e "  Прокси-клиент ${red}не запущен${reset}"
+    return 1
+}
+
+case "$1" in
+    start)
+        if [ -z "$2" ]; then
+            _xkeen_create_ext_ipsets
+            [ "$start_auto" != "on" ] && exit 0
+            # Атомарный guard ДО spawn — повторный S05xkeen start от
+            # NDM (fs.d / init.d / reconnect) увидит каталог и выйдет.
+            _acquire_coldstart_guard || exit 0
+            log_router "info" "Подготовка к запуску прокси-клиента"
+            nohup "$0" cold_start >/dev/null 2>&1 &
+            # PID фонового cold_start — caller ($$) умрёт через exit 0,
+            # а живость guard'а проверяется именно по этому PID.
+            _set_coldstart_pid "$!"
+            exit 0
+        fi
+        ;;
+    status)
+        cmd_status
+        exit $?
+        ;;
+esac
 
 # Дубль функции из 01_info_common.sh: этот файл побайтово копируется в
 # init.d/S05xkeen и модули не подключает, поэтому правки нужны в обоих местах.
@@ -225,28 +337,15 @@ get_rci_token() {
     rci_token=""
     [ ! -f "$xkeen_config" ] && return 1
 
-    local json_clean
-    json_clean=$(_xkeen_cached_json)
-
-    rci_token=$(printf '%s' "$json_clean" | sed -n 's/.*"rci_token": *"\([^"]*\)".*/\1/p' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' 2>/dev/null)
+    # Кэш прогрет в основном shell (см. выше), читаем переменную напрямую —
+    # $(_xkeen_cached_json) форкал subshell только ради printf.
+    rci_token=$(printf '%s' "$_xkeen_json_cache" | sed -n 's/.*"rci_token": *"\([^"]*\)".*/\1/p' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' 2>/dev/null)
 
     [ "$rci_token" = "null" ] && rci_token=""
 }
-get_rci_token
+
 
 # Fail closed is deliberately opt-in.  Old configurations remain fail-open.
-load_killswitch_settings() {
-    local _ks_v
-    killswitch="off"
-
-    [ -f "$xkeen_config" ] || return 0
-    command -v jq >/dev/null 2>&1 || return 0
-
-    _ks_v=$(_xkeen_cached_json | jq -r '.xkeen.killswitch // "off"' 2>/dev/null)
-
-    [ "$_ks_v" = "on" ] && killswitch="on"
-}
-load_killswitch_settings
 keep_killswitch="off"
 
 # Пользовательские имена встроенных политик XKeen.
@@ -254,8 +353,7 @@ keep_killswitch="off"
 #   .xkeen.policy_full_name  - имя политики full-проксирования (по умолчанию "xkeen_full")
 # Прочитанные значения: name_policy_custom / name_policy_full_custom.
 # Ключ отсутствует, пуст или некорректен -> остаётся значение по умолчанию.
-# Предупреждения копятся в _policy_name_warn и выводятся из proxy_start
-# (load_policy_names вызывается при любой команде, в т.ч. status/stop).
+# Предупреждения копятся в _policy_name_warn и выводятся из proxy_start.
 _policy_name_warn=""
 
 # Допустимое имя: не пустое, без '|' (разделитель в user_policies)
@@ -266,14 +364,13 @@ _is_valid_policy_name() {
     [ "$(printf '%s' "$1" | tr -d '\000-\037\177')" = "$1" ]
 }
 
-# Читает строковый ключ .xkeen.<$1>; результат в _lpn_result ("" = не задан/некорректен).
+# Обрабатывает сырое значение ключа .xkeen.<$1>, переданное в $2 в том виде,
+# в каком его отдаёт jq: "" (нет ключа) / "x:" (не строка) / "s:<значение>".
+# Результат — в _lpn_result ("" = не задан/некорректен).
 # Вызывать без $(...), иначе _policy_name_warn теряется в subshell.
-_read_policy_name_key() {
+_apply_policy_name_raw() {
     _lpn_result=""
-    _lpn_raw=$(_xkeen_cached_json | jq -r --arg k "$1" '
-        .xkeen[$k] | if type == "string" then "s:" + .
-                     elif type == "null" then empty
-                     else "x:" end' 2>/dev/null)
+    _lpn_raw=$2
     case "$_lpn_raw" in
         "") return 0 ;;
         "x:")
@@ -293,7 +390,13 @@ _read_policy_name_key() {
     _lpn_result="$_lpn_val"
 }
 
-load_policy_names() {
+# killswitch и оба имени политик читаются из xkeen.json ОДНИМ запуском jq
+# (раньше — три: jq стартует с медленного накопителя и стоит дорого).
+# jq отдаёт значения через @sh, поэтому eval безопасен для любого содержимого.
+# Ошибка jq (битый JSON, .xkeen не объект) = пустой вывод = значения по умолчанию,
+# как и раньше.
+load_json_settings() {
+    killswitch="off"
     _policy_name_warn=""
     name_policy_custom=""
     name_policy_full_custom=""
@@ -301,9 +404,22 @@ load_policy_names() {
     [ -f "$xkeen_config" ] || return 0
     command -v jq >/dev/null 2>&1 || return 0
 
-    _read_policy_name_key policy_name
+    _ks_v=""
+    _lpn_raw_a=""
+    _lpn_raw_b=""
+    eval "$(printf '%s' "$_xkeen_json_cache" | jq -r '
+        def pn(k): (.xkeen[k] | if type == "string" then "s:" + .
+                                elif type == "null" then empty
+                                else "x:" end) // "";
+        @sh "_ks_v=\(if (.xkeen.killswitch // "off") == "on" then "on" else "off" end)",
+        @sh "_lpn_raw_a=\(pn("policy_name"))",
+        @sh "_lpn_raw_b=\(pn("policy_full_name"))"' 2>/dev/null)"
+
+    [ "$_ks_v" = "on" ] && killswitch="on"
+
+    _apply_policy_name_raw policy_name "$_lpn_raw_a"
     name_policy_custom="$_lpn_result"
-    _read_policy_name_key policy_full_name
+    _apply_policy_name_raw policy_full_name "$_lpn_raw_b"
     name_policy_full_custom="$_lpn_result"
 
     # Сравнение без учёта регистра - как при сопоставлении с RCI (ascii_downcase)
@@ -319,13 +435,20 @@ load_policy_names() {
     # Пользовательское имя, если задано, заменяет имя по умолчанию
     [ -n "$name_policy_custom" ] && name_policy="$name_policy_custom"
     [ -n "$name_policy_full_custom" ] && name_policy_full="$name_policy_full_custom"
-    unset _lpn_raw _lpn_val _lpn_a _lpn_b
+    unset _ks_v _lpn_raw _lpn_raw_a _lpn_raw_b _lpn_val _lpn_a _lpn_b
 }
-load_policy_names
+
+# stop не использует ни токен RCI, ни killswitch, ни имена политик
+# (clean_firewall/proxy_stop работают только с pidof/iptables/ipset),
+# поэтому для него это чтение xkeen.json пропускается.
+if [ "$1" != "stop" ]; then
+    get_rci_token
+    load_json_settings
+fi
 
 report_policy_name_warnings() {
     [ -n "$_policy_name_warn" ] || return 0
-    log_warning_router "xkeen.json: некорректные имена встроенных политик, использованы значения по умолчанию"
+    log_router "warn" "xkeen.json: некорректные имена встроенных политик, использованы значения по умолчанию"
     log_warning_terminal "$_policy_name_warn"
 }
 
@@ -391,7 +514,7 @@ wait_for_rci_token() {
     [ -n "$rci_token" ] || return 1
 
     wait_for_webui || {
-        log_error_router "Веб-интерфейс недоступен"
+        log_router "err" "Веб-интерфейс недоступен"
         return 1
     }
 
@@ -408,7 +531,7 @@ wait_for_rci_token() {
         case "$http_code" in
             200) return 0 ;;
             401|403)
-                log_error_router "Отсутствует или недействителен токен доступа к RCI роутера"
+                log_router "err" "Отсутствует или недействителен токен доступа к RCI роутера"
                 log_error_terminal "Отсутствует или недействителен токен доступа к RCI роутера"
                 ;;
         esac
@@ -418,7 +541,7 @@ wait_for_rci_token() {
 
     done
 
-    log_error_router "RCI не отвечает (http_code=$http_code)"
+    log_router "err" "RCI не отвечает (http_code=$http_code)"
     log_error_terminal "RCI не отвечает (http_code=$http_code)"
 }
 # stop/status не используют curl_api (proxy_stop/proxy_status/clean_firewall
@@ -548,16 +671,15 @@ ${custom_details}"
     fi
 }
 
-utils="jq curl grep awk sed ipset ip logger killall"
-[ "$name_client" = "mihomo" ] && utils="$utils yq"
-for cmd in $utils; do
-    command -v "$cmd" >/dev/null 2>&1 || log_error_terminal "Не найдена необходимая утилита: ${yellow}$cmd${reset}"
-done
 
-if readlink "$(which ip)" | grep -q 'busybox'; then
-    log_error_router "Обнаружена урезанная версия ip (BusyBox). Необходим пакет ip-full"
-    log_error_terminal "Обнаружена урезанная версия ip (BusyBox). Необходим пакет: ${yellow}ip-full${reset}"
-fi
+# command -v — builtin; case вместо grep: ни which, ни grep не запускаются
+_ip_path=$(command -v ip)
+case "$(readlink "$_ip_path")" in
+    *busybox*)
+        log_router "err" "Обнаружена урезанная версия ip (BusyBox). Необходим пакет ip-full"
+        log_error_terminal "Обнаружена урезанная версия ip (BusyBox). Необходим пакет: ${yellow}ip-full${reset}"
+        ;;
+esac
 
 log_clean() { [ "$name_client" = "xray" ] && : > "$log_access" && : > "$log_error"; }
 
@@ -626,7 +748,7 @@ apply_ipv6_state() {
     sleep 2
 
     if [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 1 ]; then
-        log_info_router "Отключение IPv6 выполнено"
+        log_router "info" "Отключение IPv6 выполнено"
         return 0
     fi
 }
@@ -1224,31 +1346,10 @@ process_mark_var() {
     done
 
     clean_mark=${clean_mark# }
-    [ -n "$clean_mark" ] || log_warning_router "Значение $var_name отброшено при нормализации, правила для этой метки не создаются"
+    [ -n "$clean_mark" ] || log_router "warn" "Значение $var_name отброшено при нормализации, правила для этой метки не создаются"
     eval "$var_name=\"\$clean_mark\""
 }
 
-# Проверка статуса прокси-клиента
-proxy_pids() {
-    if [ "$name_client" != "xray" ]; then
-        pidof "$name_client"
-        return
-    fi
-    for _proxy_pid in $(pidof "$name_client"); do
-        if tr '\000' '\n' 2>/dev/null < "/proc/$_proxy_pid/cmdline" | awk '
-            NR == 2 { command = $0 }
-            /^--?(test|dump)(=true)?$/ { oneshot = 1 }
-            END {
-                running = NR == 1 || command == "run" || (command ~ /^-/ && command !~ /^--?(h|help|version)$/)
-                exit !(running && !oneshot)
-            }
-        '; then
-            printf '%s\n' "$_proxy_pid"
-        fi
-    done
-}
-
-proxy_status() { [ -n "$(proxy_pids)" ]; }
 
 # Поиск конфигураций DNS
 check_dns_config() {
@@ -1265,7 +1366,7 @@ check_dns_config() {
 
     echo "false"
 }
-file_dns=$(check_dns_config)
+[ "$1" = "stop" ] || file_dns=$(check_dns_config)
 
 # Кэш зарегистрированных в ядре модулей
 _registered_modules=""
@@ -1328,7 +1429,7 @@ get_modules() {
     _refresh_modules_cache  # подхватить только что insmod-нутые модули
 
     if ! is_module_loaded xt_comment; then
-        log_error_router "Модуль xt_comment не загружен"
+        log_router "err" "Модуль xt_comment не загружен"
         log_error_terminal "
   Модуль '${light_blue}xt_comment${reset}' не загружен
   Невозможно запустить XKeen без него
@@ -1340,7 +1441,7 @@ get_modules() {
         for module in xt_TPROXY.ko xt_socket.ko; do
             if ! is_module_loaded "${module%.ko}"; then
                 proxy_stop
-                log_error_router "Модуль ${module} не загружен"
+                log_router "err" "Модуль ${module} не загружен"
                 log_error_terminal "
   Модуль '${light_blue}${module}${reset}' не загружен
   Невозможно запустить XKeen в режиме ${mode_proxy} без него
@@ -1352,7 +1453,7 @@ get_modules() {
 
     if [ -n "$port_donor" ] || [ -n "$port_exclude" ]; then
         if ! is_module_loaded xt_multiport; then
-            log_warning_router "Модуль xt_multiport не загружен"
+            log_router "warn" "Модуль xt_multiport не загружен"
             log_warning_terminal "
   Модуль '${light_blue}xt_multiport${reset}' не загружен
   Невозможно использовать выбранные порты без него
@@ -1366,7 +1467,7 @@ get_modules() {
 
     if [ -n "$dscp_force_proxy" ] || [ -n "$dscp_exclude" ] || [ -n "$dscp_proxy" ]; then
         if ! is_module_loaded xt_dscp; then
-            log_warning_router "Модуль xt_dscp не загружен"
+            log_router "warn" "Модуль xt_dscp не загружен"
             log_warning_terminal "
   Модуль '${light_blue}xt_dscp${reset}' не загружен
   Работа с DSCP-метками невозможна
@@ -1986,7 +2087,7 @@ configure_dscp_force_proxy() {
     status_code=$?
 
     if [ "$status_code" -eq 2 ]; then
-        log_warning_router "$dscp_force_proxy_reason"
+        log_router "warn" "$dscp_force_proxy_reason"
         log_warning_terminal "
   DSCP force-proxy '${yellow}${dscp_force_proxy_tag}${reset}' найден, но настроен неверно
   ${light_blue}${dscp_force_proxy_reason}${reset}
@@ -2178,7 +2279,7 @@ sync_deny_mac_ipset() {
         else false
         end
     ' >/dev/null 2>&1; then
-        log_warning_router "Некорректный ответ hotspot API; $name_ipset_deny_mac оставлен без изменений"
+        log_router "warn" "Некорректный ответ hotspot API; $name_ipset_deny_mac оставлен без изменений"
         ipset destroy "$_xkeen_deny_tmp" 2>/dev/null
         unset _xkeen_deny_tmp _xkeen_hotspot_json
         return 1
@@ -2213,10 +2314,10 @@ sync_deny_mac_ipset() {
         if ipset swap "$_xkeen_deny_tmp" "$name_ipset_deny_mac" 2>/dev/null; then
             _xkeen_deny_rc=0
         else
-            log_warning_router "Не удалось заменить $name_ipset_deny_mac после hotspot API"
+            log_router "warn" "Не удалось заменить $name_ipset_deny_mac после hotspot API"
         fi
     else
-        log_warning_router "Не удалось восстановить $name_ipset_deny_mac из hotspot API"
+        log_router "warn" "Не удалось восстановить $name_ipset_deny_mac из hotspot API"
     fi
     ipset destroy "$_xkeen_deny_tmp" 2>/dev/null
     rm -f "$_xkeen_deny_entries" "$_xkeen_deny_commands"
@@ -2239,7 +2340,7 @@ check_policy_name_conflict() {
           '[ .xkeen.policy[] | select((.name | ascii_downcase) == ($main | ascii_downcase) or (.name | ascii_downcase) == ($full | ascii_downcase)) | .name ] | join(", ")' 2>/dev/null)
 
         if [ -n "$conflict" ]; then
-            log_error_router "Ошибка конфигурации: Имя политики в xkeen.json совпадает с зарезервированным"
+            log_router "err" "Ошибка конфигурации: Имя политики в xkeen.json совпадает с зарезервированным"
             log_error_terminal "
   Имя пользовательской политики совпадает с зарезервированным: '${light_blue}${conflict}${reset}'
   Устраните конфликт политик в файле '${yellow}xkeen.json${reset}'
@@ -2431,6 +2532,8 @@ restart_script() {
     exec /bin/sh "$0" "$@"
 }
 
+log_router() { logger -p "$1" -t "$name_app" "$2"; }
+
 # Дубль функции: см. также top-level копию (~316) в 04_register_init.sh и
 # 01_info_common.sh:curl_api — правь все три места синхронно.
 curl_api() {
@@ -2526,7 +2629,7 @@ if proxy_status; then
             else false
             end
         ' >/dev/null 2>&1; then
-            logger -p warning -t XKeen "Некорректный ответ hotspot API; $name_ipset_deny_mac оставлен без изменений"
+            log_router "warn" "Некорректный ответ hotspot API; $name_ipset_deny_mac оставлен без изменений"
             ipset destroy "$_tmp" 2>/dev/null
             return 1
         fi
@@ -2540,7 +2643,7 @@ if proxy_status; then
              ipset restore -exist; then
             ipset swap "$_tmp" "$name_ipset_deny_mac" 2>/dev/null
         else
-            logger -p warning -t XKeen "Не удалось восстановить $name_ipset_deny_mac из hotspot API"
+            log_router "warn" "Не удалось восстановить $name_ipset_deny_mac из hotspot API"
         fi
         ipset destroy "$_tmp" 2>/dev/null
     }
@@ -2665,12 +2768,11 @@ if proxy_status; then
         while :; do
             _restore_err=$(printf '%s\n' "$_blob" | "$_restore_cmd" --noflush 2>&1) && {
                 [ "$_attempt" -gt 1 ] && \
-                logger -p notice -t XKeen "$_restore_cmd $_table: applied on retry $_attempt"
+                log_router "info" "$_restore_cmd $_table: applied on retry $_attempt"
                 break
             }
             if [ "$_attempt" -ge "$_max_attempts" ]; then
-                logger -p error -t XKeen \
-                "$_restore_cmd --noflush failed for $_table after $_attempt attempts: $(printf '%s' "$_restore_err" | head -n1)"
+                log_router "err" "$_restore_cmd --noflush failed for $_table after $_attempt attempts: $(printf '%s' "$_restore_err" | head -n1)"
                 return 1
             fi
             usleep $((200000 * _attempt)) 2>/dev/null || sleep "$_attempt"
@@ -3277,7 +3379,7 @@ USER_POLICIES_EOF
              awk '{print "add '"$_rg_tmp"' "$1}' | ipset restore -exist; then
             ipset swap "$_rg_set" "$_rg_tmp" 2>/dev/null || return 1
         else
-            logger -p warning -t XKeen "Не удалось восстановить $_rg_set из $_rg_file"
+            log_router "warn" "Не удалось восстановить $_rg_set из $_rg_file"
         fi
         ipset destroy "$_rg_tmp" 2>/dev/null
     }
@@ -3510,7 +3612,7 @@ EOL
         mv -f "$file_netfilter_hook" "$_hook_live" || {
             rm -f "$file_netfilter_hook"
             file_netfilter_hook="$_hook_live"
-            log_error_router "Не удалось атомарно обновить netfilter-хук"
+            log_router "err" "Не удалось атомарно обновить netfilter-хук"
             return 1
         }
     fi
@@ -3562,54 +3664,62 @@ clean_firewall() {
         [ "$family" = "iptables" ] && [ "$iptables_supported" != "true" ] && continue
         [ "$family" = "ip6tables" ] && [ "$ip6tables_supported" != "true" ] && continue
 
-        if "$family" -w -t nat -nL _NDM_HOTSPOT_DNSREDIR >/dev/null 2>&1; then
-            "$family" -w -t nat -S _NDM_HOTSPOT_DNSREDIR | grep -E -- "$comment_tag" | sed 's/^-A /-D /' | while IFS= read -r rule; do
+        # -S по несуществующей цепочке завершается с ошибкой, как и -nL: один вызов вместо двух
+        if _cf_hs=$("$family" -w -t nat -S _NDM_HOTSPOT_DNSREDIR 2>/dev/null); then
+            printf '%s\n' "$_cf_hs" | grep -E -- "$comment_tag" | sed 's/^-A /-D /' | while IFS= read -r rule; do
                 [ -n "$rule" ] && "$family" -w -t nat $rule >/dev/null 2>&1
             done
         fi
     done
+
+    # Раньше на каждую пару (семейство, таблица) выполнялось ~7 запусков
+    # iptables (2x -S, 5x -nL) и по конвейеру grep|cat|sed на каждый -S.
+    # Теперь таблица читается ОДНИМ вызовом -S; наличие цепочек определяется
+    # в shell по строкам "-N <цепочка>" без единого форка. Порядок и набор
+    # операций -D/-F/-X не изменились.
+    _cr_chain_exists() {
+        case "$_cr_dump_nl" in
+            *"
+-N $1
+"*) return 0 ;;
+        esac
+        return 1
+    }
+
+    _cr_flush_del() {
+        _cr_chain_exists "$1" || return 0
+        "$family" -w -t "$table" -F "$1" >/dev/null 2>&1
+        "$family" -w -t "$table" -X "$1" >/dev/null 2>&1
+    }
 
     clean_run() {
         family="$1"
         table="$2"
         name_chain="$3"
 
-        for sys_chain in PREROUTING OUTPUT; do
-            "$family" -w -t "$table" -S "$sys_chain" 2>/dev/null | grep -E -- "$comment_tag" \
-                | { if [ "$keep_killswitch" = "on" ]; then grep -v -- "-j ${name_chain}_killswitch"; else cat; fi; } \
-                | sed 's/^-A /-D /' | while IFS= read -r rule; do
-                [ -n "$rule" ] && "$family" -w -t "$table" $rule >/dev/null 2>&1
-            done
+        _cr_dump=$("$family" -w -t "$table" -S 2>/dev/null)
+        [ -n "$_cr_dump" ] || return 0
+        _cr_dump_nl="
+$_cr_dump
+"
+
+        # Правила-ссылки в PREROUTING и OUTPUT (в порядке дампа: PREROUTING, затем OUTPUT)
+        printf '%s\n' "$_cr_dump" | grep -E -- '^-A (PREROUTING|OUTPUT) ' | grep -E -- "$comment_tag" \
+            | { if [ "$keep_killswitch" = "on" ]; then grep -v -- "-j ${name_chain}_killswitch"; else cat; fi; } \
+            | sed 's/^-A /-D /' | while IFS= read -r rule; do
+            [ -n "$rule" ] && "$family" -w -t "$table" $rule >/dev/null 2>&1
         done
 
-        if "$family" -w -t "$table" -nL "$name_chain" >/dev/null 2>&1; then
-            "$family" -w -t "$table" -F "$name_chain" >/dev/null 2>&1
-            "$family" -w -t "$table" -X "$name_chain" >/dev/null 2>&1
-        fi
-
+        _cr_flush_del "$name_chain"
         out_chain="${name_chain}_out"
-        if "$family" -w -t "$table" -nL "$out_chain" >/dev/null 2>&1; then
-            "$family" -w -t "$table" -F "$out_chain" >/dev/null 2>&1
-            "$family" -w -t "$table" -X "$out_chain" >/dev/null 2>&1
-        fi
-
+        _cr_flush_del "$out_chain"
         force_chain="${name_chain}_force"
-        if "$family" -w -t "$table" -nL "$force_chain" >/dev/null 2>&1; then
-            "$family" -w -t "$table" -F "$force_chain" >/dev/null 2>&1
-            "$family" -w -t "$table" -X "$force_chain" >/dev/null 2>&1
-        fi
-
+        _cr_flush_del "$force_chain"
         divert_chain="${name_chain}_divert"
-        if "$family" -w -t "$table" -nL "$divert_chain" >/dev/null 2>&1; then
-            "$family" -w -t "$table" -F "$divert_chain" >/dev/null 2>&1
-            "$family" -w -t "$table" -X "$divert_chain" >/dev/null 2>&1
-        fi
-
+        _cr_flush_del "$divert_chain"
         killswitch_chain="${name_chain}_killswitch"
-        if [ "$keep_killswitch" != "on" ] && "$family" -w -t "$table" -nL "$killswitch_chain" >/dev/null 2>&1; then
-            "$family" -w -t "$table" -F "$killswitch_chain" >/dev/null 2>&1
-            "$family" -w -t "$table" -X "$killswitch_chain" >/dev/null 2>&1
-        fi
+        [ "$keep_killswitch" != "on" ] && _cr_flush_del "$killswitch_chain"
+        return 0
     }
 
     for family in iptables ip6tables; do
@@ -3627,7 +3737,24 @@ clean_firewall() {
 
     # Очистка и удаление списков ipset
     if command -v ipset >/dev/null 2>&1; then
+        # Один "ipset list -n" вместо flush+destroy для каждого из 7 наборов;
+        # если list -n не поддерживается — прежний цикл по всем наборам.
+        if _cf_sets=$(ipset list -n 2>/dev/null); then
+            _cf_sets="
+$_cf_sets
+"
+        else
+            _cf_sets=""
+        fi
         for set in geo_override geo_override6 geo_exclude geo_exclude6 user_exclude user_exclude6 "$name_ipset_deny_mac"; do
+            if [ -n "$_cf_sets" ]; then
+                case "$_cf_sets" in
+                    *"
+$set
+"*) ;;
+                    *) continue ;;
+                esac
+            fi
             ipset flush "$set" >/dev/null 2>&1
             ipset destroy "$set" >/dev/null 2>&1
         done
@@ -3679,7 +3806,7 @@ monitor_fd() {
                     [ -e "$1" ] || set --
                     current=$#
                     if [ "$limit" -gt 0 ] && [ "$current" -gt $((limit * 90 / 100)) ]; then
-                        log_warning_router "$name_client открыл $current из $limit файловых дескрипторов, инициирован перезапуск"
+                        log_router "warn" "$name_client открыл $current из $limit файловых дескрипторов, инициирован перезапуск"
                         rm -f "$file_pid_fd"
                         fd_out=true
                         proxy_stop
@@ -3754,7 +3881,7 @@ check_binary() {
     [ "$file" = "mihomo" ] && check_cmd="-v"
 
     if ! "$path" "$check_cmd" >/dev/null 2>&1; then
-        log_error_router "Бинарный файл $file аварийно остановлен"
+        log_router "err" "Бинарный файл $file аварийно остановлен"
         log_error_terminal "
   Бинарный файл ${yellow}$file${reset} аварийно остановлен
   ${red}Файл повреждён или несовместим с процессором${reset} вашего роутера
@@ -3796,42 +3923,6 @@ info_health_binary() {
     fi
 }
 
-# Атомарный single-instance guard на cold_start. mkdir — POSIX-атомарен,
-# единственный надёжный lock в busybox-ash без flock. Закрывает гонку
-# повторного S05xkeen start от NDM (fs.d + init.d + reconnect-триггеры).
-# Flag-файл xkeen_coldstart.lock сохранён для совместимости с условиями
-# подавления логов в proxy_start/proxy_stop ("[ -f lock ] || log_info_router").
-# PID владельца записывает _set_coldstart_pid после `nohup cold_start &` —
-# текущий $$ это caller (S05xkeen start), который завершается сразу;
-# проверка живости должна идти по PID фонового cold_start ($!).
-_acquire_coldstart_guard() {
-    if mkdir "$xkeen_rundir/coldstart.lock.d" 2>/dev/null; then
-        printf '%s\n' "$$" > "$xkeen_rundir/coldstart.lock.d/pid"
-        : > "$xkeen_rundir/coldstart.lock"
-        return 0
-    fi
-    _gpid=$(cat "$xkeen_rundir/coldstart.lock.d/pid" 2>/dev/null)
-    if [ -n "$_gpid" ] && kill -0 "$_gpid" 2>/dev/null; then
-        return 1
-    fi
-    # PID is written together with mkdir.  A guard without it is stale, not a
-    # permanent denial of service.
-    # PID exists but its process died → reclaim stale guard.
-    # Реcheck перед rm -rf: между чтением протухшего pid выше и этой строкой
-    # другой процесс мог успеть сделать свой mkdir+printf — не сносим чужой
-    # свежий lock.
-    [ "$(cat "$xkeen_rundir/coldstart.lock.d/pid" 2>/dev/null)" = "$_gpid" ] || return 1
-    rm -rf "$xkeen_rundir/coldstart.lock.d"
-    mkdir "$xkeen_rundir/coldstart.lock.d" 2>/dev/null || return 1
-    printf '%s\n' "$$" > "$xkeen_rundir/coldstart.lock.d/pid"
-    : > "$xkeen_rundir/coldstart.lock"
-    return 0
-}
-
-_set_coldstart_pid() {
-    [ -d "$xkeen_rundir/coldstart.lock.d" ] || return 0
-    printf '%s\n' "$1" > "$xkeen_rundir/coldstart.lock.d/pid"
-}
 
 _release_coldstart_guard() {
     _gpid=$(cat "$xkeen_rundir/coldstart.lock.d/pid" 2>/dev/null)
@@ -3920,7 +4011,7 @@ enable_killswitch() {
         _ks_marks="$_ks_marks $_ks_user_marks"
     fi
     [ -n "$(printf '%s' "$_ks_marks" | tr -d ' ')" ] || {
-        log_warning_router "Kill-switch не установлен: нет policy-mark для безопасной выборки трафика"
+        log_router "warn" "Kill-switch не установлен: нет policy-mark для безопасной выборки трафика"
         return 1
     }
 
@@ -3934,9 +4025,18 @@ enable_killswitch() {
         _ks_restore="${_ks_family}-restore"
         _ks_has_jump=0
         "$_ks_family" -w -t mangle -S PREROUTING 2>/dev/null | grep -q -- "-j ${name_chain}_killswitch" && _ks_has_jump=1
+        if [ "$_ks_family" = "iptables" ]; then
+            _ks_local="0.0.0.0/8 10.0.0.0/8 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 255.255.255.255"
+        else
+            _ks_local="::1/128 fd00::/8 fe80::/10 ff00::/8"
+        fi
         _ks_blob=$( {
             printf '*mangle\n'
             printf ':%s_killswitch -\n' "$name_chain"
+            # доступ к роутеру/LAN не блокируем
+            for _ks_net in $_ks_local; do
+                printf '%s\n' "-A ${name_chain}_killswitch -d $_ks_net $comment -j RETURN"
+            done
             for _ks_mark in $_ks_marks; do
                 [ -n "$_ks_mark" ] || continue
                 printf '%s\n' "-A ${name_chain}_killswitch -m conntrack ! --ctstate INVALID -m mark --mark ${_ks_mark} $comment -j DROP"
@@ -3946,7 +4046,7 @@ enable_killswitch() {
         } )
         _ks_err=$(printf '%s\n' "$_ks_blob" | "$_ks_restore" --noflush 2>&1) || {
             _ks_failed=1
-            log_error_router "Kill-switch не установлен ($_ks_restore): $(printf '%s' "$_ks_err" | head -n1)"
+            log_router "err" "Kill-switch не установлен ($_ks_restore): $(printf '%s' "$_ks_err" | head -n1)"
             echo "$_ks_err" >&2
             continue
         }
@@ -3954,9 +4054,9 @@ enable_killswitch() {
     _release_nf_lock
     [ "$_ks_failed" -eq 0 ] || return 1
     if [ "$1" = "hold" ]; then
-        log_info_router "Kill-switch блокирует трафик политик XKeen на время перезапуска"
+        log_router "info" "Kill-switch блокирует трафик политик XKeen на время перезапуска"
     else
-        log_warning_router "Kill-switch включён: трафик политик XKeen заблокирован до явного stop/start"
+        log_router "warn" "Kill-switch включён: трафик политик XKeen заблокирован до явного stop/start"
     fi
 }
 
@@ -3988,28 +4088,28 @@ disable_killswitch() {
         while "$_dk_family" -w -t mangle -D PREROUTING $comment -j "$_dk_chain" >/dev/null 2>&1; do :; done
         _dk_rules=$("$_dk_family" -w -t mangle -S PREROUTING 2>/dev/null) || {
             _dk_failed=1
-            log_error_router "Не удалось проверить jump kill-switch в $_dk_family"
+            log_router "err" "Не удалось проверить jump kill-switch в $_dk_family"
             continue
         }
         if printf '%s\n' "$_dk_rules" | grep -Fq -- "-j $_dk_chain"; then
             _dk_failed=1
-            log_error_router "Не удалось удалить jump kill-switch в $_dk_family"
+            log_router "err" "Не удалось удалить jump kill-switch в $_dk_family"
             continue
         fi
 
         if ! "$_dk_family" -w -t mangle -F "$_dk_chain" >/dev/null 2>&1; then
             _dk_failed=1
-            log_error_router "Не удалось очистить цепочку $_dk_chain в $_dk_family"
+            log_router "err" "Не удалось очистить цепочку $_dk_chain в $_dk_family"
             continue
         fi
         if ! "$_dk_family" -w -t mangle -X "$_dk_chain" >/dev/null 2>&1; then
             _dk_failed=1
-            log_error_router "Не удалось удалить цепочку $_dk_chain в $_dk_family"
+            log_router "err" "Не удалось удалить цепочку $_dk_chain в $_dk_family"
             continue
         fi
         if "$_dk_family" -w -t mangle -nL "$_dk_chain" >/dev/null 2>&1; then
             _dk_failed=1
-            log_error_router "Цепочка $_dk_chain всё ещё существует в $_dk_family"
+            log_router "err" "Цепочка $_dk_chain всё ещё существует в $_dk_family"
         fi
     done
     [ "$_dk_rc" -eq 2 ] || _release_nf_lock || _dk_failed=1
@@ -4078,15 +4178,15 @@ proxy_start() {
             # её удалили вручную. Кеш недействителен, режим "для всех клиентов".
             if [ -e "$policy_mark_cache" ]; then
                 rm -f "$policy_mark_cache"
-                log_info_router "Политика $name_policy отсутствует в RCI; кеш mark сброшен, прокси будет запущен для всех клиентов"
+                log_router "info" "Политика $name_policy отсутствует в RCI; кеш mark сброшен, прокси будет запущен для всех клиентов"
             fi
         elif [ -s "$policy_mark_cache" ]; then
             _cached_mark=$(cat "$policy_mark_cache" 2>/dev/null)
             case "$_cached_mark" in
-                0x[0-9A-Fa-f]*) policy_mark="$_cached_mark"; log_warning_router "RCI не вернул mark xkeen; используется последний успешный mark" ;;
+                0x[0-9A-Fa-f]*) policy_mark="$_cached_mark"; log_router "warn" "RCI не вернул mark xkeen; используется последний успешный mark" ;;
             esac
         else
-            log_warning_router "RCI не вернул mark xkeen; без policy-mark будет применён явный режим проксирования всех"
+            log_router "warn" "RCI не вернул mark xkeen; без policy-mark будет применён явный режим проксирования всех"
         fi
         policy_mark_full=$(get_policy_mark "$name_policy_full")
         user_policies=$(resolve_user_policies)
@@ -4137,7 +4237,7 @@ proxy_start() {
             if [ "$mode_proxy" = "TProxy" ]; then
                 get_keenetic_port >/dev/null || {
                     proxy_stop
-                    log_error_router "Порт 443 занят сервисами Keenetic. Запуск в режиме TProxy невозможен"
+                    log_router "err" "Порт 443 занят сервисами Keenetic. Запуск в режиме TProxy невозможен"
                     log_error_terminal "
   Необходимый для режима ${light_blue}TProxy${reset} ${red}443 порт занят${reset} сервисами Keenetic
 
@@ -4173,11 +4273,11 @@ proxy_start() {
             if [ "$start_manual" = "on" ]; then
                 log_error_terminal "Не удалось запустить ${yellow}$name_client${reset}, так как он уже запущен"
             else
-                log_info_router "Прокси-клиент успешно запущен в режиме $mode_proxy"
+                log_router "info" "Прокси-клиент успешно запущен в режиме $mode_proxy"
                 _release_coldstart_guard
             fi
         else
-            log_info_router "Инициирован запуск прокси-клиента"
+            log_router "info" "Инициирован запуск прокси-клиента"
             attempt=1
 
             fd_limit="$other_fd"
@@ -4281,7 +4381,7 @@ proxy_start() {
                             echo
                             echo -e "  Прокси-клиент ${red}аварийно завершился${reset}"
                             echo -e "  ${green}Выполняется очистка${reset} правил прозрачного проксирования"
-                            log_error_router "Прокси-клиент аварийно завершился после запуска"
+                            log_router "err" "Прокси-клиент аварийно завершился после запуска"
                             emergency_clear
                             printf '\n~ # '
                         fi
@@ -4296,13 +4396,13 @@ proxy_start() {
                         fi
                     fi
                     [ "$mode_proxy" = "Other" ] && echo -e "  Функция прозрачного прокси ${red}не активна${reset}. Направляйте соединения на ${yellow}${name_client}${reset} вручную"
-                    log_info_router "Прокси-клиент успешно запущен в режиме $mode_proxy"
+                    log_router "info" "Прокси-клиент успешно запущен в режиме $mode_proxy"
                     _release_coldstart_guard
                     if [ "$check_fd" = "on" ]; then
                         cleanup_fd_monitor
                         monitor_fd &
                         echo $! > "$file_pid_fd"
-                        log_info_router "Запущен контроль файловых дескрипторов $name_client"
+                        log_router "info" "Запущен контроль файловых дескрипторов $name_client"
                     fi
                     if [ "$_ps_mutex_rc" -eq 0 ]; then
                         _release_proxy_mutex
@@ -4398,7 +4498,7 @@ proxy_stop() {
         rm -f "$xkeen_rundir/ready"
         cleanup_fd_monitor
     else
-        [ -f "$xkeen_rundir/coldstart.lock" ] || log_info_router "Инициирована остановка прокси-клиента"
+        [ -f "$xkeen_rundir/coldstart.lock" ] || log_router "info" "Инициирована остановка прокси-клиента"
         attempt=1
         _stop_cleanup_done=0
         while [ "$attempt" -le "$start_attempts" ]; do
@@ -4429,7 +4529,7 @@ proxy_stop() {
             fi
             if ! proxy_status; then
                 echo -e "  Прокси-клиент ${red}остановлен${reset}"
-                [ -f "$xkeen_rundir/coldstart.lock" ] || log_info_router "Прокси-клиент успешно остановлен"
+                [ -f "$xkeen_rundir/coldstart.lock" ] || log_router "info" "Прокси-клиент успешно остановлен"
                 _release_coldstart_guard
                 if [ "$_pstop_mutex_rc" -eq 0 ]; then
                     _release_proxy_mutex
@@ -4452,38 +4552,13 @@ proxy_stop() {
 _cmd_rc=0
 case "$1" in
     start)
-        ipset create ext_exclude hash:ip family inet -exist
-        ipset create ext_exclude6 hash:ip family inet6 -exist
-        if [ -z "$2" ]; then
-            [ "$start_auto" != "on" ] && exit 0
-            # Атомарный guard ДО spawn — повторный S05xkeen start от
-            # NDM (fs.d / init.d / reconnect) увидит каталог и выйдет.
-            _acquire_coldstart_guard || exit 0
-            log_info_router "Подготовка к запуску прокси-клиента"
-            nohup "$0" cold_start >/dev/null 2>&1 &
-            # PID фонового cold_start — caller ($$) умрёт через exit 0,
-            # а живость guard'а проверяется именно по этому PID.
-            _set_coldstart_pid "$!"
-            exit 0
-        fi
+        # start без аргумента обработан в раннем диспетчере (вверху файла)
+        _xkeen_create_ext_ipsets
         proxy_start "$2"
         _cmd_rc=$?
     ;;
     stop) proxy_stop; _cmd_rc=$? ;;
-    status)
-        if proxy_status; then
-            mode_proxy=""
-            if [ -f "$file_netfilter_hook" ]; then
-                mode_proxy=$(grep '^mode_proxy=' "$file_netfilter_hook" | awk -F"=" '{print $2}' | tr -d "'" 2>/dev/null)
-            fi
-            [ -z "$mode_proxy" ] && mode_proxy="Other"
-            echo -e "  Прокси-клиент ${yellow}$name_client${reset} ${green}запущен${reset} в режиме ${light_blue}$mode_proxy${reset}"
-            _cmd_rc=0
-        else
-            echo -e "  Прокси-клиент ${red}не запущен${reset}"
-            _cmd_rc=1
-        fi
-        ;;
+    status) cmd_status; _cmd_rc=$? ;;
     dscp)
         if [ "$dscp_enable" != "off" ]; then
             echo
@@ -4502,7 +4577,7 @@ case "$1" in
                 else
                     _rs_fail=1
                     _cmd_rc=1
-                    log_error_router "Перезапуск отменён: не удалось установить hold kill-switch"
+                    log_router "err" "Перезапуск отменён: не удалось установить hold kill-switch"
                     printf '%s\n' "  ${red}Перезапуск отменён${reset}: действующее прокси-ядро оставлено запущенным, поскольку hold kill-switch не установлен."
                 fi
             fi
@@ -4513,7 +4588,7 @@ case "$1" in
             _cmd_rc=$?
         fi
         if [ "$keep_killswitch" = "on" ]; then
-            log_warning_router "Перезапуск не завершён: kill-switch остаётся включённым до успешного start или явного stop"
+            log_router "warn" "Перезапуск не завершён: kill-switch остаётся включённым до успешного start или явного stop"
             printf '%s\n' "  ${yellow}Kill-switch${reset} остаётся включённым: трафик политики заблокирован."
             printf '%s\n' "  Снять блокировку: ${green}xkeen -stop${reset} (остановить) или повторить ${green}xkeen -restart${reset}"
         fi
@@ -4524,7 +4599,7 @@ case "$1" in
         _set_coldstart_pid "$$"
         # Гарантированная задержка перед попыткой запуска прокси-клиента
         if [ -n "$init_delay" ] && [ "$init_delay" -gt 0 ] 2>/dev/null; then
-            log_info_router "Ожидание перед проверкой готовности к запуску XKeen (${init_delay} сек...)"
+            log_router "info" "Ожидание перед проверкой готовности к запуску XKeen (${init_delay} сек...)"
             sleep "$init_delay"
         fi
         # Re-spawn в чистый S05xkeen: sh-функции (wait_for_ready) не
