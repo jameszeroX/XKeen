@@ -28,7 +28,7 @@ preinstall_warn() {
         fi
 
         echo "  1. Продолжить установку $entware_storage"
-        echo "  2. Выйти из установщика"
+        echo "  0. Выйти из установщика"
         echo
 
         while true; do
@@ -39,7 +39,7 @@ preinstall_warn() {
                     [ -t 1 ] && clear
                     break
                     ;;
-                2)
+                0)
                     echo
                     echo -e "  ${red}Установка отменена${reset}"
                     exit 0
