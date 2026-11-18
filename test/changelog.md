@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-18 09:37:44 MSK)
+
+Сборка из [`39e5238`](https://github.com/jameszeroX/XKeen/commit/39e5238e3f78ff69584e60d901f9c6ab97c40206).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/d539996742d0c69bb91e9967b61a786bfdc0f001/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`d7c1641...39e5238`](https://github.com/jameszeroX/XKeen/compare/d7c16413cd56552385eba034c96bfd991d68772a...39e5238e3f78ff69584e60d901f9c6ab97c40206).
+
+###### Коммиты
+
+- Change installer exit option to 0 ([`39e5238`](https://github.com/jameszeroX/XKeen/commit/39e5238e3f78ff69584e60d901f9c6ab97c40206)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-18 08:32:03 MSK)
 
 Сборка из [`96269f8`](https://github.com/jameszeroX/XKeen/commit/96269f841dac1ed783d636a46944e0f4c3d30034).
