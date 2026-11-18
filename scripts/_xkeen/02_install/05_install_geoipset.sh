@@ -123,7 +123,7 @@ load_geoipset() {
     # 04_register_init.sh: kill -0 снимает лок мёртвого держателя, короткое
     # ограниченное ожидание уместно — restore идёт по уже скачанному
     # локальному файлу, в отличие от многоминутной загрузки install/upgrade.
-    local _gi_rundir="" _gi_lockdir="" _gi_lock_owned="" _gi_try=0 _gi_lock_pid _gi_trap_file=""
+    local _gi_rundir="" _gi_lockdir="" _gi_lock_owned="" _gi_try=0 _gi_lock_pid
     _gi_rundir=$(_xkeen_secure_rundir)
     if [ -n "$_gi_rundir" ]; then
         _gi_lockdir="$_gi_rundir/geoipset.lock.d"
@@ -152,16 +152,6 @@ load_geoipset() {
             printf "GeoIPSET: не удалось получить лок для '%s' — другой процесс ещё выполняет загрузку, обновление пропущено\n" "$set" >&2
             return 1
         fi
-        _gi_trap_file=$(mktemp "$_gi_lockdir/traps.XXXXXX") || {
-            rm -rf "$_gi_lockdir" 2>/dev/null
-            _gi_lock_owned=""
-            return 1
-        }
-        trap > "$_gi_trap_file" || {
-            rm -rf "$_gi_lockdir" 2>/dev/null
-            _gi_lock_owned=""
-            return 1
-        }
         trap 'rm -rf "$_gi_lockdir" 2>/dev/null; exit 1' INT TERM
         trap 'rm -rf "$_gi_lockdir" 2>/dev/null' EXIT
     fi
@@ -197,8 +187,7 @@ load_geoipset() {
     fi
 
     if [ -n "$_gi_lock_owned" ]; then
-        trap - EXIT INT TERM
-        eval "$(cat "$_gi_trap_file" 2>/dev/null)"
+        trap - EXIT
         rm -rf "$_gi_lockdir" 2>/dev/null || result=1
     fi
     return "$result"
