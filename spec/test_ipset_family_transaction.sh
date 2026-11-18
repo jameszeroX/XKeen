@@ -21,7 +21,6 @@ extract() {
 }
 eval "$(extract load_user_ipset_family "$root/scripts/_xkeen/02_install/07_install_register/04_register_init.sh")"
 eval "$(extract load_user_ipset "$root/scripts/_xkeen/02_install/07_install_register/04_register_init.sh")"
-eval "$(extract _filter_ip_cidr_family "$root/scripts/_xkeen/02_install/07_install_register/04_register_init.sh")"
 eval "$(extract _acquire_geoipset_lock "$root/scripts/_xkeen/02_install/07_install_register/04_register_init.sh")"
 eval "$(extract _release_geoipset_lock "$root/scripts/_xkeen/02_install/07_install_register/04_register_init.sh")"
 eval "$(extract load_ipset "$root/scripts/_xkeen/02_install/07_install_register/04_register_init.sh")"

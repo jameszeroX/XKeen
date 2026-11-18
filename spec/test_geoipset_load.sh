@@ -8,9 +8,8 @@
 # литеральный \r (подтверждено od -c), а IPv6-запись вида "::/0" (ведущий ':')
 # якорь не матчил и молча терялась. load_ipset вообще не проверяла формат
 # адреса — мусорная строка становилась аргументом ipset restore как есть.
-# CRLF/comments/blank-lines are normalized; runtime exception parsers validate
-# each complete CIDR record. Strict malformed-record cases live in
-# test_ip_cidr_strict_validation.sh.
+# Обе копии сведены к паттерну load_user_ipset_family: sed CR/comment/blank-
+# strip + grep -Eo с тем же адресным regex, что и везде в проекте.
 
 # Модули целиком не подключаем: 04_register_init.sh standalone и на верхнем
 # уровне содержит генерацию init.d-скрипта, а 05_install_geoipset.sh ходит в
@@ -20,7 +19,6 @@ extract() {
     awk "/^$1\\(\\) \\{/,/^\\}/" "$2"
 }
 eval "$(extract load_geoipset /repo/scripts/_xkeen/02_install/05_install_geoipset.sh)"
-eval "$(extract _filter_ip_cidr_family /repo/scripts/_xkeen/02_install/07_install_register/04_register_init.sh)"
 eval "$(extract _acquire_geoipset_lock /repo/scripts/_xkeen/02_install/07_install_register/04_register_init.sh)"
 eval "$(extract _release_geoipset_lock /repo/scripts/_xkeen/02_install/07_install_register/04_register_init.sh)"
 eval "$(extract load_ipset /repo/scripts/_xkeen/02_install/07_install_register/04_register_init.sh)"
@@ -69,7 +67,7 @@ ipset() {
 # Fixture: CRLF, комментарий, пустая строка, мусорная строка, IPv6 с
 # ведущим "::" — ровно те случаи, что разошлись между копиями.
 fixture="$(mktemp)"
-printf '1.2.3.0/24\r\n# comment\n   \n5.6.7.8/32\r\n2001:db8::/32\r\n::/0\r\n' > "$fixture"
+printf '1.2.3.0/24\r\n# comment\n   \n5.6.7.8/32\r\ngarbage not an ip\n2001:db8::/32\r\n::/0\r\n' > "$fixture"
 
 v4_regex='([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?'
 v6_regex='([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?'
@@ -88,7 +86,7 @@ check "load_geoipset v4: без \\r, без мусора" "$(cat "$capture_file"
 check "load_geoipset v6: '::/0' захвачен" "$(cat "$capture_file")" "$expected_v6"
 
 : > "$capture_file"; load_ipset geo_test "$fixture" inet
-check "load_ipset v4: валидные записи сохранены" "$(cat "$capture_file")" "$expected_v4"
+check "load_ipset v4: мусорная строка отфильтрована" "$(cat "$capture_file")" "$expected_v4"
 
 : > "$capture_file"; load_ipset geo_test "$fixture" inet6
 check "load_ipset v6: '::/0' захвачен" "$(cat "$capture_file")" "$expected_v6"

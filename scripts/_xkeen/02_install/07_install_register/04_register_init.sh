@@ -1084,90 +1084,16 @@ validate_pbr_routing_mark() {
     validate_client_routing_mark "pbr" "no"
 }
 
-_filter_ip_cidr_family() {
-    local family="$1" source_file="$2" set_name="$3"
-    [ -f "$source_file" ] || return 1
-
-    sed -e 's/\r$//' -e 's/#.*//' "$source_file" | awk -v family="$family" -v set_name="$set_name" '
-        function valid_prefix(value, max) {
-            return value ~ /^(0|[1-9][0-9]*)$/ && value + 0 <= max
-        }
-        function valid_v4(value, parts, count, i, octets) {
-            count = split(value, parts, "/")
-            if (count > 2 || parts[1] !~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/) return 0
-            if (count == 2 && !valid_prefix(parts[2], 32)) return 0
-            count = split(parts[1], octets, ".")
-            if (count != 4) return 0
-            for (i = 1; i <= 4; i++) {
-                if (octets[i] !~ /^(0|[1-9][0-9]*)$/ || octets[i] + 0 > 255) return 0
-            }
-            return 1
-        }
-        function valid_v6(value, parts, count, address, prefix, compressed, groups, i, group, v4, octets, colon) {
-            count = split(value, parts, "/")
-            if (count > 2) return 0
-            address = parts[1]
-            prefix = (count == 2 ? parts[2] : "128")
-            if (!valid_prefix(prefix, 128) || address == "" || address ~ /[^0-9a-fA-F:.]/ || address ~ /:::/) return 0
-
-            # Accept the standard IPv4-embedded notation by converting its tail to two hextets.
-            if (address ~ /\./) {
-                colon = match(address, /:[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/)
-                if (!colon) return 0
-                v4 = substr(address, RSTART + 1)
-                if (!valid_v4(v4)) return 0
-                split(v4, octets, ".")
-                address = substr(address, 1, RSTART - 1) ":" sprintf("%x:%x", octets[1] * 256 + octets[2], octets[3] * 256 + octets[4])
-            }
-
-            compressed = index(address, "::")
-            if (compressed) {
-                if (index(substr(address, compressed + 2), "::")) return 0
-            } else if (address ~ /(^:|:$)/) {
-                return 0
-            }
-            count = split(address, parts, ":")
-            groups = 0
-            for (i = 1; i <= count; i++) {
-                group = parts[i]
-                if (group == "") continue
-                if (length(group) > 4 || group !~ /^[0-9a-fA-F]+$/) return 0
-                groups++
-            }
-            return compressed ? groups < 8 : groups == 8
-        }
-        {
-            line = $0
-            sub(/^[[:space:]]+/, "", line)
-            sub(/[[:space:]]+$/, "", line)
-            if (line == "") next
-
-            if (line ~ /:/) {
-                if (!valid_v6(line)) { invalid = 1; next }
-                if (family == "inet6") print "add " set_name " " line
-                next
-            }
-            if (line ~ /\./) {
-                if (!valid_v4(line)) { invalid = 1; next }
-                if (family == "inet") print "add " set_name " " line
-                next
-            }
-            invalid = 1
-        }
-        END { exit invalid }
-    '
-}
-
 load_user_ipset_family() {
-    # Keep the third argument accepted for existing callers; whole-record
-    # validation below no longer relies on the old substring regex.
-    local set_name="$1" family="$2" source_file="$4"
+    local set_name="$1" family="$2" addr_regex="$3" source_file="$4"
     local tmp="${1}_tmp" restore_file result=1
 
     [ -f "$source_file" ] || return 1
     restore_file=$(mktemp "${TMPDIR:-/tmp}/xkeen-ipset.XXXXXX") || return 1
 
-    if _filter_ip_cidr_family "$family" "$source_file" "$tmp" > "$restore_file" &&
+    if sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$source_file" |
+       grep -Eo "$addr_regex" |
+       awk -v s="$tmp" '{print "add "s" "$1}' > "$restore_file" &&
        ipset create "$tmp" hash:net family "$family" -exist &&
        ipset flush "$tmp" &&
        ipset restore -exist < "$restore_file" &&
@@ -3825,8 +3751,15 @@ _release_geoipset_lock() {
 
 load_ipset() {
     local set="$1" file="$2" family="$3"
-    local tmp="${1}_tmp" result=1 restore_file
+    local tmp="${1}_tmp" addr_regex result=1 restore_file
     local lock_rc
+
+    # Тот же паттерн, что и в load_user_ipset_family
+    if [ "$family" = "inet6" ]; then
+        addr_regex='([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}(/[0-9]{1,3})?'
+    else
+        addr_regex='([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?'
+    fi
 
     [ -f "$file" ] || return 1
     restore_file=$(mktemp "${TMPDIR:-/tmp}/xkeen-ipset.XXXXXX") || return 1
@@ -3838,7 +3771,9 @@ load_ipset() {
         return 1
     fi
 
-    if _filter_ip_cidr_family "$family" "$file" "$tmp" > "$restore_file" &&
+    if sed -e 's/\r$//' -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file" |
+       grep -Eo "$addr_regex" |
+       awk -v s="$tmp" '{print "add "s" "$1}' > "$restore_file" &&
        [ -s "$restore_file" ] &&
        ipset create "$tmp" hash:net family "$family" -exist &&
        ipset flush "$tmp" &&
