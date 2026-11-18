@@ -1338,13 +1338,10 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  Удаление ${yellow}GeoIPSET${reset}"
 
-            if ! delete_geoipset_key; then
-                echo -e "  ${red}Не удалось полностью удалить GeoIPSET${reset}"
-                xkeen_rc=1
-            else
-                echo -e "  Удаление GeoIPSET ${green}выполнено${reset}"
-            fi
+            delete_geoipset_key
             logs_delete_geoipset_info_console
+
+            echo -e "  Удаление GeoIPSET ${green}выполнено${reset}"
             sleep 2
 
             # Удаление файлов конфигурации Xray
@@ -1534,7 +1531,7 @@ while [ $# -gt 0 ]; do
 
         -dgips)    # Удаление GeoIPSET
             smart_clear
-            delete_geoipset || xkeen_rc=1
+            delete_geoipset
         ;;
 
 
