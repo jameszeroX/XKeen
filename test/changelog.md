@@ -1,5 +1,55 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-18 08:32:03 MSK)
+
+Сборка из [`96269f8`](https://github.com/jameszeroX/XKeen/commit/96269f841dac1ed783d636a46944e0f4c3d30034).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/d7c16413cd56552385eba034c96bfd991d68772a/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`d5789a5...96269f8`](https://github.com/jameszeroX/XKeen/compare/d5789a54a0147f54d39e3a43b192fea0706354df...96269f841dac1ed783d636a46944e0f4c3d30034).
+
+###### Коммиты
+
+- fix(rci): отклонять некорректный ответ политики ([`f3f1af0`](https://github.com/jameszeroX/XKeen/commit/f3f1af0a7ca7c8e31e6d969b6a0a34ab819d783a)) — rangerxxyy
+- fix(balancer): согласовать выбор и обработку ошибок ([`d895a38`](https://github.com/jameszeroX/XKeen/commit/d895a38ec576c1cab6e7545ddf5dbb742bcc50b7)) — rangerxxyy
+- fix(balancer): propagate activation setup failures ([`bd62ae9`](https://github.com/jameszeroX/XKeen/commit/bd62ae9c1e3574ce0debb3bec7aa5df61d9b7c99)) — rangerxxyy
+- fix(balancer): clean probe file after API failure ([`8ca74f7`](https://github.com/jameszeroX/XKeen/commit/8ca74f716ce9fe1c7f67b8ca0a2e04d5562dcd42)) — rangerxxyy
+- fix(balancer): stop ticks when probe cleanup fails ([`617ae49`](https://github.com/jameszeroX/XKeen/commit/617ae49b5cdfaad89af0e159936a4ff7adf25ce7)) — rangerxxyy
+- fix(balancer): validate probe rule before Xray API ([`819d4b5`](https://github.com/jameszeroX/XKeen/commit/819d4b56970b56fb4756d2723f41b0fcf15b8e1a)) — rangerxxyy
+- fix(balancer): separate setup from first probe status ([`e1bf834`](https://github.com/jameszeroX/XKeen/commit/e1bf834cf34688718e0c76c1df061e7dd542d006)) — rangerxxyy
+- fix(ipset): keep active GeoIP sets on failed update ([`b125a8d`](https://github.com/jameszeroX/XKeen/commit/b125a8deb2870ce04026785824c6346c70c6686a)) — rangerxxyy
+- fix(ipset): preserve sets on failed runtime load ([`add8a34`](https://github.com/jameszeroX/XKeen/commit/add8a34fe8117fd2f6e6fe4761645b5d73c9d9e3)) — rangerxxyy
+- fix(ipset): serialize runtime and install GeoIP updates ([`0b3c27a`](https://github.com/jameszeroX/XKeen/commit/0b3c27acda2fcaea61d4a62eba28d7cbbe8d2e56)) — rangerxxyy
+- fix(ip): validate complete IPv4 and IPv6 CIDR records ([`6d4f889`](https://github.com/jameszeroX/XKeen/commit/6d4f889c891e436b2032350064ba60132ce0ec99)) — rangerxxyy
+- fix(ipset): restore caller traps after GeoIP load ([`9f52f80`](https://github.com/jameszeroX/XKeen/commit/9f52f804cc4c33e205da6f9e0c0d4f91ace8cbff)) — rangerxxyy
+- fix(ipset): report GeoIPSET deletion failures ([`e15c86c`](https://github.com/jameszeroX/XKeen/commit/e15c86c766fe5e56d77558885241fae5d5b420a5)) — rangerxxyy
+- fix(ipset): report IPv4 and IPv6 load failures ([`336e735`](https://github.com/jameszeroX/XKeen/commit/336e735f73745a49aa80e91b62eca455cbe33b07)) — rangerxxyy
+- fix(netfilter): preserve live lock on cleanup timeout ([`645bca9`](https://github.com/jameszeroX/XKeen/commit/645bca95af6141bd8fb04ad30b24ee095fd934c9)) — rangerxxyy
+- fix(killswitch): report incomplete rule removal ([`cebd7d1`](https://github.com/jameszeroX/XKeen/commit/cebd7d12d473e57b1c26dd0cfa6e0a0c6dd6b5c0)) — rangerxxyy
+- fix(restart): retain running core when hold setup fails ([`3807631`](https://github.com/jameszeroX/XKeen/commit/38076310182fa4bfea56bce06759efc281948be0)) — rangerxxyy
+- fix(stop): retain proxy when firewall cleanup fails ([`80ff991`](https://github.com/jameszeroX/XKeen/commit/80ff99153d7487b6b507b2b9c3e26f9cc27ea14d)) — rangerxxyy
+- fix(install): fail closed when free space is unknown ([`2330478`](https://github.com/jameszeroX/XKeen/commit/23304785dd0d7cafffb436eeb715de5e18c09039)) — rangerxxyy
+- fix(install): compare storage warning flag strictly ([`a001dc7`](https://github.com/jameszeroX/XKeen/commit/a001dc7eb40e3523b42e6393505fabccfe42d813)) — rangerxxyy
+- fix(install): prompt when free space is unknown ([`9163f72`](https://github.com/jameszeroX/XKeen/commit/9163f72029a9d969b9f485b81b34e1279ddf7c8c)) — rangerxxyy
+- fix(monitor): select main Xray process for fd checks ([`2a655ae`](https://github.com/jameszeroX/XKeen/commit/2a655aee8fb4df2d0fe1669841a49dcf29ecb9da)) — rangerxxyy
+- fix(cli): keep recovery commands available without RCI ([`295b918`](https://github.com/jameszeroX/XKeen/commit/295b9188d903ecc42f16973a0e556e4c22f19dbd)) — rangerxxyy
+- fix(config): read GitHub proxy from exact JSON path ([`0ee1fff`](https://github.com/jameszeroX/XKeen/commit/0ee1fffe88b1664f91a549e459d40ac04df9f37b)) — rangerxxyy
+- fix(cli): propagate startup and update failures ([`df5ad81`](https://github.com/jameszeroX/XKeen/commit/df5ad8104a42a2cc39ffe42023c2ab1b95fa2db0)) — rangerxxyy
+- fix(cron): preserve cancel state and report start failures ([`937e11f`](https://github.com/jameszeroX/XKeen/commit/937e11fa8235b7d963e09f2c96484b6127e8ecc0)) — rangerxxyy
+- fix(opkg): publish registration status atomically ([`ce7358b`](https://github.com/jameszeroX/XKeen/commit/ce7358b94abb8ed7534d5c3777d8b05c9c4f5933)) — rangerxxyy
+- fix(core): preserve selection when switch fails ([`df7dac3`](https://github.com/jameszeroX/XKeen/commit/df7dac3a3b70433923ec54eab4ab6f57cf76cfda)) — rangerxxyy
+- fix(config): report template installation failures ([`9ce648e`](https://github.com/jameszeroX/XKeen/commit/9ce648e6d83bee0dfc4f9020f0c49837f4038997)) — rangerxxyy
+- fix(download): verify selected sources and Yq ([`2dc0eb8`](https://github.com/jameszeroX/XKeen/commit/2dc0eb8c124ab6b2b30a848e55ff2d5394c880f0)) — rangerxxyy
+- fix(geofile): verify aliases and report deletion errors ([`70417b0`](https://github.com/jameszeroX/XKeen/commit/70417b0191e6f1fc5eb24a859e18ceafdd1169b0)) — rangerxxyy
+- fix(opkg): preserve registration files on write failures ([`f214571`](https://github.com/jameszeroX/XKeen/commit/f2145715ed480cf7746f56d87674fb4c6beb9061)) — rangerxxyy
+- fix(opkg): clean staging after list copy errors ([`9b6fad4`](https://github.com/jameszeroX/XKeen/commit/9b6fad4fbcc6a9ff3907633e4adac140735da0ba)) — rangerxxyy
+- fix(geofile): report failures and preserve aliases ([`b0a5cb3`](https://github.com/jameszeroX/XKeen/commit/b0a5cb3f03ab25d35a8864fbf28f53fea1f5c05f)) — rangerxxyy
+- fix(geofile): detect IPv6 updates and report restart failures ([`c8e9780`](https://github.com/jameszeroX/XKeen/commit/c8e978076e15698ab0f3ec5c4cb4646541b9ae40)) — rangerxxyy
+- fix(mihomo): preserve cache when config conversion fails ([`e90bf4e`](https://github.com/jameszeroX/XKeen/commit/e90bf4e8462468d74f83dddf7c2b5cdaeaf78301)) — rangerxxyy
+- fix(mihomo): propagate config cache read errors ([`96269f8`](https://github.com/jameszeroX/XKeen/commit/96269f841dac1ed783d636a46944e0f4c3d30034)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-17 15:51:36 MSK)
 
 Сборка из [`0619676`](https://github.com/jameszeroX/XKeen/commit/06196768191b023ebf2079c503e902c245924911).
