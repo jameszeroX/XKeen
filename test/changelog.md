@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-18 20:56:48 MSK)
+
+Сборка из [`e55acbe`](https://github.com/jameszeroX/XKeen/commit/e55acbe0f0c0ce2a65ab1e9e27b23b8f20dfdfdf).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/63670a87de00d0cf7cf30619e5959ef9ecb5dcbf/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`ff47cf0...e55acbe`](https://github.com/jameszeroX/XKeen/compare/ff47cf028260ccb5ea6ab0d58c1369ac64bc0565...e55acbe0f0c0ce2a65ab1e9e27b23b8f20dfdfdf).
+
+###### Коммиты
+
+- Optimize XKeen init startup ([`e55acbe`](https://github.com/jameszeroX/XKeen/commit/e55acbe0f0c0ce2a65ab1e9e27b23b8f20dfdfdf)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-18 11:52:44 MSK)
 
 Сборка из [`fde4770`](https://github.com/jameszeroX/XKeen/commit/fde4770abfe8d269ee37e4a7fa0f55f0d9984a88).
