@@ -1,5 +1,25 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-18 11:31:55 MSK)
+
+Сборка из [`3e99f3e`](https://github.com/jameszeroX/XKeen/commit/3e99f3e371ef9153703c8bec6989f7b9cb3a6a78).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/f5539a566320fda50b1628a9fa54c7101c0355d4/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`d539996...3e99f3e`](https://github.com/jameszeroX/XKeen/compare/d539996742d0c69bb91e9967b61a786bfdc0f001...3e99f3e371ef9153703c8bec6989f7b9cb3a6a78).
+
+###### Коммиты
+
+- Revert "fix(ipset): report IPv4 and IPv6 load failures" ([`e9589d7`](https://github.com/jameszeroX/XKeen/commit/e9589d71d1834dd833710a92aa7f28f22a9a88dc)) — jameszeroX
+- Revert "fix(ipset): report GeoIPSET deletion failures" ([`05c7d5d`](https://github.com/jameszeroX/XKeen/commit/05c7d5d737cff68b2509720b907615bf14d040d5)) — jameszeroX
+- Revert "fix(ipset): restore caller traps after GeoIP load" ([`36d2b3c`](https://github.com/jameszeroX/XKeen/commit/36d2b3c1319f299fb8ea57b053b3022111709883)) — jameszeroX
+- Revert "fix(ip): validate complete IPv4 and IPv6 CIDR records" ([`ec81d47`](https://github.com/jameszeroX/XKeen/commit/ec81d47cfb46ea95eac7bdc0e6c24e399677c364)) — jameszeroX
+- Revert "fix(ipset): serialize runtime and install GeoIP updates" ([`293cc7a`](https://github.com/jameszeroX/XKeen/commit/293cc7a346a061036d7f13084150560160efa418)) — jameszeroX
+- Revert "fix(ipset): preserve sets on failed runtime load" ([`df5897c`](https://github.com/jameszeroX/XKeen/commit/df5897c5eb1daabe57c74b2b0109ffb2572994d8)) — jameszeroX
+- Revert "fix(ipset): keep active GeoIP sets on failed update" ([`3e99f3e`](https://github.com/jameszeroX/XKeen/commit/3e99f3e371ef9153703c8bec6989f7b9cb3a6a78)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-18 09:37:44 MSK)
 
 Сборка из [`39e5238`](https://github.com/jameszeroX/XKeen/commit/39e5238e3f78ff69584e60d901f9c6ab97c40206).
