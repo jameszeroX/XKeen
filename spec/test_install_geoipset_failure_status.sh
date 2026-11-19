@@ -33,23 +33,60 @@ autoinstall_mode=true
 auto_geoipset=on
 red=''; green=''; yellow=''; reset=''
 mkdir -p "$ipset_cfg"
-touch "$ru_exclude_ipv4" "$ru_override"
+touch "$ru_exclude_ipv4" "$ru_exclude_ipv6" "$ru_override"
 
-ip() { printf 'inet 192.0.2.1/24\n'; }
+ipv4_on=true
+ipv6_on=false
+fail_download_file=''
+fail_load_set=''
+download_calls=''
+load_calls=''
+ip() { [ "$ipv4_on" = true ] && printf 'inet 192.0.2.1/24\n'; }
 iptables() { return 0; }
-check_ipv6_active() { return 1; }
-install_geoipset_lst() { return 1; }
-load_geoipset() { return 0; }
+ip6tables() { return 0; }
+check_ipv6_active() { [ "$ipv6_on" = true ]; }
+install_geoipset_lst() {
+    download_calls="$download_calls $2"
+    [ "$2" != "$fail_download_file" ]
+}
+load_geoipset() {
+    load_calls="$load_calls $1"
+    [ "$1" != "$fail_load_set" ]
+}
+run_case() {
+    ipv4_on="$1"
+    ipv6_on="$2"
+    fail_download_file="$3"
+    fail_load_set="$4"
+    download_calls=''
+    load_calls=''
+    install_geoipset update >/dev/null 2>&1
+    case_rc=$?
+}
 
-install_geoipset update >/dev/null 2>&1
-rc=$?
-check 'IPv4 file download failure propagates from install_geoipset' "$rc" 1
+run_case true false "$ru_exclude_ipv4" ''
+check 'IPv4 download failure propagates' "$case_rc" 1
+check 'failed IPv4 download does not skip attempted set load' "$load_calls" ' geo_exclude'
 
-install_geoipset_lst() { return 0; }
-load_geoipset() { return 1; }
-install_geoipset update >/dev/null 2>&1
-rc=$?
-check 'IPv4 set load failure propagates from install_geoipset' "$rc" 1
+run_case true false '' geo_exclude
+check 'IPv4 set load failure propagates' "$case_rc" 1
+
+run_case true true "$ru_exclude_ipv6" ''
+check 'IPv4 success does not hide IPv6 download failure' "$case_rc" 1
+check 'both requested families are attempted after IPv6 failure' "$download_calls" " $ru_exclude_ipv4 $ru_exclude_ipv6"
+
+run_case true true "$ru_exclude_ipv4" ''
+check 'IPv6 success does not hide IPv4 download failure' "$case_rc" 1
+check 'IPv6 load still runs after IPv4 failure' "$load_calls" ' geo_exclude geo_exclude6'
+
+run_case true true '' geo_exclude6
+check 'IPv6 set load failure propagates' "$case_rc" 1
+
+run_case true true '' ''
+check 'both family updates succeed' "$case_rc" 0
+
+run_case true false "$ru_exclude_ipv6" ''
+check 'disabled IPv6 is skipped without failing' "$case_rc:$download_calls:$load_calls" "0: $ru_exclude_ipv4: geo_exclude"
 
 grep -A8 -- '-gips)' "$root/scripts/xkeen" | grep -Fq 'install_geoipset init || xkeen_rc=1'
 check 'standalone -gips returns GeoIPSET failure to the CLI' "$?" 0
