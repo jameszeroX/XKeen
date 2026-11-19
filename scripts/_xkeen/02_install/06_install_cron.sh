@@ -1,5 +1,6 @@
 # Функция для установки задач Cron
 install_cron() {
+    local cron_file_path cron_tmp
     cron_entry=
 
     # Добавление задачи Cron для обновления GeoFile
@@ -7,18 +8,26 @@ install_cron() {
         cron_entry="$choice_geofile_cron_time $install_dir/xkeen -ug"
     fi
 
-    # Если есть записи для задач Cron, то сохраняем их
-    if [ -n "$cron_entry" ] || [ "${choice_cancel_cron_select:-false}" = "true" ]; then
+    # Пустой/отменённый выбор не должен переписывать пользовательский crontab.
+    if [ -n "$cron_entry" ]; then
         cron_file_path="$cron_dir/$cron_file"
-
-        touch "$cron_file_path"
-        chmod +x "$cron_file_path"
-
-        if [ -n "$cron_entry" ]; then
-            awk -v exe="$install_dir/xkeen" 'NF < 7 || $6 != exe || $7 != "-ug"' "$cron_file_path" > "$cron_file_path.tmp"
-            mv "$cron_file_path.tmp" "$cron_file_path"
-            printf "%s\n" "$cron_entry" >> "$cron_file_path"
+        cron_tmp="${cron_file_path}.tmp.$$"
+        mkdir -p "$cron_dir" || return 1
+        if [ -f "$cron_file_path" ]; then
+            awk -v exe="$install_dir/xkeen" 'NF < 7 || $6 != exe || $7 != "-ug"' "$cron_file_path" > "$cron_tmp" || {
+                rm -f "$cron_tmp"
+                return 1
+            }
+        else
+            : > "$cron_tmp" || return 1
         fi
-        sed -i '/^$/d' "$cron_file_path"
+        printf "%s\n" "$cron_entry" >> "$cron_tmp" || {
+            rm -f "$cron_tmp"
+            return 1
+        }
+        chmod +x "$cron_tmp" && sed -i '/^$/d' "$cron_tmp" && mv -f "$cron_tmp" "$cron_file_path" || {
+            rm -f "$cron_tmp"
+            return 1
+        }
     fi
 }

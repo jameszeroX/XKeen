@@ -238,7 +238,10 @@ del_ports_donor() {
     if [ -z "$ports_to_del" ]; then
         # Очистка всего списка
         if confirm_deletion "proxying"; then
-            > "$file_port_proxying"
+            if ! write_ports_file "$file_port_proxying" ""; then
+                echo -e "  ${red}Ошибка${reset}: не удалось очистить список портов проксирования"
+                return 1
+            fi
             echo -e "  ${green}Все порты удалены${reset}"
         fi
         return
@@ -297,7 +300,10 @@ del_ports_exclude() {
     if [ -z "$ports_to_del" ]; then
         # Очистка всего списка
         if confirm_deletion "exclude"; then
-            > "$file_port_exclude"
+            if ! write_ports_file "$file_port_exclude" ""; then
+                echo -e "  ${red}Ошибка${reset}: не удалось очистить список исключённых портов"
+                return 1
+            fi
             echo -e "  ${green}Все исключения удалены${reset}"
         fi
         return
