@@ -24,6 +24,19 @@ add_chmod_init() {
     [ -f "$initd_file" ] && chmod +x "$initd_file"
 }
 
+apply_port_change() {
+    local _port_change
+    _port_change="$1"
+    shift
+    "$_port_change" "$@" || return 1
+    sleep 2
+    add_chmod_init
+    if is_proxy_running; then
+        "$initd_file" restart on >/dev/null 2>&1 || return 1
+    fi
+    return 0
+}
+
 # Подсчет количества логических команд (параметров, начинающихся с - или --)
 LOGICAL_CMD_COUNT=0
 for arg in "$@"; do
@@ -117,6 +130,13 @@ geofiles_update_needed() {
 
 restart_active_proxy_after_geofile_update() {
     if pidof mihomo >/dev/null 2>&1 || pidof xray >/dev/null 2>&1; then
+        "$initd_file" restart on >/dev/null 2>&1 || return 1
+    fi
+    return 0
+}
+
+restart_proxy_after_update() {
+    if is_proxy_running; then
         "$initd_file" restart on >/dev/null 2>&1 || return 1
     fi
     return 0
@@ -822,6 +842,7 @@ while [ $# -gt 0 ]; do
 
 
         -uk_post_update)    # Завершение обновления XKeen (запускается автоматически)
+            _update_restart_failed=false
             autoinstall_mode=$(get_auto_arg "$2")
             if [ -n "$autoinstall_mode" ]; then
                 shift
@@ -859,15 +880,20 @@ while [ $# -gt 0 ]; do
             register_xkeen_status
             logs_register_xkeen_status_info_console
 
-            if is_proxy_running; then
-                "$initd_file" restart on >/dev/null 2>&1
-            fi
+            restart_proxy_after_update || {
+                xkeen_rc=1
+                _update_restart_failed=true
+            }
 
             fixed_register_packages
             echo
             delete_tmp
 
-            echo -e "  Обновление XKeen ${green}выполнено${reset}"
+            if [ "$_update_restart_failed" = "true" ]; then
+                echo -e "  Обновление XKeen установлено, но ${red}не удалось перезапустить прокси${reset}"
+            else
+                echo -e "  Обновление XKeen ${green}выполнено${reset}"
+            fi
             version_xkeen
         ;;
 
@@ -1121,9 +1147,13 @@ while [ $# -gt 0 ]; do
             update_cron_geofile_task
             [ "$choice_geofile_cron_select" = "true" ] && smart_clear
             choice_cron_time
-            install_cron
+            if install_cron; then
+                echo -e "  Создание или изменение задачи автообновления баз GeoFile/GeoIPSET ${green}выполнено${reset}"
+            else
+                echo -e "  ${red}Не удалось сохранить задачу автообновления GeoFile/GeoIPSET${reset}"
+                xkeen_rc=1
+            fi
             delete_tmp
-            echo -e "  Создание или изменение задачи автообновления баз GeoFile/GeoIPSET ${green}выполнено${reset}"
         ;;
 
 
@@ -1692,12 +1722,7 @@ while [ $# -gt 0 ]; do
                 shift
             done
             # shellcheck disable=SC2086 # намеренный word-split: ports_args — пробел-разделённые числа/диапазоны
-            add_ports_donor $ports_args
-            sleep 2
-            add_chmod_init
-            if is_proxy_running; then
-                "$initd_file" restart on >/dev/null 2>&1
-            fi
+            apply_port_change add_ports_donor $ports_args || xkeen_rc=1
             continue
         ;;
 
@@ -1713,12 +1738,7 @@ while [ $# -gt 0 ]; do
                 shift
             done
             # shellcheck disable=SC2086 # намеренный word-split: ports_args — пробел-разделённые числа/диапазоны
-            del_ports_donor $ports_args
-            sleep 2
-            add_chmod_init
-            if is_proxy_running; then
-                "$initd_file" restart on >/dev/null 2>&1
-            fi
+            apply_port_change del_ports_donor $ports_args || xkeen_rc=1
             continue
         ;;
 
@@ -1739,12 +1759,7 @@ while [ $# -gt 0 ]; do
                 shift
             done
             # shellcheck disable=SC2086 # намеренный word-split: ports_args — пробел-разделённые числа/диапазоны
-            add_ports_exclude $ports_args
-            sleep 2
-            add_chmod_init
-            if is_proxy_running; then
-                "$initd_file" restart on >/dev/null 2>&1
-            fi
+            apply_port_change add_ports_exclude $ports_args || xkeen_rc=1
             continue
         ;;
 
@@ -1760,12 +1775,7 @@ while [ $# -gt 0 ]; do
                 shift
             done
             # shellcheck disable=SC2086 # намеренный word-split: ports_args — пробел-разделённые числа/диапазоны
-            del_ports_exclude $ports_args
-            sleep 2
-            add_chmod_init
-            if is_proxy_running; then
-                "$initd_file" restart on >/dev/null 2>&1
-            fi
+            apply_port_change del_ports_exclude $ports_args || xkeen_rc=1
             continue
         ;;
 
