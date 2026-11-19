@@ -51,5 +51,8 @@ install_geoipset update >/dev/null 2>&1
 rc=$?
 check 'IPv4 set load failure propagates from install_geoipset' "$rc" 1
 
+grep -A8 -- '-gips)' "$root/scripts/xkeen" | grep -Fq 'install_geoipset init || xkeen_rc=1'
+check 'standalone -gips returns GeoIPSET failure to the CLI' "$?" 0
+
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
