@@ -1525,7 +1525,7 @@ while [ $# -gt 0 ]; do
             test_github
 
             smart_clear
-            install_geoipset init
+            install_geoipset init || xkeen_rc=1
         ;;
 
 
