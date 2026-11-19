@@ -344,13 +344,26 @@ EOF
 
 # Cron-задача периодического замера. Формат совпадает с install_cron.
 sb_install_cron() {
-    local path
+    local path tmp
     path="$cron_dir/$cron_file"
-    mkdir -p "$cron_dir"; touch "$path"; chmod +x "$path"
-    grep -v "$install_dir/xkeen -sbt" "$path" > "$path.tmp" 2>/dev/null
-    mv "$path.tmp" "$path"
-    printf '* * * * * %s/xkeen -sbtx\n' "$install_dir" >> "$path"
-    sed -i '/^$/d' "$path"
+    tmp="$path.tmp.$$"
+    mkdir -p "$cron_dir" || return 1
+    if [ -f "$path" ]; then
+        awk -v exe="$install_dir/xkeen" 'NF < 7 || $6 != exe || $7 != "-sbtx"' "$path" > "$tmp" || {
+            rm -f "$tmp"
+            return 1
+        }
+    else
+        : > "$tmp" || return 1
+    fi
+    printf '* * * * * %s/xkeen -sbtx\n' "$install_dir" >> "$tmp" || {
+        rm -f "$tmp"
+        return 1
+    }
+    chmod +x "$tmp" && sed -i '/^$/d' "$tmp" && mv -f "$tmp" "$path" || {
+        rm -f "$tmp"
+        return 1
+    }
 }
 
 sb_tick_if_due() {
@@ -368,12 +381,18 @@ sb_tick_if_due() {
 }
 
 sb_remove_cron() {
-    local path
+    local path tmp
     path="$cron_dir/$cron_file"
     [ -f "$path" ] || return 0
-    grep -v "$install_dir/xkeen -sbt" "$path" > "$path.tmp" 2>/dev/null
-    mv "$path.tmp" "$path"
-    sed -i '/^$/d' "$path"
+    tmp="$path.tmp.$$"
+    awk -v exe="$install_dir/xkeen" 'NF < 7 || $6 != exe || $7 != "-sbtx"' "$path" > "$tmp" || {
+        rm -f "$tmp"
+        return 1
+    }
+    chmod +x "$tmp" && sed -i '/^$/d' "$tmp" && mv -f "$tmp" "$path" || {
+        rm -f "$tmp"
+        return 1
+    }
 }
 
 sb_cron_installed() {
@@ -458,7 +477,10 @@ sb_disable_locked() {
         echo -e "  ${red}✗${reset} Не удалось удалить закрепление балансировщика. Повторите отключение."
         return 1
     fi
-    sb_remove_cron
+    if ! sb_remove_cron; then
+        echo -e "  ${red}✗${reset} Не удалось удалить задачу балансировки из cron. Повторите отключение."
+        return 1
+    fi
     sb_write_setting enabled false || return 1
     echo
     echo -e "  ${green}✔${reset} Балансировка по скорости выключена, override снят."
