@@ -47,7 +47,8 @@ _xkeen_apply
 check 'apply reports success when all tables succeed' "$?" 0
 
 eval "$(extract _xkeen_apply_checked)"
-log_error_router() { :; }
+logger_log="$work/logger.log"
+logger() { printf '%s\n' "$*" >> "$logger_log"; }
 _release_calls=0
 _xkeen_release_nf_lock() { _release_calls=$((_release_calls + 1)); }
 _xkeen_apply() { [ "${APPLY_FAIL:-0}" = 0 ]; }
@@ -55,11 +56,14 @@ APPLY_FAIL=1
 _xkeen_apply_checked
 check 'apply failure reaches checked caller' "$?" 1
 check 'apply failure releases the netfilter lock' "$_release_calls" 1
+check 'apply failure logs through logger directly' "$(cat "$logger_log")" '-p error -t XKeen Не удалось применить все поддерживаемые таблицы netfilter; новые правила XKeen не считаются активными'
 APPLY_FAIL=0
 _release_calls=0
+: > "$logger_log"
 _xkeen_apply_checked
 check 'successful apply keeps success status' "$?" 0
 check 'successful apply does not release an active lock' "$_release_calls" 0
+check 'successful apply does not log an error' "$(cat "$logger_log")" ''
 
 eval "$(extract _xkeen_normalize_fwmark)"
 eval "$(extract _xkeen_find_policy_table)"
@@ -77,8 +81,8 @@ ip() {
         '-4 route show table 1000') printf '%s\n' 'default via 10.0.0.2 dev ppp1' ;;
         '-4 route show table 200') : ;;
         '-4 rule show') : ;;
-        '-4 route flush table '*) return 0 ;;
-        '-4 rule del '*|'-4 route add local '*|'-4 rule add '*|'-4 route add table '*)
+        '-4 route flush table '*|'-6 route flush table '*) return 0 ;;
+        '-4 rule del '*|'-6 rule del '*|'-4 route add local '*|'-6 route add local '*|'-4 rule add '*|'-6 rule add '*|'-4 route add table '*|'-6 route add table '*)
             [ "${FAIL_ROUTE_MUTATION:-0}" = 0 ] || return 42
             return 0
             ;;
@@ -95,6 +99,13 @@ selected_source=$(awk '/route show table (100|1000)$/ {print $NF; exit}' "$ip_lo
 check 'policy 0x100 selects its exact routing table' "$selected_source" 100
 check 'successful route setup returns zero' "$route_rc" 0
 
+# IPv6 enabled without a provider route is not itself a route-setup error.
+: > "$ip_log"
+policy_mark=
+configure_route 6
+no_ipv6_uplink_rc=$?
+check 'IPv6 setup tolerates an empty main route table when ISP provides no IPv6' "$no_ipv6_uplink_rc" 0
+
 : > "$ip_log"
 FAIL_ROUTE_MUTATION=1 configure_route 4
 route_failure_rc=$?
@@ -107,6 +118,7 @@ _release_calls=0
 _xkeen_configure_route_checked 4
 check 'route error reaches checked caller' "$?" 1
 check 'route error releases the netfilter lock' "$_release_calls" 1
+check 'route failure logs through logger directly' "$(tail -n 1 "$logger_log")" '-p error -t XKeen Не удалось настроить policy routing IPv4; правила TProxy не будут применены'
 
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
