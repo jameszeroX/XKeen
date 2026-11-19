@@ -77,7 +77,7 @@ dscp_proxy="63"
 ipv4_proxy="127.0.0.1"
 ipv4_exclude="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 255.255.255.255 78.47.125.180 198.51.100.11 198.51.100.37"
 ipv6_proxy="::1"
-ipv6_exclude="::/128 ::1/128 64:ff9b::/96 2001::/32 2002::/16 fd00::/8 ff00::/8 fe80::/10 2001:2:7847:1251:feee:ed78:4712:5180 2001:2::c633:640b 2001:2::c633:6425"
+ipv6_exclude="::/128 ::1/128 64:ff9b::/96 2001::/32 2002::/16 fc00::/7 ff00::/8 fe80::/10 2001:2:7847:1251:feee:ed78:4712:5180 2001:2::c633:640b 2001:2::c633:6425"
 
 # Перехват DNS в прокси
 proxy_dns="off"
@@ -270,7 +270,7 @@ case "$1" in
             # Атомарный guard ДО spawn — повторный S05xkeen start от
             # NDM (fs.d / init.d / reconnect) увидит каталог и выйдет.
             _acquire_coldstart_guard || exit 0
-            log_router "info" "Подготовка к запуску прокси-клиента"
+            log_router "notice" "Подготовка к запуску прокси-клиента"
             nohup "$0" cold_start >/dev/null 2>&1 &
             # PID фонового cold_start — caller ($$) умрёт через exit 0,
             # а живость guard'а проверяется именно по этому PID.
@@ -332,19 +332,6 @@ _xkeen_cached_json() {
 # из родительского процесса и заново форкал strip_json_comments.
 [ -f "$xkeen_config" ] && _xkeen_cached_json >/dev/null 2>&1
 
-# Функция извлечения rci-токена из xkeen.json
-get_rci_token() {
-    rci_token=""
-    [ ! -f "$xkeen_config" ] && return 1
-
-    # Кэш прогрет в основном shell (см. выше), читаем переменную напрямую —
-    # $(_xkeen_cached_json) форкал subshell только ради printf.
-    rci_token=$(printf '%s' "$_xkeen_json_cache" | sed -n 's/.*"rci_token": *"\([^"]*\)".*/\1/p' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' 2>/dev/null)
-
-    [ "$rci_token" = "null" ] && rci_token=""
-}
-
-
 # Fail closed is deliberately opt-in.  Old configurations remain fail-open.
 keep_killswitch="off"
 
@@ -390,12 +377,13 @@ _apply_policy_name_raw() {
     _lpn_result="$_lpn_val"
 }
 
-# killswitch и оба имени политик читаются из xkeen.json ОДНИМ запуском jq
-# (раньше — три: jq стартует с медленного накопителя и стоит дорого).
+# killswitch, оба имени политик и rci_token читаются из xkeen.json ОДНИМ
+# запуском jq (раньше — три; jq стартует с медленного накопителя и стоит дорого).
 # jq отдаёт значения через @sh, поэтому eval безопасен для любого содержимого.
 # Ошибка jq (битый JSON, .xkeen не объект) = пустой вывод = значения по умолчанию,
 # как и раньше.
 load_json_settings() {
+    rci_token=""
     killswitch="off"
     _policy_name_warn=""
     name_policy_custom=""
@@ -407,15 +395,32 @@ load_json_settings() {
     _ks_v=""
     _lpn_raw_a=""
     _lpn_raw_b=""
+    _rt_v=""
+    _rt_bad=""
     eval "$(printf '%s' "$_xkeen_json_cache" | jq -r '
         def pn(k): (.xkeen[k] | if type == "string" then "s:" + .
                                 elif type == "null" then empty
                                 else "x:" end) // "";
-        @sh "_ks_v=\(if (.xkeen.killswitch // "off") == "on" then "on" else "off" end)",
-        @sh "_lpn_raw_a=\(pn("policy_name"))",
-        @sh "_lpn_raw_b=\(pn("policy_full_name"))"' 2>/dev/null)"
+        def rt: (.xkeen.rci_token) as $t
+            | if ($t | type) != "string" then ["", ""]
+              elif ($t | explode | all(.[];
+                  . == 43 or (. >= 45 and . <= 57) or (. >= 65 and . <= 90) or
+                  (. >= 97 and . <= 122) or . == 61 or . == 95 or . == 126
+              )) then [$t, ""]
+              else ["", "1"] end;
+        rt as $r
+        | @sh "_ks_v=\(if (.xkeen.killswitch // "off") == "on" then "on" else "off" end)",
+          @sh "_lpn_raw_a=\(pn("policy_name"))",
+          @sh "_lpn_raw_b=\(pn("policy_full_name"))",
+          @sh "_rt_v=\($r[0])",
+          @sh "_rt_bad=\($r[1])"' 2>/dev/null)"
 
     [ "$_ks_v" = "on" ] && killswitch="on"
+
+    rci_token="$_rt_v"
+    if [ "$_rt_bad" = "1" ]; then
+        log_router "warn" "xkeen.json: rci_token содержит недопустимые символы и проигнорирован"
+    fi
 
     _apply_policy_name_raw policy_name "$_lpn_raw_a"
     name_policy_custom="$_lpn_result"
@@ -435,14 +440,13 @@ load_json_settings() {
     # Пользовательское имя, если задано, заменяет имя по умолчанию
     [ -n "$name_policy_custom" ] && name_policy="$name_policy_custom"
     [ -n "$name_policy_full_custom" ] && name_policy_full="$name_policy_full_custom"
-    unset _ks_v _lpn_raw _lpn_raw_a _lpn_raw_b _lpn_val _lpn_a _lpn_b
+    unset _ks_v _rt_v _rt_bad _lpn_raw _lpn_raw_a _lpn_raw_b _lpn_val _lpn_a _lpn_b
 }
 
 # stop не использует ни токен RCI, ни killswitch, ни имена политик
 # (clean_firewall/proxy_stop работают только с pidof/iptables/ipset),
 # поэтому для него это чтение xkeen.json пропускается.
 if [ "$1" != "stop" ]; then
-    get_rci_token
     load_json_settings
 fi
 
@@ -561,7 +565,7 @@ case "$1" in
 esac
 
 # Параметры curl
-# Дубль функции: см. также строку ~2221 этого файла (heredoc proxy.sh) и
+# Дубль функции: см. heredoc proxy.sh и
 # 01_info_common.sh:curl_api — правь все три места синхронно.
 curl_api() {
     if [ -n "$rci_token" ]; then
@@ -748,7 +752,7 @@ apply_ipv6_state() {
     sleep 2
 
     if [ "$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null)" -eq 1 ]; then
-        log_router "info" "Отключение IPv6 выполнено"
+        log_router "notice" "Отключение IPv6 выполнено"
         return 0
     fi
 }
@@ -2464,6 +2468,7 @@ EOL
     }
 
     inject_var name_client "$name_client"
+    inject_var name_app "$name_app"
     inject_var name_profile "$name_profile"
     inject_var mode_proxy "$mode_proxy"
     inject_var network_redirect "$network_redirect"
@@ -2534,7 +2539,7 @@ restart_script() {
 
 log_router() { logger -p "$1" -t "$name_app" "$2"; }
 
-# Дубль функции: см. также top-level копию (~316) в 04_register_init.sh и
+# Дубль функции: см. также top-level копию в 04_register_init.sh и
 # 01_info_common.sh:curl_api — правь все три места синхронно.
 curl_api() {
     if [ -n "$rci_token" ]; then
@@ -2768,7 +2773,7 @@ if proxy_status; then
         while :; do
             _restore_err=$(printf '%s\n' "$_blob" | "$_restore_cmd" --noflush 2>&1) && {
                 [ "$_attempt" -gt 1 ] && \
-                log_router "info" "$_restore_cmd $_table: applied on retry $_attempt"
+                log_router "notice" "$_restore_cmd $_table: applied on retry $_attempt"
                 break
             }
             if [ "$_attempt" -ge "$_max_attempts" ]; then
@@ -2809,7 +2814,7 @@ if proxy_status; then
         for exclude in $exclude_list; do
             if [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ] && [ "$chain" != "${name_chain}_out" ]; then
                 case "$exclude" in
-                    10.0.0.0/8|172.16.0.0/12|192.168.0.0/16|fd00::/8|fe80::/10)
+                    10.0.0.0/8|172.16.0.0/12|192.168.0.0/16|fc00::/7|fe80::/10)
                         if [ "$table" = "mangle" ] && [ "$mode_proxy" = "Hybrid" ]; then
                             ipt -A "$chain" -d "$exclude" -p tcp --dport 53 $comment -j RETURN >/dev/null 2>&1
                             ipt -A "$chain" -d "$exclude" -p udp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
@@ -4026,9 +4031,9 @@ enable_killswitch() {
         _ks_has_jump=0
         "$_ks_family" -w -t mangle -S PREROUTING 2>/dev/null | grep -q -- "-j ${name_chain}_killswitch" && _ks_has_jump=1
         if [ "$_ks_family" = "iptables" ]; then
-            _ks_local="0.0.0.0/8 10.0.0.0/8 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 255.255.255.255"
+            _ks_local="10.0.0.0/8 172.16.0.0/12 192.168.0.0/16"
         else
-            _ks_local="::1/128 fd00::/8 fe80::/10 ff00::/8"
+            _ks_local="fc00::/7 fe80::/10"
         fi
         _ks_blob=$( {
             printf '*mangle\n'
@@ -4054,7 +4059,7 @@ enable_killswitch() {
     _release_nf_lock
     [ "$_ks_failed" -eq 0 ] || return 1
     if [ "$1" = "hold" ]; then
-        log_router "info" "Kill-switch блокирует трафик политик XKeen на время перезапуска"
+        log_router "notice" "Kill-switch блокирует трафик политик XKeen на время перезапуска"
     else
         log_router "warn" "Kill-switch включён: трафик политик XKeen заблокирован до явного stop/start"
     fi
@@ -4178,7 +4183,7 @@ proxy_start() {
             # её удалили вручную. Кеш недействителен, режим "для всех клиентов".
             if [ -e "$policy_mark_cache" ]; then
                 rm -f "$policy_mark_cache"
-                log_router "info" "Политика $name_policy отсутствует в RCI; кеш mark сброшен, прокси будет запущен для всех клиентов"
+                log_router "notice" "Политика $name_policy отсутствует в RCI; кеш mark сброшен, прокси будет запущен для всех клиентов"
             fi
         elif [ -s "$policy_mark_cache" ]; then
             _cached_mark=$(cat "$policy_mark_cache" 2>/dev/null)
@@ -4273,11 +4278,11 @@ proxy_start() {
             if [ "$start_manual" = "on" ]; then
                 log_error_terminal "Не удалось запустить ${yellow}$name_client${reset}, так как он уже запущен"
             else
-                log_router "info" "Прокси-клиент успешно запущен в режиме $mode_proxy"
+                log_router "notice" "Прокси-клиент успешно запущен в режиме $mode_proxy"
                 _release_coldstart_guard
             fi
         else
-            log_router "info" "Инициирован запуск прокси-клиента"
+            log_router "notice" "Инициирован запуск прокси-клиента"
             attempt=1
 
             fd_limit="$other_fd"
@@ -4396,13 +4401,13 @@ proxy_start() {
                         fi
                     fi
                     [ "$mode_proxy" = "Other" ] && echo -e "  Функция прозрачного прокси ${red}не активна${reset}. Направляйте соединения на ${yellow}${name_client}${reset} вручную"
-                    log_router "info" "Прокси-клиент успешно запущен в режиме $mode_proxy"
+                    log_router "notice" "Прокси-клиент успешно запущен в режиме $mode_proxy"
                     _release_coldstart_guard
                     if [ "$check_fd" = "on" ]; then
                         cleanup_fd_monitor
                         monitor_fd &
                         echo $! > "$file_pid_fd"
-                        log_router "info" "Запущен контроль файловых дескрипторов $name_client"
+                        log_router "notice" "Запущен контроль файловых дескрипторов $name_client"
                     fi
                     if [ "$_ps_mutex_rc" -eq 0 ]; then
                         _release_proxy_mutex
@@ -4498,7 +4503,7 @@ proxy_stop() {
         rm -f "$xkeen_rundir/ready"
         cleanup_fd_monitor
     else
-        [ -f "$xkeen_rundir/coldstart.lock" ] || log_router "info" "Инициирована остановка прокси-клиента"
+        [ -f "$xkeen_rundir/coldstart.lock" ] || log_router "notice" "Инициирована остановка прокси-клиента"
         attempt=1
         _stop_cleanup_done=0
         while [ "$attempt" -le "$start_attempts" ]; do
@@ -4529,7 +4534,7 @@ proxy_stop() {
             fi
             if ! proxy_status; then
                 echo -e "  Прокси-клиент ${red}остановлен${reset}"
-                [ -f "$xkeen_rundir/coldstart.lock" ] || log_router "info" "Прокси-клиент успешно остановлен"
+                [ -f "$xkeen_rundir/coldstart.lock" ] || log_router "notice" "Прокси-клиент успешно остановлен"
                 _release_coldstart_guard
                 if [ "$_pstop_mutex_rc" -eq 0 ]; then
                     _release_proxy_mutex
@@ -4599,7 +4604,7 @@ case "$1" in
         _set_coldstart_pid "$$"
         # Гарантированная задержка перед попыткой запуска прокси-клиента
         if [ -n "$init_delay" ] && [ "$init_delay" -gt 0 ] 2>/dev/null; then
-            log_router "info" "Ожидание перед проверкой готовности к запуску XKeen (${init_delay} сек...)"
+            log_router "notice" "Ожидание перед проверкой готовности к запуску XKeen (${init_delay} сек...)"
             sleep "$init_delay"
         fi
         # Re-spawn в чистый S05xkeen: sh-функции (wait_for_ready) не
