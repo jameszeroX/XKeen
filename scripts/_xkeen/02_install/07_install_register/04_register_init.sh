@@ -2855,7 +2855,7 @@ if proxy_status; then
 
     _xkeen_apply_checked() {
         _xkeen_apply && return 0
-        log_error_router "Не удалось применить все поддерживаемые таблицы netfilter; новые правила XKeen не считаются активными"
+        logger -p error -t XKeen "Не удалось применить все поддерживаемые таблицы netfilter; новые правила XKeen не считаются активными"
         _xkeen_release_nf_lock
         return 1
     }
@@ -3227,7 +3227,7 @@ EOF
 
     _xkeen_configure_route_checked() {
         configure_route "$1" && return 0
-        log_error_router "Не удалось настроить policy routing IPv$1; правила TProxy не будут применены"
+        logger -p error -t XKeen "Не удалось настроить policy routing IPv$1; правила TProxy не будут применены"
         _xkeen_release_nf_lock
         return 1
     }
