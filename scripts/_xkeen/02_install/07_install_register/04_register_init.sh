@@ -2674,8 +2674,11 @@ if proxy_status; then
         command -v ipset >/dev/null 2>&1 || return 0
         ipset create "$name_ipset_deny_mac" hash:mac -exist 2>/dev/null || return 0
         _tmp="${name_ipset_deny_mac}_tmp_$$"
-        ipset create "$_tmp" hash:mac -exist 2>/dev/null
-        ipset flush "$_tmp" >/dev/null 2>&1
+        ipset create "$_tmp" hash:mac -exist 2>/dev/null || return 1
+        if ! ipset flush "$_tmp" >/dev/null 2>&1; then
+            ipset destroy "$_tmp" 2>/dev/null
+            return 1
+        fi
         _hjson=$(curl_api "${url_server}/${url_hotspot}" 2>/dev/null)
         if [ -z "$_hjson" ]; then
             # Сбой curl/RCI: не затираем живой deny-MAC пустым набором.
@@ -2692,19 +2695,33 @@ if proxy_status; then
             ipset destroy "$_tmp" 2>/dev/null
             return 1
         fi
-        if printf '%s' "$_hjson" | jq -r '
+
+        _entries=$(printf '%s' "$_hjson" | jq -r '
             ((.host // . // []) |
              (if type == "array" then .[] else . end)) |
             select((.access // "") == "deny" and (.mac // "") != "") |
             .mac
-        ' 2>/dev/null | tr '[:lower:]' '[:upper:]' | \
-             awk -v set="$_tmp" '/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/ {print "add " set " " $0 " -exist"}' | \
-             ipset restore -exist; then
-            ipset swap "$_tmp" "$name_ipset_deny_mac" 2>/dev/null
+        ' 2>/dev/null) || {
+            ipset destroy "$_tmp" 2>/dev/null
+            return 1
+        }
+        _commands=$(printf '%s\n' "$_entries" | awk -v set="$_tmp" \
+            '/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/ {print "add " set " " toupper($0) " -exist"}') || {
+            ipset destroy "$_tmp" 2>/dev/null
+            return 1
+        }
+        _deny_rc=1
+        if printf '%s\n' "$_commands" | ipset restore -exist; then
+            if ipset swap "$_tmp" "$name_ipset_deny_mac" 2>/dev/null; then
+                _deny_rc=0
+            else
+                log_router "warn" "Не удалось заменить $name_ipset_deny_mac после hotspot API"
+            fi
         else
             log_router "warn" "Не удалось восстановить $name_ipset_deny_mac из hotspot API"
         fi
         ipset destroy "$_tmp" 2>/dev/null
+        return "$_deny_rc"
     }
     command -v ipset >/dev/null 2>&1 && ipset create "$name_ipset_deny_mac" hash:mac -exist 2>/dev/null
 
@@ -3712,22 +3729,35 @@ EOL
     # Тот же tmp+сравнение+atomic-mv паттерн, что и у proxy.sh выше: heredoc
     # статичен, но голый exists-check "застынет" на старом содержимом после
     # апгрейда XKeen, поэтому сравниваем содержимое, а не факт наличия файла.
-    mkdir -p "$(dirname "$file_schedule_hook")" 2>/dev/null
+    if ! write_schedule_hook; then
+        log_router "warn" "Не удалось обновить schedule.d-хук; синхронизация deny-MAC по событиям расписания недоступна"
+    fi
+
+    return 0
+}
+
+write_schedule_hook() {
+    mkdir -p "$(dirname "$file_schedule_hook")" 2>/dev/null || return 1
     _schedule_hook_tmp="${file_schedule_hook}.tmp.$$"
-    rm -f "$_schedule_hook_tmp"
-    cat > "$_schedule_hook_tmp" <<'SCHEDULE_EOL'
+    rm -f "$_schedule_hook_tmp" || return 1
+    if ! cat > "$_schedule_hook_tmp" <<'SCHEDULE_EOL'
 #!/bin/sh
 # XKeen: re-sync deny MAC ipset on schedule start/stop. Auto-generated. DO NOT EDIT!
 [ "$1" = "start" ] || [ "$1" = "stop" ] || exit 0
 [ -x /opt/etc/ndm/netfilter.d/proxy.sh ] && /opt/etc/ndm/netfilter.d/proxy.sh
 SCHEDULE_EOL
-    if [ -f "$file_schedule_hook" ] && [ "$(cat "$_schedule_hook_tmp")" = "$(cat "$file_schedule_hook")" ]; then
+    then
         rm -f "$_schedule_hook_tmp"
-    else
-        chmod 755 "$_schedule_hook_tmp"
-        mv -f "$_schedule_hook_tmp" "$file_schedule_hook"
+        return 1
     fi
-
+    if [ -f "$file_schedule_hook" ] && [ "$(cat "$_schedule_hook_tmp")" = "$(cat "$file_schedule_hook")" ]; then
+        rm -f "$_schedule_hook_tmp" || return 1
+        return 0
+    fi
+    if ! chmod 755 "$_schedule_hook_tmp" || ! mv -f "$_schedule_hook_tmp" "$file_schedule_hook"; then
+        rm -f "$_schedule_hook_tmp"
+        return 1
+    fi
     return 0
 }
 
@@ -3738,12 +3768,17 @@ clean_firewall() {
     # Re-entrant calls from the lock owner are safe; never clean without
     # either acquiring the lock or confirming that this PID already owns it.
     [ "$_cf_nf_rc" -eq 1 ] && return 1
+    _cf_failed=0
 
     # Атомарно гасим хук: truncate live mid-renew больше не оставляем.
     if [ -f "$file_netfilter_hook" ] || [ -e "$file_netfilter_hook" ]; then
         _cf_hook_tmp="${file_netfilter_hook}.clean.$$"
-        : > "$_cf_hook_tmp"
-        mv -f "$_cf_hook_tmp" "$file_netfilter_hook" 2>/dev/null || : > "$file_netfilter_hook"
+        if ! : > "$_cf_hook_tmp"; then
+            _cf_failed=1
+        elif ! mv -f "$_cf_hook_tmp" "$file_netfilter_hook" 2>/dev/null; then
+            : > "$file_netfilter_hook" || _cf_failed=1
+            rm -f "$_cf_hook_tmp" 2>/dev/null
+        fi
     fi
 
     get_ipver_support
@@ -3776,11 +3811,12 @@ clean_firewall() {
 
     _cr_flush_del() {
         _cr_chain_exists "$1" || return 0
-        "$family" -w -t "$table" -F "$1" >/dev/null 2>&1
-        "$family" -w -t "$table" -X "$1" >/dev/null 2>&1
+        "$family" -w -t "$table" -F "$1" >/dev/null 2>&1 || return 1
+        "$family" -w -t "$table" -X "$1" >/dev/null 2>&1 || return 1
     }
 
     clean_run() {
+        local _cr_failed=0
         family="$1"
         table="$2"
         name_chain="$3"
@@ -3792,34 +3828,43 @@ $_cr_dump
 "
 
         # Правила-ссылки в PREROUTING и OUTPUT (в порядке дампа: PREROUTING, затем OUTPUT)
-        printf '%s\n' "$_cr_dump" | grep -E -- '^-A (PREROUTING|OUTPUT) ' | grep -E -- "$comment_tag" \
+        _cr_rules=$(printf '%s\n' "$_cr_dump" | grep -E -- '^-A (PREROUTING|OUTPUT) ' | grep -E -- "$comment_tag" \
             | { if [ "$keep_killswitch" = "on" ]; then grep -v -- "-j ${name_chain}_killswitch"; else cat; fi; } \
-            | sed 's/^-A /-D /' | while IFS= read -r rule; do
-            [ -n "$rule" ] && "$family" -w -t "$table" $rule >/dev/null 2>&1
-        done
+            | sed 's/^-A /-D /')
+        while IFS= read -r rule; do
+            [ -n "$rule" ] || continue
+            # Intentional word splitting: iptables -S emits argv fields.
+            "$family" -w -t "$table" $rule >/dev/null 2>&1 || _cr_failed=1
+        done <<EOF
+$_cr_rules
+EOF
 
-        _cr_flush_del "$name_chain"
+        _cr_flush_del "$name_chain" || _cr_failed=1
         out_chain="${name_chain}_out"
-        _cr_flush_del "$out_chain"
+        _cr_flush_del "$out_chain" || _cr_failed=1
         force_chain="${name_chain}_force"
-        _cr_flush_del "$force_chain"
+        _cr_flush_del "$force_chain" || _cr_failed=1
         divert_chain="${name_chain}_divert"
-        _cr_flush_del "$divert_chain"
+        _cr_flush_del "$divert_chain" || _cr_failed=1
         killswitch_chain="${name_chain}_killswitch"
-        [ "$keep_killswitch" != "on" ] && _cr_flush_del "$killswitch_chain"
-        return 0
+        [ "$keep_killswitch" != "on" ] && _cr_flush_del "$killswitch_chain" || {
+            [ "$keep_killswitch" = "on" ] || _cr_failed=1
+        }
+        return "$_cr_failed"
     }
 
     for family in iptables ip6tables; do
         for chain in nat mangle; do
-            clean_run "$family" "$chain" "$name_chain"
+            clean_run "$family" "$chain" "$name_chain" || _cf_failed=1
         done
     done
 
     if command -v ip >/dev/null 2>&1; then
         for family in 4 6; do
             while ip -"$family" rule del fwmark "$table_mark" lookup "$table_id" >/dev/null 2>&1; do :; done
-            ip -"$family" route flush table "$table_id" >/dev/null 2>&1 || true
+            if ip -"$family" route show table "$table_id" 2>/dev/null | grep -q .; then
+                ip -"$family" route flush table "$table_id" >/dev/null 2>&1 || _cf_failed=1
+            fi
         done
     fi
 
@@ -3827,7 +3872,9 @@ $_cr_dump
     if command -v ipset >/dev/null 2>&1; then
         # Один "ipset list -n" вместо flush+destroy для каждого из 7 наборов;
         # если list -n не поддерживается — прежний цикл по всем наборам.
+        _cf_list_ok=0
         if _cf_sets=$(ipset list -n 2>/dev/null); then
+            _cf_list_ok=1
             _cf_sets="
 $_cf_sets
 "
@@ -3835,25 +3882,36 @@ $_cf_sets
             _cf_sets=""
         fi
         for set in geo_override geo_override6 geo_exclude geo_exclude6 user_exclude user_exclude6 "$name_ipset_deny_mac"; do
-            if [ -n "$_cf_sets" ]; then
+            if [ "$_cf_list_ok" -eq 1 ]; then
                 case "$_cf_sets" in
                     *"
 $set
 "*) ;;
                     *) continue ;;
                 esac
+            else
+                # Some older ipset builds lack `list -n`; check each target
+                # before treating a missing set as a cleanup failure.
+                ipset list "$set" >/dev/null 2>&1 || continue
             fi
-            ipset flush "$set" >/dev/null 2>&1
-            ipset destroy "$set" >/dev/null 2>&1
+            if ! ipset flush "$set" >/dev/null 2>&1 || ! ipset destroy "$set" >/dev/null 2>&1; then
+                _cf_failed=1
+            fi
         done
     fi
 
     # Schedule.d-hook идемпотентно перегенерируется в configure_firewall,
     # на остановке убираем чтобы NDM не дёргал мёртвый netfilter.d/proxy.sh.
-    [ -f "$file_schedule_hook" ] && rm -f "$file_schedule_hook"
+    [ -f "$file_schedule_hook" ] && rm -f "$file_schedule_hook" || {
+        [ -f "$file_schedule_hook" ] || [ ! -e "$file_schedule_hook" ] || _cf_failed=1
+    }
 
     # rc=2 — re-entrant (тот же PID уже держал lock), чужой замок не снимаем.
-    [ "$_cf_nf_rc" -ne 2 ] && _release_nf_lock
+    if [ "$_cf_nf_rc" -ne 2 ]; then
+        _release_nf_lock || _cf_failed=1
+        [ ! -e "$xkeen_rundir/netfilter.lock.d" ] || _cf_failed=1
+    fi
+    return "$_cf_failed"
 }
 
 # Мониторинг файловых дескрипторов
