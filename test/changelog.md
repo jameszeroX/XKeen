@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-19 12:32:22 MSK)
+
+Сборка из [`ffa6ad7`](https://github.com/jameszeroX/XKeen/commit/ffa6ad7ea64c805fc2fb7137705a9c709d1ed57b).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/5a9b7ec4d857f43594fa995238037767f774e6a5/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`63670a8...ffa6ad7`](https://github.com/jameszeroX/XKeen/compare/63670a87de00d0cf7cf30619e5959ef9ecb5dcbf...ffa6ad7ea64c805fc2fb7137705a9c709d1ed57b).
+
+###### Коммиты
+
+- Load rci_token in single jq call; fix IPv6 exclude ranges ([`ffa6ad7`](https://github.com/jameszeroX/XKeen/commit/ffa6ad7ea64c805fc2fb7137705a9c709d1ed57b)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-18 20:56:48 MSK)
 
 Сборка из [`e55acbe`](https://github.com/jameszeroX/XKeen/commit/e55acbe0f0c0ce2a65ab1e9e27b23b8f20dfdfdf).
