@@ -630,10 +630,11 @@ warn_legacy_on_52() {
 }
 
 # Версии KeeneticOS, на которых установка невозможна.
-# KeeneticOS 5.1.9: RCI требует токен доступа, но создать его нельзя ни в
-# веб-интерфейсе, ни через ndmc. Разработчики Keenetic признали проблему и
-# обещают исправить её в следующей прошивке.
-keenetic_blocked_release="5.1.9"
+# На этих прошивках RCI требует токен доступа, но создать его нельзя ни в
+# веб-интерфейсе, ни через ndmc. Разработчики Keenetic признали проблему.
+#   5.1.9  — исправление обещано в следующей прошивке
+#   4.3.10 — LTS-ветка, подвержена той же проблеме
+keenetic_blocked_releases="5.1.9 4.3.10"
 
 # Версия прошивки через ndmc, в обход RCI (на 5.1.9 RCI без токена отвечает 401/403).
 # Работает только в нативной SSH-консоли роутера; при недоступности ndmc вывод пуст.
@@ -659,14 +660,18 @@ check_keenetic_blocked_release() {
     [ -z "$_ckb_release" ] && _ckb_release=$(get_keenetic_release_ndmc)
     [ -z "$_ckb_release" ] && return 0
 
-    [ "$(normalize_keenetic_release "$_ckb_release")" = "$keenetic_blocked_release" ] || return 0
+    _ckb_norm=$(normalize_keenetic_release "$_ckb_release")
+    _ckb_blocked=0
+    for _ckb_v in $keenetic_blocked_releases; do
+        [ "$_ckb_norm" = "$_ckb_v" ] && _ckb_blocked=1
+    done
+    [ "$_ckb_blocked" = 1 ] || return 0
 
     printf "  ${red}Установка прервана!${reset}\n"
-    printf "  Обнаружена не совместимая с XKeen прошивка ${yellow}KeeneticOS %s${reset}:\n" "$keenetic_blocked_release"
+    printf "  Обнаружена не совместимая с XKeen прошивка ${yellow}KeeneticOS %s${reset}:\n" "$_ckb_norm"
     printf "  RCI требует токен доступа, но в этой версии нет механизма его создания\n"
-    printf "  ни в веб-интерфейсе, ни через ${yellow}ndmc${reset}. Разработчики Keenetic признали проблему\n"
-    printf "  и обещают исправить её в следующей прошивке.\n\n"
-    printf "  Обновите KeeneticOS, когда выйдет исправление, и повторите установку\n\n"
+    printf "  ни в веб-интерфейсе, ни через ${yellow}ndmc${reset}. Разработчики Keenetic признали проблему.\n\n"
+    printf "  Обновите KeeneticOS до версии, в которой проблема исправлена, и повторите установку\n\n"
     return 1
 }
 
