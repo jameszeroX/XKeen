@@ -44,6 +44,11 @@ run_dispatch() {
     add_chmod_init()    { :; }
     is_proxy_running()  { return 1; }
     sleep()             { :; }
+    apply_port_change() {
+        _test_port_func=$1
+        shift
+        "$_test_port_func" "$@"
+    }
     initd_file=""
 
     eval "
