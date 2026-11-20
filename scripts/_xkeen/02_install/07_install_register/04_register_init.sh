@@ -3186,7 +3186,16 @@ if proxy_status; then
         # пересборка, как раньше.
         _cur_routes=$(ip -"$ip_version" route show table "$table_id" 2>/dev/null)
         _source_routes=$(ip -"$ip_version" route show table "$source_table" 2>/dev/null) || return 1
-        _want_routes=$(printf '%s\n' "$_source_routes" | grep -v '^default\|^unreachable\|^blackhole')
+        if [ "$ip_version" = "6" ]; then
+            # IPv6 policy tables on IPv4-only links may contain stale routes
+            # marked linkdown and several interface-scoped link-local routes.
+            # They cannot be copied into one table as-is (duplicate fe80::/10
+            # routes conflict), and link-local destinations are not useful for
+            # transparent proxy routing. Keep usable routed prefixes intact.
+            _want_routes=$(printf '%s\n' "$_source_routes" | grep -Ev '^(default|unreachable|blackhole)|^fe[89ab][0-9a-f]:|(^|[[:space:]])linkdown([[:space:]]|$)')
+        else
+            _want_routes=$(printf '%s\n' "$_source_routes" | grep -v '^default\|^unreachable\|^blackhole')
+        fi
         if [ -n "$_cur_routes" ] && \
            printf '%s\n' "$_cur_routes" | grep -q '^local default dev lo' && \
            [ "$(printf '%s\n' "$_cur_routes" | grep -v '^local default dev lo' | sort)" = \

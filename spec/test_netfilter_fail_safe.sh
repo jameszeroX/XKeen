@@ -74,14 +74,29 @@ ip() {
     printf '%s\n' "$*" >> "$ip_log"
     case "$*" in
         'rule show')
-            printf '%s\n' '100: from all fwmark 0x1000 lookup 1000' '101: from all fwmark 0x100 lookup 100'
+            printf '%s\n' '100: from all fwmark 0x1000 lookup 1000' '101: from all fwmark 0x100 lookup 100' '102: from all fwmark 0xffffaaa lookup 4096'
             ;;
         '-4 route show default') printf '%s\n' 'default via 192.0.2.1 dev wan0' ;;
         '-4 route show table 100') printf '%s\n' 'default via 10.0.0.1 dev ppp0' ;;
         '-4 route show table 1000') printf '%s\n' 'default via 10.0.0.2 dev ppp1' ;;
         '-4 route show table 200') : ;;
+        '-6 route show table 4096')
+            printf '%s\n' \
+                '2001:2::c633:6425 dev ezcfg0 metric 256 linkdown pref medium' \
+                'fe80::/64 dev br0 metric 256' \
+                'fe80::/64 dev eth3 metric 256' \
+                '2001:db8:1::/64 dev wan0 metric 256'
+            ;;
+        '-6 route show table 424242') : ;;
         '-4 rule show') : ;;
         '-4 route flush table '*|'-6 route flush table '*) return 0 ;;
+        '-6 route add table 424242 2001:2::'*linkdown*) return 42 ;;
+        '-6 route add table 424242 fe80::/64 dev '*)
+            _v6_fe80_adds=$((${_v6_fe80_adds:-0} + 1))
+            [ "$_v6_fe80_adds" -eq 1 ] || return 17
+            return 0
+            ;;
+        '-6 route add table 424242 2001:db8:1::/64 '*) return 0 ;;
         '-4 rule del '*|'-6 rule del '*|'-4 route add local '*|'-6 route add local '*|'-4 rule add '*|'-6 rule add '*|'-4 route add table '*|'-6 route add table '*)
             [ "${FAIL_ROUTE_MUTATION:-0}" = 0 ] || return 42
             return 0
@@ -105,6 +120,19 @@ policy_mark=
 configure_route 6
 no_ipv6_uplink_rc=$?
 check 'IPv6 setup tolerates an empty main route table when ISP provides no IPv6' "$no_ipv6_uplink_rc" 0
+
+: > "$ip_log"
+policy_mark=0xffffaaa
+table_id=424242
+table_mark=0x424242
+_v6_fe80_adds=0
+configure_route 6
+v6_no_isp_rc=$?
+check 'IPv6 setup ignores linkdown and link-local routes from IPv4-only policy table' "$v6_no_isp_rc" 0
+v6_copy_count=$(grep -c '^-6 route add table 424242 ' "$ip_log" || true)
+check 'IPv6 policy table copies only the usable route' "$v6_copy_count" 1
+v6_copied_route=$(grep '^-6 route add table 424242 ' "$ip_log" | tail -n 1)
+check 'usable global IPv6 route remains copied' "$v6_copied_route" '-6 route add table 424242 2001:db8:1::/64 dev wan0 metric 256'
 
 : > "$ip_log"
 FAIL_ROUTE_MUTATION=1 configure_route 4
