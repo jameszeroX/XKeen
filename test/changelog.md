@@ -1,5 +1,20 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-20 19:30:02 MSK)
+
+Сборка из [`dc41e40`](https://github.com/jameszeroX/XKeen/commit/dc41e400190c967f6e96561bffff4a07cf6c5a29).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/ee282bb537bd4b487d353cafc642438937e15cf2/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`c6b9fc2...dc41e40`](https://github.com/jameszeroX/XKeen/compare/c6b9fc28e287e0752b42bc1cc8208964516f2858...dc41e400190c967f6e96561bffff4a07cf6c5a29).
+
+###### Коммиты
+
+- fix(ipset): propagate GeoIPSET load failures ([`bfcca42`](https://github.com/jameszeroX/XKeen/commit/bfcca42470cd4971617ddcd7248b9246455ab596)) — rangerxxyy
+- fix(ipset): propagate install command failures ([`045cbf0`](https://github.com/jameszeroX/XKeen/commit/045cbf036750ae6efc690f6c23125ca37284859a)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-20 13:55:29 MSK)
 
 Сборка из [`f16ff15`](https://github.com/jameszeroX/XKeen/commit/f16ff152f4b4096945a7770c7441b037c78b9069).
