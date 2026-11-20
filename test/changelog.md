@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-20 13:55:29 MSK)
+
+Сборка из [`f16ff15`](https://github.com/jameszeroX/XKeen/commit/f16ff152f4b4096945a7770c7441b037c78b9069).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/c6b9fc28e287e0752b42bc1cc8208964516f2858/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`17fe360...f16ff15`](https://github.com/jameszeroX/XKeen/compare/17fe3608f37c8800b418ccbca14df40fd08ba026...f16ff152f4b4096945a7770c7441b037c78b9069).
+
+###### Коммиты
+
+- Refactor IPv6 exclusion and firewall rule logic ([`f16ff15`](https://github.com/jameszeroX/XKeen/commit/f16ff152f4b4096945a7770c7441b037c78b9069)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-20 13:50:39 MSK)
 
 Сборка из [`7f8cd15`](https://github.com/jameszeroX/XKeen/commit/7f8cd15ee7f8b73654297e9f4b352ffbb3580326).
