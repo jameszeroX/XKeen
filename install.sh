@@ -629,6 +629,47 @@ warn_legacy_on_52() {
     return 1
 }
 
+# Версии KeeneticOS, на которых установка невозможна.
+# KeeneticOS 5.1.9: RCI требует токен доступа, но создать его нельзя ни в
+# веб-интерфейсе, ни через ndmc. Разработчики Keenetic признали проблему и
+# обещают исправить её в следующей прошивке.
+keenetic_blocked_release="5.1.9"
+
+# Версия прошивки через ndmc, в обход RCI (на 5.1.9 RCI без токена отвечает 401/403).
+# Работает только в нативной SSH-консоли роутера; при недоступности ndmc вывод пуст.
+get_keenetic_release_ndmc() {
+    command -v ndmc >/dev/null 2>&1 || return 1
+    ndmc -c 'show version' 2>/dev/null | tr -d '\r' | \
+        sed -n 's/^[[:space:]]*release:[[:space:]]*//p' | head -n 1
+}
+
+# Приводит строку release ("5.1.9" или "5.01.A.9.0-0") к виду MAJOR.MINOR.PATCH
+normalize_keenetic_release() {
+    printf '%s\n' "$1" | awk -F'[.-]' '{
+        patch = ($3 ~ /^[0-9]+$/) ? $3 : $4
+        printf "%d.%d.%d\n", $1, $2, patch
+    }'
+}
+
+# Прерывание установки на прошивке с неработающей генерацией RCI-токена.
+# Возврат: 0 — прошивка допустима или версию определить не удалось,
+# 1 — обнаружена заблокированная прошивка (сообщение уже выведено).
+check_keenetic_blocked_release() {
+    _ckb_release=$(get_keenetic_release "$(get_rci_token_from_config)")
+    [ -z "$_ckb_release" ] && _ckb_release=$(get_keenetic_release_ndmc)
+    [ -z "$_ckb_release" ] && return 0
+
+    [ "$(normalize_keenetic_release "$_ckb_release")" = "$keenetic_blocked_release" ] || return 0
+
+    printf "  ${red}Установка прервана!${reset}\n"
+    printf "  Обнаружена не совместимая с XKeen прошивка ${yellow}KeeneticOS %s${reset}:\n" "$keenetic_blocked_release"
+    printf "  RCI требует токен доступа, но в этой версии нет механизма его создания\n"
+    printf "  ни в веб-интерфейсе, ни через ${yellow}ndmc${reset}. Разработчики Keenetic признали проблему\n"
+    printf "  и обещают исправить её в следующей прошивке.\n\n"
+    printf "  Обновите KeeneticOS, когда выйдет исправление, и повторите установку\n\n"
+    return 1
+}
+
 # Функция загрузки с проверкой (дубль из scripts/_xkeen/.../01_tests_system.sh:
 # install.sh запускается до установки модулей, поэтому правки нужны в обоих местах)
 download_with_check() {
@@ -721,6 +762,9 @@ echo
 
 # Первым делом проверяем валидность xkeen.json
 validate_xkeen_json_early || exit 1
+
+# Прошивки с неработающей генерацией RCI-токена не поддерживаются
+check_keenetic_blocked_release || exit 1
 
 # Проверяем доступность репозитория Entware до начала установки
 check_entware_repo
