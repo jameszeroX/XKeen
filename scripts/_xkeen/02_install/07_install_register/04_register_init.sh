@@ -22,7 +22,7 @@ name_chain="xkeen"
 name_ipset_deny_mac="xkeen_deny_mac"
 
 # Директории
-_uname_r="$(uname -r)"
+[ -r /proc/sys/kernel/osrelease ] && read -r _uname_r < /proc/sys/kernel/osrelease || _uname_r="$(uname -r)"
 directory_os_modules="/lib/modules/$_uname_r"
 directory_user_modules="/opt/lib/modules"
 directory_opkg_modules="/opt/lib/system-modules/$_uname_r"
@@ -57,6 +57,7 @@ url_policy="rci/show/ip/policy"
 url_keenetic_port="rci/ip/http/ssl"
 url_redirect_port="rci/ip/static"
 url_hotspot="rci/show/ip/hotspot"
+url_prefixes="rci/show/ipv6/prefixes"
 
 # Настройки правил iptables
 table_id="111"
@@ -2190,21 +2191,21 @@ get_exclude_ip4() {
     echo "${ipv4_eth} ${ipv4_exclude}" | tr ' ' '\n' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//'
 }
 
-# Получение исключений IPv6.
+# Получение исключений IPv6. Результат — в глобальных переменных:
+#   ipv6_exclude_static  — WAN IPv6 роутера + статический ipv6_exclude;
+#   ipv6_local_prefixes  — делегированные глобальные префиксы локальных сетей.
 get_exclude_ip6() {
     ipv6_local_prefixes=""
     ipv6_exclude_static=""
-    ipv6_exclude_ip6=""
     [ "$ip6tables_supported" != "true" ] && return
 
     # Получаем провайдерский IPv6
     ipv6_eth=$(ip -o -6 route get 2a02:6b8::feed:0ff 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
     [ -n "$ipv6_eth" ] && ipv6_eth="${ipv6_eth}/128"
-
-    # RCI may mark a ULA prefix global=true. The static fd00::/8 exclusion
-    # keeps the established ULA behavior; only active global-unicast ranges
-    # with a delegatable prefix length are dynamic local exclusions.
-    ipv6_local_prefixes=$(curl_api "${url_server}/rci/show/ipv6/prefixes/" 2>/dev/null |
+    # RCI может пометить ULA-префикс как global=true. ULA уже покрыт статическим
+    # fc00::/7, поэтому динамическими исключениями становятся только активные
+    # глобальные unicast-префиксы (2000::/3) длиной /48../64.
+    ipv6_local_prefixes=$(curl_api "${url_server}/${url_prefixes}" 2>/dev/null |
         jq -r 'if type == "object" and (.prefix | type) == "array" then
             .prefix[]? |
             select(type == "object" and .global == true and
@@ -2248,9 +2249,6 @@ get_exclude_ip6() {
     ipv6_exclude_static=$(printf '%s\n' "${ipv6_eth} ${ipv6_exclude}" |
         tr ' ' '\n' | awk 'NF && !seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//')
 
-    ipv6_exclude_ip6=$(printf '%s\n' "${ipv6_exclude_static} ${ipv6_local_prefixes}" |
-        tr ' ' '\n' | awk 'NF && !seen[$0]++' | tr '\n' ' ' | sed 's/^ //; s/ $//')
-    printf '%s\n' "$ipv6_exclude_ip6"
 }
 
 validate_api_policy_response() {
@@ -2481,8 +2479,7 @@ configure_firewall() {
     file_netfilter_hook="$_hook_tmp"
 
     # Pre-evaluate dynamic variables
-    get_exclude_ip6 >/dev/null
-    val_exclude_ip6="$ipv6_exclude_ip6"
+    get_exclude_ip6
     val_exclude_ip6_static="$ipv6_exclude_static"
     val_exclude_ip6_local="$ipv6_local_prefixes"
     val_exclude_ip4="$(get_exclude_ip4)"
@@ -2572,7 +2569,6 @@ EOL
     inject_var aghfix "$aghfix"
     inject_var ipv6_proxy "$ipv6_proxy"
     inject_var ipv4_proxy "$ipv4_proxy"
-    inject_var val_exclude_ip6 "$val_exclude_ip6"
     inject_var val_exclude_ip6_static "$val_exclude_ip6_static"
     inject_var val_exclude_ip6_local "$val_exclude_ip6_local"
     inject_var val_exclude_ip4 "$val_exclude_ip4"
@@ -2866,65 +2862,61 @@ if proxy_status; then
         conntrack -D -p udp -m "$(( table_mark ))" >/dev/null 2>&1
     }
 
+    # Одно правило-исключение для подсети.
+    # $3=true — подсеть локальная: при включённом перехвате DNS порт 53
+    # не исключается, чтобы DNS-пакеты доходили до TProxy/Redirect.
+    # Иначе — безусловный RETURN.
+    add_exclude_rule() {
+        _ex_chain="$1"
+        _ex_net="$2"
+        _ex_dns_split="$3"
+
+        if [ "$_ex_dns_split" = "true" ] && [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ] && [ "$_ex_chain" != "${name_chain}_out" ]; then
+            case "$table/$mode_proxy" in
+                mangle/TProxy)
+                    ipt -A "$_ex_chain" -d "$_ex_net" -p tcp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
+                    ipt -A "$_ex_chain" -d "$_ex_net" -p udp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
+                    ;;
+                mangle/Hybrid)
+                    ipt -A "$_ex_chain" -d "$_ex_net" -p tcp --dport 53 $comment -j RETURN >/dev/null 2>&1
+                    ipt -A "$_ex_chain" -d "$_ex_net" -p udp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
+                    ;;
+                nat/Hybrid)
+                    ipt -A "$_ex_chain" -d "$_ex_net" -p tcp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
+                    ipt -A "$_ex_chain" -d "$_ex_net" -p udp --dport 53 $comment -j RETURN >/dev/null 2>&1
+                    ;;
+                nat/Redirect)
+                    ipt -A "$_ex_chain" -d "$_ex_net" -p tcp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
+                    ;;
+                *)
+                    ipt -A "$_ex_chain" -d "$_ex_net" $comment -j RETURN >/dev/null 2>&1
+                    ;;
+            esac
+        else
+            ipt -A "$_ex_chain" -d "$_ex_net" $comment -j RETURN >/dev/null 2>&1
+        fi
+    }
+
     # Добавление правил-исключений
     add_exclude_rules() {
         chain="$1"
         for exclude in $exclude_list; do
-            if [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ] && [ "$chain" != "${name_chain}_out" ]; then
-                case "$exclude" in
-                    10.0.0.0/8|172.16.0.0/12|192.168.0.0/16|fc00::/7|fe80::/10)
-                        if [ "$table" = "mangle" ] && [ "$mode_proxy" = "Hybrid" ]; then
-                            ipt -A "$chain" -d "$exclude" -p tcp --dport 53 $comment -j RETURN >/dev/null 2>&1
-                            ipt -A "$chain" -d "$exclude" -p udp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
-                        elif [ "$table" = "nat" ] && [ "$mode_proxy" = "Hybrid" ]; then
-                            ipt -A "$chain" -d "$exclude" -p tcp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
-                            ipt -A "$chain" -d "$exclude" -p udp --dport 53 $comment -j RETURN >/dev/null 2>&1
-                        elif [ "$table" = "mangle" ] && [ "$mode_proxy" = "TProxy" ]; then
-                            ipt -A "$chain" -d "$exclude" -p tcp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
-                            ipt -A "$chain" -d "$exclude" -p udp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
-                        fi
-                        ;;
-                    *)
-                        # Остальные исключения (WAN роутера, 224.0.0.0/4, 100.64.0.0/10,
-                        # 255.255.255.255, IPv6 ff00::/8 и пользовательские адреса) ставятся
-                        # как без перехвата DNS: без ветки *) case молча их отбрасывал.
-                        ipt -A "$chain" -d "$exclude" $comment -j RETURN >/dev/null 2>&1
-                        ;;
-                esac
-            else
-                ipt -A "$chain" -d "$exclude" $comment -j RETURN >/dev/null 2>&1
-            fi
+            case "$exclude" in
+                10.0.0.0/8|172.16.0.0/12|192.168.0.0/16|fc00::/7|fe80::/10)
+                    add_exclude_rule "$chain" "$exclude" true
+                    ;;
+                *)
+                    # Остальные исключения (WAN роутера, 224.0.0.0/4, 100.64.0.0/10,
+                    # 255.255.255.255, IPv6 ff00::/8 и пользовательские адреса) ставятся
+                    # без учёта DNS.
+                    add_exclude_rule "$chain" "$exclude" false
+                    ;;
+            esac
         done
 
-        # Delegated local prefixes are distinct from static exclusions.
-        # Keep their DNS handling aligned with fd00::/8 and fe80::/10 so
-        # DNS packets still reach the intended TProxy/Redirect interception.
+        # Делегированные глобальные префиксы локальных сетей — как fc00::/7 и fe80::/10.
         for exclude in $local_exclude_list; do
-            if [ "$file_dns" = "true" ] && [ "$proxy_dns" = "on" ] && [ "$chain" != "${name_chain}_out" ]; then
-                case "$table/$mode_proxy" in
-                    mangle/TProxy)
-                        ipt -A "$chain" -d "$exclude" -p tcp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
-                        ipt -A "$chain" -d "$exclude" -p udp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
-                        ;;
-                    mangle/Hybrid)
-                        ipt -A "$chain" -d "$exclude" -p tcp --dport 53 $comment -j RETURN >/dev/null 2>&1
-                        ipt -A "$chain" -d "$exclude" -p udp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
-                        ;;
-                    nat/Hybrid)
-                        ipt -A "$chain" -d "$exclude" -p tcp ! --dport 53 $comment -j RETURN >/dev/null 2>&1
-                        ipt -A "$chain" -d "$exclude" -p udp --dport 53 $comment -j RETURN >/dev/null 2>&1
-                        ;;
-                    nat/Redirect)
-                        ipt -A "$chain" -d "$exclude" -p tcp ! --dport 53 \
-                            $comment -j RETURN >/dev/null 2>&1
-                        ;;
-                    *)
-                        ipt -A "$chain" -d "$exclude" $comment -j RETURN >/dev/null 2>&1
-                        ;;
-                esac
-            else
-                ipt -A "$chain" -d "$exclude" $comment -j RETURN >/dev/null 2>&1
-            fi
+            add_exclude_rule "$chain" "$exclude" true
         done
     }
 
