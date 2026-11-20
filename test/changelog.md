@@ -1,5 +1,21 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-20 13:50:39 MSK)
+
+Сборка из [`7f8cd15`](https://github.com/jameszeroX/XKeen/commit/7f8cd15ee7f8b73654297e9f4b352ffbb3580326).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/17fe3608f37c8800b418ccbca14df40fd08ba026/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`5a9b7ec...7f8cd15`](https://github.com/jameszeroX/XKeen/compare/5a9b7ec4d857f43594fa995238037767f774e6a5...7f8cd15ee7f8b73654297e9f4b352ffbb3580326).
+
+###### Коммиты
+
+- fix(ipv6): исключать локальные делегированные префиксы ([`e89043c`](https://github.com/jameszeroX/XKeen/commit/e89043c1ea64d95f19211f8a449ac59bd88c74e4)) — rangerxxyy
+- fix(ipv6): preserve DNS interception and use authenticated RCI ([`476f6a0`](https://github.com/jameszeroX/XKeen/commit/476f6a0ef9d53ee1d7207038ac76c656129f3dd5)) — インフィニティ
+- fix(ipv6): preserve local TCP bypass in Redirect mode ([`7f8cd15`](https://github.com/jameszeroX/XKeen/commit/7f8cd15ee7f8b73654297e9f4b352ffbb3580326)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-19 12:32:22 MSK)
 
 Сборка из [`ffa6ad7`](https://github.com/jameszeroX/XKeen/commit/ffa6ad7ea64c805fc2fb7137705a9c709d1ed57b).
