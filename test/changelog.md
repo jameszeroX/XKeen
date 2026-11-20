@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-20 19:32:47 MSK)
+
+Сборка из [`f856689`](https://github.com/jameszeroX/XKeen/commit/f856689814aff65edd1296d9a0440ca203e17561).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/c277661b95e57453275ded133b03e124173f7d9b/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`ee282bb...f856689`](https://github.com/jameszeroX/XKeen/compare/ee282bb537bd4b487d353cafc642438937e15cf2...f856689814aff65edd1296d9a0440ca203e17561).
+
+###### Коммиты
+
+- fix(balancer): propagate cron publication failures ([`f856689`](https://github.com/jameszeroX/XKeen/commit/f856689814aff65edd1296d9a0440ca203e17561)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-20 19:30:02 MSK)
 
 Сборка из [`dc41e40`](https://github.com/jameszeroX/XKeen/commit/dc41e400190c967f6e96561bffff4a07cf6c5a29).
