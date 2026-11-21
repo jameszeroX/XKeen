@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-21 12:04:14 MSK)
+
+Сборка из [`0a722cd`](https://github.com/jameszeroX/XKeen/commit/0a722cd25ce4f5f578385bfeab7e01deba8a1f07).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/c3515ffef928065836c718ae9a63c755c72204eb/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`c277661...0a722cd`](https://github.com/jameszeroX/XKeen/compare/c277661b95e57453275ded133b03e124173f7d9b...0a722cd25ce4f5f578385bfeab7e01deba8a1f07).
+
+###### Коммиты
+
+- fix(cli): report cron, port, and update failures ([`56aa607`](https://github.com/jameszeroX/XKeen/commit/56aa6076bd4bb4a64b6fb8f83dd2eeb9baa3ecce)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-20 19:32:47 MSK)
 
 Сборка из [`f856689`](https://github.com/jameszeroX/XKeen/commit/f856689814aff65edd1296d9a0440ca203e17561).
