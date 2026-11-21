@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-21 12:20:57 MSK)
+
+Сборка из [`dfd7a8a`](https://github.com/jameszeroX/XKeen/commit/dfd7a8aa7d40bbb7c366fd9b61a503015e13ed3c).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/ca4e4f790bad6a9a4b6d3de30e96b23d358d6ced/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`c3515ff...dfd7a8a`](https://github.com/jameszeroX/XKeen/compare/c3515ffef928065836c718ae9a63c755c72204eb...dfd7a8aa7d40bbb7c366fd9b61a503015e13ed3c).
+
+###### Коммиты
+
+- fix(netfilter): report cleanup and deny sync failures ([`dfd7a8a`](https://github.com/jameszeroX/XKeen/commit/dfd7a8aa7d40bbb7c366fd9b61a503015e13ed3c)) — rangerxxyy
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-21 12:04:14 MSK)
 
 Сборка из [`0a722cd`](https://github.com/jameszeroX/XKeen/commit/0a722cd25ce4f5f578385bfeab7e01deba8a1f07).
