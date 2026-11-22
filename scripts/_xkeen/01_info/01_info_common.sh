@@ -584,6 +584,40 @@ is_firmware_52_or_newer() {
     printf '%s\n' "$1" | awk -F. '{ exit !(($1 + 0 > 5) || ($1 + 0 == 5 && $2 + 0 >= 2)) }'
 }
 
+# Версия прошивки через ndmc, в обход RCI (на таких прошивках RCI без токена отвечает 401/403).
+# Работает только в нативной SSH-консоли роутера; при недоступности ndmc вывод пуст.
+get_keenetic_release_ndmc() {
+    command -v ndmc >/dev/null 2>&1 || return 1
+    ndmc -c 'show version' 2>/dev/null | tr -d '\r' | \
+        sed -n 's/^[[:space:]]*release:[[:space:]]*//p' | head -n 1
+}
+
+# Приводим строку release ("5.1.9" или "5.01.A.9.0-0") к виду MAJOR.MINOR.PATCH
+normalize_keenetic_release() {
+    printf '%s\n' "$1" | awk -F'[.-]' '{
+        patch = ($3 ~ /^[0-9]+$/) ? $3 : $4
+        printf "%d.%d.%d\n", $1, $2, patch
+    }'
+}
+
+# Если прошивка входит в список несовместимых — выводим её версию
+# и возвращаем 0, иначе возвращаем 1. Если версию определить
+# не удалось, прошивка не считается несовместимой.
+detect_blocked_keenetic_release() {
+    local _dbk_release _dbk_norm _dbk_v
+    _dbk_release=$(get_keenetic_release)
+    [ -z "$_dbk_release" ] && _dbk_release=$(get_keenetic_release_ndmc)
+    [ -z "$_dbk_release" ] && return 1
+    _dbk_norm=$(normalize_keenetic_release "$_dbk_release")
+    for _dbk_v in $broken_os; do
+        if [ "$_dbk_norm" = "$_dbk_v" ]; then
+            printf '%s' "$_dbk_norm"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # Справка, диагностика, восстановление и удаление разрешены preflight-проверкой
 # xkeen.json и не требуют успешной RCI-пробы для входа в CLI. В частности,
 # недействительный токен не должен блокировать аварийные команды. Этот файл
@@ -618,6 +652,14 @@ while [ "$_rci_probe_needed" = "1" ] && [ "$_rci_probe_i" -lt 3 ]; do
 done
 unset _rci_probe_i
 
+# RCI отказал в доступе: проверяем, не прошивка ли из списка с неработающей
+# генерацией токена. Тогда автосоздание токена бессмысленно, а совет «создайте
+# токен в веб-интерфейсе» неверен. Рабочий токен (код 200) этим не затрагивается.
+_rci_blocked=""
+case "$http_code" in
+    401|403) _rci_blocked=$(detect_blocked_keenetic_release) ;;
+esac
+
 # Проверка: токен нужен, но отсутствует или отвергнут
 if [ "$_rci_probe_needed" = "1" ] && [ -t 0 ] && [ -t 1 ]; then
     _rci_need_token=0
@@ -635,7 +677,7 @@ if [ "$_rci_probe_needed" = "1" ] && [ -t 0 ] && [ -t 1 ]; then
             fi
             ;;
     esac
-    if [ "$_rci_need_token" = "1" ] && [ -z "$_xkeen_json_invalid" ] && auto_setup_rci_token "$_rci_release"; then
+    if [ "$_rci_need_token" = "1" ] && [ -z "$_rci_blocked" ] && [ -z "$_xkeen_json_invalid" ] && auto_setup_rci_token "$_rci_release"; then
         http_code=$(rci_probe_code_retry)
     fi
     unset _rci_need_token _rci_release
@@ -644,7 +686,9 @@ unset _rci_probe_needed
 
 case "$http_code" in
     401|403)
-        if [ -n "$_xkeen_json_invalid" ]; then
+        if [ -n "$_rci_blocked" ]; then
+            printf "  ${red}Ошибка${reset}: RCI роутера отказал в доступе (HTTP ${http_code}), а на прошивке ${yellow}KeeneticOS %s${reset}\n  получить ${light_blue}токен доступа${reset} невозможно: в этой версии нет механизма его создания\n  ни в веб-интерфейсе, ни через ${yellow}ndmc${reset}. Разработчики Keenetic признали проблему.\n\n  Обновите KeeneticOS до версии, в которой проблема исправлена\n" "$_rci_blocked" >&2
+        elif [ -n "$_xkeen_json_invalid" ]; then
             printf "  ${red}Ошибка${reset}: RCI роутера отказал в доступе (HTTP ${http_code}), а ${yellow}xkeen.json${reset} содержит синтаксические ошибки,\n  поэтому токен доступа прочитать и создать нельзя. Исправьте файл ${yellow}%s${reset}\n" "$xkeen_config" >&2
         elif [ -n "$rci_token" ]; then
             printf "  ${red}Ошибка${reset}: RCI роутера отклонил ${light_blue}токен доступа${reset} из ${yellow}xkeen.json${reset} (HTTP ${http_code})
@@ -660,6 +704,7 @@ case "$http_code" in
         exit 1
         ;;
 esac
+unset _rci_blocked
 
 # Параметры curl
 curl_api() {
