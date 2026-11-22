@@ -620,7 +620,9 @@ print_policy_info() {
             fi
 
             custom_details=$(echo "$user_policies" | while IFS='|' read -r p_name p_mark p_mode p_ports; do
-                if [ "$p_mode" = "include" ]; then
+                if [ "$p_mode" = "none" ]; then
+                    echo "  - ${yellow}$p_name${reset} только метка (PBR), без перехвата клиентов"
+                elif [ "$p_mode" = "include" ]; then
                     echo "  - ${yellow}$p_name${reset} на портах ${green}${p_ports}${reset}"
                 elif [ "$p_mode" = "exclude" ]; then
                     echo "  - ${yellow}$p_name${reset} на всех портах кроме ${green}${p_ports}${reset}"
@@ -988,8 +990,10 @@ validate_client_routing_mark() {
                 | flatten_nested_arrays
                 | select(type == "object")
                 | select((.protocol // "") != "blackhole" and (.protocol // "") != "loopback")
+                | select(((.protocol // "") == "dns" and ((.settings? | if type == "object" then . else {} end | .address? // "") == "")) | not)
                 | (.streamSettings? | if type == "object" then . else {} end) as $stream
                 | ($stream.sockopt? | if type == "object" then . else {} end) as $sockopt
+                | select(($sockopt.dialerProxy? // "") == "")
                 | ($sockopt.mark? // null) as $mark
                 | select(($allowed | split(" ") | index((if $mark == null or $mark == "" then "" else ($mark | tostring) end))) | not)
                 | [(.tag // .protocol // "<unnamed>"), (if $mark == null or $mark == "" then "" else ($mark | tostring) end)] | @tsv
@@ -2421,13 +2425,19 @@ resolve_user_policies() {
             (.name // "" | ascii_downcase) == 
             ($api.description // "" | ascii_downcase)
         ) |
-        "\(.name)|\($api.mark // "")|\(.port // "")"
+        "\(.name)|\($api.mark // "")|\(.port // "")|\(.pbr // false)"
     ' 2>/dev/null)
 
     [ -z "$matched_policies" ] && return
 
     # Обрабатываем каждую политику в одном цикле
-    echo "$matched_policies" | while IFS='|' read -r pname mark pports; do
+    echo "$matched_policies" | while IFS='|' read -r pname mark pports pbr; do
+        # "pbr": true - политика только поставляет mark (для PBR / bypass),
+        # перехват клиентов не создаётся (режим none).
+        if [ "$pbr" = "true" ]; then
+            [ -n "$mark" ] && echo "${pname}|${mark}|none|"
+            continue
+        fi
         if [ -z "$pports" ]; then
             # Порты не указаны -> режим "all" (все порты)
             if [ -n "$api_exclude_ports" ]; then
@@ -2550,6 +2560,7 @@ EOL
     inject_var network_dscp_force_proxy_redirect "$network_dscp_force_proxy_redirect"
     inject_var network_dscp_force_proxy_tproxy "$network_dscp_force_proxy_tproxy"
     inject_var user_policies "$user_policies"
+    inject_var bypass_policies "$bypass_policies"
     inject_var table_redirect "$table_redirect"
     inject_var table_tproxy "$table_tproxy"
     inject_var table_mark "$table_mark"
@@ -3343,10 +3354,10 @@ USER_POLICIES_EOF
 
         ipt -A "$out_chain" -o lo $comment -j RETURN >/dev/null 2>&1
         ipt -A "$out_chain" -m mark --mark 255 $comment -j RETURN >/dev/null 2>&1
-        policy_bypass_marks="$policy_mark"
+        policy_bypass_marks="$policy_mark $policy_mark_full"
 
-        if [ -n "$user_policies" ]; then
-            user_policy_marks=$(printf '%s\n' "$user_policies" | awk -F'|' '$2 != "" {print "0x"$2}')
+        if [ -n "$bypass_policies" ]; then
+            user_policy_marks=$(printf '%s\n' "$bypass_policies" | awk -F'|' '$2 != "" {print "0x"$2}')
             policy_bypass_marks="$policy_bypass_marks $user_policy_marks"
         fi
 
@@ -4153,7 +4164,7 @@ enable_killswitch() {
     [ "$killswitch" = "on" ] || return 0
     _ks_marks="$policy_mark $policy_mark_full"
     if [ -n "$user_policies" ]; then
-        _ks_user_marks=$(printf '%s\n' "$user_policies" | awk -F'|' '$2 != "" {print "0x"$2}')
+        _ks_user_marks=$(printf '%s\n' "$user_policies" | awk -F'|' '$2 != "" && $3 != "none" {print "0x"$2}')
         _ks_marks="$_ks_marks $_ks_user_marks"
     fi
     [ -n "$(printf '%s' "$_ks_marks" | tr -d ' ')" ] || {
@@ -4336,6 +4347,11 @@ proxy_start() {
         fi
         policy_mark_full=$(get_policy_mark "$name_policy_full")
         user_policies=$(resolve_user_policies)
+        # Метки ВСЕХ найденных политик (в т.ч. PBR-only) нужны хуку для bypass
+        # в xkeen_out независимо от того, будет ли user_policies обнулён ниже
+        # (политика xkeen не найдена -> перехват клиентов кастомных политик
+        # отключается, но исходящий трафик ядра по-прежнему нельзя заворачивать).
+        bypass_policies="$user_policies"
         validate_entware_proxy_mark
         validate_pbr_routing_mark
         log_clean
