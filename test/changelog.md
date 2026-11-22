@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-22 14:20:32 MSK)
+
+Сборка из [`6d28ec3`](https://github.com/jameszeroX/XKeen/commit/6d28ec3001c90998c2f817babdccad8df41543ac).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/5299dc318cf7759bdb5f09764101e7502d8bf3e9/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`ca4e4f7...6d28ec3`](https://github.com/jameszeroX/XKeen/compare/ca4e4f790bad6a9a4b6d3de30e96b23d358d6ced...6d28ec3001c90998c2f817babdccad8df41543ac).
+
+###### Коммиты
+
+- Fix: firmware RCI auth handling ([`6d28ec3`](https://github.com/jameszeroX/XKeen/commit/6d28ec3001c90998c2f817babdccad8df41543ac)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-21 12:20:57 MSK)
 
 Сборка из [`dfd7a8a`](https://github.com/jameszeroX/XKeen/commit/dfd7a8aa7d40bbb7c366fd9b61a503015e13ed3c).
