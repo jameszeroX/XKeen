@@ -667,7 +667,7 @@ check_keenetic_blocked_release() {
 
     printf "  ${red}Установка прервана!${reset}\n"
     printf "  Обнаружена не совместимая с XKeen прошивка ${yellow}KeeneticOS %s${reset}:\n\n" "$_ckb_norm"
-    printf "  Установите KeeneticOS другой версии, и повторите установку\n\n"
+    printf "  Установите KeeneticOS другой версии, и повторите установку XKeen\n\n"
     return 1
 }
 
