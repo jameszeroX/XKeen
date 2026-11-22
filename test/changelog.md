@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-22 17:08:17 MSK)
+
+Сборка из [`d05a67e`](https://github.com/jameszeroX/XKeen/commit/d05a67e3b6019eb07dbec53ed507119ce8aa5201).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/04a51f0c4a9be1d97901f980bfd0ba319748123c/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`167ccd0...d05a67e`](https://github.com/jameszeroX/XKeen/compare/167ccd021a6ab579b048924d55f3c852c170e2af...d05a67e3b6019eb07dbec53ed507119ce8aa5201).
+
+###### Коммиты
+
+- Support PBR-only custom policies ([`d05a67e`](https://github.com/jameszeroX/XKeen/commit/d05a67e3b6019eb07dbec53ed507119ce8aa5201)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-22 16:54:37 MSK)
 
 Сборка из [`10b4c8c`](https://github.com/jameszeroX/XKeen/commit/10b4c8c67303ec6a3273aeec1df286e043f6f3a5).
