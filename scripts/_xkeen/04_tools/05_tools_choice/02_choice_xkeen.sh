@@ -379,10 +379,48 @@ _pbr_format_single_line_error() {
     printf '%s' "$1" | tr '\n' ' ' | sed 's/[[:space:]]\{1,\}/ /g; s/^ //; s/ $//'
 }
 
-show_pbr_policy_codes() {
-    policy_api_url="127.0.0.1:79/rci/show/ip/policy"
+# Допустимое имя - как в S05xkeen (_is_valid_policy_name): после обрезки
+# пробелов не пустое, без '|' и без управляющих символов.
+_pbr_clean_policy_name() {
+    _pbr_pn=$(printf '%s' "$1" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    [ -n "$_pbr_pn" ] || return 1
+    case "$_pbr_pn" in *"|"*) return 1 ;; esac
+    [ "$(printf '%s' "$_pbr_pn" | tr -d '\000-\037\177')" = "$_pbr_pn" ] || return 1
+    printf '%s' "$_pbr_pn"
+}
+
+# Имена встроенных политик: .xkeen.policy_name / .xkeen.policy_full_name
+# из xkeen.json, иначе xkeen / xkeen_full. Правила те же, что в S05xkeen
+# (load_json_settings): не строка или недопустимое имя -> значение по
+# умолчанию; имена совпали (без учёта регистра) -> оба по умолчанию.
+# Результат - в main_policy_name / full_policy_name.
+_pbr_resolve_policy_names() {
     main_policy_name="xkeen"
     full_policy_name="xkeen_full"
+    [ -f "$xkeen_config" ] || return 0
+
+    _pbr_cfg=$(strip_json_comments "$xkeen_config" 2>/dev/null)
+    _pbr_raw_main=$(printf '%s' "$_pbr_cfg" | jq -r '.xkeen.policy_name | strings' 2>/dev/null)
+    _pbr_raw_full=$(printf '%s' "$_pbr_cfg" | jq -r '.xkeen.policy_full_name | strings' 2>/dev/null)
+
+    _pbr_custom_main=$(_pbr_clean_policy_name "$_pbr_raw_main") || _pbr_custom_main=""
+    _pbr_custom_full=$(_pbr_clean_policy_name "$_pbr_raw_full") || _pbr_custom_full=""
+
+    _pbr_cmp_main=$(printf '%s' "${_pbr_custom_main:-$main_policy_name}" | tr '[:upper:]' '[:lower:]')
+    _pbr_cmp_full=$(printf '%s' "${_pbr_custom_full:-$full_policy_name}" | tr '[:upper:]' '[:lower:]')
+    if [ "$_pbr_cmp_main" = "$_pbr_cmp_full" ]; then
+        _pbr_custom_main=""
+        _pbr_custom_full=""
+    fi
+
+    [ -n "$_pbr_custom_main" ] && main_policy_name="$_pbr_custom_main"
+    [ -n "$_pbr_custom_full" ] && full_policy_name="$_pbr_custom_full"
+    return 0
+}
+
+show_pbr_policy_codes() {
+    policy_api_url="127.0.0.1:79/rci/show/ip/policy"
+    _pbr_resolve_policy_names
 
     echo
     api_policy_json=$(curl_api "$policy_api_url" 2>/dev/null)
@@ -453,9 +491,9 @@ show_pbr_policy_codes() {
 
     if [ -n "$main_policy_mark" ]; then
         main_policy_dec=$(_pbr_hex_to_decimal "$main_policy_mark" 2>/dev/null)
-        echo "xkeen=$main_policy_dec"
+        echo "${main_policy_name}=${main_policy_dec}"
     else
-        echo "xkeen="
+        echo "${main_policy_name}="
     fi
 
     if [ -n "$full_policy_mark" ]; then
