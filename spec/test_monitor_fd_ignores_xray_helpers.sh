@@ -39,7 +39,7 @@ while [ "$i" -le 10 ]; do : > "$xkeen_proc_root/111/fd/$i"; i=$((i + 1)); done
 : > "$xkeen_proc_root/222/fd/1"
 
 pidof() { [ "$1" = xray ] && printf '111 222\n'; }
-log_warning_router() { echo warning > "$restart_marker"; }
+log_router() { echo warning > "$restart_marker"; }
 proxy_stop() { echo stop >> "$restart_marker"; }
 proxy_start() { echo start >> "$restart_marker"; }
 sleep() { exit 0; }

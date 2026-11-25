@@ -31,6 +31,7 @@ extract_hook_function() {
 }
 eval "$(extract_top_function curl_api)"
 eval "$(extract_top_function get_exclude_ip6)"
+eval "$(extract_hook_function add_exclude_rule)"
 eval "$(extract_hook_function add_exclude_rules)"
 eval "$(extract_hook_function add_ipt_rule)"
 eval "$(extract_hook_function add_force_ipt_rule)"
@@ -38,11 +39,11 @@ eval "$(extract_hook_function add_force_ipt_rule)"
 ip6tables_supported=true
 ipv6_exclude='::/128 ::1/128 64:ff9b::/96 2001::/32 2002::/16 fd00::/8 ff00::/8 fe80::/10'
 url_server='127.0.0.1:79'
+url_prefixes=$(sed -n 's/^url_prefixes="\(.*\)"/\1/p' "$source_file")
 name_chain=xkeen
 comment='-m comment --comment xkeen_rule'
 ipv6_local_prefixes=''
 ipv6_exclude_static=''
-ipv6_exclude_ip6=''
 ip() { printf '2001:db8::55 via fe80::1 dev ppp0 src 2001:db8::55 metric 1\n'; }
 curl() {
     curl_args="$*"
@@ -60,13 +61,13 @@ for cidr in '2a02:2168:1234::/48' '2a02:2168:1234:5600::/56' '2a02:2168:1234:560
     has_word "$ipv6_local_prefixes" "$cidr" && got=yes || got=no
     check "real RCI prefix[] shape accepts $cidr" "$got" yes
 done
-has_word "$ipv6_exclude_ip6" '2001:db8::55/128' && got=yes || got=no
+has_word "$ipv6_exclude_static" '2001:db8::55/128' && got=yes || got=no
 check 'WAN IPv6 source remains excluded' "$got" yes
-has_word "$ipv6_exclude_ip6" 'fd00::/8' && got=yes || got=no
+has_word "$ipv6_exclude_static" 'fd00::/8' && got=yes || got=no
 check 'static exclusions remain in complete list' "$got" yes
 case "$(cat "$work/curl-args")" in *'X-Ndma-Tkn: secret-token-value'*) got=yes ;; *) got=no ;; esac
 check 'curl_api uses the configured RCI token' "$got" yes
-case "$(cat "$work/curl-args")" in *'--connect-timeout 2'*'-m 5'*'127.0.0.1:79/rci/show/ipv6/prefixes/'*) got=yes ;; *) got=no ;; esac
+case "$(cat "$work/curl-args")" in *'--connect-timeout 2'*'-m 5'*'127.0.0.1:79/rci/show/ipv6/prefixes'*) got=yes ;; *) got=no ;; esac
 check 'RCI request reuses curl_api URL and timeout policy' "$got" yes
 
 RCI_TOKEN=''; : > "$work/curl-args"; write_json '{"prefix":[]}'; read_prefixes
@@ -83,7 +84,7 @@ for failure in 401 403 500 timeout missing_api; do
         missing_api) CURL_HTTP_STATUS=000; CURL_EXIT=7 ;;
     esac
     read_prefixes
-    has_word "$ipv6_exclude_ip6" 'fd00::/8' && got=yes || got=no
+    has_word "$ipv6_exclude_static" 'fd00::/8' && got=yes || got=no
     check "$failure keeps prior static exclusions" "$got" yes
     [ -z "$ipv6_local_prefixes" ] && got=yes || got=no
     check "$failure adds no unverified prefix" "$got" yes
@@ -98,7 +99,7 @@ for body in '' '{broken' '[]' '{"prefix":null}' \
     write_json "$body"; read_prefixes
     [ -z "$ipv6_local_prefixes" ] && got=yes || got=no
     check 'empty, malformed, expired, or incomplete JSON adds no CIDR' "$got" yes
-    has_word "$ipv6_exclude_ip6" 'fd00::/8' && got=yes || got=no
+    has_word "$ipv6_exclude_static" 'fd00::/8' && got=yes || got=no
     check 'invalid JSON preserves static fallback exclusions' "$got" yes
 done
 
@@ -106,7 +107,7 @@ write_json '{"prefix":[{"prefix":"fdf2:cc10:506a::/48","interface":"","valid-lif
 read_prefixes
 [ -z "$ipv6_local_prefixes" ] && got=yes || got=no
 check 'global=true ULA is not treated as a public GUA prefix' "$got" yes
-has_word "$ipv6_exclude_ip6" 'fd00::/8' && got=yes || got=no
+has_word "$ipv6_exclude_static" 'fd00::/8' && got=yes || got=no
 check 'ULA still follows static fd00::/8 policy' "$got" yes
 
 # Redacted live RCI shape: the router returned an active local prefix with
@@ -115,7 +116,7 @@ write_json '{"prefix":[{"prefix":"2001:db8::/48","interface":"","valid-lifetime"
 read_prefixes
 [ -z "$ipv6_local_prefixes" ] && got=yes || got=no
 check 'redacted live RCI response with global=false is parsed but not classified as GUA' "$got" yes
-has_word "$ipv6_exclude_ip6" 'fd00::/8' && got=yes || got=no
+has_word "$ipv6_exclude_static" 'fd00::/8' && got=yes || got=no
 check 'live RCI response keeps static fallback exclusions' "$got" yes
 
 for cidr in '2a02:2168:1234::/47' '2a02:2168::/0' '2a02:2168::/65' 'not-ipv6/64' '2a02:2168::/129' '2a02:2168:::1/56' '2a02:2168:1:2:3:4:5:6:7/64' '2606:4700:4700::1111/128'; do

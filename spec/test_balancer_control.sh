@@ -68,7 +68,7 @@ check 'restart waits for completion' "$(cat "$work/restarts")" restart
 sb_ensure_api </dev/null >/dev/null
 check 'complete setup needs no second restart' "$(cat "$work/restarts")" restart
 printf '%s\n' '{"xkeen":{"xray":{"speed_balancer":{"enabled":true}}}}' > "$xkeen_config"
-printf '*/5 * * * * %s/xkeen -sbt\n' "$install_dir" > "$cron_dir/root"
+printf '* * * * * %s/xkeen -sbtx\n' "$install_dir" > "$cron_dir/root"
 sb_balancer=balancer
 speed_balancer_settings() { sb_enabled=$(jq -r '.xkeen.xray.speed_balancer.enabled' "$xkeen_config"); }
 reset_rc=42

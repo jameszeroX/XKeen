@@ -96,7 +96,7 @@ check 'successful toggle returns success' "$rc" 0
 check 'successful toggle updates only killswitch' "$(strip_json_comments "$xkeen_config" | jq -r '.xkeen.killswitch,.xkeen.custom' | tr -d '\r' | tr '\n' ':')" 'off:keep:'
 check 'successful toggle preserves JSONC comment' "$(grep -c 'keep this user comment' "$xkeen_config")" 1
 check 'successful backup contains previous configuration' "$(cmp -s "$bak" "$work/original.json" && echo yes || echo no)" yes
-check 'successful toggle registers init script once' "$register_calls" 1
+check 'successful toggle does not re-register init script' "$register_calls" 0
 
 write_original_config
 cp "$xkeen_config" "$work/before_backup_publish_failure.json"
@@ -105,7 +105,7 @@ change_killswitch off >/dev/null 2>&1
 rc=$?
 check 'backup publication failure returns error' "$rc" 1
 check 'backup publication failure preserves configuration' "$(cmp -s "$xkeen_config" "$work/before_backup_publish_failure.json" && echo yes || echo no)" yes
-check 'backup publication failure does not register init script' "$register_calls" 1
+check 'backup publication failure does not register init script' "$register_calls" 0
 
 write_original_config
 backup_publish_failure=false
@@ -114,7 +114,7 @@ change_killswitch off >/dev/null 2>&1
 rc=$?
 check 'JSON generation failure returns error' "$rc" 1
 check 'JSON generation failure preserves configuration' "$(cmp -s "$xkeen_config" "$work/before_backup_publish_failure.json" && echo yes || echo no)" yes
-check 'JSON generation failure does not register init script' "$register_calls" 1
+check 'JSON generation failure does not register init script' "$register_calls" 0
 check 'failed operation leaves no temporary config' "$(find "$work" -name 'xkeen.json.tmp.*' | wc -l | tr -d ' ')" 0
 
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
