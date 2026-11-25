@@ -3019,6 +3019,8 @@ if proxy_status; then
                 else
                     ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
                     ipt -I "$chain" 1 -m conntrack --ctstate INVALID $comment -j RETURN >/dev/null 2>&1
+                    # Ответы на непроксируемые соединения (свои UDP-сокеты ядра, исключённые клиенты LAN) в TPROXY не отдаём
+                    ipt -I "$chain" 1 -m conntrack --ctdir REPLY $comment -j RETURN >/dev/null 2>&1
                     add_ipset_exclude ext_exclude hash:ip
                     add_ipset_exclude user_exclude hash:net
                     add_geo_exclude
@@ -3030,6 +3032,8 @@ if proxy_status; then
             TProxy)
                 ipt -I "$chain" 1 -m conntrack --ctstate DNAT $comment -j RETURN >/dev/null 2>&1
                 ipt -I "$chain" 1 -m conntrack --ctstate INVALID $comment -j RETURN >/dev/null 2>&1
+                # Ответы на непроксируемые соединения (свои UDP-сокеты ядра, исключённые клиенты LAN) в TPROXY не отдаём
+                ipt -I "$chain" 1 -m conntrack --ctdir REPLY $comment -j RETURN >/dev/null 2>&1
                 add_ipset_exclude ext_exclude hash:ip
                 add_ipset_exclude user_exclude hash:net
                 add_geo_exclude
