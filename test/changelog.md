@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-25 08:08:00 MSK)
+
+Сборка из [`5031af7`](https://github.com/jameszeroX/XKeen/commit/5031af7cec604bd515bd7d8cdcfd2f798416c2bb).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/caae8ea57bba61281da4a12e85c8145005fabe20/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`04a51f0...5031af7`](https://github.com/jameszeroX/XKeen/compare/04a51f0c4a9be1d97901f980bfd0ba319748123c...5031af7cec604bd515bd7d8cdcfd2f798416c2bb).
+
+###### Коммиты
+
+- Не отдавать в TPROXY ответные пакеты непроксируемых соединений ([`5031af7`](https://github.com/jameszeroX/XKeen/commit/5031af7cec604bd515bd7d8cdcfd2f798416c2bb)) — Dv2Corn
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-22 17:08:17 MSK)
 
 Сборка из [`d05a67e`](https://github.com/jameszeroX/XKeen/commit/d05a67e3b6019eb07dbec53ed507119ce8aa5201).
