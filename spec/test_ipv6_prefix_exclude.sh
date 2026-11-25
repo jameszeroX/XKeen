@@ -202,10 +202,14 @@ case "$rules" in *'-d 2a02:2168:1234:5600::/56 -p tcp ! --dport 53'*) got=yes ;;
 check 'TProxy add_ipt_rule includes local DNS exception' "$got" yes
 case "$rules" in *'-d 2a02:2168:1234:5600::/56 -p udp ! --dport 53'*'-j TPROXY'*) got=yes ;; *) got=no ;; esac
 check 'TProxy RETURN exceptions precede its terminal TPROXY actions' "$got" yes
+case "$rules" in *'-I xkeen 1 -m conntrack --ctdir REPLY'*'-j RETURN'*) got=yes ;; *) got=no ;; esac
+check 'TProxy returns reply-direction packets before TPROXY' "$got" yes
 
 mode_proxy=Hybrid; table=mangle; rules=$(run_ipt_rules)
 case "$rules" in *'-p tcp --dport 53'*'-p udp ! --dport 53'*'-j TPROXY'*) got=yes ;; *) got=no ;; esac
 check 'Hybrid mangle preserves DNS split before TPROXY action' "$got" yes
+case "$rules" in *'-I xkeen 1 -m conntrack --ctdir REPLY'*'-j RETURN'*) got=yes ;; *) got=no ;; esac
+check 'Hybrid mangle returns reply-direction packets before TPROXY' "$got" yes
 mode_proxy=Hybrid; table=nat; rules=$(run_ipt_rules)
 case "$rules" in *'-p tcp ! --dport 53'*'-p udp --dport 53'*'-j REDIRECT'*) got=yes ;; *) got=no ;; esac
 check 'Hybrid nat preserves DNS split before REDIRECT action' "$got" yes
