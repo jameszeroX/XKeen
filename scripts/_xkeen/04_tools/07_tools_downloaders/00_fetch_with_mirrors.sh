@@ -484,26 +484,31 @@ verify_github_sha256() {
         rm -f "$_vgs_ref"
     fi
 
-    # Удаляем префикс "sha256:"
+    # Удаляем префикс "sha256:" и приводим к нижнему регистру
     case "$_vgs_expected" in
         sha256:*)
             _vgs_expected="${_vgs_expected#sha256:}"
             ;;
     esac
+    _vgs_expected=$(printf '%s' "$_vgs_expected" | tr 'A-F' 'a-f')
 
+    # Валидный SHA-256 — ровно 64 шестнадцатеричных символа
+    _vgs_valid=""
     case "$_vgs_expected" in
-        [0-9a-fA-F][0-9a-fA-F]*) ;;
-        *)
-            if [ "$verify_downloads" = "strict" ]; then
-                printf "  ${red}Ошибка${reset}: Контрольная сумма ${light_blue}SHA-256${reset} файла %s не найдена в GitHub API (старый релиз без digest?)\n" "$_vgs_asset"
-                return 1
-            fi
-            printf "  ${yellow}Предупреждение${reset}: Контрольная сумма ${light_blue}SHA-256${reset} файла %s не найдена в GitHub API (старый релиз без digest?)\n" "$_vgs_asset"
-            return 0
-            ;;
+        ''|*[!0-9a-f]*) ;;
+        *) [ "${#_vgs_expected}" -eq 64 ] && _vgs_valid=1 ;;
     esac
 
-    _vgs_actual=$(sha256sum "$_vgs_file" 2>/dev/null | awk '{print $1}')
+    if [ -z "$_vgs_valid" ]; then
+        if [ "$verify_downloads" = "strict" ]; then
+            printf "  ${red}Ошибка${reset}: Контрольная сумма ${light_blue}SHA-256${reset} файла %s не найдена в GitHub API или имеет неверный формат (старый релиз без digest?)\n" "$_vgs_asset"
+            return 1
+        fi
+        printf "  ${yellow}Предупреждение${reset}: Контрольная сумма ${light_blue}SHA-256${reset} файла %s не найдена в GitHub API или имеет неверный формат (старый релиз без digest?)\n" "$_vgs_asset"
+        return 0
+    fi
+
+    _vgs_actual=$(sha256sum "$_vgs_file" 2>/dev/null | awk '{print $1}' | tr 'A-F' 'a-f')
     if [ "$_vgs_actual" = "$_vgs_expected" ]; then
         if [ -n "$_vgs_via_mirror" ]; then
             printf "  Контрольная сумма ${light_blue}SHA-256${reset} файла %s ${green}проверена${reset} ${yellow}(эталон получен через прокси)${reset}\n" "$_vgs_asset"

@@ -11,8 +11,12 @@ xray_conf_install() {
         return 0
     fi
 
-    xray_files="$xray_conf_smpl"/*.json
-    for file in $xray_files; do
+    for file in "$xray_conf_smpl"/*.json; do
+        # Если шаблонов нет, цикл получает буквальный шаблон "*.json"
+        if [ ! -f "$file" ]; then
+            echo -e "  ${red}Ошибка${reset}: Шаблоны конфигурации Xray не найдены в $xray_conf_smpl" >&2
+            return 1
+        fi
         filename=$(basename "$file")
         if ! cp "$file" "$xray_conf_dir/"; then
             echo -e "  ${red}Ошибка${reset}: Не удалось скопировать шаблон конфигурации Xray $filename" >&2

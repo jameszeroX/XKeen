@@ -33,7 +33,14 @@ _xkeen_secure_rundir() {
     chmod 700 "$d" 2>/dev/null || return 1
     printf '%s' "$d"
 }
-tmp_ram="$(_xkeen_secure_rundir)/work.$$"
+
+if _xkeen_rundir_base=$(_xkeen_secure_rundir); then
+    tmp_ram="$_xkeen_rundir_base/work.$$"
+else
+    tmp_ram="/proc/xkeen-rundir-unavailable/work.$$"
+    echo "Предупреждение: не удалось создать защищённый каталог /tmp/.xkeen, загрузки недоступны" >&2
+fi
+unset _xkeen_rundir_base
 
 verify_downloads_settings() {
     verify_downloads="warn"

@@ -3148,12 +3148,12 @@ if proxy_status; then
         until { [ "$allow_noisp" = "on" ] && [ "$source_table" != "main" ]; } || check_default; do
             attempts=$((attempts + 1))
             if [ "$attempts" -ge "$max_attempts" ]; then
-                [ "$ip_version" = "4" ] && touch "/tmp/noinet"
+                [ "$ip_version" = "4" ] && : > "$xkeen_rundir/noinet"
                 return 1
             fi
             sleep 1
         done
-        [ "$ip_version" = "4" ] && rm -f "/tmp/noinet"
+        [ "$ip_version" = "4" ] && rm -f "$xkeen_rundir/noinet"
 
         # NDM при netfilter rewrite (в т.ч. на каждый DHCP renew) не трогает
         # ни ip rule, ни table $table_id — безусловный flush ниже рвал
@@ -4554,7 +4554,7 @@ proxy_start() {
                     ) &
                     if [ -n "$api_policy_json" ]; then
                         if echo "$api_policy_json" | jq --arg policy "$name_policy" -e 'any(.[]; (.description // "" | ascii_downcase) == ($policy | ascii_downcase))' > /dev/null; then
-                            if [ -e "/tmp/noinet" ]; then
+                            if [ -e "$xkeen_rundir/noinet" ]; then
                                 echo
                                 echo -e "  У политики ${yellow}$name_policy${reset} ${red}нет доступа в интернет${reset}"
                                 echo "  Проверьте, установлена ли галка на подключении к провайдеру"

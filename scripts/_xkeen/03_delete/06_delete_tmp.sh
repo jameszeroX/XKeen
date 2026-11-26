@@ -8,8 +8,6 @@ delete_tmp() {
     [ -f "$register_dir/new_entry.txt" ] && rm -f "$register_dir/new_entry.txt"
     [ -f "$install_dir/xray_bak" ] && rm -f "$install_dir/xray_bak"
     [ -f "$install_dir/mihomo_bak" ] && rm -f "$install_dir/mihomo_bak"
-    [ -f "/tmp/xkrun" ] && rm -f "/tmp/xkrun"
-    [ -f "/tmp/toff" ] && rm -f "/tmp/toff"
 
     if ! pidof xray >/dev/null && ! pidof mihomo >/dev/null ; then
         [ -f "$file_netfilter_hook" ] && rm "$file_netfilter_hook"
