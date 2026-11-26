@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-26 13:01:00 MSK)
+
+Сборка из [`639a19e`](https://github.com/jameszeroX/XKeen/commit/639a19ed84b6fd33abeab819e20e2f9fe7132cb8).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/806f98d9d9588acd91af58ea4a5b61bfb80d6246/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`caae8ea...639a19e`](https://github.com/jameszeroX/XKeen/compare/caae8ea57bba61281da4a12e85c8145005fabe20...639a19ed84b6fd33abeab819e20e2f9fe7132cb8).
+
+###### Коммиты
+
+- Harden temp dirs, config install, SHA-256 checks ([`639a19e`](https://github.com/jameszeroX/XKeen/commit/639a19ed84b6fd33abeab819e20e2f9fe7132cb8)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-25 08:08:00 MSK)
 
 Сборка из [`5031af7`](https://github.com/jameszeroX/XKeen/commit/5031af7cec604bd515bd7d8cdcfd2f798416c2bb).
