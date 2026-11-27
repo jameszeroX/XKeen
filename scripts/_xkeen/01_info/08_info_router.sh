@@ -57,7 +57,7 @@ info_firmware() {
         echo -e "  ${red}ВНИМАНИЕ${reset}: Обнаружена KeeneticOS версии $major_version"
         echo -e "  XKeen тестируется ТОЛЬКО на ${green}KeeneticOS 4+${reset}"
         echo -e "  Работа на старых прошивках ${light_blue}НЕ гарантируется${reset}"
-        echo -e "  Техподдержка разработчиком ${light_blue}НЕ предоставляетcя${reset}"
+        echo -e "  Техподдержка разработчиком ${light_blue}НЕ предоставляется${reset}"
         echo -e "  ${red}=============================================${reset}"
         echo
 

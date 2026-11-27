@@ -11,10 +11,11 @@ tests_ports_client() {
         echo "  Запустите XKeen командой 'xkeen -start'"
         exit 1
     fi
+    set_core_title "$name_client"
 
     listening_ports_tcp=
     listening_ports_udp=
-    output="  $name_client ${green}слушает${reset}"
+    output="  Ядро $core_title ${green}слушает${reset}"
 
     netstat_raw=$(netstat -ltunp 2>/dev/null | grep "$name_client")
     listening_ports_tcp=$(printf '%s\n' "$netstat_raw" | grep "tcp")
@@ -86,6 +87,6 @@ tests_ports_client() {
                    "$italic" "$reset" "$protocol"
         done
     else
-        printf "%b\n" "  $name_client ${red}не слушает${reset} на каких-либо портах"
+        printf "%b\n" "  Ядро $core_title ${red}не слушает${reset} на каких-либо портах"
     fi
 }

@@ -261,13 +261,14 @@ check_file_descriptors() {
         echo -e "\n  Команда работает только при работающем ${yellow}XKeen${reset}"
         return 1
     fi
+    set_core_title "$name_client"
 
     fd_count=$(ls /proc/"$pid"/fd | wc -l)
 
     maxfd=$(grep 'Max open files' "/proc/$pid/limits" | awk '{print $4}')
 
-    echo -e "\n  Прокси-клиент ${light_blue}$name_client${reset} открыл файловых дескрипторов - ${green}$fd_count${reset}"
-    echo -e "  Лимит файловых дескрипторов для вашего роутера  - ${green}$maxfd${reset}"
+    echo -e "\n  Ядро ${light_blue}$core_title${reset} сейчас открыло файловых дескрипторов - ${green}$fd_count${reset}"
+    echo -e "  Лимит файловых дескрипторов для вашего роутера - ${green}$maxfd${reset}"
     echo -e "\n  При высоких значениях открытых файловых дескрипторов,"
     echo -e "  можете включить их контроль командой ${yellow}xkeen -fd${reset}"
 }
@@ -536,7 +537,7 @@ show_pbr_strict_status() {
 }
 
 change_extended_msg() {
-    toggle_param "extended_msg" "расширенных сообщений при запуcке XKeen" "none" "$1"
+    toggle_param "extended_msg" "расширенных сообщений при запуске XKeen" "none" "$1"
 }
 
 change_backup_xkeen() {
@@ -552,5 +553,5 @@ change_dscp_proxy() {
 }
 
 change_start_verbose() {
-    toggle_param "start_verbose" "информации при старте прокси-клиента" "none" "$1"
+    toggle_param "start_verbose" "информации при старте XKeen" "none" "$1"
 }

@@ -56,12 +56,15 @@ preinstall_warn() {
 check_free_space() {
     local client_name="$1"
     local required_space=0
+    local core_title
 
     case "$client_name" in
         xray)   required_space=$xray_free_space ;;
         mihomo) required_space=$mihomo_free_space ;;
         *)      return 0 ;;
     esac
+
+    set_core_title "$client_name"
 
     local df_output free_space space_unknown
     space_unknown=false
@@ -78,13 +81,13 @@ check_free_space() {
 
     if [ "$space_unknown" = "true" ]; then
         echo
-        echo -e "  ${red}Внимание: не удалось определить свободное место для установки $client_name${reset}"
+        echo -e "  ${red}Внимание: не удалось определить свободное место для установки $core_title${reset}"
         echo "  Проверьте работоспособность утилиты df и состояние накопителя."
         echo
     elif [ "$free_space" -lt "$required_space" ]; then
         smart_clear
         echo
-        echo -e "  ${red}Внимание: Недостаточно свободного места для установки $client_name${reset}"
+        echo -e "  ${red}Внимание: Недостаточно свободного места для установки $core_title${reset}"
         echo -e "  Требуется: ${light_blue}${required_space} MB${reset}, доступно: ${light_blue}${free_space} MB${reset}"
         echo
     else
@@ -93,15 +96,15 @@ check_free_space() {
 
     if [ "$autoinstall_mode" = "true" ]; then
         if [ "$space_unknown" = "true" ]; then
-            echo -e "  Установка ${yellow}$client_name${reset} отменена: объём свободного места неизвестен"
+            echo -e "  Установка ${yellow}$core_title${reset} отменена: объём свободного места неизвестен"
         else
-            echo -e "  Установка ${yellow}$client_name${reset} отменена: недостаточно места"
+            echo -e "  Установка ${yellow}$core_title${reset} отменена: недостаточно места"
         fi
         return 1
     fi
 
-    echo -e "  1) Продолжить установку ${yellow}$client_name${reset} ${red}на свой страх и риск${reset}"
-    echo -e "  0) Отменить установку ${yellow}$client_name${reset} (${green}Рекомендуется${reset})"
+    echo -e "  1) Продолжить установку ${yellow}$core_title${reset} ${red}на свой страх и риск${reset}"
+    echo -e "  0) Отменить установку ${yellow}$core_title${reset} (${green}Рекомендуется${reset})"
     echo
     printf "  Выберите вариант: "
     read -r response
@@ -112,11 +115,11 @@ check_free_space() {
             return 0
             ;;
         0|"")
-            echo -e "  Установка ${yellow}$client_name${reset} отменена пользователем"
+            echo -e "  Установка ${yellow}$core_title${reset} отменена пользователем"
             return 1
             ;;
         *)
-            echo -e "  Неверный ввод. В целях безопасности установка ${yellow}$client_name${reset} отменена"
+            echo -e "  Неверный ввод. В целях безопасности установка ${yellow}$core_title${reset} отменена"
             return 1
             ;;
     esac

@@ -21,6 +21,12 @@ name_profile="xkeen"
 name_chain="xkeen"
 name_ipset_deny_mac="xkeen_deny_mac"
 
+case "$name_client" in
+    xray)   core_title="Xray" ;;
+    mihomo) core_title="Mihomo" ;;
+    *)      core_title="$name_client" ;;
+esac
+
 # Директории
 [ -r /proc/sys/kernel/osrelease ] && read -r _uname_r < /proc/sys/kernel/osrelease || _uname_r="$(uname -r)"
 directory_os_modules="/lib/modules/$_uname_r"
@@ -256,10 +262,10 @@ cmd_status() {
             mode_proxy=$(grep '^mode_proxy=' "$file_netfilter_hook" | awk -F"=" '{print $2}' | tr -d "'" 2>/dev/null)
         fi
         [ -z "$mode_proxy" ] && mode_proxy="Other"
-        echo -e "  Прокси-клиент ${yellow}$name_client${reset} ${green}запущен${reset} в режиме ${light_blue}$mode_proxy${reset}"
+        echo -e "  ${yellow}XKeen${reset} ${green}запущен${reset} в режиме ${light_blue}$mode_proxy${reset} (ядро ${yellow}$core_title${reset})"
         return 0
     fi
-    echo -e "  Прокси-клиент ${red}не запущен${reset}"
+    echo -e "  ${yellow}XKeen${reset} ${red}не запущен${reset}"
     return 1
 }
 
@@ -271,7 +277,7 @@ case "$1" in
             # Атомарный guard ДО spawn — повторный S05xkeen start от
             # NDM (fs.d / init.d / reconnect) увидит каталог и выйдет.
             _acquire_coldstart_guard || exit 0
-            log_router "notice" "Подготовка к запуску прокси-клиента"
+            log_router "notice" "Подготовка к запуску XKeen"
             nohup "$0" cold_start >/dev/null 2>&1 &
             # PID фонового cold_start — caller ($$) умрёт через exit 0,
             # а живость guard'а проверяется именно по этому PID.
@@ -843,7 +849,7 @@ ${light_blue}${bad_list}${reset}
 
   Измените расширение резервных копий, например, на ${yellow}.bak${reset}
   Либо переместите их в поддиректорию
-  Запуск ${yellow}$name_client${reset} ${red}отменен${reset}
+  Запуск ${yellow}XKeen${reset} ${red}отменен${reset}
 "
     fi
     return 0
@@ -1169,7 +1175,7 @@ ${light_blue}${bad_list}${reset}"
 
     if [ "$validation_mode" = "pbr" ]; then
         log_error_terminal "
-  Включена strict PBR-проверка, но у исходящих подключений ${yellow}${name_client}${reset} ${pbr_validation_summary} ${yellow}mark/routing-mark${reset} политики Keenetic$error_details
+  Включена strict PBR-проверка, но у исходящих подключений ${yellow}${core_title}${reset} ${pbr_validation_summary} ${yellow}mark/routing-mark${reset} политики Keenetic$error_details
 
   Разрешённые policy marks Keenetic: ${yellow}${allowed_marks_display}${reset}
 $config_hint
@@ -1180,12 +1186,12 @@ $config_hint
     else
         log_warning_terminal "
   Для проксирования трафика Entware требуется его маркировка
-  В конфигурации ${yellow}${name_client}${reset} ${validation_summary} ${yellow}mark/routing-mark${reset} для bypass$error_details
+  В конфигурации ${yellow}${core_title}${reset} ${validation_summary} ${yellow}mark/routing-mark${reset} для bypass$error_details
 
   Для обычного Entware proxy можно использовать служебную метку ${yellow}255${reset}
   Разрешённые bypass marks: ${yellow}${allowed_marks_display}${reset}
 $config_hint
-  Если нужно направить сам ${yellow}${name_client}${reset} через конкретную политику Keenetic, используйте код из ${yellow}xkeen -pbr codes${reset}
+  Если нужно направить сам ${yellow}${core_title}${reset} через конкретную политику Keenetic, используйте код из ${yellow}xkeen -pbr codes${reset}
 
   Отсутствие маркировки в этом режиме приведет к петле трафика и зависанию роутера
   Проксирование трафика Entware ${red}отключено${reset} для безопасности"
@@ -2404,7 +2410,7 @@ check_policy_name_conflict() {
   Имя пользовательской политики совпадает с зарезервированным: '${light_blue}${conflict}${reset}'
   Устраните конфликт политик в файле '${yellow}xkeen.json${reset}'
 
-  Запуск ${yellow}$name_client${reset} ${red}отменен${reset}
+  Запуск ${yellow}XKeen${reset} ${red}отменен${reset}
 "
         fi
     fi
@@ -3967,7 +3973,7 @@ monitor_fd() {
                     [ -e "$1" ] || set --
                     current=$#
                     if [ "$limit" -gt 0 ] && [ "$current" -gt $((limit * 90 / 100)) ]; then
-                        log_router "warn" "$name_client открыл $current из $limit файловых дескрипторов, инициирован перезапуск"
+                        log_router "warn" "Ядро $core_title открыло $current из $limit файловых дескрипторов, инициирован перезапуск"
                         rm -f "$file_pid_fd"
                         fd_out=true
                         proxy_stop
@@ -4414,7 +4420,7 @@ proxy_start() {
         fi
         flush_warn_gap
         if proxy_status; then
-            echo -e "  Прокси-клиент уже ${green}запущен${reset}"
+            echo -e "  ${yellow}XKeen${reset} уже ${green}запущен${reset}"
             if [ "$mode_proxy" != "Other" ] && ! configure_firewall; then
                 rm -f "$xkeen_rundir/ready"
                 log_error_terminal "Не удалось записать netfilter-хук"
@@ -4437,13 +4443,13 @@ proxy_start() {
                 return 1
             fi
             if [ "$start_manual" = "on" ]; then
-                log_error_terminal "Не удалось запустить ${yellow}$name_client${reset}, так как он уже запущен"
+                log_error_terminal "Не удалось запустить ${yellow}XKeen${reset}, так как он уже запущен"
             else
-                log_router "notice" "Прокси-клиент успешно запущен в режиме $mode_proxy"
+                log_router "notice" "XKeen успешно запущен в режиме $mode_proxy"
                 _release_coldstart_guard
             fi
         else
-            log_router "notice" "Инициирован запуск прокси-клиента"
+            log_router "notice" "Инициирован запуск XKeen"
             attempt=1
 
             fd_limit="$other_fd"
@@ -4484,7 +4490,7 @@ proxy_start() {
                             fi
                         fi
                         ;;
-                    *) log_error_terminal "Неизвестный прокси-клиент: ${yellow}$name_client${reset}" ;;
+                    *) log_error_terminal "Неизвестное ядро проксирования: ${yellow}$name_client${reset}" ;;
                 esac
                 _probe_attempt=0
                 while [ "$_probe_attempt" -lt 60 ]; do
@@ -4529,9 +4535,9 @@ proxy_start() {
                     load_user_ipset
                     keep_killswitch="off"
                     if disable_killswitch; then
-                        echo -e "  Прокси-клиент ${green}запущен${reset} в режиме ${light_blue}${mode_proxy}${reset}"
+                        echo -e "  ${yellow}XKeen${reset} ${green}запущен${reset} в режиме ${light_blue}${mode_proxy}${reset} (ядро ${yellow}$core_title${reset})"
                     else
-                        echo -e "  Прокси-клиент запущен, но не удалось подтвердить отключение Kill-switch; часть трафика может оставаться заблокированной" >&2
+                        echo -e "  ${yellow}XKeen${reset} запущен, но не удалось подтвердить отключение Kill-switch; часть трафика может оставаться заблокированной" >&2
                     fi
                     (
                         # Даём ядру прокси время полностью инициализироваться
@@ -4545,9 +4551,9 @@ proxy_start() {
                         if { [ -z "$_crash_pid" ] || ! kill -0 "$_crash_pid" 2>/dev/null; } \
                            && ! proxy_status; then
                             echo
-                            echo -e "  Прокси-клиент ${red}аварийно завершился${reset}"
+                            echo -e "  Ядро ${yellow}$core_title${reset} ${red}аварийно завершилось${reset}"
                             echo -e "  ${green}Выполняется очистка${reset} правил прозрачного проксирования"
-                            log_router "err" "Прокси-клиент аварийно завершился после запуска"
+                            log_router "err" "Ядро $core_title аварийно завершилось после запуска"
                             emergency_clear
                             printf '\n~ # '
                         fi
@@ -4561,14 +4567,14 @@ proxy_start() {
                             fi
                         fi
                     fi
-                    [ "$mode_proxy" = "Other" ] && echo -e "  Функция прозрачного прокси ${red}не активна${reset}. Направляйте соединения на ${yellow}${name_client}${reset} вручную"
-                    log_router "notice" "Прокси-клиент успешно запущен в режиме $mode_proxy"
+                    [ "$mode_proxy" = "Other" ] && echo -e "  Функция прозрачного прокси ${red}не активна${reset}. Направляйте соединения на ${yellow}${core_title}${reset} вручную"
+                    log_router "notice" "XKeen успешно запущен в режиме $mode_proxy"
                     _release_coldstart_guard
                     if [ "$check_fd" = "on" ]; then
                         cleanup_fd_monitor
                         monitor_fd &
                         echo $! > "$file_pid_fd"
-                        log_router "notice" "Запущен контроль файловых дескрипторов $name_client"
+                        log_router "notice" "Запущен контроль файловых дескрипторов ядра $core_title"
                     fi
                     if [ "$_ps_mutex_rc" -eq 0 ]; then
                         _release_proxy_mutex
@@ -4578,10 +4584,10 @@ proxy_start() {
                 fi
                 attempt=$((attempt + 1))
             done
-            echo -e "  ${red}Не удалось запустить${reset} прокси-клиент"
+            echo -e "  ${red}Не удалось запустить${reset} ${yellow}XKeen${reset}"
             clean_firewall
             enable_killswitch
-            log_error_terminal "Не удалось запустить прокси-клиент"
+            log_error_terminal "Не удалось запустить ${yellow}XKeen${reset}"
             _release_coldstart_guard
         fi
     else
@@ -4652,7 +4658,7 @@ proxy_stop() {
         trap '_release_proxy_mutex; trap - INT TERM HUP' INT TERM HUP
     fi
     if ! proxy_status; then
-        echo -e "  Прокси-клиент ${red}не запущен${reset}"
+        echo -e "  ${yellow}XKeen${reset} ${red}не запущен${reset}"
         if ! clean_firewall; then
             log_error_terminal "Не удалось очистить правила firewall; состояние остановки не изменено"
             if [ "$_pstop_mutex_rc" -eq 0 ]; then
@@ -4664,7 +4670,7 @@ proxy_stop() {
         rm -f "$xkeen_rundir/ready"
         cleanup_fd_monitor
     else
-        [ -f "$xkeen_rundir/coldstart.lock" ] || log_router "notice" "Инициирована остановка прокси-клиента"
+        [ -f "$xkeen_rundir/coldstart.lock" ] || log_router "notice" "Инициирована остановка XKeen"
         attempt=1
         _stop_cleanup_done=0
         while [ "$attempt" -le "$start_attempts" ]; do
@@ -4694,8 +4700,8 @@ proxy_stop() {
                 usleep 200000
             fi
             if ! proxy_status; then
-                echo -e "  Прокси-клиент ${red}остановлен${reset}"
-                [ -f "$xkeen_rundir/coldstart.lock" ] || log_router "notice" "Прокси-клиент успешно остановлен"
+                echo -e "  ${yellow}XKeen${reset} ${red}остановлен${reset}"
+                [ -f "$xkeen_rundir/coldstart.lock" ] || log_router "notice" "XKeen успешно остановлен"
                 _release_coldstart_guard
                 if [ "$_pstop_mutex_rc" -eq 0 ]; then
                     _release_proxy_mutex
@@ -4705,8 +4711,8 @@ proxy_stop() {
             fi
             attempt=$((attempt + 1))
         done
-        echo -e "  Прокси-клиент ${red}не удалось остановить${reset}"
-        log_error_terminal "Не удалось остановить прокси-клиент"
+        echo -e "  ${red}Не удалось остановить${reset} ${yellow}XKeen${reset}"
+        log_error_terminal "Не удалось остановить ${yellow}XKeen${reset}"
     fi
     if [ "$_pstop_mutex_rc" -eq 0 ]; then
         _release_proxy_mutex
@@ -4744,7 +4750,7 @@ case "$1" in
                     _rs_fail=1
                     _cmd_rc=1
                     log_router "err" "Перезапуск отменён: не удалось установить hold kill-switch"
-                    printf '%s\n' "  ${red}Перезапуск отменён${reset}: действующее прокси-ядро оставлено запущенным, поскольку hold kill-switch не установлен."
+                    printf '%s\n' "  ${red}Перезапуск отменён${reset}: действующее ядро проксирования оставлено запущенным, поскольку hold kill-switch не установлен."
                 fi
             fi
         fi

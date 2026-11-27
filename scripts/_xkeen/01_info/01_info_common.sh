@@ -849,3 +849,15 @@ speed_balancer_settings() {
         [ -n "$v" ] && sb_outbounds_file="$xray_conf_dir/$v"
     fi
 }
+
+# Отображаемое имя ядра проксирования: xray -> Xray, mihomo -> Mihomo
+# Результат записывается в core_title. Сама переменная name_client остаётся
+# строчной: она используется как имя процесса и бинарника (pidof, killall, grep)
+# Для неизвестного значения core_title равен переданной строке
+set_core_title() {
+    case "$1" in
+        xray)   core_title="Xray" ;;
+        mihomo) core_title="Mihomo" ;;
+        *)      core_title="$1" ;;
+    esac
+}

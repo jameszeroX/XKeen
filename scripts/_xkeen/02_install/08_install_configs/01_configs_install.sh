@@ -28,13 +28,15 @@ xray_conf_install() {
     done
 }
 
-# Проверка конфигурации прокси-клиента
+# Проверка конфигурации ядра проксирования
 core_conf_test() {
     local core="$1"
     local path="$install_dir/$core"
+    local core_title
+    set_core_title "$core"
 
     if [ ! -f "$path" ] || [ ! -x "$path" ]; then
-        echo -e "  ${red}Ошибка${reset}: Не найден или повреждён исполняемый файл прокси-клиента ${green}$core${reset}"
+        echo -e "  ${red}Ошибка${reset}: Не найден или повреждён исполняемый файл ядра проксирования ${green}$core_title${reset}"
         return 1
     fi
 

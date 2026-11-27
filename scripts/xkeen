@@ -632,14 +632,14 @@ while [ $# -gt 0 ]; do
             else
                 smart_clear
                 echo
-                echo -e "  ${red}Не найдено ядро проксирования xray или mihomo${reset}"
+                echo -e "  ${red}Не найдено ядро проксирования Xray или Mihomo${reset}"
                 echo
-                echo -e "  Если планируете использовать ядро xray, поместите бинарник ${yellow}xray${reset}\n  архитектуры ${green}$architecture${reset} в директорию /opt/sbin/ и начните установку снова"
-                echo -e "  Страница загрузок xray: ${yellow}https://github.com/XTLS/Xray-core/releases/latest${reset}"
+                echo -e "  Если планируете использовать ядро Xray, поместите бинарник ${yellow}xray${reset}\n  архитектуры ${green}$architecture${reset} в директорию /opt/sbin/ и начните установку снова"
+                echo -e "  Страница загрузок Xray: ${yellow}https://github.com/XTLS/Xray-core/releases/latest${reset}"
                 echo
-                echo -e "  Если планируете использовать ядро mihomo, поместите бинарники ${yellow}mihomo${reset} и ${yellow}yq${reset}\n  архитектуры ${green}$architecture${reset} в директорию /opt/sbin/ и начните установку снова"
-                echo -e "  Страница загрузок mihomo: ${yellow}https://github.com/MetaCubeX/mihomo/releases/latest${reset}"
-                echo -e "  Страница загрузок yq: ${yellow}https://github.com/mikefarah/yq/releases/latest${reset}"
+                echo -e "  Если планируете использовать ядро Mihomo, поместите бинарники ${yellow}mihomo${reset} и ${yellow}yq${reset}\n  архитектуры ${green}$architecture${reset} в директорию /opt/sbin/ и начните установку снова"
+                echo -e "  Страница загрузок Mihomo: ${yellow}https://github.com/MetaCubeX/mihomo/releases/latest${reset}"
+                echo -e "  Страница загрузок Yq: ${yellow}https://github.com/mikefarah/yq/releases/latest${reset}"
                 echo
                 exit 1
             fi
@@ -722,7 +722,7 @@ while [ $# -gt 0 ]; do
             echo
             echo -e "  ${green}Установка XKeen завершена!${reset}"
             echo
-            echo -e "  Для использования ядра '${yellow}$Xray${reset}'"
+            echo -e "  Для использования ядра ${yellow}Xray${reset}"
             echo -e "  1. Поместите необходимые геофайлы в директорию '${yellow}$geo_dir/${reset}'"
             echo -e "  2. Настройте конфигурацию Xray по пути '${yellow}$xray_conf_dir/${reset}'"
             echo -e "  3. Запустите XKeen командой ${yellow}xkeen -start${reset}"

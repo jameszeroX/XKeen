@@ -43,6 +43,7 @@ diagnostic() {
         echo -e "  Запустите ${yellow}XKeen${reset} командой '${green}xkeen -start${reset}'"
         exit 1
     fi
+    set_core_title "$name_client"
 
     ip4_supported=$(ip -4 addr show | grep -q "inet " && echo true || echo false)
     ip6_supported=$(check_ipv6_active && echo true || echo false)
@@ -194,7 +195,7 @@ diagnostic() {
     }
 
     # Сбор данных
-    write_header "XKeen работает на ядре ${name_client}\nи установлен ${entware_storage}"
+    write_header "XKeen работает на ядре ${core_title}\nи установлен ${entware_storage}"
 
     {
         echo "Поддержка IPv4 - $ip4_supported"
@@ -249,7 +250,7 @@ diagnostic() {
         echo
         echo "PID процесса: $diagnostic_pid"
         diagnostic_process_stats
-    } | log_block "Версия $name_client и файловые дескрипторы"
+    } | log_block "Версия $core_title и файловые дескрипторы"
 
     echo "XKeen $xkeen_current_version $xkeen_build (время сборки: $build_timestamp)" | log_block "Версия XKeen"
 

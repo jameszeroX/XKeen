@@ -330,7 +330,7 @@ get_ports_donor() {
     ports=$(read_ports_file "$file_port_proxying")
 
     if [ -z "$ports" ]; then
-        echo -e "  Прокси-клиент работает ${yellow}на всех портах${reset}"
+        echo -e "  XKeen работает ${yellow}на всех портах${reset}"
     else
         echo "$ports" | tr ',' '\n' | sed 's/^/     /'
     fi
