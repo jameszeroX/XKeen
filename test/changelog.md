@@ -1,5 +1,20 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-27 09:24:58 MSK)
+
+Сборка из [`e0b8983`](https://github.com/jameszeroX/XKeen/commit/e0b89834326407c34b487a3efb0d25ab82daf05a).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/501f6fa3807647fc9b726fbebd183da2dc82cc80/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`806f98d...e0b8983`](https://github.com/jameszeroX/XKeen/compare/806f98d9d9588acd91af58ea4a5b61bfb80d6246...e0b89834326407c34b487a3efb0d25ab82daf05a).
+
+###### Коммиты
+
+- Enforce SHA-256 mismatch as failure ([`a1ceb62`](https://github.com/jameszeroX/XKeen/commit/a1ceb62844f0f2688cf12a69af8bdda8b33ba20a)) — jameszeroX
+- Rename proxy-client wording to XKeen/core ([`e0b8983`](https://github.com/jameszeroX/XKeen/commit/e0b89834326407c34b487a3efb0d25ab82daf05a)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-26 13:01:00 MSK)
 
 Сборка из [`639a19e`](https://github.com/jameszeroX/XKeen/commit/639a19ed84b6fd33abeab819e20e2f9fe7132cb8).
