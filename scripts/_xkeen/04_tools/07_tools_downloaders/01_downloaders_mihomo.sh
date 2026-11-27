@@ -164,6 +164,7 @@ download_mihomo() {
             continue
         fi
         if ! verify_github_sha256 "$tmp_ram/mihomo.$extension" "$download_url" "${mihomo_api_url}/tags/$VERSION_ARG"; then
+            rm -f "$tmp_ram/mihomo.$extension"
             [ -n "$_dlm_cache" ] && rm -f "$_dlm_cache"
             [ "$autoinstall_mode" = "true" ] && return 1
             continue

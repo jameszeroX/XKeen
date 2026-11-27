@@ -44,6 +44,7 @@ _xray_perform_install() {
         return 1
     fi
     if ! verify_github_sha256 "$tmp_ram/xray.$extension" "$download_url" "${xray_api_url}/tags/$version"; then
+        rm -f "$tmp_ram/xray.$extension"
         [ -n "$xpi_cache" ] && rm -f "$xpi_cache"
         return 1
     fi
