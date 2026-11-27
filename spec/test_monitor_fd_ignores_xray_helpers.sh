@@ -25,6 +25,8 @@ eval "$(awk '$0 == "monitor_fd() {" { on=1 } on { print } on && /^}/ { exit }' "
 
 xkeen_proc_root="$work/proc"
 name_client=xray
+# Отображаемое имя ядра: в production задаётся в начале init-скрипта.
+core_title=Xray
 delay_fd=1
 file_pid_fd="$work/fd-monitor.pid"
 restart_marker="$work/restarted"
@@ -39,7 +41,7 @@ while [ "$i" -le 10 ]; do : > "$xkeen_proc_root/111/fd/$i"; i=$((i + 1)); done
 : > "$xkeen_proc_root/222/fd/1"
 
 pidof() { [ "$1" = xray ] && printf '111 222\n'; }
-log_router() { echo warning > "$restart_marker"; }
+log_router() { echo warning > "$restart_marker"; printf '%s\n' "$2" > "$work/log_message"; }
 proxy_stop() { echo stop >> "$restart_marker"; }
 proxy_start() { echo start >> "$restart_marker"; }
 sleep() { exit 0; }
@@ -51,6 +53,12 @@ i=2
 while [ "$i" -le 901 ]; do : > "$xkeen_proc_root/222/fd/$i"; i=$((i + 1)); done
 ( monitor_fd )
 check 'main daemon still triggers restart above threshold' "$(cat "$restart_marker" | tr '\n' ' ' | sed 's/ $//')" 'warning stop start'
+
+case "$(cat "$work/log_message" 2>/dev/null)" in
+    'Ядро Xray открыло '*) core_in_log=capitalized ;;
+    *) core_in_log=wrong ;;
+esac
+check 'fd warning names the core with a capital letter' "$core_in_log" capitalized
 
 printf '\n=== passed: %s, failed: %s ===\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

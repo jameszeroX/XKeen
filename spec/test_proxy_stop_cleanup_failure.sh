@@ -20,6 +20,7 @@ extract() {
 file="$root/scripts/_xkeen/02_install/07_install_register/04_register_init.sh"
 eval "$(extract proxy_stop "$file")"
 red=''
+yellow=''
 reset=''
 name_client=xray
 xkeen_rundir="$work/run"

@@ -16,6 +16,8 @@ check() {
     fi
 }
 eval "$(awk '$0 == "check_free_space() {" { on=1 } on { print } on && /^}/ { exit }' "$root/scripts/_xkeen/05_tests/03_tests_storage.sh")"
+# Helper used by the extracted function to build the displayed core name.
+eval "$(awk '$0 == "set_core_title() {" { on=1 } on { print } on && /^}/ { exit }' "$root/scripts/_xkeen/01_info/01_info_common.sh")"
 
 # Globals consumed by the extracted production function.
 # shellcheck disable=SC2034
