@@ -1,5 +1,19 @@
 ### Changelog
 
+#### XKeen 2.2 Beta (время сборки: 2026-11-28 11:05:22 MSK)
+
+Сборка из [`6db5582`](https://github.com/jameszeroX/XKeen/commit/6db55828aae29671482fccfdc97b33f69ab41517).
+
+Скачать: [xkeen.tar.gz](https://github.com/jameszeroX/XKeen/raw/d8be5fdca044f6b5800748dd7fa41ffac3c938f8/test/xkeen.tar.gz)
+
+Изменения с прошлой сборки: [`501f6fa...6db5582`](https://github.com/jameszeroX/XKeen/compare/501f6fa3807647fc9b726fbebd183da2dc82cc80...6db55828aae29671482fccfdc97b33f69ab41517).
+
+###### Коммиты
+
+- Hide size-check messages when size is unknown ([`6db5582`](https://github.com/jameszeroX/XKeen/commit/6db55828aae29671482fccfdc97b33f69ab41517)) — jameszeroX
+
+---
+
 #### XKeen 2.2 Beta (время сборки: 2026-11-27 09:24:58 MSK)
 
 Сборка из [`e0b8983`](https://github.com/jameszeroX/XKeen/commit/e0b89834326407c34b487a3efb0d25ab82daf05a).
