@@ -649,11 +649,16 @@ _download_and_validate_loop() {
         fi
 
         if [ "$_fetch_result" -eq 0 ]; then
-            # Проверяем размер загруженного файла
-            printf "  Проверка размера %s...\n" "$display_name"
+            # Размер проверяем (и сообщаем об этом) только если он известен
+            _size_known=""
+            if [ -n "$expected_size" ] && [ "$expected_size" -gt 0 ] 2>/dev/null; then
+                _size_known=1
+                printf "  Проверка размера %s...\n" "$display_name"
+            fi
             if _validate_file_with_size "$tmp_file" "$expected_size"; then
                 # Успешно - перемещаем файл на место
-                printf "  ${green}✔ OK${reset} - Размер файла совпал с ожидаемым\n"
+                [ -n "$_size_known" ] && \
+                    printf "  ${green}✔ OK${reset} - Размер файла совпал с ожидаемым\n"
                 return 0
             else
                 # Проверка не прошла
